@@ -1,7 +1,9 @@
 echo "Building UltraOS floppy image..."
-MYDIR="$(dirname "$(realpath "$0")")"
-nasm $MYDIR/UltraBoot.asm -o $MYDIR/UltraBoot.bin
-dd if=/dev/zero of=$MYDIR/UltraFloppy.flp bs=1024 count=1440
-dd if=$MYDIR/UltraBoot.bin of=$MYDIR/UltraFloppy.flp seek=0 count=1 conv=notrunc
+MYDIR="$(dirname "$(realpath "$0")")"/..
+mkdir -p $MYDIR/bin
+nasm -i $MYDIR/Bootloader $MYDIR/Bootloader/UltraBoot.asm -o $MYDIR/bin/UltraBoot.bin
+nasm -i $MYDIR/Bootloader $MYDIR/Bootloader/UKLoader.asm -o $MYDIR/bin/UKLoader.bin
+mkdir -p $MYDIR/images
+$MYDIR/Linux/ffc -b $MYDIR/bin/UltraBoot.bin -s $MYDIR/bin/UKLoader.bin -o $MYDIR/images/UltraFloppy.img --ls-fat
 echo "Done!"
 
