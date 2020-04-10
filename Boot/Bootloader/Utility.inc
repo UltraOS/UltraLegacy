@@ -1,4 +1,4 @@
-; void write_string(ds: segment, si: char*)
+; void write_string(ds:si string)
 write_string:
     lodsb
     or al, al
@@ -22,7 +22,7 @@ reboot:
     int 0x16
     jmp word 0xFFFF:0x0000
 
-; void reset_disk_system()
+; void reset_disk_system(dl disk)
 reset_disk_system:
     xor ax, ax
     int 0x13
@@ -36,7 +36,7 @@ on_boot_failed:
     call write_string
     call reboot
 
-; void read_sector(es: segment, bx: void*, ax: LBA)
+; void read_sector(es:bx into, ax LBA)
 read_sector:
     xor cx, cx
 

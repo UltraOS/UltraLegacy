@@ -20,4 +20,4 @@ BPB:
     BootSignature     db 0x29
     VolumeID          dd 0
     VolumeLabel       db "UltraVolume"
-    FileSystem        db "FAT16   "
+    FileSystem        db "FAT12   "

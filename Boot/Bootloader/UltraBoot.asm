@@ -9,8 +9,10 @@ main:
 %include "Macros.inc"
 
 start:
-    ; initilize memory segments
-    ; segment 0 offset 0x7C00
+    ; initilize memory segments:
+    ; segment 0 
+    ; offset  0x7C00
+    ; stack   0x7C00
     cli
     mov [BootDrive], dl
     xor ax, ax
@@ -20,6 +22,8 @@ start:
     mov sp, 0x7C00
     sti
 
+    clear_screen
+
     mov si, loading_msg
     call write_string
 
@@ -27,31 +31,30 @@ start:
     call reset_disk_system
     jc on_boot_failed
 
-    mov si, bootloader_file
-    find_file: find_file_on_disk
-    mov [bootloader_cluster], ax
+    ; read the kernel loader from disk
+    find_file_on_disk kernel_loader_file, KERNEL_LOADER_SEGMENT
+    mov [kernel_loader_cluster], ax
 
-    fat: load_fat
+    load_fat
 
-    mov cx, [bootloader_cluster]
-    mov ax, BOOTLOADER_SEGMENT
-    mov es, ax
-    read_file: read_file_from_disk
+    read_file_from_disk [kernel_loader_cluster], KERNEL_LOADER_SEGMENT
 
-    mov ax, BOOTLOADER_SEGMENT
+    ; jump to kernel loader
+    ; it expects the segments to be initilized
+    ; according to its origin so we set them here
+    mov ax, KERNEL_LOADER_SEGMENT
     mov es, ax
     mov ds, ax
-    jmp BOOTLOADER_SEGMENT:0x0
+    jmp KERNEL_LOADER_SEGMENT:0x0
 
 %include "Utility.inc"
 
-BOOTLOADER_SEGMENT: equ 0x1000
+KERNEL_LOADER_SEGMENT: equ 0x1000
 
-bootloader_cluster dw 0
+kernel_loader_cluster dw 0
+kernel_loader_file    db "UKLoaderbin"
 
-bootloader_file db "UKLoaderbin"
-loading_msg     db "Loading UltraOS...", CR, LF, 0x0
+loading_msg db "Loading UltraOS...", CR, LF, 0x0
 
 times 510-($-$$) db 0
-
-dw 0xAA55
+boot_signature   dw 0xAA55
