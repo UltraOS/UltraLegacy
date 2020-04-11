@@ -1,3 +1,6 @@
+%ifndef _BPB_INC_
+%define _BPB_INC_
+
 BPB:
     ; BIOS Parameter Block
     OEMLabel          db "UltraOS "
@@ -21,3 +24,5 @@ BPB:
     VolumeID          dd 0
     VolumeLabel       db "UltraVolume"
     FileSystem        db "FAT12   "
+
+%endif ; _BPB_INC_

@@ -1,3 +1,6 @@
+%ifndef _COMMON_INC_
+%define _COMMON_INC_
+
 ; void write_string(ds:si string)
 write_string:
     lodsb
@@ -81,3 +84,5 @@ read_sector:
 
 root_dir_size   dw 0
 root_dir_sector dw 0
+
+%endif ; _COMMON_INC_

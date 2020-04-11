@@ -6,7 +6,7 @@ main:
     nop
 
 %include "BPB.inc"
-%include "Macros.inc"
+%include "CommonMacros.inc"
 
 start:
     ; initilize memory segments:
@@ -47,7 +47,7 @@ start:
     mov ds, ax
     jmp KERNEL_LOADER_SEGMENT:0x0
 
-%include "Utility.inc"
+%include "Common.inc"
 
 KERNEL_LOADER_SEGMENT: equ 0x1000
 

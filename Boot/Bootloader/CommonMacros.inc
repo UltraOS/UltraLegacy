@@ -1,6 +1,10 @@
+%ifndef _COMMON_MACROS_INC_
+%define _COMMON_MACROS_INC_
+
 BYTES_PER_DIR_ENTRY: equ 32
 CLUSTER_ENTRY_OFFSET: equ 0x1A
 MAX_READ_TRIES: equ 5
+FAT_FILENAME_LENGTH: equ 11
 
 CR: equ 0x0D
 LF: equ 0x0A
@@ -40,7 +44,7 @@ LF: equ 0x0A
     call read_sector
 
 %%.check_next_entry:
-    mov cx, 11
+    mov cx, FAT_FILENAME_LENGTH
     mov di, bx
     mov si, %1
     repz cmpsb
@@ -125,3 +129,5 @@ FAT_LOAD_SEGMENT: equ 0x0EE0
     cmp cx, 0xFF8
     jl %%.read_next_sector
 %endmacro
+
+%endif ; _COMMON_MACROS_INC_
