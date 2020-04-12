@@ -7,7 +7,7 @@ main:
 %include "CommonMacros.inc"
 
 start:
-    mov si, welcome_msg
+    mov si, dskread_msg
     call write_string
 
     ; steal BPB from the bootloader
@@ -31,14 +31,11 @@ start:
     mov dl, [BootDrive]
     call reset_disk_system
 
-    mov si, success_msg
+    mov si, loading_msg
     call write_string
 
     ; ---- try enable the A20 line ----
     enable_a20:
-        mov si, a20_msg
-        call write_string
-
         ; check if its already enabled
         call is_a20_enabled
         cmp ax, 1
@@ -63,17 +60,13 @@ start:
         je a20_success
 
     a20_failure:
-        mov si, failure_msg
+        mov si, a20fail_msg
         call write_string
         call reboot
 
     a20_success:
-        mov si, success_msg
-        call write_string
 
     ; ---- set up IDT and GDT ----
-    mov si, idt_gdt_msg
-    call write_string
     xor ax, ax
     mov es, ax
     mov di, ax
@@ -148,16 +141,9 @@ KERNEL_SEGMENT: equ 0x2000
 KERNEL_FLAT_ADDRESS: equ 0x20000 ; KERNEL_SEGMENT << 4
 BPB_SIZE: equ 34
 
-welcome_msg db "Reading kernel from disk...", CR, LF, 0
-a20_msg     db "Enabling the A20 line...", CR, LF, 0
-idt_gdt_msg db "Setting up IDT and GDT...", CR, LF, 0
-success_msg db "Done!", CR, LF, 0
-failure_msg db "Failed!", CR, LF, 0
+dskread_msg db "Reading kernel from disk...", CR, LF, 0
+loading_msg db "Preparing kernel environment...", CR, LF, 0
+a20fail_msg db "Failed to enable A20!", CR, LF, 0
 
 kernel_file db "UKLoaderbin"
 kernel_file_cluster dw 0
-
-BITS 32
-kernel:
-BRKP
-jmp $
