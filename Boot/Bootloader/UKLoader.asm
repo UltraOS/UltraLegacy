@@ -70,19 +70,94 @@ start:
     a20_success:
         mov si, success_msg
         call write_string
-        jmp $
+
+    ; ---- set up IDT and GDT ----
+    mov si, idt_gdt_msg
+    call write_string
+    xor ax, ax
+    mov es, ax
+    mov di, ax
+    mov cx, 2048
+    rep stosb ; 256 empty IDT entries
+
+    ; NULL descriptor
+    mov cx, 4
+    rep stosw
+
+    ; code segment descriptor
+    mov [es:di],     word 0xFFFF ; limit
+    mov [es:di + 2], word 0x0000 ; base
+    mov [es:di + 4], byte 0x00   ; base
+    mov [es:di + 5], byte 0x9A   ; access
+    mov [es:di + 6], byte 0xCF   ; granularity
+    mov [es:di + 7], byte 0x00   ; base
+    add di, 8
+
+    ; data segment descriptor
+    mov [es:di],     word 0xFFFF ; limit
+    mov [es:di + 2], word 0x0000 ; base
+    mov [es:di + 4], byte 0x00   ; base
+    mov [es:di + 5], byte 0x92   ; access
+    mov [es:di + 6], byte 0xCF   ; granularity
+    mov [es:di + 7], byte 0x00   ; base
+
+    cli
+
+    lgdt [gdt_entry]
+    lidt [idt_entry]
+
+    ; switch to protected mode
+    mov eax, cr0
+    or  eax, 1
+    mov cr0, eax
+
+    ; clear prefetch queue
+    jmp clear_prefetch
+    clear_prefetch:
+
+    ; setup segments
+    mov ax, 0x10
+    mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
+    mov ss, ax
+    mov esp, 0x30000
+
+    jmp $ ; we don't actually have a kernel yet
+
+    ; jump to the kernel
+    db 0x66
+    db 0xEA
+    dd KERNEL_FLAT_ADDRESS
+    dw 0x0008
 
 %include "Common.inc"
 %include "LoaderUtils.inc"
 
+idt_entry:
+    dw 2048
+    dd 0
+
+gdt_entry:
+    dw 24
+    dd 2048
+
 BPB_OFFSET: equ 0x7C03
 KERNEL_SEGMENT: equ 0x2000
+KERNEL_FLAT_ADDRESS: equ 0x20000 ; KERNEL_SEGMENT << 4
 BPB_SIZE: equ 34
 
 welcome_msg db "Reading kernel from disk...", CR, LF, 0
-a20_msg     db "Trying to enable the A20 line...", CR, LF, 0
+a20_msg     db "Enabling the A20 line...", CR, LF, 0
+idt_gdt_msg db "Setting up IDT and GDT...", CR, LF, 0
 success_msg db "Done!", CR, LF, 0
 failure_msg db "Failed!", CR, LF, 0
 
 kernel_file db "UKLoaderbin"
 kernel_file_cluster dw 0
+
+BITS 32
+kernel:
+BRKP
+jmp $

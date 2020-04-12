@@ -9,6 +9,9 @@ FAT_FILENAME_LENGTH: equ 11
 CR: equ 0x0D
 LF: equ 0x0A
 
+; magic breakpoint in Bochs
+%define BP xchg bx, bx
+
 ; void clear_screen()
 %macro clear_screen 0
     mov ax, 0x0007
