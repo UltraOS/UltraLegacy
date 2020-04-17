@@ -66,6 +66,20 @@ start:
 
     a20_success:
 
+    ; scroll page up
+    mov ax, word 0x0006
+    int 0x10
+
+    ; enable color 80x25 text mode
+    ; for future use in protected mode
+    mov ax, 0x0003
+    int 0x10
+
+    ; disable cursor
+    mov ax, 0x0100
+    mov cx, 0x3F00
+    int 0x10
+
     ; ---- set up IDT and GDT ----
     xor ax, ax
     mov es, ax
@@ -117,8 +131,6 @@ start:
     mov ss, ax
     mov esp, 0x30000
 
-    jmp $ ; we don't actually have a kernel yet
-
     ; jump to the kernel
     db 0x66
     db 0xEA
@@ -145,5 +157,5 @@ dskread_msg db "Reading kernel from disk...", CR, LF, 0
 loading_msg db "Preparing kernel environment...", CR, LF, 0
 a20fail_msg db "Failed to enable A20!", CR, LF, 0
 
-kernel_file db "UKLoaderbin"
+kernel_file db "MyKernelbin"
 kernel_file_cluster dw 0
