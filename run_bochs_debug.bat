@@ -1,7 +1,7 @@
 @echo off
-call Boot\Windows\build_floppy.bat
+call Boot\Scripts\build_image.bat
 pushd %~dp0
 SET images=%CD%\Boot\images
 popd
-bochsdbg -f Boot\Windows\bochsrc_debug.bxrc
+bochsdbg -f configuration\bochsrc_debug.bxrc
 del bx_enh_dbg.ini

@@ -1,6 +1,6 @@
 @echo off
-call Boot\Windows\build_floppy.bat
+call Boot\Scripts\build_image.bat
 pushd %~dp0
 SET images=%CD%\Boot\images
 popd
-bochs -f Boot\Windows\bochsrc.bxrc
+bochs -f Configuration\bochsrc.bxrc
