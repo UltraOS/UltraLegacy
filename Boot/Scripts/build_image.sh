@@ -16,31 +16,22 @@ echo "Building UltraOS image..."
 true_path="$(dirname "$(realpath "$0")")"
 root_path=$true_path/..
 
-pushd $root_path
-mkdir -p bin || on_error
+mkdir -p $root_path/bin || on_error
 
+# Make the bootloader files
 pushd $root_path/Bootloader
-BOOTLOADER_PATH=$root_path/bin make || on_error
-nasm  MyKernel.asm -o  $root_path/bin/MyKernel.bin  || on_error
+BOOTLOADER_PATH=$root_path/bin \
+make || on_error
+
+# a tempo hack
+nasm MyKernel.asm -o  $root_path/bin/MyKernel.bin  || on_error
 popd
 
-mkdir -p Images || on_error
-$true_path/ffc -b bin/UltraBoot.bin \
-               -s bin/UKLoader.bin bin/MyKernel.bin \
-               -o Images/UltraFloppy.img \
-               --ls-fat || on_error
-
-mkdir Images/iso || on_error
-cp Images/UltraFloppy.img Images/iso/
-genisoimage -V 'UltraVolume' \
-            -input-charset iso8859-1 \
-            -o Images/UltraDisk.iso \
-            -b UltraFloppy.img \
-            -hide UltraFloppy.img Images/iso || on_error
-
-rm Images/iso/UltraFloppy.img
-rmdir Images/iso
+# Make the images
+pushd $true_path
+IMAGES_PATH=$root_path/Images \
+BOOTLOADER_PATH=$root_path/bin \
+make || on_error
 popd
 
 echo "Done!"
-
