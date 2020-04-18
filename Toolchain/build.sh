@@ -16,7 +16,7 @@ popd () {
 
 pushd $true_path
 
-if [ -e "CrossCompiler/tools/bin/i686-elf-g++" ]
+if [ -e "CrossCompiler/Tools/bin/i686-elf-g++" ]
 then
   echo "Cross-compiler is already built!"
   exit 0
@@ -60,7 +60,7 @@ binutils_url="https://ftp.gnu.org/gnu/binutils/$binutils_version.tar.gz"
 if [ ! -e "CrossCompiler/gcc/configure" ]
 then
   echo "Downloading GCC source files..."
-  mkdir -p "CrossCompiler" || on_error
+  mkdir -p "CrossCompiler"     || on_error
   mkdir -p "CrossCompiler/gcc" || on_error
   wget -O "CrossCompiler/gcc.tar.gz" $gcc_url || on_error
   echo "Unpacking GCC source files..."
@@ -74,7 +74,7 @@ fi
 if [ ! -e "CrossCompiler/binutils/configure" ]
 then
   echo "Downloading binutils source files..."
-  mkdir -p  "CrossCompiler" || on_error
+  mkdir -p  "CrossCompiler"          || on_error
   mkdir -p  "CrossCompiler/binutils" || on_error
   wget -O "CrossCompiler/binutils.tar.gz" $binutils_url || on_error
   echo "Unpacking binutils source files..."
@@ -85,7 +85,7 @@ else
   echo "binutils is already downloaded!"
 fi
 
-export PREFIX="CrossCompiler/tools"
+export PREFIX="$true_path/CrossCompiler/Tools"
 export TARGET=i686-elf
 export PATH="$PREFIX/bin:$PATH"
 
@@ -98,7 +98,7 @@ pushd "CrossCompiler/binutils_build"
                       --with-sysroot \
                       --disable-nls \
                       --disable-werror || on_error
-make || on_error
+make         || on_error
 make install || on_error
 popd
 
@@ -111,9 +111,9 @@ pushd "CrossCompiler/gcc_build"
                  --enable-languages=c,c++ \
                  --without-headers || on_error
 
-make all-gcc || on_error
-make all-target-libgcc || on_error
-make install-gcc || on_error
+make all-gcc               || on_error
+make all-target-libgcc     || on_error
+make install-gcc           || on_error
 make install-target-libgcc || on_error
 popd
 
