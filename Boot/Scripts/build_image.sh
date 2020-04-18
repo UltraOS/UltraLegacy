@@ -25,22 +25,22 @@ nasm  UKLoader.asm -o  $root_path/bin/UKLoader.bin  || on_error
 nasm  MyKernel.asm -o  $root_path/bin/MyKernel.bin  || on_error
 popd
 
-mkdir -p images || on_error
+mkdir -p Images || on_error
 $true_path/ffc -b bin/UltraBoot.bin \
       -s bin/UKLoader.bin bin/MyKernel.bin \
-      -o images/UltraFloppy.img \
+      -o Images/UltraFloppy.img \
       --ls-fat || on_error
 
-mkdir images/iso || on_error
-cp images/UltraFloppy.img images/iso/
+mkdir Images/iso || on_error
+cp Images/UltraFloppy.img Images/iso/
 genisoimage -V 'UltraVolume' \
             -input-charset iso8859-1 \
-            -o images/UltraDisk.iso \
+            -o Images/UltraDisk.iso \
             -b UltraFloppy.img \
-            -hide UltraFloppy.img images/iso || on_error
+            -hide UltraFloppy.img Images/iso || on_error
 
-rm images/iso/UltraFloppy.img
-rmdir images/iso
+rm Images/iso/UltraFloppy.img
+rmdir Images/iso
 popd
 
 echo "Done!"
