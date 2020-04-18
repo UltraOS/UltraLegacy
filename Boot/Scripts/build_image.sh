@@ -20,16 +20,15 @@ pushd $root_path
 mkdir -p bin || on_error
 
 pushd $root_path/Bootloader
-nasm  UltraBoot.asm -o $root_path/bin/UltraBoot.bin || on_error
-nasm  UKLoader.asm -o  $root_path/bin/UKLoader.bin  || on_error
+BOOTLOADER_PATH=$root_path/bin make || on_error
 nasm  MyKernel.asm -o  $root_path/bin/MyKernel.bin  || on_error
 popd
 
 mkdir -p Images || on_error
 $true_path/ffc -b bin/UltraBoot.bin \
-      -s bin/UKLoader.bin bin/MyKernel.bin \
-      -o Images/UltraFloppy.img \
-      --ls-fat || on_error
+               -s bin/UKLoader.bin bin/MyKernel.bin \
+               -o Images/UltraFloppy.img \
+               --ls-fat || on_error
 
 mkdir Images/iso || on_error
 cp Images/UltraFloppy.img Images/iso/
