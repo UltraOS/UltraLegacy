@@ -1,3 +1,3 @@
-Boot/bin
-Boot/Images
-Toolchain/CrossCompiler
+Boot/bin/
+Images/
+Toolchain/CrossCompiler/
