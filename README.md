@@ -14,4 +14,4 @@ Linux
 - Install nasm
 - run `run_qemu.sh`
 
-Virtualization software other than QEMU and Bochs (like VMware or VirtualBox) is also usable by manually loading the iso image from `Boot/Images` (generated via `Boot/Scripts/build_image.{sh/bat}`).
+Virtualization software other than QEMU and Bochs (like VMware or VirtualBox) is also usable by manually loading the iso image from `Images` (generated via `Scripts/build_image.{sh/bat}`).
