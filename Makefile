@@ -39,7 +39,7 @@ $(dependencies):
 
 .PHONY: clean
 clean:
-	for dependecy in $(dependencies); do \
-		$(MAKE) -C $$dependecy clean; \
+	for dependency in $(dependencies); do \
+		$(MAKE) -C $$dependency clean; \
 	done
 	rm -rf $(images_dir)/
