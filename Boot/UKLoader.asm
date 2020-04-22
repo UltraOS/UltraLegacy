@@ -157,5 +157,5 @@ dskread_msg db "Reading kernel from disk...", CR, LF, 0
 loading_msg db "Preparing kernel environment...", CR, LF, 0
 a20fail_msg db "Failed to enable A20!", CR, LF, 0
 
-kernel_file db "MyKernelbin"
+kernel_file db "Kernel  bin"
 kernel_file_cluster dw 0

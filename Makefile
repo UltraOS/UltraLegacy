@@ -1,14 +1,16 @@
 images_dir = Images
 iso_dir    = $(images_dir)/iso
+kernel_dir = Kernel
 
 # I don't like the hardcoded paths here
 # TODO: find a way to make this more elegant
 bootloader_dir = Boot/bin
 bootloader_file = $(bootloader_dir)/UltraBoot.bin
-bootloader_misc = $(bootloader_dir)/UKLoader.bin \
-                  $(bootloader_dir)/MyKernel.bin
+kernelloader_file = $(bootloader_dir)/UKLoader.bin
+kernel_file = $(kernel_dir)/Kernel.bin
 
-dependencies = Boot/
+dependencies = Boot/ \
+               Kernel/
 
 UltraOS: $(dependencies) images
 
@@ -26,10 +28,10 @@ $(images_dir)/UltraDisk.iso: $(images_dir)/UltraFloppy.img
 	rm $(iso_dir)/UltraFloppy.img
 	rmdir $(iso_dir)
 
-$(images_dir)/UltraFloppy.img: $(bootloader_file) $(bootloader_misc)
+$(images_dir)/UltraFloppy.img: $(bootloader_file) $(kernelloader_file)
 	mkdir -p $(images_dir)/
 	Scripts/ffc -b $(bootloader_file) \
-	            -s $(bootloader_misc) \
+	            -s $(kernelloader_file) $(kernel_file)\
 	            -o $(images_dir)/UltraFloppy.img \
 	            --ls-fat
 
