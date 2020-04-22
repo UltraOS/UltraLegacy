@@ -28,7 +28,7 @@ $(images_dir)/UltraDisk.iso: $(images_dir)/UltraFloppy.img
 	rm $(iso_dir)/UltraFloppy.img
 	rmdir $(iso_dir)
 
-$(images_dir)/UltraFloppy.img: $(bootloader_file) $(kernelloader_file)
+$(images_dir)/UltraFloppy.img: $(bootloader_file) $(kernelloader_file) $(kernel_file)
 	mkdir -p $(images_dir)/
 	Scripts/ffc -b $(bootloader_file) \
 	            -s $(kernelloader_file) $(kernel_file)\
