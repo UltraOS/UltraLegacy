@@ -17,6 +17,8 @@ true_path="$(dirname "$(realpath "$0")")"
 root_path=$true_path/..
 
 pushd $root_path
+Toolchain/build.sh || on_error
+source Toolchain/export_paths.sh
 make || on_error
 popd
 
