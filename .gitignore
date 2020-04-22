@@ -1,3 +1,5 @@
 Boot/bin/
 Images/
 Toolchain/CrossCompiler/
+*.o
+*.bin
