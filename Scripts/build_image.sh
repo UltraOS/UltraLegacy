@@ -1,3 +1,5 @@
+#!/bin/bash
+
 on_error()
 {
     echo "Failed to build the image!"

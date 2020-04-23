@@ -1,3 +1,5 @@
+#!/bin/bash
+
 true_path="$(dirname "$(realpath "$0")")"
 
 on_error()
