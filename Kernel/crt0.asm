@@ -1,6 +1,5 @@
-BITS 32
-
-extern init_global_objects
+extern _init
+extern _fini
 extern run
 
 section .entry
@@ -11,11 +10,13 @@ start:
     mov esp, kernel_stack_begin
 
     ; Call all global constructors
-    call init_global_objects
+    call _init
 
     ; Jump into kernel main
     call run
 
+    ; call global destructors
+    call _fini
 hang:
     cli
     hlt

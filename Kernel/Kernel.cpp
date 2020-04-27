@@ -1,6 +1,24 @@
 static constexpr unsigned long video_memory = 0xB8000;
 
-void write_string(const char* string, unsigned char color = 0xF)
+void write_string(const char* string, unsigned char color = 0xF);
+
+class Checker
+{
+public:
+    Checker()
+    {
+        write_string("Constructor called", 0x2);
+    }
+
+    ~Checker()
+    {
+        write_string("Destructor called", 0x2);
+    }
+};
+
+static Checker c;
+
+void write_string(const char* string, unsigned char color)
 {
     static unsigned short* memory = reinterpret_cast<unsigned short*>(video_memory);
 
@@ -13,23 +31,7 @@ void write_string(const char* string, unsigned char color = 0xF)
     }
 }
 
-typedef void (*constructor)();
-
-extern "C"
-{
-    constructor global_constructors_begin;
-    constructor global_constructors_end;
-
-    void init_global_objects()
-    {
-        for (constructor ctor = global_constructors_begin; ctor != global_constructors_end; ctor++)
-            (*ctor)();
-    }
-}
-
 extern "C" void run()
 {
     write_string("Hello from the kernel!", 0x4);
-
-    for (;;) {}
 }
