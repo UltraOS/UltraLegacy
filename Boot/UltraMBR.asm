@@ -44,7 +44,7 @@ main:
         je partition_found
         add bx, PARTITION_ENTRY_SIZE
         cmp cx, PARTITION_COUNT
-        je no_partition_found
+        je on_no_partition_found
         inc cx
         jmp pick_a_partiton
 
@@ -61,11 +61,6 @@ main:
         call write_string
         call reboot
 
-    no_partition_found:
-        mov si, no_partition_error
-        call write_string
-        call reboot
-
     load_lba_partition:
         mov bx, [selected_partition]
         add bx, PARTITION_LBA_OFFSET
@@ -78,15 +73,20 @@ main:
         jc on_disk_read_failed
         jmp transfer_control_to_vbr
 
-    on_disk_read_failed:
-        mov si, no_lba_support_error
-        call write_string
-        call reboot
-
     transfer_control_to_vbr:
         mov bx, [selected_partition]
         mov dl, [drive_number]
         jmp 0x0:VBR_LOAD_ADDRESS
+
+    on_no_partition_found:
+        mov si, no_partition_error
+        call write_string
+        call reboot
+
+    on_disk_read_failed:
+        mov si, disk_error
+        call write_string
+        call reboot
 
 VBR_DAP:
     .DAP_size:          db 0x10
