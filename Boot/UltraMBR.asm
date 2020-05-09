@@ -1,0 +1,141 @@
+BITS 16
+
+MBR_ORIGINAL_ADDRESS:  equ 0x7C00
+VBR_LOAD_ADDRESS:      equ MBR_ORIGINAL_ADDRESS
+MBR_RELOCATED_ADDRESS: equ 0x0600
+ACTIVE_PARTITION:      equ 0b10000000
+PARTITION_ENTRY_SIZE:  equ 16
+PARTITION_COUNT:       equ 4
+MBR_SIZE_IN_BYTES:     equ 512
+
+; fake origin here to make it easier for us
+ORG MBR_RELOCATED_ADDRESS
+
+start:
+    cli
+    xor ax, ax
+    mov ds, ax
+    mov es, ax
+    mov ss, ax
+    mov sp, MBR_ORIGINAL_ADDRESS
+
+; Relocate ourselves to give space to the VBR
+relocate:
+    push ds
+    mov ds, ax
+    mov si, MBR_ORIGINAL_ADDRESS
+    mov di, MBR_RELOCATED_ADDRESS
+    mov cx, MBR_SIZE_IN_BYTES
+    rep movsb
+    pop ds
+    jmp 0x0:main ; force a long jump here
+
+; actual main that we get to after we've relocated
+main:
+    mov [drive_number], dl
+    ; pick a partition
+    mov bx, partition1
+    mov cx, 1
+    pick_a_partiton:
+        cmp byte [bx], ACTIVE_PARTITION
+        je partition_found
+        add bx, PARTITION_ENTRY_SIZE
+        cmp cx, PARTITION_COUNT
+        je no_partition_found
+        inc cx
+        jmp pick_a_partiton
+
+    partition_found:
+        mov [selected_partition], bx
+        ; We use LBA addressing for any partition
+        ; Let's check if our bios supports that
+        mov ah, 0x41
+        mov bx, 0x55aa
+        int 0x13
+        jnc load_lba_partition
+
+        jmp $ ; unsuppored, print error and hang
+
+    no_partition_found:
+        jmp $
+
+    load_lba_partition:
+        mov bx, [selected_partition]
+        add bx, 8 ; fix this magic number, it's an offset to LBA
+        mov ax, [bx]
+        mov [VBR_DAP.sector_begin_low], ax
+        mov ax, VBR_DAP
+        mov si, ax
+        mov ah, 0x42
+        int 0x13
+        jc on_disk_read_failed
+        jmp transfer_control_to_vbr
+
+    on_disk_read_failed:
+        jmp $ ; say something bad and hang
+
+    transfer_control_to_vbr:
+        mov bx, [selected_partition]
+        mov dl, [drive_number]
+        jmp 0x0:VBR_LOAD_ADDRESS
+
+VBR_DAP:
+    .DAP_size:          db 0x10
+    .unused:            db 0x0
+    .sector_count:      dw 0x1
+    .read_into_offset:  dw VBR_LOAD_ADDRESS
+    .read_into_segment: dw 0x0
+    .sector_begin_low:  dd 0x0
+    .sector_begin_high: dd 0x0
+
+selected_partition: dw 0
+drive_number: db 0x0
+
+times 446-($-$$) db 0
+
+partition1:
+    .status:                db 0
+    .head_begin:            db 0
+    .sector_cylinder_begin: db 0
+    .cylinder_begin:        db 0
+    .partition_type:        db 0
+    .head_end:              db 0
+    .sector_cylinder_end:   db 0
+    .cylinder_end:          db 0
+    .lba_offset:            dd 0
+    .sector_count:          dd 0
+partition2:
+    .status:                db 0
+    .head_begin:            db 0
+    .sector_cylinder_begin: db 0
+    .cylinder_begin:        db 0
+    .partition_type:        db 0
+    .head_end:              db 0
+    .sector_cylinder_end:   db 0
+    .cylinder_end:          db 0
+    .lba_offset:            dd 0
+    .sector_count:          dd 0
+partition3:
+    .status:                db 0
+    .head_begin:            db 0
+    .sector_cylinder_begin: db 0
+    .cylinder_begin:        db 0
+    .partition_type:        db 0
+    .head_end:              db 0
+    .sector_cylinder_end:   db 0
+    .cylinder_end:          db 0
+    .lba_offset:            dd 0
+    .sector_count:          dd 0
+partition4:
+    .status:                db 0
+    .head_begin:            db 0
+    .sector_cylinder_begin: db 0
+    .cylinder_begin:        db 0
+    .partition_type:        db 0
+    .head_end:              db 0
+    .sector_cylinder_end:   db 0
+    .cylinder_end:          db 0
+    .lba_offset:            dd 0
+    .sector_count:          dd 0
+
+boot_signature dw 0xAA55
