@@ -10,7 +10,6 @@ PARTITION_COUNT:       equ 4
 MBR_SIZE_IN_BYTES:     equ 512
 PARTITION_LBA_OFFSET:  equ 8
 
-
 ; fake origin here to make it easier for us
 ORG MBR_RELOCATED_ADDRESS
 
@@ -64,13 +63,11 @@ main:
     load_lba_partition:
         mov bx, [selected_partition]
         add bx, PARTITION_LBA_OFFSET
+        mov ax, 0x0
+        mov es, ax
         mov eax, [bx]
-        mov [VBR_DAP.sector_begin_low], eax
-        mov ax, VBR_DAP
-        mov si, ax
-        mov ah, 0x42
-        int 0x13
-        jc on_disk_read_failed
+        mov di, VBR_LOAD_ADDRESS
+        call read_disk_lba
         jmp transfer_control_to_vbr
 
     transfer_control_to_vbr:
@@ -83,25 +80,10 @@ main:
         call write_string
         call reboot
 
-    on_disk_read_failed:
-        mov si, disk_error
-        call write_string
-        call reboot
-
-VBR_DAP:
-    .DAP_size:          db 0x10
-    .unused:            db 0x0
-    .sector_count:      dw 0x1
-    .read_into_offset:  dw VBR_LOAD_ADDRESS
-    .read_into_segment: dw 0x0
-    .sector_begin_low:  dd 0x0
-    .sector_begin_high: dd 0x0
-
 selected_partition:   dw 0
 drive_number:         db 0x0
 no_partition_error:   db "No bootable partiton found!", CR, LF, 0
 no_lba_support_error: db "This BIOS doesn't support LBA disk access!", CR, LF, 0
-disk_error:           db "Error reading disk!", CR, LF, 0
 
 %include "Common.inc"
 
