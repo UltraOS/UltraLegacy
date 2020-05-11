@@ -1,5 +1,6 @@
 Boot/bin/
 Images/
+Scripts/vhc
 Toolchain/CrossCompiler/
 *.o
 *.bin
