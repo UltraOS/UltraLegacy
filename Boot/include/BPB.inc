@@ -1,28 +1,29 @@
-%ifndef _BPB_INC_
-%define _BPB_INC_
-
 BPB:
     ; BIOS Parameter Block
-    OEMLabel          db "UltraOS "
-    BytesPerSector    dw 512
-    SectorsPerCluster db 1
-    SectorsReserved   dw 1
-    FATCount          db 2
-    RootDirEntries    dw 224
-    SectorsCount      dw 2880
-    MediaDescriptor   db 0xF0 ; gonna pretend we're a 3.5 floppy
-    FATSize           dw 9
-    SectorsPerTrack   dw 18
-    NumberOfSides     dw 2
+    BytesPerSector    dw 0
+    SectorsPerCluster db 0
+    SectorsReserved   dw 0
+    FATCount          db 0
+    RootDirEntries    dw 0
+    Unused1           dw 0
+    MediaDescriptor   db 0
+    Unused2           dw 0
+    SectorsPerTrack   dw 0
+    Heads             dw 0
     SectorsHidden     dd 0
-    SectorsLarge      dd 0
+    TotalSectorCount  dd 0
 
     ; Extended BIOS Parameter Block
+    SectorsPerFAT     dd 0
+    DriveDescription  dw 0
+    Version           dw 0
+    RootDirCluster    dd 0
+    FSInfomation      dw 0
+    BackupBootSectors dw 0
+    Reserved times 12 db 0
     BootDrive         db 0
-    Reserved          db 0
-    BootSignature     db 0x29
+    Unused3           db 0
+    BootSignature     db 0
     VolumeID          dd 0
     VolumeLabel       db "UltraVolume"
-    FileSystem        db "FAT12   "
-
-%endif ; _BPB_INC_
+    FileSystem        db "FAT32   "
