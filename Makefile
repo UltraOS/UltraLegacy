@@ -1,39 +1,26 @@
 images_dir = Images
-iso_dir    = $(images_dir)/iso
 kernel_dir = Kernel
 
 # I don't like the hardcoded paths here
 # TODO: find a way to make this more elegant
 bootloader_dir = Boot/bin
-bootloader_file = $(bootloader_dir)/UltraBoot.bin
+mbr_file = $(bootloader_dir)/UltraMBR.bin
+vbr_file = $(bootloader_dir)/UltraBoot.bin
 kernelloader_file = $(bootloader_dir)/UKLoader.bin
 kernel_file = $(kernel_dir)/Kernel.bin
 
 dependencies = Boot/ \
                Kernel/
 
-UltraOS: $(dependencies) images
+.PHONY: UltraOS
+UltraOS: $(dependencies) $(images_dir)/UltraHDD.vmdk
 
-images: $(images_dir)/UltraDisk.iso $(images_dir)/UltraFloppy.img
-
-$(images_dir)/UltraDisk.iso: $(images_dir)/UltraFloppy.img
-	mkdir -p $(iso_dir)
-	cp $(images_dir)/UltraFloppy.img $(iso_dir)
-	cd $(images_dir)/ && \
-	genisoimage -V 'UltraVolume' \
-	            -input-charset iso8859-1 \
-	            -o UltraDisk.iso \
-	            -b UltraFloppy.img \
-	            -hide UltraFloppy.img iso
-	rm $(iso_dir)/UltraFloppy.img
-	rmdir $(iso_dir)
-
-$(images_dir)/UltraFloppy.img: $(bootloader_file) $(kernelloader_file) $(kernel_file)
+$(images_dir)/UltraHDD.vmdk: $(mbr_file) $(vbr_file) $(kernelloader_file) $(kernel_file)
 	mkdir -p $(images_dir)/
-	Scripts/ffc -b $(bootloader_file) \
-	            -s $(kernelloader_file) $(kernel_file)\
-	            -o $(images_dir)/UltraFloppy.img \
-	            --ls-fat
+	Scripts/vhc --mbr $(mbr_file) \
+	            --vbr $(vbr_file) \
+	            --files $(kernelloader_file) $(kernel_file) \
+	            --size 64 --image-dir $(images_dir) --image-name UltraHDD
 
 .PHONY: $(dependencies)
 $(dependencies):
