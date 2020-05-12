@@ -10,11 +10,15 @@ main:
 %include "CommonMacros.inc"
 
 start:
-    mov si, dskread_msg
-    call write_string
-
-    ; steal BPB from the bootloader
+    ; copy the boot context from VBR
     push ds
+    xor  ax, ax
+    mov ds, ax
+    mov di, boot_context
+    mov cx, BOOT_CONTEXT_SIZE
+    rep movsb
+
+    ; copy the BPB from VBR
     xor ax, ax
     mov ds, ax
     mov si, VBR_ORIGIN + BPB_OFFSET
@@ -23,22 +27,8 @@ start:
     rep movsb
     pop ds
 
-    ; TODO: No reason to calculate this twice
-    ; maybe grab this from the VBR
-
-    ; calculate the offset to data in sectors
-    mov eax, [SectorsPerFAT]
-    xor ebx, ebx
-    mov bx,  [FATCount]
-    mul ebx
-    add ax,  [SectorsReserved]
-    add eax, [SectorsHidden]
-    mov [data_offset_in_sectors], eax
-
-    ; calculate offset to FAT
-    mov eax, [SectorsHidden]
-    add ax,  [SectorsReserved]
-    mov [fat_offset_in_sectors], eax
+    mov si, dskread_msg
+    call write_string
 
     ; read the first sector of the root directory
     read_root_directory [boot_drive], KERNEL_SEGMENT
@@ -112,10 +102,6 @@ start:
         call reboot
 
     a20_success:
-
-    ; scroll page up
-    mov ax, word 0x0006
-    int 0x10
 
     ; enable color 80x25 text mode
     ; for future use in protected mode
@@ -200,11 +186,11 @@ gdt_entry:
     dw 24
     dd 2048
 
-; copy the boot context from VBR
-boot_drive:             db 0x80
-this_partition:         dw 0x0
-data_offset_in_sectors: dd 0x0
-fat_offset_in_sectors:  dd 0x0
+boot_context:
+    boot_drive:             db 0x0
+    this_partition:         dw 0x0000
+    data_offset_in_sectors: dd 0x00000000
+    fat_offset_in_sectors:  dd 0x00000000
 
 dskread_msg:        db "Reading kernel from disk...", CR, LF, 0
 loading_msg:        db "Preparing kernel environment...", CR, LF, 0

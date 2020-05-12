@@ -77,7 +77,7 @@ start:
         mov ax, KERNEL_LOADER_SEGMENT
         mov ds, ax
         mov es, ax
-        mov ax, boot_context
+        mov si, boot_context
         jmp KERNEL_LOADER_SEGMENT:0x0
 
     on_file_not_found:
@@ -92,9 +92,9 @@ no_file_error:          db "Couldn't find the kernel loader file!", CR, LF, 0
 
 boot_context:
     boot_drive:             db 0
-    this_partition:         dw 0x0
-    data_offset_in_sectors: dd 0x0
-    fat_offset_in_sectors:  dd 0x0
+    this_partition:         dw 0x0000
+    data_offset_in_sectors: dd 0x00000000
+    fat_offset_in_sectors:  dd 0x00000000
 
 times 510-($-$$) db 0
 boot_signature   dw 0xAA55
