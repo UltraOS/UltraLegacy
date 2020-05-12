@@ -1,5 +1,8 @@
 BITS 16
 
+KERNEL_SEGMENT:      equ 0x2000
+KERNEL_FLAT_ADDRESS: equ (KERNEL_SEGMENT << 4)
+
 main:
     jmp short start
 
@@ -20,6 +23,9 @@ start:
     rep movsb
     pop ds
 
+    ; TODO: No reason to calculate this twice
+    ; maybe grab this from the VBR
+
     ; calculate the offset to data in sectors
     mov eax, [SectorsPerFAT]
     xor ebx, ebx
@@ -35,14 +41,7 @@ start:
     mov [fat_offset_in_sectors], eax
 
     ; read the first sector of the root directory
-    mov dl, [boot_drive]
-    mov ax, KERNEL_SEGMENT
-    mov es, ax
-    xor di, di
-    mov eax, [RootDirCluster]
-    sub eax, RESERVED_CLUSTER_COUNT
-    add eax, [data_offset_in_sectors]
-    call read_disk_lba
+    read_root_directory [boot_drive], KERNEL_SEGMENT
 
     ; check if this file is what we're looking for
     mov cx, FAT_FILENAME_LENGTH
@@ -201,23 +200,7 @@ gdt_entry:
     dw 24
     dd 2048
 
-VBR_ORIGIN: equ 0x7C00
-BPB_OFFSET: equ 11
-KERNEL_SEGMENT: equ 0x2000
-KERNEL_FLAT_ADDRESS: equ 0x20000 ; KERNEL_SEGMENT << 4
-BPB_SIZE: equ 34
-
-CLUSTER_HIGH_ENTRY_OFFSET: equ 20
-CLUSTER_LOW_ENTRY_OFFSET:  equ 26
-FILESIZE_ENTRY_OFFSET:     equ 28
-RESERVED_CLUSTER_COUNT:    equ 2
-KERNEL_LOADER_SEGMENT:     equ 0x1000
-FAT_SEGMENT:               equ 0x2000
-FAT_FILENAME_LENGTH:       equ 11
-ENTRIES_PER_FAT_SECTOR:    equ 128
-END_OF_CHAIN:              equ 0x0FFFFFF8
-KERNEL_LOADER_CLUSTER:     equ 3
-
+; copy the boot context from VBR
 boot_drive:             db 0x80
 this_partition:         dw 0x0
 data_offset_in_sectors: dd 0x0
@@ -229,4 +212,3 @@ a20fail_msg:        db "Failed to enable A20!", CR, LF, 0
 no_file_error:      db "Couldn't find the kernel file!", CR, LF, 0
 
 kernel_file db "Kernel  bin"
-kernel_file_cluster dw 0

@@ -1,6 +1,8 @@
 BITS 16
 ORG 0x7c00
 
+KERNEL_LOADER_SEGMENT: equ 0x1000
+
 main:
     jmp short start
     nop
@@ -35,15 +37,7 @@ start:
     add ax,  [SectorsReserved]
     mov [fat_offset_in_sectors], eax
 
-    ; read the first sector of the root directory
-    mov dl, [boot_drive]
-    mov ax, KERNEL_LOADER_SEGMENT
-    mov es, ax
-    xor di, di
-    mov eax, [RootDirCluster]
-    sub eax, RESERVED_CLUSTER_COUNT
-    add eax, [data_offset_in_sectors]
-    call read_disk_lba
+    read_root_directory [boot_drive], KERNEL_LOADER_SEGMENT
 
     ; check if this file is what we're looking for
     mov cx, FAT_FILENAME_LENGTH
@@ -92,17 +86,6 @@ start:
         call reboot
 
 %include "Common.inc"
-
-CLUSTER_HIGH_ENTRY_OFFSET: equ 20
-CLUSTER_LOW_ENTRY_OFFSET:  equ 26
-FILESIZE_ENTRY_OFFSET:     equ 28
-RESERVED_CLUSTER_COUNT:    equ 2
-KERNEL_LOADER_SEGMENT:     equ 0x1000
-FAT_SEGMENT:               equ 0x2000
-FAT_FILENAME_LENGTH:       equ 11
-ENTRIES_PER_FAT_SECTOR:    equ 128
-END_OF_CHAIN:              equ 0x0FFFFFF8
-KERNEL_LOADER_CLUSTER:     equ 3
 
 kernel_loader_file:     db "UKLoaderbin"
 no_file_error:          db "Couldn't find the kernel loader file!", CR, LF, 0
