@@ -12,7 +12,7 @@ main:
 start:
     ; copy the boot context from VBR
     push ds
-    xor  ax, ax
+    xor ax, ax
     mov ds, ax
     mov di, boot_context
     mov cx, BOOT_CONTEXT_SIZE
@@ -47,7 +47,7 @@ start:
         mov eax, [es: 32 + FILESIZE_ENTRY_OFFSET]
         xor ebx, ebx
         xor edx, edx
-        mov bx, [BytesPerSector]
+        mov bx, [bytes_per_sector]
         div ebx
         cmp edx, 0
         je aligned ; fix this hack :D
@@ -55,8 +55,10 @@ start:
         aligned:
         mov [DAP.sector_count], ax
 
-        mov ax, [es:32 + CLUSTER_LOW_ENTRY_OFFSET]
-        sub eax, RESERVED_CLUSTER_COUNT
+        movzx eax, word [es:32 + CLUSTER_LOW_ENTRY_OFFSET]
+        sub   eax, RESERVED_CLUSTER_COUNT
+        movzx edx, byte [sectors_per_cluster]
+        mul edx
         add eax, [data_offset_in_sectors]
 
         push eax
@@ -187,7 +189,6 @@ gdt_entry:
     dd 2048
 
 boot_context:
-    boot_drive:             db 0x0
     this_partition:         dw 0x0000
     data_offset_in_sectors: dd 0x00000000
     fat_offset_in_sectors:  dd 0x00000000

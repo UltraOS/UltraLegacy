@@ -24,13 +24,13 @@ start:
     sti
 
     ; calculate offset to FAT
-    movzx eax, word [SectorsReserved]
-    add   eax, [SectorsHidden]
+    movzx eax, word [sectors_reserved]
+    add   eax, [hidden_sector_count]
     mov [fat_offset_in_sectors], eax
 
     ; calculate the offset to data in sectors
-    mov   eax, [SectorsPerFAT]
-    movzx ebx, byte [FATCount]
+    mov   eax, [sectors_per_fat_table]
+    movzx ebx, byte [fat_table_count]
     mul   ebx
     add   eax, [fat_offset_in_sectors]
 
@@ -51,7 +51,7 @@ start:
         mov eax, [es:FILESIZE_ENTRY_OFFSET]
         xor ebx, ebx
         xor edx, edx
-        mov bx, [BytesPerSector]
+        mov bx, [bytes_per_sector]
         div ebx
         cmp edx, 0
         je aligned ; fix this hack :D
@@ -59,8 +59,10 @@ start:
         aligned:
         mov [DAP.sector_count], ax
 
-        mov ax, [es:CLUSTER_LOW_ENTRY_OFFSET]
-        sub eax, RESERVED_CLUSTER_COUNT
+        movzx eax, word [es:CLUSTER_LOW_ENTRY_OFFSET]
+        sub   eax, RESERVED_CLUSTER_COUNT
+        movzx edx, byte [sectors_per_cluster]
+        mul edx
         add eax, [data_offset_in_sectors]
 
         push eax
@@ -90,7 +92,6 @@ kernel_loader_file:     db "UKLoaderbin"
 no_file_error:          db "Couldn't find the kernel loader file!", CR, LF, 0
 
 boot_context:
-    boot_drive:             db 0
     this_partition:         dw 0x0000
     data_offset_in_sectors: dd 0x00000000
     fat_offset_in_sectors:  dd 0x00000000

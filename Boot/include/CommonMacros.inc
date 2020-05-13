@@ -4,7 +4,7 @@
 CR: equ 0x0D
 LF: equ 0x0A
 
-BOOT_CONTEXT_SIZE:         equ 11
+BOOT_CONTEXT_SIZE:         equ 10
 CLUSTER_LOW_ENTRY_OFFSET:  equ 26
 FILESIZE_ENTRY_OFFSET:     equ 28
 RESERVED_CLUSTER_COUNT:    equ 2
@@ -24,7 +24,7 @@ read_root_dir:
     mov ax, %2
     mov es, ax
     xor di, di
-    mov eax, [RootDirCluster]
+    mov eax, [root_directory_cluster]
     sub eax, RESERVED_CLUSTER_COUNT
     add eax, [data_offset_in_sectors]
     call read_disk_lba

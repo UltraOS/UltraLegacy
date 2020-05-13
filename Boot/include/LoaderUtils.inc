@@ -126,5 +126,4 @@ try_enable_a20_using_fast_gate:
     pop ax
     ret
 
-
 %endif ; _LOADER_UTILS_INC_
