@@ -23,19 +23,18 @@ start:
     mov sp, 0x7C00
     sti
 
-    ; calculate the offset to data in sectors
-    mov eax, [SectorsPerFAT]
-    xor ebx, ebx
-    mov bx,  [FATCount]
-    mul ebx
-    add ax,  [SectorsReserved]
-    add eax, [SectorsHidden]
-    mov [data_offset_in_sectors], eax
-
     ; calculate offset to FAT
-    mov eax, [SectorsHidden]
-    add ax,  [SectorsReserved]
+    movzx eax, word [SectorsReserved]
+    add   eax, [SectorsHidden]
     mov [fat_offset_in_sectors], eax
+
+    ; calculate the offset to data in sectors
+    mov   eax, [SectorsPerFAT]
+    movzx ebx, byte [FATCount]
+    mul   ebx
+    add   eax, [fat_offset_in_sectors]
+
+    mov [data_offset_in_sectors], eax
 
     read_root_directory [boot_drive], KERNEL_LOADER_SEGMENT
 
