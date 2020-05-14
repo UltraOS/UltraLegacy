@@ -1,7 +1,8 @@
 BITS 16
 ORG 0x7c00
 
-KERNEL_LOADER_SEGMENT: equ 0x1000
+KERNEL_LOADER_SEGMENT:         equ 0x1000
+KERNEL_LOADER_DIRECTORY_INDEX: equ 0
 
 main:
     jmp short start
@@ -38,41 +39,7 @@ start:
 
     read_root_directory [boot_drive], KERNEL_LOADER_SEGMENT
 
-    ; check if this file is what we're looking for
-    mov cx, FAT_FILENAME_LENGTH
-    mov ax, KERNEL_LOADER_SEGMENT
-    mov es, ax
-    xor di, di
-    mov si, kernel_loader_file
-    repz cmpsb
-    jne on_file_not_found
-
-    on_file_found:
-        mov eax, [es:FILESIZE_ENTRY_OFFSET]
-        xor ebx, ebx
-        xor edx, edx
-        mov bx, [bytes_per_sector]
-        div ebx
-        cmp edx, 0
-        je aligned ; fix this hack :D
-        add eax, 1
-        aligned:
-        mov [DAP.sector_count], ax
-
-        movzx eax, word [es:CLUSTER_LOW_ENTRY_OFFSET]
-        sub   eax, RESERVED_CLUSTER_COUNT
-        movzx edx, byte [sectors_per_cluster]
-        mul edx
-        add eax, [data_offset_in_sectors]
-
-        push eax
-        mov ax, KERNEL_LOADER_SEGMENT
-        mov es, ax
-        xor di, di
-        pop eax
-        mov dl, [boot_drive]
-
-        call read_disk_lba
+    read_directory_file KERNEL_LOADER_SEGMENT, KERNEL_LOADER_DIRECTORY_INDEX, kernel_loader_file
 
     transfer_control_to_kernel_loader:
         mov ax, KERNEL_LOADER_SEGMENT
@@ -80,11 +47,6 @@ start:
         mov es, ax
         mov si, boot_context
         jmp KERNEL_LOADER_SEGMENT:0x0
-
-    on_file_not_found:
-        mov si, no_file_error
-        call write_string
-        call reboot
 
 %include "Common.inc"
 
