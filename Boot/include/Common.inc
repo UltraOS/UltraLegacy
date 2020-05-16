@@ -15,10 +15,13 @@ write_string:
 .done:
     ret
 
-; modifies: eax, si
-; expects: dl to be the drive letter, ds to be set to the current segment
 ; void read_disk_lba(u32 lba_start, u16 sector_count, u16 into_segment, u16 into_offset)
 read_disk_lba:
+    push ax
+    push si
+    cmp [DAP.sector_count], word MAX_SECTOR_COUNT_PER_READ
+    jg .on_disk_read_failed
+
 .setup_dap:
     mov [DAP.sector_begin_low],  eax
     mov [DAP.read_into_segment], es
@@ -29,6 +32,8 @@ read_disk_lba:
     mov ah, 0x42
     int 0x13
     jc .on_disk_read_failed
+    pop si
+    pop ax
     ret
 .on_disk_read_failed:
     mov si, disk_error

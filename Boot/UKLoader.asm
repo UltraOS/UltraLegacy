@@ -28,17 +28,6 @@ start:
     rep movsb
     pop ds
 
-    mov si, dskread_msg
-    call write_string
-
-    ; read the first sector of the root directory
-    read_root_directory [boot_drive], KERNEL_SEGMENT
-
-    read_directory_file KERNEL_SEGMENT, KERNEL_DIRECTORY_INDEX, kernel_file
-
-    mov si, loading_msg
-    call write_string
-
     ; ---- try enable the A20 line ----
     enable_a20:
         ; check if its already enabled
@@ -70,6 +59,17 @@ start:
         call reboot
 
     a20_success:
+
+    mov si, dskread_msg
+    call write_string
+
+    ; read the first sector of the root directory
+    read_root_directory [boot_drive], KERNEL_SEGMENT
+
+    read_directory_file_extended KERNEL_SEGMENT, KERNEL_DIRECTORY_INDEX, kernel_file
+
+    mov si, loading_msg
+    call write_string
 
     ; enable color 80x25 text mode
     ; for future use in protected mode
