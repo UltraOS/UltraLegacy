@@ -39,8 +39,8 @@ static_assert(sizeof(u16) == SIZEOF_U16, "Incorrect size of 16 bit unsigned inte
 static_assert(sizeof(u32) == SIZEOF_U32, "Incorrect size of 32 bit unsigned integer");
 static_assert(sizeof(u64) == SIZEOF_U64, "Incorrect size of 64 bit unsigned integer");
 
-static_assert(sizeof(f32) == SIZEOF_F32,  "Incorrect size of 32 bit float");
-static_assert(sizeof(f64) == SIZEOF_F64,  "Incorrect size of 64 bit float");
+static_assert(sizeof(f32) == SIZEOF_F32, "Incorrect size of 32 bit float");
+static_assert(sizeof(f64) == SIZEOF_F64, "Incorrect size of 64 bit float");
 
 #undef SIZEOF_F32
 #undef SIZEOF_F64
