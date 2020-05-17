@@ -30,7 +30,7 @@ cpuid: movbe=false, adx=false, aes=false, sha=false, xsave=false, xsaveopt=false
 cpuid: 1g_pages=false, pcid=false, fsgsbase=false, smep=false, smap=false, mwait=true
 cpuid: vmx=1
 print_timestamps: enabled=0
-port_e9_hack: enabled=0
+port_e9_hack: enabled=1
 private_colormap: enabled=0
 clock: sync=none, time0=local, rtc_sync=0
 # no cmosimage
