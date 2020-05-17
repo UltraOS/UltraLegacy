@@ -13,8 +13,8 @@ using u32 = unsigned int;
 using u64 = unsigned long long int;
 
 // floating point
-using f32  = float;
-using f64  = double;
+using f32 = float;
+using f64 = double;
 
 #define SIZEOF_I8  1
 #define SIZEOF_I16 2
@@ -26,8 +26,8 @@ using f64  = double;
 #define SIZEOF_U32 4
 #define SIZEOF_U64 8
 
-#define SIZEOF_F32  4
-#define SIZEOF_F64  8
+#define SIZEOF_F32 4
+#define SIZEOF_F64 8
 
 static_assert(sizeof(i8)  == SIZEOF_I8,  "Incorrect size of 8 bit integer");
 static_assert(sizeof(i16) == SIZEOF_I16, "Incorrect size of 16 bit integer");
