@@ -1,6 +1,8 @@
-static constexpr unsigned long video_memory = 0xB8000;
+#include "Types.h"
 
-void write_string(const char* string, unsigned char color = 0xF);
+static constexpr u32 video_memory = 0xB8000;
+
+void write_string(const char* string, u8 color = 0xF);
 
 class Checker
 {
@@ -18,13 +20,13 @@ public:
 
 static Checker c;
 
-void write_string(const char* string, unsigned char color)
+void write_string(const char* string, u8 color)
 {
-    static unsigned short* memory = reinterpret_cast<unsigned short*>(video_memory);
+    static u16* memory = reinterpret_cast<u16*>(video_memory);
 
     while (*string)
     {
-        unsigned short colored_char = *(string++);
+        u16 colored_char = *(string++);
         colored_char |= color << 8;
 
         *(memory++) = colored_char;
