@@ -1,5 +1,5 @@
 cxx = i686-elf-g++
-cxx_compile_flags = -std=c++17 -ffreestanding -O2 -Wall -Wextra -fno-use-cxa-atexit
+cxx_compile_flags = -std=c++17 -ffreestanding -O2 -Wall -Wextra -fno-use-cxa-atexit -fno-rtti
 nasm_compile_flags = -felf32
 
 ld_flags = -Wl,--oformat=binary -ffreestanding -O2 -nostdlib -lgcc
@@ -9,7 +9,7 @@ asm_files = $(wildcard ./*.asm)
 crti_obj = crti.o
 crtn_obj = crtn.o
 
-object_files = Kernel.o crt0.o
+object_files = Kernel.o crt0.o Itanium.o
 
 crtbegin_obj = $(shell $(cxx) $(cxx_compile_flags) -print-file-name=crtbegin.o)
 crtend_obj   = $(shell $(cxx) $(cxx_compile_flags) -print-file-name=crtend.o)
@@ -28,4 +28,4 @@ Kernel.bin: Linker.ld $(object_files) $(asm_files) $(crti_obj) $(crtn_obj)
 
 .PHONY: clean
 clean:
-	rm -f $(object_files)  $(crti_obj) $(crtn_obj) Kernel.bin
+	rm -f $(object_files) $(crti_obj) $(crtn_obj) Kernel.bin

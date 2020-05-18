@@ -1,4 +1,5 @@
 #include "Types.h"
+#include "Log.h"
 
 static constexpr u32 video_memory = 0xB8000;
 
@@ -32,8 +33,11 @@ void write_string(const char* string, u8 color)
         *(memory++) = colored_char;
     }
 }
-
-extern "C" void run()
-{
-    write_string("Hello from the kernel!", 0x4);
+namespace kernel {
+    extern "C" void run()
+    {
+        constexpr auto greeting = "Hello from the kernel!\n";
+        log() << greeting;
+        write_string(greeting, 0x4);
+    }
 }
