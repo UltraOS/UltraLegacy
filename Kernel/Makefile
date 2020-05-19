@@ -1,5 +1,5 @@
 cxx = i686-elf-g++
-cxx_compile_flags = -std=c++17 -ffreestanding -O2 -Wall -Wextra -fno-use-cxa-atexit -fno-rtti
+cxx_compile_flags = -std=c++17 -ffreestanding -O2 -Wall -Wextra -fno-use-cxa-atexit -fno-rtti -fno-exceptions
 nasm_compile_flags = -felf32
 
 ld_flags = -Wl,--oformat=binary -ffreestanding -O2 -nostdlib -lgcc
