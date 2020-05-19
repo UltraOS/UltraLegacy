@@ -119,10 +119,10 @@ start:
     or  eax, 1
     mov cr0, eax
 
-    ; clear prefetch queue
-    jmp clear_prefetch
-    clear_prefetch:
-
+    jmp 0x08:dword pm_code + 0x10000
+    
+BITS 32
+pm_code:
     ; setup segments
     mov ax, 0x10
     mov ds, ax
@@ -133,10 +133,8 @@ start:
     mov esp, 0x30000
 
     ; jump to the kernel
-    db 0x66
-    db 0xEA
-    dd KERNEL_FLAT_ADDRESS
-    dw 0x0008
+    jmp 0x08:KERNEL_FLAT_ADDRESS
+BITS 16
 
 %include "Common.inc"
 %include "LoaderUtils.inc"
