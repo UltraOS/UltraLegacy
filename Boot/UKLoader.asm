@@ -1,14 +1,16 @@
 BITS 16
 
-KERNEL_SEGMENT:         equ 0x2000
-KERNEL_FLAT_ADDRESS:    equ (KERNEL_SEGMENT << 4)
-KERNEL_DIRECTORY_INDEX: equ 1
-
 main:
     jmp short start
 
 %include "BPB.inc"
 %include "CommonMacros.inc"
+
+FLAT_ORIGIN:            equ (KERNEL_LOADER_SEGMENT << 4)
+KERNEL_SEGMENT:         equ 0x2000
+KERNEL_FLAT_ADDRESS:    equ (KERNEL_SEGMENT << 4)
+KERNEL_DIRECTORY_INDEX: equ 1
+%define JUMP_TO_KERNEL dword FLAT_ORIGIN + jump_to_kernel
 
 start:
     ; copy the boot context from VBR
@@ -119,10 +121,10 @@ start:
     or  eax, 1
     mov cr0, eax
 
-    jmp 0x08:dword pm_code + 0x10000
-    
+    jmp 0x08:JUMP_TO_KERNEL
+
 BITS 32
-pm_code:
+jump_to_kernel:
     ; setup segments
     mov ax, 0x10
     mov ds, ax

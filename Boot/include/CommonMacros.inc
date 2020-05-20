@@ -10,6 +10,7 @@ FILESIZE_ENTRY_OFFSET:     equ 28
 RESERVED_CLUSTER_COUNT:    equ 2
 FAT_FILENAME_LENGTH:       equ 11
 VBR_ORIGIN:                equ 0x7C00
+KERNEL_LOADER_SEGMENT:     equ 0x1000
 BPB_OFFSET:                equ 11
 BPB_SIZE:                  equ 79 ; FAT32
 DIRECTORY_ENTRY_SIZE:      equ 32
