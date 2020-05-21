@@ -9,8 +9,9 @@ CLUSTER_LOW_ENTRY_OFFSET:  equ 26
 FILESIZE_ENTRY_OFFSET:     equ 28
 RESERVED_CLUSTER_COUNT:    equ 2
 FAT_FILENAME_LENGTH:       equ 11
-VBR_ORIGIN:                equ 0x7C00
-KERNEL_LOADER_SEGMENT:     equ 0x1000
+VBR_ORIGIN:                equ 0xFDFF
+KERNEL_LOADER_SEGMENT:     equ 0x0000
+KERNEL_LOADER_OFFSET:      equ 0x7C00
 BPB_OFFSET:                equ 11
 BPB_SIZE:                  equ 79 ; FAT32
 DIRECTORY_ENTRY_SIZE:      equ 32
@@ -23,29 +24,30 @@ MAX_BYTE_COUNT_PER_READ:   equ MAX_SECTOR_COUNT_PER_READ * SECTOR_SIZE
 ; magic breakpoint in Bochs
 %define BP xchg bx, bx
 
-; void read_root_directory(boot_dirve, into_segment)
-%macro read_root_directory 2
+; void read_root_directory(boot_dirve, into_segment, into_offset)
+%macro read_root_directory 3
 %%read_root_dir:
     ; read the first sector of the root directory
     mov dl, %1
     mov ax, %2
     mov es, ax
-    xor di, di
+    mov ax, %3
+    mov di, ax
     mov eax, [root_directory_cluster]
     sub eax, RESERVED_CLUSTER_COUNT
     add eax, [data_offset_in_sectors]
     call read_disk_lba
 %endmacro
 
-; void read_directory_file(dir_segment, index, filename)
-%macro read_directory_file 3
+; void read_directory_file(dir_segment, dir_offset, index, filename)
+%macro read_directory_file 4
 %%read_directory_file:
     ; check if this file is what we're looking for
     mov cx, FAT_FILENAME_LENGTH
     mov ax, %1
     mov es, ax
-    mov di, %2 * DIRECTORY_ENTRY_SIZE
-    mov si, %3
+    mov di, %2 + %3 * DIRECTORY_ENTRY_SIZE
+    mov si, %4
     repz cmpsb
     je %%.on_file_found
 
@@ -55,7 +57,7 @@ MAX_BYTE_COUNT_PER_READ:   equ MAX_SECTOR_COUNT_PER_READ * SECTOR_SIZE
         call reboot
 
     %%.on_file_found:
-        mov eax, [es:%2 * DIRECTORY_ENTRY_SIZE + FILESIZE_ENTRY_OFFSET]
+        mov eax, [es:%2 + %3 * DIRECTORY_ENTRY_SIZE + FILESIZE_ENTRY_OFFSET]
         xor ebx, ebx
         xor edx, edx
         mov bx, [bytes_per_sector]
@@ -67,7 +69,7 @@ MAX_BYTE_COUNT_PER_READ:   equ MAX_SECTOR_COUNT_PER_READ * SECTOR_SIZE
 
         mov [DAP.sector_count], ax
 
-        movzx eax, word [es:%2 * DIRECTORY_ENTRY_SIZE + CLUSTER_LOW_ENTRY_OFFSET]
+        movzx eax, word [es:%2 + %3 * DIRECTORY_ENTRY_SIZE + CLUSTER_LOW_ENTRY_OFFSET]
         sub   eax, RESERVED_CLUSTER_COUNT
         movzx edx, byte [sectors_per_cluster]
         mul edx
@@ -76,7 +78,7 @@ MAX_BYTE_COUNT_PER_READ:   equ MAX_SECTOR_COUNT_PER_READ * SECTOR_SIZE
         push ax
         mov ax, %1
         mov es, ax
-        xor di, di
+        mov di, 0x7C00
         pop ax
         mov dl, [boot_drive]
 

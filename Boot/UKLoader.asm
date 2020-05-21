@@ -1,16 +1,16 @@
 BITS 16
 
+ORG 0x7C00
+
 main:
     jmp short start
 
 %include "BPB.inc"
 %include "CommonMacros.inc"
 
-FLAT_ORIGIN:            equ (KERNEL_LOADER_SEGMENT << 4)
 KERNEL_SEGMENT:         equ 0x2000
 KERNEL_FLAT_ADDRESS:    equ (KERNEL_SEGMENT << 4)
 KERNEL_DIRECTORY_INDEX: equ 1
-%define JUMP_TO_KERNEL dword FLAT_ORIGIN + jump_to_kernel
 
 start:
     ; copy the boot context from VBR
@@ -66,7 +66,7 @@ start:
     call write_string
 
     ; read the first sector of the root directory
-    read_root_directory [boot_drive], KERNEL_SEGMENT
+    read_root_directory [boot_drive], KERNEL_SEGMENT, 0x0000
 
     read_directory_file_extended KERNEL_SEGMENT, KERNEL_DIRECTORY_INDEX, kernel_file
 
@@ -121,7 +121,7 @@ start:
     or  eax, 1
     mov cr0, eax
 
-    jmp 0x08:JUMP_TO_KERNEL
+    jmp 0x08:jump_to_kernel
 
 BITS 32
 jump_to_kernel:
@@ -135,7 +135,7 @@ jump_to_kernel:
     mov esp, 0x30000
 
     ; jump to the kernel
-    jmp 0x08:KERNEL_FLAT_ADDRESS
+    jmp KERNEL_FLAT_ADDRESS
 BITS 16
 
 %include "Common.inc"

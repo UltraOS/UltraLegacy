@@ -1,17 +1,21 @@
 BITS 16
-ORG 0x7c00
 
+ORIGINAL_ADDRESS:              equ 0x7C00
+RELOCATED_ADDRESS:             equ 0xFDFF
+VBR_SIZE:                      equ SECTOR_SIZE
 KERNEL_LOADER_DIRECTORY_INDEX: equ 0
 
-main:
-    jmp short start
+ORG RELOCATED_ADDRESS
+
+start:
+    jmp short init
     nop
 
 OEMLabel db "UltraOS "
 %include "BPB.inc"
 %include "CommonMacros.inc"
 
-start:
+init:
     ; initilize memory segments
     cli
     mov [boot_drive], dl
@@ -23,6 +27,15 @@ start:
     mov sp, 0x7C00
     sti
 
+; Relocate ourselves to give space to the kernel loader
+relocate:
+    mov si, ORIGINAL_ADDRESS
+    mov di, RELOCATED_ADDRESS
+    mov cx, VBR_SIZE
+    rep movsb
+    jmp 0x0:main ; force a long jump here
+
+main:
     ; calculate offset to FAT
     movzx eax, word [sectors_reserved]
     add   eax, [hidden_sector_count]
@@ -36,16 +49,16 @@ start:
 
     mov [data_offset_in_sectors], eax
 
-    read_root_directory [boot_drive], KERNEL_LOADER_SEGMENT
+    read_root_directory [boot_drive], KERNEL_LOADER_SEGMENT, KERNEL_LOADER_OFFSET
 
-    read_directory_file KERNEL_LOADER_SEGMENT, KERNEL_LOADER_DIRECTORY_INDEX, kernel_loader_file
+    read_directory_file KERNEL_LOADER_SEGMENT, KERNEL_LOADER_OFFSET, KERNEL_LOADER_DIRECTORY_INDEX, kernel_loader_file
 
     transfer_control_to_kernel_loader:
         mov ax, KERNEL_LOADER_SEGMENT
         mov ds, ax
         mov es, ax
         mov si, boot_context
-        jmp KERNEL_LOADER_SEGMENT:0x0
+        jmp KERNEL_LOADER_SEGMENT:KERNEL_LOADER_OFFSET
 
 %include "Common.inc"
 
