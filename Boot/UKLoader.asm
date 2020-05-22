@@ -8,6 +8,11 @@ main:
 %include "BPB.inc"
 %include "CommonMacros.inc"
 
+IDT_GDT_SEGMENT:        equ 0x1000
+IDT_FLAT_ADRESS:        equ (IDT_GDT_SEGMENT << 4)
+SIZEOF_IDT:             equ 2048
+GDT_FLAT_ADRESS:        equ (IDT_FLAT_ADRESS + SIZEOF_IDT)
+SIZEOF_GDT:             equ 24
 KERNEL_SEGMENT:         equ 0x2000
 KERNEL_FLAT_ADDRESS:    equ (KERNEL_SEGMENT << 4)
 KERNEL_DIRECTORY_INDEX: equ 1
@@ -84,9 +89,9 @@ start:
     int 0x10
 
     ; ---- set up IDT and GDT ----
-    xor ax, ax
+    mov ax, IDT_GDT_SEGMENT
     mov es, ax
-    mov di, ax
+    mov di, 0x0000
     mov cx, 2048
     rep stosb ; 256 empty IDT entries
 
@@ -142,12 +147,12 @@ BITS 16
 %include "LoaderUtils.inc"
 
 idt_entry:
-    dw 2048
-    dd 0
+    dw SIZEOF_IDT
+    dd IDT_FLAT_ADRESS
 
 gdt_entry:
-    dw 24
-    dd 2048
+    dw SIZEOF_GDT
+    dd GDT_FLAT_ADRESS
 
 boot_context:
     this_partition:         dw 0x0000
