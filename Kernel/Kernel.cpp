@@ -1,5 +1,7 @@
 #include "Types.h"
 #include "Log.h"
+#include "InterruptDescriptorTable.h"
+#include "InterruptServiceRoutines.h"
 
 static constexpr u32 video_memory = 0xB8000;
 
@@ -33,11 +35,19 @@ void write_string(const char* string, u8 color)
         *(memory++) = colored_char;
     }
 }
+
 namespace kernel {
     extern "C" void run()
     {
-        constexpr auto greeting = "Hello from the kernel!\n";
+        cli();
+        InterruptServiceRoutines::install();
+        InterruptDescriptorTable::the().install();
+        sti();
+
+        constexpr auto greeting = "Hello from the kernel! Let's try to divide by zero!\n";
         log() << greeting;
         write_string(greeting, 0x4);
+
+        asm volatile("div %0" :: "r"(0));
     }
 }
