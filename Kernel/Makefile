@@ -9,7 +9,7 @@ asm_files = $(wildcard ./*.asm)
 crti_obj = crti.o
 crtn_obj = crtn.o
 
-object_files = Kernel.o crt0.o Itanium.o
+object_files = Kernel.o crt0.o Itanium.o InterruptServiceRoutines.o InterruptDescriptorTable.o
 
 crtbegin_obj = $(shell $(cxx) $(cxx_compile_flags) -print-file-name=crtbegin.o)
 crtend_obj   = $(shell $(cxx) $(cxx_compile_flags) -print-file-name=crtend.o)
