@@ -1,7 +1,8 @@
 cmake_minimum_required(VERSION 3.10)
 
-enable_language(ASM_NASM)
+project(Bootloader)
 
+enable_language(ASM_NASM)
 set(CMAKE_ASM_NASM_COMPILE_OBJECT "<CMAKE_ASM_NASM_COMPILER> <INCLUDES> <FLAGS> -o <OBJECT> <SOURCE>")
 
 # A workaround to make cmake not try to link our flat binary file
