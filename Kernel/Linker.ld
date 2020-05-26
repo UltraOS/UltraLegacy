@@ -13,6 +13,10 @@ SECTIONS
 
     .rodata BLOCK(4K) : ALIGN(4K)
     {
+        global_constructors_begin = .;
+        *(.ctors)
+        global_constructors_end = .;
+
         *(.rodata)
     }
 

@@ -3,6 +3,10 @@
 #include "InterruptDescriptorTable.h"
 #include "InterruptServiceRoutines.h"
 
+using global_constructor = void(*)();
+extern "C" global_constructor global_constructors_begin;
+extern "C" global_constructor global_constructors_end;
+
 static constexpr u32 video_memory = 0xB8000;
 
 void write_string(const char* string, u8 color = 0xF);
@@ -39,6 +43,9 @@ void write_string(const char* string, u8 color)
 namespace kernel {
     extern "C" void run()
     {
+        for (global_constructor* ctor = &global_constructors_begin; ctor < &global_constructors_end; ++ctor)
+            (*ctor)();
+
         cli();
         InterruptServiceRoutines::install();
         InterruptDescriptorTable::the().install();
