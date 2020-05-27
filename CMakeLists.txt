@@ -1,17 +1,17 @@
-cmake_minimum_required(VERSION 3.10)
-
-set(CMAKE_TOOLCHAIN_FILE ${CMAKE_SOURCE_DIR}/Toolchain/CMakeToolchain.txt)
-
-project(UltraOS)
-
 execute_process(
-    COMMAND ${PROJECT_SOURCE_DIR}/Scripts/build_vhc.sh
+    COMMAND ${CMAKE_SOURCE_DIR}/Scripts/build_vhc.sh
     RESULT_VARIABLE VHC_BUILD_FAILED
 )
 
 if (VHC_BUILD_FAILED)
     message(FATAL_ERROR "-- VHC build error.")
 endif()
+
+cmake_minimum_required(VERSION 3.10)
+
+set(CMAKE_TOOLCHAIN_FILE ${CMAKE_SOURCE_DIR}/Toolchain/CMakeToolchain.txt)
+
+project(UltraOS)
 
 add_subdirectory(Boot)
 add_subdirectory(Kernel)
