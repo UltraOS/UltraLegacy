@@ -25,6 +25,11 @@ add_executable(UltraMBR.bin  UltraMBR.asm)
 add_executable(UltraBoot.bin UltraBoot.asm)
 add_executable(UKLoader.bin  UKLoader.asm)
 
+set(MBR           UltraMBR.bin  PARENT_SCOPE)
+set(VBR           UltraBoot.bin PARENT_SCOPE)
+set(KERNEL_LOADER UKLoader.bin  PARENT_SCOPE)
+set(BOOTLOADER_PATH ${PROJECT_BINARY_DIR} PARENT_SCOPE)
+
 # Make the bootloader files regenerate if we change headers
 foreach(INCLUDE_FILE ${BOOTLOADER_INCLUDES})
     set_property(SOURCE UltraMBR.asm  APPEND PROPERTY OBJECT_DEPENDS ${INCLUDE_FILE})
