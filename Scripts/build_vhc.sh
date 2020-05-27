@@ -21,7 +21,6 @@ pushd $true_path
 
 if [ -e "./vhc" ]
 then
-  echo "VHC is already built!"
   exit 0
 else
   echo "Building VHC..."

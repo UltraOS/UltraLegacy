@@ -20,7 +20,6 @@ pushd $true_path
 
 if [ -e "CrossCompiler/Tools/bin/i686-elf-g++" ]
 then
-  echo "Cross-compiler is already built!"
   exit 0
 else
   echo "Building the cross-compiler..."
