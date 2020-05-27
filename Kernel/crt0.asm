@@ -1,4 +1,4 @@
-extern run
+extern _ZN6kernel3runEv
 
 section .entry
 
@@ -8,7 +8,7 @@ start:
     mov esp, kernel_stack_begin
 
     ; Jump into kernel main
-    call run
+    call _ZN6kernel3runEv
 hang:
     cli
     hlt
