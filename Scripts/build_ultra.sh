@@ -2,7 +2,7 @@
 
 on_error()
 {
-    echo "Failed to build the image!"
+    echo "Failed to build UltraOS!"
     exit 1
 }
 
@@ -14,7 +14,7 @@ popd () {
     command popd "$@" > /dev/null
 }
 
-echo "Building UltraOS image..."
+echo "Building UltraOS..."
 true_path="$(dirname "$(realpath "$0")")"
 root_path=$true_path/..
 
