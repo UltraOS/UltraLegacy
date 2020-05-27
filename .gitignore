@@ -1,6 +1,6 @@
-Boot/bin/
 Images/
-Scripts/vhc
 Toolchain/CrossCompiler/
+Build/
+Scripts/vhc
 *.o
 *.bin
