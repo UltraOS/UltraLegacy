@@ -78,7 +78,7 @@ namespace kernel {
     {
         auto& logger = E9Logger::get();
 
-        logger.write("\33[34m[INFO]\033[0m ");
+        logger.write("[\33[34mINFO\033[0m] ");
 
         return AutoLogger(logger);
     }
@@ -87,7 +87,7 @@ namespace kernel {
     {
         auto& logger = E9Logger::get();
 
-        logger.write("\33[33m[WARNING]\033[0m ");
+        logger.write("[\33[33mWARNING\033[0m] ");
 
         return AutoLogger(logger);
     }
@@ -96,7 +96,7 @@ namespace kernel {
     {
         auto& logger = E9Logger::get();
 
-        logger.write("\033[91m[ERROR]\033[0m ");
+        logger.write("[\033[91mERROR\033[0m] ");
 
         return AutoLogger(logger);
     }
