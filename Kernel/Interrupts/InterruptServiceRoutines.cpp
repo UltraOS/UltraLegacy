@@ -1,7 +1,8 @@
+#include "Core/Macros.h"
+#include "Core/Logger.h"
+
 #include "InterruptDescriptorTable.h"
 #include "InterruptServiceRoutines.h"
-#include "Macros.h"
-#include "Log.h"
 
 namespace kernel {
     DEFINE_INTERRUPT_HANDLER_NO_ERROR_CODE(division_by_zero, 24)

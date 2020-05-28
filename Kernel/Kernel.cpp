@@ -1,5 +1,5 @@
-#include "Types.h"
-#include "Log.h"
+#include "Core/Types.h"
+#include "Core/Logger.h"
 #include "Interrupts/InterruptDescriptorTable.h"
 #include "Interrupts/InterruptServiceRoutines.h"
 

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Types.h"
-#include "Macros.h"
+#include "Core/Types.h"
+#include "Core/Macros.h"
 
 namespace kernel {
     class InterruptDescriptorTable {

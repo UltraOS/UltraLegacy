@@ -1,5 +1,7 @@
+#include "Core/Logger.h"
+
 #include "InterruptDescriptorTable.h"
-#include "Log.h"
+
 namespace kernel {
     InterruptDescriptorTable InterruptDescriptorTable::s_instance;
 

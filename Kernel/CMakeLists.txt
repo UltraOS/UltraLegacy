@@ -17,7 +17,9 @@ set(CMAKE_ASM_NASM_FLAGS "-felf32")
 FILE(GLOB CPP_FILES "${PROJECT_SOURCE_DIR}/*cpp"
                     "${PROJECT_SOURCE_DIR}/Interrupts/*cpp")
 
-FILE(GLOB ASM_FILES "${PROJECT_SOURCE_DIR}/*asm")
+FILE(GLOB ASM_FILES "${PROJECT_SOURCE_DIR}/*asm"
+                    "${PROJECT_SOURCE_DIR}/Core/*asm")
+
 set(KERNEL_SOURCES ${CPP_FILES} ${ASM_FILES})
 
 set(KERNEL Kernel.bin PARENT_SCOPE)
