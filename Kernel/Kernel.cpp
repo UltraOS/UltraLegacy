@@ -3,47 +3,14 @@
 #include "InterruptDescriptorTable.h"
 #include "InterruptServiceRoutines.h"
 
-using global_constructor = void(*)();
-global_constructor global_constructors_begin;
-global_constructor global_constructors_end;
-
-static constexpr u32 video_memory = 0xB8000;
-
-void write_string(const char* string, u8 color = 0xF);
-
-class Checker
-{
-public:
-    Checker()
-    {
-        write_string("Constructor called", 0x2);
-    }
-
-    ~Checker()
-    {
-        write_string("Destructor called", 0x2);
-    }
-};
-
-static Checker c;
-
-void write_string(const char* string, u8 color)
-{
-    static u16* memory = reinterpret_cast<u16*>(video_memory);
-
-    while (*string)
-    {
-        u16 colored_char = *(string++);
-        colored_char |= color << 8;
-
-        *(memory++) = colored_char;
-    }
-}
+using global_constructor_t = void(*)();
+global_constructor_t global_constructors_begin;
+global_constructor_t global_constructors_end;
 
 namespace kernel {
     void run()
     {
-        for (global_constructor* ctor = &global_constructors_begin; ctor < &global_constructors_end; ++ctor)
+        for (global_constructor_t* ctor = &global_constructors_begin; ctor < &global_constructors_end; ++ctor)
             (*ctor)();
 
         cli();
@@ -51,9 +18,7 @@ namespace kernel {
         InterruptDescriptorTable::the().install();
         sti();
 
-        constexpr auto greeting = "Hello from the kernel! Let's try to divide by zero!\n";
-        log() << greeting;
-        write_string(greeting, 0x4);
+        log() << "Hello from the kernel! Let's try to divide by zero!";
 
         asm volatile("div %0" :: "r"(0));
     }

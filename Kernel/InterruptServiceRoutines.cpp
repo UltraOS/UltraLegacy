@@ -9,7 +9,7 @@ namespace kernel {
     {
         (void) registers;
 
-        log() << "Division by zero!";
+        error() << "Division by zero!";
 
         for(;;);
     }
@@ -19,7 +19,7 @@ namespace kernel {
     {
         (void) registers;
 
-        log() << "Debug handler!";
+        error() << "Debug handler!";
 
         for(;;);
     }
@@ -29,7 +29,7 @@ namespace kernel {
     {
         (void) registers;
         
-        log() << "Non maskable interrupt!";
+        error() << "Non maskable interrupt!";
 
         for(;;);
     }
@@ -39,7 +39,7 @@ namespace kernel {
     {
         (void) registers;
         
-        log() << "Breakpoint interrupt!";
+        error() << "Breakpoint interrupt!";
 
         for(;;);
     }
@@ -49,7 +49,7 @@ namespace kernel {
     {
         (void) registers;
 
-        log() << "Overflow interrupt!";
+        error() << "Overflow interrupt!";
 
         for(;;);
     }
@@ -59,7 +59,7 @@ namespace kernel {
     {
         (void) registers;
 
-        log() << "Bound range exceeded!";
+        error() << "Bound range exceeded!";
 
         for(;;);
     }
@@ -69,7 +69,7 @@ namespace kernel {
     {
         (void) registers;
 
-        log() << "Invalid OPcode!";
+        error() << "Invalid OPcode!";
 
         for(;;);
     }
@@ -79,7 +79,7 @@ namespace kernel {
     {
         (void) registers;
 
-        log() << "Device not available!";
+        error() << "Device not available!";
 
         for(;;);
     }
@@ -89,7 +89,7 @@ namespace kernel {
     {
         (void) registers;
 
-        log() << "Double fault!";
+        error() << "Double fault!";
 
         for(;;);
     }
@@ -99,7 +99,7 @@ namespace kernel {
     {
         (void) registers;
 
-        log() << "Coprocessor segment overrun! (really?)";
+        error() << "Coprocessor segment overrun! (really?)";
 
         for(;;);
     }
@@ -109,7 +109,7 @@ namespace kernel {
     {
         (void) registers;
 
-        log() << "Invalid TSS!";
+        error() << "Invalid TSS!";
 
         for(;;);
     }
@@ -119,7 +119,7 @@ namespace kernel {
     {
         (void) registers;
 
-        log() << "Segment not present!";
+        error() << "Segment not present!";
 
         for(;;);
     }
@@ -129,7 +129,7 @@ namespace kernel {
     {
         (void) registers;
 
-        log() << "Stack segment fault!";
+        error() << "Stack segment fault!";
 
         for(;;);
     }
@@ -139,7 +139,7 @@ namespace kernel {
     {
         (void) registers;
 
-        log() << "General protection fault!";
+        error() << "General protection fault!";
 
         for(;;);
     }
@@ -149,7 +149,7 @@ namespace kernel {
     {
         (void) registers;
 
-        log() << "Pagefault!";
+        error() << "Pagefault!";
 
         for(;;);
     }
@@ -159,7 +159,7 @@ namespace kernel {
     {
         (void) registers;
 
-        log() << "Floating point exception!";
+        error() << "Floating point exception!";
 
         for(;;);
     }
@@ -169,7 +169,7 @@ namespace kernel {
     {
         (void) registers;
 
-        log() << "Alignment Check exception!";
+        error() << "Alignment Check exception!";
 
         for(;;);
     }
@@ -179,7 +179,7 @@ namespace kernel {
     {
         (void) registers;
 
-        log() << "Machine check exception!";
+        error() << "Machine check exception!";
 
         for(;;);
     }
@@ -189,7 +189,7 @@ namespace kernel {
     {
         (void) registers;
 
-        log() << "SIMD floating point exception!";
+        error() << "SIMD floating point exception!";
 
         for(;;);
     }
@@ -199,7 +199,7 @@ namespace kernel {
     {
         (void) registers;
 
-        log() << "Virtualization exception!";
+        error() << "Virtualization exception!";
 
         for(;;);
     }
@@ -209,7 +209,7 @@ namespace kernel {
     {
         (void) registers;
 
-        log() << "Security exception!";
+        error() << "Security exception!";
 
         for(;;);
     }
