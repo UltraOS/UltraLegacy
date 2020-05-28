@@ -14,12 +14,15 @@ set(CMAKE_EXE_LINKER_FLAGS  "-T ${PROJECT_SOURCE_DIR}/Linker.ld ${LINKER_FLAGS}"
 set(CMAKE_ASM_NASM_COMPILE_OBJECT "<CMAKE_ASM_NASM_COMPILER> <FLAGS> -o <OBJECT> <SOURCE>")
 set(CMAKE_ASM_NASM_FLAGS "-felf32")
 
-FILE(GLOB CPP_FILES "${PROJECT_SOURCE_DIR}/*cpp")
+FILE(GLOB CPP_FILES "${PROJECT_SOURCE_DIR}/*cpp"
+                    "${PROJECT_SOURCE_DIR}/Interrupts/*cpp")
+
 FILE(GLOB ASM_FILES "${PROJECT_SOURCE_DIR}/*asm")
-set(SOURCES ${CPP_FILES} ${ASM_FILES})
+set(KERNEL_SOURCES ${CPP_FILES} ${ASM_FILES})
 
 set(KERNEL Kernel.bin PARENT_SCOPE)
 set(KERNEL_PATH ${PROJECT_BINARY_DIR} PARENT_SCOPE)
 
-add_executable(Kernel.bin ${SOURCES})
+add_executable(Kernel.bin ${KERNEL_SOURCES})
+target_include_directories(Kernel.bin PRIVATE "${PROJECT_SOURCE_DIR}")
 target_link_libraries(Kernel.bin gcc)

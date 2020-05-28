@@ -1,7 +1,7 @@
 #include "Types.h"
 #include "Log.h"
-#include "InterruptDescriptorTable.h"
-#include "InterruptServiceRoutines.h"
+#include "Interrupts/InterruptDescriptorTable.h"
+#include "Interrupts/InterruptServiceRoutines.h"
 
 using global_constructor_t = void(*)();
 global_constructor_t global_constructors_begin;
