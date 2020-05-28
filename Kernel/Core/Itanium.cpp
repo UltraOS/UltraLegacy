@@ -1,7 +1,7 @@
-#include "Log.h"
+#include "Logger.h"
 
 extern "C" void __cxa_pure_virtual()
 {
-    kernel::log() << "A pure virtual call!\n";
+    kernel::error() << "A pure virtual call!\n";
     for(;;);
 }

@@ -15,7 +15,8 @@ set(CMAKE_ASM_NASM_COMPILE_OBJECT "<CMAKE_ASM_NASM_COMPILER> <FLAGS> -o <OBJECT>
 set(CMAKE_ASM_NASM_FLAGS "-felf32")
 
 FILE(GLOB CPP_FILES "${PROJECT_SOURCE_DIR}/*cpp"
-                    "${PROJECT_SOURCE_DIR}/Interrupts/*cpp")
+                    "${PROJECT_SOURCE_DIR}/Interrupts/*cpp"
+                    "${PROJECT_SOURCE_DIR}/Core/*cpp")
 
 FILE(GLOB ASM_FILES "${PROJECT_SOURCE_DIR}/*asm"
                     "${PROJECT_SOURCE_DIR}/Core/*asm")
