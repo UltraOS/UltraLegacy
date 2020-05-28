@@ -12,7 +12,7 @@ namespace kernel {
 
         error() << "Division by zero!";
 
-        for(;;);
+        hang();
     }
 
     DEFINE_INTERRUPT_HANDLER_NO_ERROR_CODE(debug, 13)
@@ -22,7 +22,7 @@ namespace kernel {
 
         error() << "Debug handler!";
 
-        for(;;);
+        hang();
     }
 
     DEFINE_INTERRUPT_HANDLER_NO_ERROR_CODE(non_maskable, 20)
@@ -32,7 +32,7 @@ namespace kernel {
         
         error() << "Non maskable interrupt!";
 
-        for(;;);
+        hang();
     }
 
     DEFINE_INTERRUPT_HANDLER_NO_ERROR_CODE(breakpoint, 18)
@@ -42,7 +42,7 @@ namespace kernel {
         
         error() << "Breakpoint interrupt!";
 
-        for(;;);
+        hang();
     }
 
     DEFINE_INTERRUPT_HANDLER_NO_ERROR_CODE(overflow, 16)
@@ -52,7 +52,7 @@ namespace kernel {
 
         error() << "Overflow interrupt!";
 
-        for(;;);
+        hang();
     }
 
     DEFINE_INTERRUPT_HANDLER_NO_ERROR_CODE(bound_range_exceeded, 28)
@@ -62,7 +62,7 @@ namespace kernel {
 
         error() << "Bound range exceeded!";
 
-        for(;;);
+        hang();
     }
 
     DEFINE_INTERRUPT_HANDLER_NO_ERROR_CODE(invalid_opcode, 22)
@@ -72,7 +72,7 @@ namespace kernel {
 
         error() << "Invalid OPcode!";
 
-        for(;;);
+        hang();
     }
 
     DEFINE_INTERRUPT_HANDLER_NO_ERROR_CODE(device_not_available, 28)
@@ -82,7 +82,7 @@ namespace kernel {
 
         error() << "Device not available!";
 
-        for(;;);
+        hang();
     }
 
     DEFINE_INTERRUPT_HANDLER(double_fault, 20)
@@ -92,7 +92,7 @@ namespace kernel {
 
         error() << "Double fault!";
 
-        for(;;);
+        hang();
     }
 
     DEFINE_INTERRUPT_HANDLER_NO_ERROR_CODE(coprocessor_segment_overrun, 35)
@@ -102,7 +102,7 @@ namespace kernel {
 
         error() << "Coprocessor segment overrun! (really?)";
 
-        for(;;);
+        hang();
     }
 
     DEFINE_INTERRUPT_HANDLER(invalid_tss, 19)
@@ -112,7 +112,7 @@ namespace kernel {
 
         error() << "Invalid TSS!";
 
-        for(;;);
+        hang();
     }
 
     DEFINE_INTERRUPT_HANDLER(segment_not_present, 27)
@@ -122,7 +122,7 @@ namespace kernel {
 
         error() << "Segment not present!";
 
-        for(;;);
+        hang();
     }
 
     DEFINE_INTERRUPT_HANDLER(stack_segment_fault, 27)
@@ -132,7 +132,7 @@ namespace kernel {
 
         error() << "Stack segment fault!";
 
-        for(;;);
+        hang();
     }
 
     DEFINE_INTERRUPT_HANDLER(general_protection_fault, 32)
@@ -142,7 +142,7 @@ namespace kernel {
 
         error() << "General protection fault!";
 
-        for(;;);
+        hang();
     }
 
     DEFINE_INTERRUPT_HANDLER(pagefault, 17)
@@ -152,7 +152,7 @@ namespace kernel {
 
         error() << "Pagefault!";
 
-        for(;;);
+        hang();
     }
 
     DEFINE_INTERRUPT_HANDLER_NO_ERROR_CODE(floating_point_exception, 32)
@@ -162,7 +162,7 @@ namespace kernel {
 
         error() << "Floating point exception!";
 
-        for(;;);
+        hang();
     }
 
     DEFINE_INTERRUPT_HANDLER(alignment_check_exception, 33)
@@ -172,7 +172,7 @@ namespace kernel {
 
         error() << "Alignment Check exception!";
 
-        for(;;);
+        hang();
     }
 
     DEFINE_INTERRUPT_HANDLER_NO_ERROR_CODE(machine_check_exception, 31)
@@ -182,7 +182,7 @@ namespace kernel {
 
         error() << "Machine check exception!";
 
-        for(;;);
+        hang();
     }
 
     DEFINE_INTERRUPT_HANDLER_NO_ERROR_CODE(simd_floating_point_exception, 37)
@@ -192,7 +192,7 @@ namespace kernel {
 
         error() << "SIMD floating point exception!";
 
-        for(;;);
+        hang();
     }
 
     DEFINE_INTERRUPT_HANDLER_NO_ERROR_CODE(virtualization_exception, 32)
@@ -202,7 +202,7 @@ namespace kernel {
 
         error() << "Virtualization exception!";
 
-        for(;;);
+        hang();
     }
 
     DEFINE_INTERRUPT_HANDLER(security_exception, 26)
@@ -212,7 +212,7 @@ namespace kernel {
 
         error() << "Security exception!";
 
-        for(;;);
+        hang();
     }
 
     void InterruptServiceRoutines::install()

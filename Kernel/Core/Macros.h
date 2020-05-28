@@ -8,5 +8,7 @@
 
 #define TO_STRING(x) #x
 
-#define cli() asm volatile("cli" ::: "memory")
-#define sti() asm volatile("sti" ::: "memory")
+#define cli()  asm volatile("cli" ::: "memory")
+#define sti()  asm volatile("sti" ::: "memory")
+#define hlt()  asm volatile("hlt" ::: "memory")
+#define hang() for (;;) { cli(); hlt(); }
