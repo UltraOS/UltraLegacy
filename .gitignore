@@ -4,3 +4,10 @@ Build/
 Scripts/vhc
 *.o
 *.bin
+*.cxxflags
+*.cflags
+*.config
+*.creator
+*.files
+*.includes
+*.creator.user
