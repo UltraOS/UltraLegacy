@@ -6,17 +6,11 @@ on_error()
     exit 1
 }
 
-pushd () {
-    command pushd "$@" > /dev/null
-}
-
-popd () {
-    command popd "$@" > /dev/null
-}
-
 echo "Building UltraOS..."
 true_path="$(dirname "$(realpath "$0")")"
 root_path=$true_path/..
+
+source $true_path/utils.sh
 
 pushd $root_path
 mkdir -p Build || on_error

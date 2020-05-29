@@ -2,19 +2,13 @@
 
 true_path="$(dirname "$(realpath "$0")")"
 
+source $true_path/utils.sh
+
 on_error()
 {
     echo "VHC build failed!"
     rm -rf vhc-src
     exit 1
-}
-
-pushd () {
-    command pushd "$@" > /dev/null
-}
-
-popd () {
-    command popd "$@" > /dev/null
 }
 
 pushd $true_path

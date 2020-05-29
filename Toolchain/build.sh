@@ -1,6 +1,7 @@
 #!/bin/bash
 
 true_path="$(dirname "$(realpath "$0")")"
+root_path=$true_path/..
 
 on_error()
 {
@@ -8,13 +9,7 @@ on_error()
     exit 1
 }
 
-pushd () {
-    command pushd "$@" > /dev/null
-}
-
-popd () {
-    command popd "$@" > /dev/null
-}
+source $root_path/Scripts/utils.sh
 
 pushd $true_path
 
