@@ -46,4 +46,9 @@ public:
         asm volatile("inl %1, %0" :"=a"(data) :"Nd"(port));
         return data;
     }
+
+    static void wait()
+    {
+        out8<0x80>(0);
+    }
 };
