@@ -3,54 +3,13 @@
 #include "Core/Types.h"
 #include "Core/Macros.h"
 
-namespace kernel {
-    struct PACKED RegisterState
-    {
-        u32 ss;
-        u32 gs;
-        u32 fs;
-        u32 es;
-        u32 ds;
-        u32 edi;
-        u32 esi;
-        u32 ebp;
-        u32 esp;
-        u32 ebx;
-        u32 edx;
-        u32 ecx;
-        u32 eax;
-        u32 error_code;
-        u32 eip;
-        u32 cs;
-        u32 eflags;
-        u32 userspace_esp;
-        u32 userspace_ss;
-    };
+#include "Common.h"
 
+namespace kernel {
     class InterruptServiceRoutines
     {
-    private:
-        static constexpr u16 division_by_zero_index              = 0;
-        static constexpr u16 debug_index                         = 1;
-        static constexpr u16 non_maskable_index                  = 2;
-        static constexpr u16 breakpoint_index                    = 3;
-        static constexpr u16 overflow_index                      = 4;
-        static constexpr u16 bound_range_exceeded_index          = 5;
-        static constexpr u16 invalid_opcode_index                = 6;
-        static constexpr u16 device_not_available_index          = 7;
-        static constexpr u16 double_fault_index                  = 8;
-        static constexpr u16 coprocessor_segment_overrun_index   = 9;
-        static constexpr u16 invalid_tss_index                   = 10;
-        static constexpr u16 segment_not_present_index           = 11;
-        static constexpr u16 stack_segment_fault_index           = 12;
-        static constexpr u16 general_protection_fault_index      = 13;
-        static constexpr u16 pagefault_index                     = 14;
-        static constexpr u16 floating_point_exception_index      = 16;
-        static constexpr u16 alignment_check_exception_index     = 17;
-        static constexpr u16 machine_check_exception_index       = 18;
-        static constexpr u16 simd_floating_point_exception_index = 19;
-        static constexpr u16 virtualization_exception_index      = 20;
-        static constexpr u16 security_exception_index            = 30;
+    public:
+        static void install();
     private:
         static void division_by_zero_handler(RegisterState)              USED;
         static void debug_handler(RegisterState)                         USED;
@@ -73,8 +32,28 @@ namespace kernel {
         static void simd_floating_point_exception_handler(RegisterState) USED;
         static void virtualization_exception_handler(RegisterState)      USED;
         static void security_exception_handler(RegisterState)            USED;
-    public:
-        static void install();
+    private:
+        static constexpr u16 division_by_zero_index              = 0;
+        static constexpr u16 debug_index                         = 1;
+        static constexpr u16 non_maskable_index                  = 2;
+        static constexpr u16 breakpoint_index                    = 3;
+        static constexpr u16 overflow_index                      = 4;
+        static constexpr u16 bound_range_exceeded_index          = 5;
+        static constexpr u16 invalid_opcode_index                = 6;
+        static constexpr u16 device_not_available_index          = 7;
+        static constexpr u16 double_fault_index                  = 8;
+        static constexpr u16 coprocessor_segment_overrun_index   = 9;
+        static constexpr u16 invalid_tss_index                   = 10;
+        static constexpr u16 segment_not_present_index           = 11;
+        static constexpr u16 stack_segment_fault_index           = 12;
+        static constexpr u16 general_protection_fault_index      = 13;
+        static constexpr u16 pagefault_index                     = 14;
+        static constexpr u16 floating_point_exception_index      = 16;
+        static constexpr u16 alignment_check_exception_index     = 17;
+        static constexpr u16 machine_check_exception_index       = 18;
+        static constexpr u16 simd_floating_point_exception_index = 19;
+        static constexpr u16 virtualization_exception_index      = 20;
+        static constexpr u16 security_exception_index            = 30;
     };
 }
 

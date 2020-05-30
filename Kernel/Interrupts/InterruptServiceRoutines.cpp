@@ -1,6 +1,7 @@
 #include "Core/Macros.h"
 #include "Core/Logger.h"
 
+#include "Common.h"
 #include "InterruptDescriptorTable.h"
 #include "InterruptServiceRoutines.h"
 

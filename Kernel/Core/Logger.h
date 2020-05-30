@@ -13,6 +13,7 @@ namespace kernel {
         AutoLogger(AutoLogger&& logger);
 
         AutoLogger& operator<<(const char* string);
+        AutoLogger& operator<<(u32 number);
 
         ~AutoLogger();
     private:
@@ -65,6 +66,17 @@ namespace kernel {
     inline AutoLogger& AutoLogger::operator<<(const char* string)
     {
         m_logger.write(string);
+
+        return *this;
+    }
+
+    inline AutoLogger& AutoLogger::operator<<(u32 number)
+    {
+        char dec[2]{};
+
+        dec[0] = number + '0';
+
+        m_logger.write(dec);
 
         return *this;
     }
