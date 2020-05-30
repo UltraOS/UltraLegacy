@@ -2,6 +2,7 @@
 #include "Core/Logger.h"
 #include "Interrupts/InterruptDescriptorTable.h"
 #include "Interrupts/InterruptServiceRoutines.h"
+#include "Interrupts/InterruptRequestManager.h"
 
 using global_constructor_t = void(*)();
 global_constructor_t global_constructors_begin;
@@ -15,11 +16,12 @@ namespace kernel {
 
         cli();
         InterruptServiceRoutines::install();
+        InterruptRequestManager::the().install();
         InterruptDescriptorTable::the().install();
         sti();
 
-        log() << "Hello from the kernel! Let's try to divide by zero!";
+        log() << "Hello from the kernel!";
 
-        asm volatile("div %0" :: "r"(0));
+        for(;;);
     }
 }
