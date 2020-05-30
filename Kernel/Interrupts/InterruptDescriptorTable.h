@@ -4,7 +4,8 @@
 #include "Core/Macros.h"
 
 namespace kernel {
-    class InterruptDescriptorTable {
+    class InterruptDescriptorTable
+    {
     public:
         enum attributes : u8
         {

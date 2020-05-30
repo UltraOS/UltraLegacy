@@ -17,6 +17,12 @@ namespace kernel {
 
     InterruptDescriptorTable& InterruptDescriptorTable::register_isr(u16 index, attributes attrs, isr handler)
     {
+        if (!handler)
+        {
+            error() << "Someone tried to register an invalid (NULL) isr!";
+            hang();
+        }
+
         auto& the_entry = m_entries[index];
 
         the_entry.address_lower  =  reinterpret_cast<u32>(handler) & 0x0000FFFF;
