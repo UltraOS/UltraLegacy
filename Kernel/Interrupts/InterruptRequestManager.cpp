@@ -75,7 +75,7 @@ namespace kernel {
 
     void InterruptRequestManager::register_irq_handler(InterruptRequestHandler& handler)
     {
-        if (handler.irq_index() > 15)
+        if (handler.irq_index() > max_irq_index)
         {
             error() << "Bad IRQ index!";
             hang();

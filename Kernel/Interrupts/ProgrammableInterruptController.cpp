@@ -17,9 +17,9 @@ namespace kernel {
         u8 master_mask = IO::in8<master_data>();
         u8 slave_mask  = IO::in8<slave_data>();
 
-        static constexpr u8 icw1_icw4      = 0x01;
-        static constexpr u8 icw1_init      = 0x10;
-        static constexpr u8 icw4_8086      = 0x01;
+        static constexpr u8 icw1_icw4 = 0x01;
+        static constexpr u8 icw1_init = 0x10;
+        static constexpr u8 icw4_8086 = 0x01;
 
         static constexpr u8 irqs_per_controller = 8;
 
