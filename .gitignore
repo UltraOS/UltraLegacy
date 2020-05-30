@@ -11,3 +11,4 @@ Scripts/vhc
 *.files
 *.includes
 *.creator.user
+*.creator.user.*
