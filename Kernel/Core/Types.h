@@ -12,6 +12,8 @@ using u16 = unsigned short int;
 using u32 = unsigned int;
 using u64 = unsigned long long int;
 
+using size_t = u32;
+
 // floating point
 using f32 = float;
 using f64 = double;
