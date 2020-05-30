@@ -66,7 +66,7 @@ namespace kernel {
     {
         if (!the().has_subscriber(request_number))
         {
-            error() << "Unexpected IRQ with no receiver! " << request_number;
+            error() << "Unexpected IRQ " << request_number << " with no receiver!";
             hang();
         }
 
@@ -77,7 +77,7 @@ namespace kernel {
     {
         if (handler.irq_index() > max_irq_index)
         {
-            error() << "Bad IRQ index!";
+            error() << "Bad IRQ index " << handler.irq_index();
             hang();
         }
 

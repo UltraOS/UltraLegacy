@@ -2,6 +2,8 @@
 
 #include "Types.h"
 #include "IO.h"
+#include "Traits.h"
+#include "Conversions.h"
 
 namespace kernel {
     class Logger;
@@ -13,7 +15,9 @@ namespace kernel {
         AutoLogger(AutoLogger&& logger);
 
         AutoLogger& operator<<(const char* string);
-        AutoLogger& operator<<(u32 number);
+
+        template<typename T>
+        enable_if_t<is_integral<T>::value, AutoLogger&> operator<<(T number);
 
         ~AutoLogger();
     private:
@@ -70,13 +74,20 @@ namespace kernel {
         return *this;
     }
 
-    inline AutoLogger& AutoLogger::operator<<(u32 number)
+    template<typename T>
+    enable_if_t<is_integral<T>::value, AutoLogger&> AutoLogger::operator<<(T number)
     {
-        char dec[2]{};
+        constexpr size_t max_number_size = 11;
 
-        dec[0] = number + '0';
+        char number_as_string[max_number_size];
+        bool ok;
 
-        m_logger.write(dec);
+        to_string_buffer(number, number_as_string, max_number_size, ok);
+
+        if (ok)
+            m_logger.write(number_as_string);
+        else
+            m_logger.write("<INVALID NUMBER>");
 
         return *this;
     }
