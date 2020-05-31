@@ -25,8 +25,9 @@ namespace kernel {
         static IRQManager& the();
     private:
         bool has_subscriber(u16 request_number);
-        bool is_spurious(u16 request_number);
-        void handle_spurious_irq(u16 request_number);
+
+        static bool is_spurious(u16 request_number);
+        static void handle_spurious_irq(u16 request_number);
 
         static void irq_handler(u16 request_number, RegisterState) USED;
     private:

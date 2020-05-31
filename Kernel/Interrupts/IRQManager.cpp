@@ -78,10 +78,10 @@ namespace kernel {
 
     void IRQManager::irq_handler(u16 request_number, RegisterState registers)
     {
-        if (the().is_spurious(request_number))
+        if (is_spurious(request_number))
         {
             warning() << "Spurious IRQ " << request_number << "!";
-            the().handle_spurious_irq(request_number);
+            handle_spurious_irq(request_number);
             return;
         }
 
