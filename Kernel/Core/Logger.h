@@ -15,6 +15,7 @@ namespace kernel {
         AutoLogger(AutoLogger&& logger);
 
         AutoLogger& operator<<(const char* string);
+        AutoLogger& operator<<(bool value);
 
         template<typename T>
         enable_if_t<is_integral<T>::value, AutoLogger&> operator<<(T number);
@@ -70,6 +71,16 @@ namespace kernel {
     inline AutoLogger& AutoLogger::operator<<(const char* string)
     {
         m_logger.write(string);
+
+        return *this;
+    }
+
+    inline AutoLogger& AutoLogger::operator<<(bool value)
+    {
+        if (value)
+            m_logger.write("true");
+        else
+            m_logger.write("false");
 
         return *this;
     }

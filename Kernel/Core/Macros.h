@@ -6,6 +6,8 @@
 
 #define SET_BIT(x) (1 << (x))
 
+#define IS_BIT_SET(mask, x) ((mask) & SET_BIT(x))
+
 #define TO_STRING(x) #x
 
 #define cli()  asm volatile("cli" ::: "memory")
