@@ -1,5 +1,6 @@
 #include "Core/IO.h"
 #include "Core/Logger.h"
+#include "Core/Macros.h"
 
 #include "ProgrammableInterruptController.h"
 
@@ -24,7 +25,7 @@ namespace kernel {
 
         info() << "PIC: ISR mask=" << isr_mask << " request number=" << request_number;
 
-        return !(isr_mask & request_number);
+        return IS_BIT_SET(isr_mask, request_number);
     }
 
     void ProgrammableInterruptController::remap(u8 offset)

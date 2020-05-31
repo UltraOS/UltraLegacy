@@ -66,9 +66,7 @@ namespace kernel {
     bool InterruptRequestManager::is_spurious(u16 request_number)
     {
         if (request_number == spurious_master || request_number == spurious_slave)
-        {
-            return ProgrammableInterruptController::is_irq_being_serviced(request_number);
-        }
+            return !ProgrammableInterruptController::is_irq_being_serviced(request_number);
 
         return false;
     }
