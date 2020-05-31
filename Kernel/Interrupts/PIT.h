@@ -1,10 +1,10 @@
 #pragma once
 
-#include "InterruptRequestHandler.h"
+#include "IRQHandler.h"
 
 namespace kernel {
 
-    class ProgrammableIntervalTimer : public InterruptRequestHandler
+    class PIT : public IRQHandler
     {
     public:
         static constexpr u32 timer_frequency = 1193180;
@@ -17,7 +17,7 @@ namespace kernel {
         static constexpr u8 square_wave_mode = 0x06;
         static constexpr u8 write_word       = 0x30;
 
-        ProgrammableIntervalTimer();
+        PIT();
 
         void set_frequency(u32 ticks_per_second);
 

@@ -2,11 +2,11 @@
 #include "Core/Logger.h"
 #include "Core/Macros.h"
 
-#include "ProgrammableInterruptController.h"
+#include "PIC.h"
 
 
 namespace kernel {
-    void ProgrammableInterruptController::end_of_interrupt(u8 request_number, bool spurious)
+    void PIC::end_of_interrupt(u8 request_number, bool spurious)
     {
         if (request_number >= 8 && !spurious)
             IO::out8<slave_command>(end_of_interrupt_code);
@@ -14,7 +14,7 @@ namespace kernel {
         IO::out8<master_command>(end_of_interrupt_code);
     }
 
-    bool ProgrammableInterruptController::is_irq_being_serviced(u8 request_number)
+    bool PIC::is_irq_being_serviced(u8 request_number)
     {
         static constexpr u8 read_isr = 0x0b;
 
@@ -28,7 +28,7 @@ namespace kernel {
         return IS_BIT_SET(isr_mask, request_number);
     }
 
-    void ProgrammableInterruptController::remap(u8 offset)
+    void PIC::remap(u8 offset)
     {
         u8 master_mask = IO::in8<master_data>();
         u8 slave_mask  = IO::in8<slave_data>();

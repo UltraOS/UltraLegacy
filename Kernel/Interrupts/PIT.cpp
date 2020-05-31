@@ -1,17 +1,17 @@
 #include "Core/Logger.h"
 #include "Core/IO.h"
 
-#include "ProgrammableIntervalTimer.h"
+#include "PIT.h"
 
 namespace kernel {
 
-    ProgrammableIntervalTimer::ProgrammableIntervalTimer()
-        : InterruptRequestHandler(timer_irq)
+    PIT::PIT()
+        : IRQHandler(timer_irq)
     {
         set_frequency(default_ticks_per_second);
     }
 
-    void ProgrammableIntervalTimer::set_frequency(u32 ticks_per_second)
+    void PIT::set_frequency(u32 ticks_per_second)
     {
         if (ticks_per_second > timer_frequency)
         {
@@ -34,7 +34,7 @@ namespace kernel {
         IO::out8<timer_data>((divisor & 0x0000FF00) >> 8);
     }
 
-    void ProgrammableIntervalTimer::on_irq(const RegisterState&)
+    void PIT::on_irq(const RegisterState&)
     {
         static u32 tick = 0;
         static u32 seconds_elapsed = 0;

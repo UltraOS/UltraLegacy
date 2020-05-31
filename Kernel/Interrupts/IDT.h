@@ -4,7 +4,7 @@
 #include "Core/Macros.h"
 
 namespace kernel {
-    class InterruptDescriptorTable
+    class IDT
     {
     public:
         enum attributes : u8
@@ -20,17 +20,17 @@ namespace kernel {
         static constexpr u16 entry_count = 256;
         using isr = void(*)();
 
-        InterruptDescriptorTable& register_isr(u16 index, attributes attrs, isr handler);
-        InterruptDescriptorTable& register_interrupt_handler(u16 index, isr handler);
-        InterruptDescriptorTable& register_user_interrupt_handler(u16 index, isr handler);
+        IDT& register_isr(u16 index, attributes attrs, isr handler);
+        IDT& register_interrupt_handler(u16 index, isr handler);
+        IDT& register_user_interrupt_handler(u16 index, isr handler);
 
         void install();
 
-        static InterruptDescriptorTable& the();
+        static IDT& the();
     private:
         static constexpr u16 gdt_selector = 0x8;
 
-        InterruptDescriptorTable();
+        IDT();
 
         struct PACKED entry
         {
@@ -47,6 +47,6 @@ namespace kernel {
             entry*  address;
         } m_pointer;
 
-        static InterruptDescriptorTable s_instance;
+        static IDT s_instance;
     };
 }

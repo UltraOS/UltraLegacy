@@ -6,7 +6,7 @@
 #include "Common.h"
 
 namespace kernel {
-    class InterruptServiceRoutines
+    class ISR
     {
     public:
         static void install();
@@ -58,9 +58,9 @@ namespace kernel {
 }
 
 // Super specific mangling rules going on here, be careful :)
-#define ISR(handler, len) "_ZN6kernel24InterruptServiceRoutines" \
-                          TO_STRING(len)                         \
-                          TO_STRING(handler)                     \
+#define ISR(handler, len) "_ZN6kernel3ISR"      \
+                          TO_STRING(len)        \
+                          TO_STRING(handler)    \
                           "ENS_13RegisterStateE"
 
 // title - the interrupt handler title without "_handler"

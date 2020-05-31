@@ -4,9 +4,9 @@
 #include "Core/Types.h"
 
 namespace kernel {
-    class InterruptRequestHandler;
+    class IRQHandler;
 
-    class InterruptRequestManager
+    class IRQManager
     {
     public:
         static constexpr u16 irq_base_index = 32;
@@ -16,13 +16,13 @@ namespace kernel {
         static constexpr u16 spurious_master = 7;
         static constexpr u16 spurious_slave = 15;
 
-        InterruptRequestManager();
+        IRQManager();
 
         void install();
-        void register_irq_handler(InterruptRequestHandler&);
-        void unregister_irq_handler(InterruptRequestManager&);
+        void register_irq_handler(IRQHandler&);
+        void unregister_irq_handler(IRQManager&);
 
-        static InterruptRequestManager& the();
+        static IRQManager& the();
     private:
         bool has_subscriber(u16 request_number);
         bool is_spurious(u16 request_number);
@@ -30,15 +30,15 @@ namespace kernel {
 
         static void irq_handler(u16 request_number, RegisterState) USED;
     private:
-        InterruptRequestHandler* m_handlers[entry_count];
-        static InterruptRequestManager s_instance;
+        IRQHandler* m_handlers[entry_count];
+        static IRQManager s_instance;
     };
 }
 
 // Super specific mangling rules going on here, be careful :)
-#define IRQ(handler, len) "_ZN6kernel23InterruptRequestManager" \
-                          TO_STRING(len)                        \
-                          TO_STRING(handler)                    \
+#define IRQ(handler, len) "_ZN6kernel10IRQManager" \
+                          TO_STRING(len)           \
+                          TO_STRING(handler)       \
                           "EtNS_13RegisterStateE"
 
 #define DEFINE_IRQ_HANDLER(index)            \

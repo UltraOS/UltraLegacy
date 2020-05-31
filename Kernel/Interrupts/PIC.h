@@ -3,7 +3,7 @@
 #include "Core/Types.h"
 
 namespace kernel {
-    class ProgrammableInterruptController
+    class PIC
     {
     public:
         static constexpr u8 master_port = 0x20;

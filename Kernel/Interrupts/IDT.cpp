@@ -1,21 +1,21 @@
 #include "Core/Logger.h"
 
-#include "InterruptDescriptorTable.h"
+#include "IDT.h"
 
 namespace kernel {
-    InterruptDescriptorTable InterruptDescriptorTable::s_instance;
+    IDT IDT::s_instance;
 
-    InterruptDescriptorTable::InterruptDescriptorTable()
+    IDT::IDT()
         : m_entries(), m_pointer{entry_count * sizeof(entry) - 1, m_entries}
     {
     }
 
-    InterruptDescriptorTable& InterruptDescriptorTable::the()
+    IDT& IDT::the()
     {
         return s_instance;
     }
 
-    InterruptDescriptorTable& InterruptDescriptorTable::register_isr(u16 index, attributes attrs, isr handler)
+    IDT& IDT::register_isr(u16 index, attributes attrs, isr handler)
     {
         if (!handler)
         {
@@ -33,17 +33,17 @@ namespace kernel {
         return *this;
     }
 
-    InterruptDescriptorTable& InterruptDescriptorTable::register_interrupt_handler(u16 index, isr handler)
+    IDT& IDT::register_interrupt_handler(u16 index, isr handler)
     {
         return register_isr(index, attributes(INTERRUPT_GATE | RING_3 | PRESENT), handler);
     }
 
-    InterruptDescriptorTable& InterruptDescriptorTable::register_user_interrupt_handler(u16 index, isr handler)
+    IDT& IDT::register_user_interrupt_handler(u16 index, isr handler)
     {
         return register_isr(index, attributes(TRAP_GATE | RING_3 | PRESENT), handler);
     }
 
-    void InterruptDescriptorTable::install()
+    void IDT::install()
     {
         asm("lidt %0" ::"m"(m_pointer));
     }
