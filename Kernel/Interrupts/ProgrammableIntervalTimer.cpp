@@ -29,7 +29,7 @@ namespace kernel {
         IO::out8<timer_data>((divisor & 0x0000FF00) >> 8);
     }
 
-    void ProgrammableIntervalTimer::on_irq(const RegisterState& registers)
+    void ProgrammableIntervalTimer::on_irq(const RegisterState&)
     {
         static u32 tick = 0;
         static u32 seconds_elapsed = 0;
