@@ -3,6 +3,7 @@
 #include "Interrupts/InterruptDescriptorTable.h"
 #include "Interrupts/InterruptServiceRoutines.h"
 #include "Interrupts/InterruptRequestManager.h"
+#include "Interrupts/ProgrammableIntervalTimer.h"
 
 using global_constructor_t = void(*)();
 global_constructor_t global_constructors_begin;
@@ -15,6 +16,7 @@ namespace kernel {
             (*ctor)();
 
         cli();
+        ProgrammableIntervalTimer timer;
         InterruptServiceRoutines::install();
         InterruptRequestManager::the().install();
         InterruptDescriptorTable::the().install();

@@ -1,5 +1,6 @@
 #include "Core/Logger.h"
 
+#include "InterruptRequestHandler.h"
 #include "InterruptDescriptorTable.h"
 #include "InterruptRequestManager.h"
 #include "ProgrammableInterruptController.h"
@@ -71,6 +72,7 @@ namespace kernel {
         }
 
         the().m_handlers[request_number]->on_irq(registers);
+        the().m_handlers[request_number]->finialize_irq();
     }
 
     void InterruptRequestManager::register_irq_handler(InterruptRequestHandler& handler)

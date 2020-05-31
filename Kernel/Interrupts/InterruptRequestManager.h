@@ -1,8 +1,11 @@
 #pragma once
 
-#include "InterruptRequestHandler.h"
+#include "Common.h"
+#include "Core/Types.h"
 
 namespace kernel {
+    class InterruptRequestHandler;
+
     class InterruptRequestManager
     {
     public:
