@@ -23,6 +23,11 @@ namespace kernel {
 
         u32 divisor = timer_frequency / ticks_per_second;
 
+        if (divisor > 0xFFFF)
+        {
+            error() << "Timer: divisor is too big (" << divisor << ")";
+            hang();
+        }
         IO::out8<timer_command>(write_word | square_wave_mode | timer_0);
 
         IO::out8<timer_data>(divisor & 0x000000FF);
@@ -36,11 +41,11 @@ namespace kernel {
 
         ++tick;
 
-        auto display_write = [] (const char* string, bool carrige_return = false)
+        auto display_write = [] (const char* string, bool carriage_return = false)
                              {
                                  static u16* memory = reinterpret_cast<u16*>(0xB8000);
 
-                                 if (carrige_return)
+                                 if (carriage_return)
                                      memory = reinterpret_cast<u16*>(0xB8000);
 
                                  while (*string)

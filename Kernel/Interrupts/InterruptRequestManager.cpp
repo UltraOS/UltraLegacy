@@ -58,13 +58,36 @@ namespace kernel {
                 .register_interrupt_handler(irq_base_index + 15, irq15_handler);
     }
 
-    bool InterruptRequestManager::has_subscriber(u8 request_number)
+    bool InterruptRequestManager::has_subscriber(u16 request_number)
     {
         return m_handlers[request_number];
     }
 
+    bool InterruptRequestManager::is_spurious(u16 request_number)
+    {
+        if (request_number == spurious_master || request_number == spurious_slave)
+        {
+            return ProgrammableInterruptController::is_irq_being_serviced(request_number);
+        }
+
+        return false;
+    }
+
+    void InterruptRequestManager::handle_spurious_irq(u16 request_number)
+    {
+        if (request_number == spurious_slave)
+            ProgrammableInterruptController::end_of_interrupt(request_number, true);
+    }
+
     void InterruptRequestManager::irq_handler(u16 request_number, RegisterState registers)
     {
+        if (the().is_spurious(request_number))
+        {
+            warning() << "Spurious IRQ " << request_number << "!";
+            the().handle_spurious_irq(request_number);
+            return;
+        }
+
         if (!the().has_subscriber(request_number))
         {
             error() << "Unexpected IRQ " << request_number << " with no receiver!";

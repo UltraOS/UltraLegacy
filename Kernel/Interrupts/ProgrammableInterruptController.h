@@ -17,7 +17,9 @@ namespace kernel {
 
         static constexpr u8 end_of_interrupt_code = 0x20;
 
-        static void end_of_interrupt(u8 request_number);
+        static void end_of_interrupt(u8 request_number, bool spurious = false);
+
+        static bool is_irq_being_serviced(u8 request_number);
 
         static void remap(u8 offset);
     };

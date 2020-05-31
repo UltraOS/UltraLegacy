@@ -1,15 +1,30 @@
 #include "Core/IO.h"
+#include "Core/Logger.h"
 
 #include "ProgrammableInterruptController.h"
 
 
 namespace kernel {
-    void ProgrammableInterruptController::end_of_interrupt(u8 request_number)
+    void ProgrammableInterruptController::end_of_interrupt(u8 request_number, bool spurious)
     {
-        if (request_number >= 8)
+        if (request_number >= 8 && !spurious)
             IO::out8<slave_command>(end_of_interrupt_code);
 
         IO::out8<master_command>(end_of_interrupt_code);
+    }
+
+    bool ProgrammableInterruptController::is_irq_being_serviced(u8 request_number)
+    {
+        static constexpr u8 read_isr = 0x0b;
+
+        IO::out8<master_command>(read_isr);
+        IO::out8<slave_command>(read_isr);
+
+        u16 isr_mask = (IO::in8<slave_command>() << 8) | IO::in8<master_command>();
+
+        info() << "PIC: ISR mask=" << isr_mask << " request number=" << request_number;
+
+        return !(isr_mask & request_number);
     }
 
     void ProgrammableInterruptController::remap(u8 offset)

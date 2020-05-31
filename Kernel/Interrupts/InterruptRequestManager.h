@@ -13,6 +13,9 @@ namespace kernel {
         static constexpr u16 entry_count    = 16;
         static constexpr u16 max_irq_index  = 15;
 
+        static constexpr u16 spurious_master = 7;
+        static constexpr u16 spurious_slave = 15;
+
         InterruptRequestManager();
 
         void install();
@@ -21,7 +24,10 @@ namespace kernel {
 
         static InterruptRequestManager& the();
     private:
-        bool has_subscriber(u8 request_number);
+        bool has_subscriber(u16 request_number);
+        bool is_spurious(u16 request_number);
+        void handle_spurious_irq(u16 request_number);
+
         static void irq_handler(u16 request_number, RegisterState) USED;
     private:
         InterruptRequestHandler* m_handlers[entry_count];
