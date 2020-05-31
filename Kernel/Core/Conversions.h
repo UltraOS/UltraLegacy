@@ -4,7 +4,7 @@
 #include "Traits.h"
 
 template<typename T>
-enable_if_t<is_integral<T>::value> to_string_buffer(T number, char* string, size_t max_size, bool& ok, bool null_terminate = true)
+enable_if_t<is_integral<T>::value> to_string(T number, char* string, size_t max_size, bool& ok, bool null_terminate = true)
 {
     bool is_negative = false;
     ok = true;
@@ -57,4 +57,30 @@ enable_if_t<is_integral<T>::value> to_string_buffer(T number, char* string, size
 
     if (null_terminate)
         string[required_size] = '\0';
+}
+
+template<typename T>
+enable_if_t<is_integral<T>::value> to_hex_string(T number, char* string, size_t max_size, bool& ok, bool null_terminate = true)
+{
+    ok = true;
+    constexpr auto required_length = sizeof(number) * 2 + 2; // '0x' + 2 chars per hex byte
+
+    if (max_size < required_length + !!null_terminate)
+    {
+        ok = false;
+        return;
+    }
+
+    string[0] = '0';
+    string[1] = 'x';
+    string[required_length] = '\0';
+
+    static constexpr auto hex_digits = "0123456789ABCDEF";
+
+    size_t j = 0;
+    for (size_t i = 0; j < sizeof(number) * 2 * 4; ++i)
+    {
+        string[required_length - i - 1] = hex_digits[(number >> j) & 0x0F];
+        j += 4;
+    }
 }

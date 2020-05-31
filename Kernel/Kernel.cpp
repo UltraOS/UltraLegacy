@@ -20,7 +20,7 @@ namespace kernel {
         IDT::the().install();
         sti();
 
-        log() << "Hello from the kernel!";
+        log() << "Hello from the kernel! " << format::as_hex << 0xDEADBEEF;
 
         for(;;);
     }

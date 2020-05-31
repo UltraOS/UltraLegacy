@@ -8,6 +8,12 @@
 namespace kernel {
     class Logger;
 
+    enum class format
+    {
+        as_dec,
+        as_hex,
+    };
+
     class AutoLogger
     {
     public:
@@ -16,6 +22,7 @@ namespace kernel {
 
         AutoLogger& operator<<(const char* string);
         AutoLogger& operator<<(bool value);
+        AutoLogger& operator<<(format option);
 
         template<typename T>
         enable_if_t<is_integral<T>::value, AutoLogger&> operator<<(T number);
@@ -23,6 +30,7 @@ namespace kernel {
         ~AutoLogger();
     private:
         Logger& m_logger;
+        format m_format { format::as_dec };
         bool should_terminate;
     };
 
@@ -75,6 +83,13 @@ namespace kernel {
         return *this;
     }
 
+    inline AutoLogger& AutoLogger::operator<<(format option)
+    {
+        m_format = option;
+
+        return *this;
+    }
+
     inline AutoLogger& AutoLogger::operator<<(bool value)
     {
         if (value)
@@ -88,12 +103,15 @@ namespace kernel {
     template<typename T>
     enable_if_t<is_integral<T>::value, AutoLogger&> AutoLogger::operator<<(T number)
     {
-        constexpr size_t max_number_size = 11;
+        constexpr size_t max_number_size = 21;
 
         char number_as_string[max_number_size];
         bool ok;
 
-        to_string_buffer(number, number_as_string, max_number_size, ok);
+        if (m_format == format::as_hex)
+            to_hex_string(number, number_as_string, max_number_size, ok);
+        else
+            to_string(number, number_as_string, max_number_size, ok);
 
         if (ok)
             m_logger.write(number_as_string);

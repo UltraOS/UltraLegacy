@@ -67,7 +67,7 @@ namespace kernel {
             bool ok;
             char number[11];
 
-            to_string_buffer(seconds_elapsed, number, 11, ok);
+            to_string(seconds_elapsed, number, 11, ok);
 
             display_write(number);
 

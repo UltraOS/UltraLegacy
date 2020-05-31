@@ -32,6 +32,7 @@ struct is_integral<i8> : true_value {};
 
 template<>
 struct is_integral<i16> : true_value {};
+
 template<>
 struct is_integral<i32> : true_value {};
 
