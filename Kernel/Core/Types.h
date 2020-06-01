@@ -13,6 +13,7 @@ using u32 = unsigned int;
 using u64 = unsigned long long int;
 
 using size_t = u32;
+using ptr_t  = u32;
 
 // floating point
 using f32 = float;

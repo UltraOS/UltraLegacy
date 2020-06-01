@@ -25,7 +25,10 @@ namespace kernel {
         AutoLogger& operator<<(format option);
 
         template<typename T>
-        enable_if_t<is_integral<T>::value, AutoLogger&> operator<<(T number);
+        enable_if_t<is_integral_v<T>, AutoLogger&> operator<<(T number);
+
+        template<typename T>
+        enable_if_t<is_pointer_v<T>, AutoLogger&> operator<<(T pointer);
 
         ~AutoLogger();
     private:
@@ -101,7 +104,7 @@ namespace kernel {
     }
 
     template<typename T>
-    enable_if_t<is_integral<T>::value, AutoLogger&> AutoLogger::operator<<(T number)
+    enable_if_t<is_integral_v<T>, AutoLogger&> AutoLogger::operator<<(T number)
     {
         constexpr size_t max_number_size = 21;
 
@@ -112,6 +115,25 @@ namespace kernel {
             to_hex_string(number, number_as_string, max_number_size, ok);
         else
             to_string(number, number_as_string, max_number_size, ok);
+
+        if (ok)
+            m_logger.write(number_as_string);
+        else
+            m_logger.write("<INVALID NUMBER>");
+
+        return *this;
+    }
+
+    template<typename T>
+    enable_if_t<is_pointer_v<T>, AutoLogger&> AutoLogger::operator<<(T pointer)
+    {
+        constexpr size_t max_number_size = 21;
+
+        char number_as_string[max_number_size];
+        bool ok;
+
+        // pointers should always be hex
+        to_hex_string(reinterpret_cast<ptr_t>(pointer), number_as_string, max_number_size, ok);
 
         if (ok)
             m_logger.write(number_as_string);

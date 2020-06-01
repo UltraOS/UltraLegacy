@@ -17,8 +17,8 @@ namespace kernel {
             auto& entry = memory_map.entries[i];
 
             log() << "MEMORY -- start:" << format::as_hex
-                  << (u32)entry.base_address
-                  << " size:" << entry.length
+                  << static_cast<ptr_t>(entry.base_address)
+                  << " size:" << static_cast<ptr_t>(entry.length)
                   << " type: "
                   << (entry.type == region_type::FREE ? "FREE" : "RESERVED");
         }

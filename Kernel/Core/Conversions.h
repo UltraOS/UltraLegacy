@@ -4,7 +4,7 @@
 #include "Traits.h"
 
 template<typename T>
-enable_if_t<is_integral<T>::value> to_string(T number, char* string, size_t max_size, bool& ok, bool null_terminate = true)
+enable_if_t<is_integral_v<T>> to_string(T number, char* string, size_t max_size, bool& ok, bool null_terminate = true)
 {
     bool is_negative = false;
     ok = true;
@@ -60,7 +60,7 @@ enable_if_t<is_integral<T>::value> to_string(T number, char* string, size_t max_
 }
 
 template<typename T>
-enable_if_t<is_integral<T>::value> to_hex_string(T number, char* string, size_t max_size, bool& ok, bool null_terminate = true)
+enable_if_t<is_integral_v<T>> to_hex_string(T number, char* string, size_t max_size, bool& ok, bool null_terminate = true)
 {
     ok = true;
     constexpr auto required_length = sizeof(number) * 2 + 2; // '0x' + 2 chars per hex byte
