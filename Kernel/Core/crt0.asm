@@ -1,4 +1,6 @@
-extern _ZN6kernel3runEv
+%define KERNEL_ENTRYPOINT _ZN6kernel3runENS_9MemoryMapE
+
+extern KERNEL_ENTRYPOINT
 
 section .entry
 
@@ -7,8 +9,13 @@ start:
     ; Set up the kernel stack
     mov esp, kernel_stack_begin
 
+    ; entry count
+    push ebx
+    ; memory map pointer
+    push eax
+
     ; Jump into kernel main
-    call _ZN6kernel3runEv
+    call KERNEL_ENTRYPOINT
 hang:
     cli
     hlt

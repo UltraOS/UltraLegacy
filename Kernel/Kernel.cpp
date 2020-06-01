@@ -6,11 +6,23 @@
 #include "Interrupts/IRQManager.h"
 #include "Interrupts/PIC.h"
 #include "Interrupts/PIT.h"
+#include "Memory/PhysicalMemory.h"
 
 namespace kernel {
 
-    void run()
+    void run(MemoryMap memory_map)
     {
+        for (u16 i = 0; i < memory_map.entry_count; ++i)
+        {
+            auto& entry = memory_map.entries[i];
+
+            log() << "MEMORY -- start:" << format::as_hex
+                  << (u32)entry.base_address
+                  << " size:" << entry.length
+                  << " type: "
+                  << (entry.type == region_type::FREE ? "FREE" : "RESERVED");
+        }
+
         runtime::init_global_objects();
 
         cli();
