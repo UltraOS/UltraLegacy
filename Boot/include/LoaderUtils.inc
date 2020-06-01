@@ -126,4 +126,6 @@ try_enable_a20_using_fast_gate:
     pop ax
     ret
 
+e820_unsupported: db "Failed to retrieve memory map. This BIOS doesn't support E820!", CR, LF, 0
+
 %endif ; _LOADER_UTILS_INC_

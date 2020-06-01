@@ -78,6 +78,10 @@ start:
     mov si, loading_msg
     call write_string
 
+    xor ax, ax
+    mov es, ax
+    retrieve_memory_map memory_map, memory_map_entry_count
+
     ; enable color 80x25 text mode
     ; for future use in protected mode
     mov ax, 0x0003
@@ -139,6 +143,10 @@ jump_to_kernel:
     mov ss, ax
     mov esp, 0x30000
 
+    ; pass kernel the memory map
+    mov   eax, memory_map
+    movzx ebx, word [memory_map_entry_count]
+
     ; jump to the kernel
     jmp KERNEL_FLAT_ADDRESS
 BITS 16
@@ -165,3 +173,7 @@ a20fail_msg:        db "Failed to enable A20!", CR, LF, 0
 no_file_error:      db "Couldn't find the kernel file!", CR, LF, 0
 
 kernel_file db "Kernel  bin"
+
+memory_map_entry_count: dw 0x0000
+memory_map:
+ ; should be about 30 free kilobytes here

@@ -161,4 +161,73 @@ MAX_BYTE_COUNT_PER_READ:   equ MAX_SECTOR_COUNT_PER_READ * SECTOR_SIZE
             call read_disk_lba
 %endmacro
 
+SMAP: equ 0x0534D4150
+E820: equ 0xE820
+EXTENDED_ATTRIBUTE_OFFSET: equ 20
+VALID_ENTRY: equ 0b1
+ACPI_ATTIRBUTES_SIZE: equ 4
+ENTRY_SIZE: equ 20
+FULL_ENTRY_SIZE: equ ENTRY_SIZE + ACPI_ATTIRBUTES_SIZE
+LENGTH_LOWER_OFFSET: equ 8
+LENGTH_HIGHER_OFFSET: equ 12
+
+; void retrieve_memory_map(into_buffer, out_count)
+%macro retrieve_memory_map 2
+%%retrieve_memory_map:
+    mov di, %1
+    xor ebx, ebx
+    xor bp, bp
+    mov edx, SMAP
+    mov eax, E820
+    mov [es:di + EXTENDED_ATTRIBUTE_OFFSET], dword VALID_ENTRY
+    mov ecx, FULL_ENTRY_SIZE
+    int 0x15
+    jc %%.on_unsupported
+    mov edx, SMAP
+    cmp eax, edx
+    jne %%.on_unsupported
+    test ebx, ebx
+    je %%.on_unsupported
+    jmp %%.validate_entry
+
+    %%.next:
+        mov eax, E820
+        mov [es:di + EXTENDED_ATTRIBUTE_OFFSET], dword VALID_ENTRY
+        mov ecx, FULL_ENTRY_SIZE
+        int 0x15
+        jc %%.end_of_list
+        mov edx, SMAP
+
+    %%.validate_entry:
+        jcxz %%.skip_entry
+        cmp cl, ENTRY_SIZE
+        jbe %%.short_entry
+        test [es:di + EXTENDED_ATTRIBUTE_OFFSET], byte VALID_ENTRY
+        je %%.skip_entry
+
+    %%.short_entry:
+        mov ecx, [es:di + LENGTH_LOWER_OFFSET]
+        or ecx,  [es:di + LENGTH_HIGHER_OFFSET]
+        jz %%.skip_entry
+        inc bp
+        add di, FULL_ENTRY_SIZE
+
+    %%.skip_entry:
+        test ebx, ebx
+        jne %%.next
+
+    %%.end_of_list:
+        mov [%2], bp
+        clc
+        jmp %%.done
+
+    %%.on_unsupported:
+        mov si, e820_unsupported
+        call write_string
+        call reboot
+
+    %%.done:
+
+%endmacro
+
 %endif ; _COMMON_MACROS_INC_
