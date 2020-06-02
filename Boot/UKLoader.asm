@@ -8,10 +8,7 @@ main:
 %include "BPB.inc"
 %include "CommonMacros.inc"
 
-IDT_GDT_SEGMENT:        equ 0x1000
-IDT_FLAT_ADRESS:        equ (IDT_GDT_SEGMENT << 4)
 SIZEOF_IDT:             equ 2048
-GDT_FLAT_ADRESS:        equ (IDT_FLAT_ADRESS + SIZEOF_IDT)
 SIZEOF_GDT:             equ 24
 KERNEL_SEGMENT:         equ 0x2000
 KERNEL_FLAT_ADDRESS:    equ (KERNEL_SEGMENT << 4)
@@ -92,11 +89,9 @@ start:
     mov cx, 0x3F00
     int 0x10
 
-    ; ---- set up IDT and GDT ----
-    mov ax, IDT_GDT_SEGMENT
-    mov es, ax
-    mov di, 0x0000
-    mov cx, 2048
+    ; ---- set up dummy IDT and GDT ----
+    mov di, idt_ptr
+    mov cx, SIZEOF_IDT
     rep stosb ; 256 empty IDT entries
 
     ; NULL descriptor
@@ -155,25 +150,27 @@ BITS 16
 %include "LoaderUtils.inc"
 
 idt_entry:
-    dw SIZEOF_IDT
-    dd IDT_FLAT_ADRESS
+    dw SIZEOF_IDT - 1
+    dd idt_ptr
 
 gdt_entry:
-    dw SIZEOF_GDT
-    dd GDT_FLAT_ADRESS
+    dw SIZEOF_GDT - 1
+    dd gdt_ptr
 
 boot_context:
     this_partition:         dw 0x0000
     data_offset_in_sectors: dd 0x00000000
     fat_offset_in_sectors:  dd 0x00000000
 
-dskread_msg:        db "Reading kernel from disk...", CR, LF, 0
-loading_msg:        db "Preparing kernel environment...", CR, LF, 0
-a20fail_msg:        db "Failed to enable A20!", CR, LF, 0
-no_file_error:      db "Couldn't find the kernel file!", CR, LF, 0
+dskread_msg:   db "Reading kernel from disk...", CR, LF, 0
+loading_msg:   db "Preparing kernel environment...", CR, LF, 0
+a20fail_msg:   db "Failed to enable A20!", CR, LF, 0
+no_file_error: db "Couldn't find the kernel file!", CR, LF, 0
 
 kernel_file db "Kernel  bin"
 
+idt_ptr: times SIZEOF_IDT db 0
+gdt_ptr: times SIZEOF_GDT db 0
+
 memory_map_entry_count: dw 0x0000
 memory_map:
- ; should be about 30 free kilobytes here
