@@ -25,3 +25,8 @@ align 16
 kernel_stack_end:
     times 16384 db 0
 kernel_stack_begin:
+
+section .magic
+    global magic_string
+    ; a magic "CRC" string to verify the integrity
+    magic_string: db "MAGIC_PRESENT", 0

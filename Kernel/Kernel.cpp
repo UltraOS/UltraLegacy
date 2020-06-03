@@ -1,6 +1,7 @@
 #include "Core/Types.h"
 #include "Core/Logger.h"
 #include "Core/Runtime.h"
+#include "Core/Conversions.h"
 #include "Interrupts/IDT.h"
 #include "Interrupts/ISR.h"
 #include "Interrupts/IRQManager.h"
@@ -12,16 +13,22 @@ namespace kernel {
 
     void run(MemoryMap memory_map)
     {
-        for (u16 i = 0; i < memory_map.entry_count; ++i)
+        runtime::ensure_loaded_correctly();
+
+        u64 total_free_memory = 0;
+
+        for (const auto& entry : memory_map)
         {
-            auto& entry = memory_map.entries[i];
+            total_free_memory += entry.length;
 
             log() << "MEMORY -- start:" << format::as_hex
-                  << static_cast<ptr_t>(entry.base_address)
-                  << " size:" << static_cast<ptr_t>(entry.length)
+                  << entry.base_address
+                  << " size:" << entry.length
                   << " type: "
                   << (entry.type == region_type::FREE ? "FREE" : "RESERVED");
         }
+
+        log() << "Total free memory: " << bytes_to_megabytes(total_free_memory) << " MB";
 
         runtime::init_global_objects();
 
@@ -31,8 +38,6 @@ namespace kernel {
         IRQManager::the().install();
         IDT::the().install();
         sti();
-
-        log() << "Hello from the kernel! " << format::as_hex << 0xDEADBEEF;
 
         for(;;);
     }
