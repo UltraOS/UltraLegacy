@@ -25,5 +25,8 @@ namespace kernel {
     {
         MemoryRange* entries;
         u16 entry_count;
+
+        MemoryRange* begin() { return entries; }
+        MemoryRange* end()   { return entries + entry_count; }
     };
 }
