@@ -8,11 +8,9 @@ main:
 %include "BPB.inc"
 %include "CommonMacros.inc"
 
-SIZEOF_IDT:             equ 2048
-SIZEOF_GDT:             equ 24
-KERNEL_SEGMENT:         equ 0x2000
-KERNEL_FLAT_ADDRESS:    equ (KERNEL_SEGMENT << 4)
-KERNEL_DIRECTORY_INDEX: equ 1
+SIZEOF_IDT:     equ 2048
+SIZEOF_GDT:     equ 40
+LOAD_KERNEL_AT: equ 0x00100000 ; 1MB
 
 start:
     ; copy the boot context from VBR
@@ -67,34 +65,13 @@ start:
     mov si, dskread_msg
     call write_string
 
-    ; read the first sector of the root directory
-    read_root_directory [boot_drive], KERNEL_SEGMENT, 0x0000
-
-    read_directory_file_extended KERNEL_SEGMENT, KERNEL_DIRECTORY_INDEX, kernel_file
-
     mov si, loading_msg
     call write_string
 
-    xor ax, ax
-    mov es, ax
-    retrieve_memory_map memory_map, memory_map_entry_count
-
-    ; enable color 80x25 text mode
-    ; for future use in protected mode
-    mov ax, 0x0003
-    int 0x10
-
-    ; disable cursor
-    mov ax, 0x0100
-    mov cx, 0x3F00
-    int 0x10
-
-    ; ---- set up dummy IDT and GDT ----
-    mov di, idt_ptr
-    mov cx, SIZEOF_IDT
-    rep stosb ; 256 empty IDT entries
+    ; ---- set up GDT ----
 
     ; NULL descriptor
+    mov di, gdt_ptr
     mov cx, 4
     rep stosw
 
@@ -114,44 +91,63 @@ start:
     mov [es:di + 5], byte 0x92   ; access
     mov [es:di + 6], byte 0xCF   ; granularity
     mov [es:di + 7], byte 0x00   ; base
+    add di, 8
 
-    cli
+    ; 16 bit code segment descriptor
+    mov [es:di],     word 0xFFFF ; limit
+    mov [es:di + 2], word 0x0000 ; base
+    mov [es:di + 4], byte 0x00   ; base
+    mov [es:di + 5], byte 0x98   ; access
+    mov [es:di + 6], byte 0x00   ; granularity
+    mov [es:di + 7], byte 0x00   ; base
+    add di, 8
 
-    lgdt [gdt_entry]
-    lidt [idt_entry]
+    ; 16 bit data segment descriptor
+    mov [es:di],     word 0xFFFF ; limit
+    mov [es:di + 2], word 0x0000 ; base
+    mov [es:di + 4], byte 0x00   ; base
+    mov [es:di + 5], byte 0x92   ; access
+    mov [es:di + 6], byte 0x00   ; granularity
+    mov [es:di + 7], byte 0x00   ; base
 
-    ; switch to protected mode
-    mov eax, cr0
-    or  eax, 1
-    mov cr0, eax
+    ; read the first sector of the root directory
+    read_root_directory [boot_drive], FAT_DIRECTORY_SEGMENT, 0x0000
 
-    jmp 0x08:jump_to_kernel
+    read_directory_file_protected LOAD_KERNEL_AT, 1, kernel_file
+
+    xor ax, ax
+    mov es, ax
+    retrieve_memory_map memory_map, memory_map_entry_count
+
+    ; enable color 80x25 text mode
+    ; for future use in protected mode
+    mov ax, 0x0003
+    int 0x10
+
+    ; disable cursor
+    mov ax, 0x0100
+    mov cx, 0x3F00
+    int 0x10
+
+    switch_to_protected
 
 BITS 32
 jump_to_kernel:
-    ; setup segments
-    mov ax, 0x10
-    mov ds, ax
-    mov es, ax
-    mov fs, ax
-    mov gs, ax
-    mov ss, ax
-    mov esp, 0x30000
-
     ; pass kernel the memory map
-    mov   eax, memory_map
+    xor eax, eax
+    mov ax, memory_map
     movzx ebx, word [memory_map_entry_count]
 
     ; jump to the kernel
-    jmp KERNEL_FLAT_ADDRESS
+    jmp LOAD_KERNEL_AT
 BITS 16
 
 %include "Common.inc"
 %include "LoaderUtils.inc"
 
-idt_entry:
-    dw SIZEOF_IDT - 1
-    dd idt_ptr
+sectors_to_read: dd 0
+sector_offset:   dd 0
+memory_offset:   dd 0
 
 gdt_entry:
     dw SIZEOF_GDT - 1
@@ -169,8 +165,8 @@ no_file_error: db "Couldn't find the kernel file!", CR, LF, 0
 
 kernel_file db "Kernel  bin"
 
-idt_ptr: times SIZEOF_IDT db 0
-gdt_ptr: times SIZEOF_GDT db 0
+kernel_sector: times SECTOR_SIZE db 0
+gdt_ptr:       times SIZEOF_GDT  db 0
 
 memory_map_entry_count: dw 0x0000
 memory_map:

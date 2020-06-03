@@ -4,6 +4,7 @@
 CR: equ 0x0D
 LF: equ 0x0A
 
+FAT_DIRECTORY_SEGMENT:     equ 0x2000
 BOOT_CONTEXT_SIZE:         equ 10
 CLUSTER_LOW_ENTRY_OFFSET:  equ 26
 FILESIZE_ENTRY_OFFSET:     equ 28
@@ -20,6 +21,19 @@ SECTOR_PER_SEGMENT_COUNT:  equ 128
 SECTOR_SIZE:               equ 512 ; also present in BPB but this one is compile time
 SECTOR_OVERFLOW_COUNT:     equ SECTOR_PER_SEGMENT_COUNT - MAX_SECTOR_COUNT_PER_READ
 MAX_BYTE_COUNT_PER_READ:   equ MAX_SECTOR_COUNT_PER_READ * SECTOR_SIZE
+
+SMAP:                      equ 0x0534D4150
+E820:                      equ 0xE820
+EXTENDED_ATTRIBUTE_OFFSET: equ 20
+VALID_ENTRY:               equ 0b1
+ACPI_ATTIRBUTES_SIZE:      equ 4
+ENTRY_SIZE:                equ 20
+FULL_ENTRY_SIZE:           equ ENTRY_SIZE + ACPI_ATTIRBUTES_SIZE
+LENGTH_LOWER_OFFSET:       equ 8
+LENGTH_HIGHER_OFFSET:      equ 12
+
+REAL_MODE_CODE:            equ 0x18
+REAL_MODE_DATA:            equ 0x20
 
 ; magic breakpoint in Bochs
 %define BP xchg bx, bx
@@ -161,15 +175,124 @@ MAX_BYTE_COUNT_PER_READ:   equ MAX_SECTOR_COUNT_PER_READ * SECTOR_SIZE
             call read_disk_lba
 %endmacro
 
-SMAP: equ 0x0534D4150
-E820: equ 0xE820
-EXTENDED_ATTRIBUTE_OFFSET: equ 20
-VALID_ENTRY: equ 0b1
-ACPI_ATTIRBUTES_SIZE: equ 4
-ENTRY_SIZE: equ 20
-FULL_ENTRY_SIZE: equ ENTRY_SIZE + ACPI_ATTIRBUTES_SIZE
-LENGTH_LOWER_OFFSET: equ 8
-LENGTH_HIGHER_OFFSET: equ 12
+%macro switch_to_protected 0
+    cli
+
+    lgdt [gdt_entry]
+
+    mov eax, cr0
+    or  eax, 1
+    mov cr0, eax
+
+    jmp 0x08:%%.reset_selector
+
+    BITS 32
+    %%.reset_selector:
+        ; setup segments
+        mov ax, 0x10
+        mov ds, ax
+        mov es, ax
+        mov fs, ax
+        mov gs, ax
+        mov ss, ax
+        mov esp, 0x30000
+%endmacro
+
+%macro switch_to_real 0
+
+    cli
+    jmp REAL_MODE_CODE:%%.reset_selector
+
+    %%.reset_selector:
+    BITS 16
+    mov eax, REAL_MODE_DATA
+    mov ds, eax
+    mov es, eax
+    mov fs, eax
+    mov gs, eax
+    mov ss, eax
+
+    mov eax, cr0
+    xor eax, 1
+    mov cr0, eax
+
+    jmp 0x0:%%.actually_reset_selector
+
+    %%.actually_reset_selector:
+        xor ax, ax
+        mov ds, ax
+        mov es, ax
+        mov ss, ax
+        mov sp, 0x7C00
+        ;lidt [real_mode_idt]
+        sti
+%endmacro
+
+; can read into the entire 4GB memory space and potentially unlimited file sizes
+; void read_directory_file_protected(at_address, index, filename)
+%macro read_directory_file_protected 3
+%%read_directory_file_protected:
+    ; check if this file is what we're looking for
+    mov cx, FAT_FILENAME_LENGTH
+    mov ax, FAT_DIRECTORY_SEGMENT
+    mov es, ax
+    mov di, %2 * DIRECTORY_ENTRY_SIZE
+    mov si, %3
+    repz cmpsb
+    je %%.on_file_found
+
+    %%.on_file_not_found:
+        mov si, no_file_error
+        call write_string
+        call reboot
+
+    %%.on_file_found:
+        mov ax, FAT_DIRECTORY_SEGMENT
+        mov es, ax
+
+        mov eax, [es:%2 * DIRECTORY_ENTRY_SIZE + FILESIZE_ENTRY_OFFSET]
+        xor edx, edx
+        movzx ebx, word [bytes_per_sector]
+        div ebx
+        test edx, edx
+        jz aligned
+        inc eax
+        aligned:
+        mov [sectors_to_read], eax
+        mov [memory_offset], dword %1
+
+        movzx eax, word [es:%2 * DIRECTORY_ENTRY_SIZE + CLUSTER_LOW_ENTRY_OFFSET]
+        sub   eax, RESERVED_CLUSTER_COUNT
+        movzx edx, byte [sectors_per_cluster]
+        mul edx
+        add eax, [data_offset_in_sectors]
+        mov [sector_offset], eax
+
+        read_one:
+            xor ax, ax
+            mov es, ax
+            mov [DAP.sector_count], word 1
+            mov dl, [boot_drive]
+            mov eax, [sector_offset]
+
+            mov di, kernel_sector
+            call read_disk_lba
+
+        copy_protected:
+            switch_to_protected
+            xor eax, eax
+            mov ax, kernel_sector
+            mov esi, eax
+            mov edi, [memory_offset]
+            mov ecx, SECTOR_SIZE
+            rep movsb
+            add [memory_offset],   dword SECTOR_SIZE
+            add [sector_offset],   dword 1
+            sub [sectors_to_read], dword 1
+            switch_to_real
+            cmp dword [sectors_to_read], 0
+            jg read_one
+%endmacro
 
 ; void retrieve_memory_map(into_buffer, out_count)
 %macro retrieve_memory_map 2
@@ -227,7 +350,6 @@ LENGTH_HIGHER_OFFSET: equ 12
         call reboot
 
     %%.done:
-
 %endmacro
 
 %endif ; _COMMON_MACROS_INC_

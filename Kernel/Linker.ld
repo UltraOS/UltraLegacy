@@ -3,7 +3,7 @@ ENTRY(start)
 SECTIONS
 {
     /* also defined in UKLoader.asm */
-    . = 0x20000;
+    . = 0x00100000; /* 1 MB */
 
     .text BLOCK(4K) : ALIGN(4K)
     {
@@ -29,5 +29,10 @@ SECTIONS
     {
         *(COMMON)
         *(.bss)
+    }
+
+    .rodata BLOCK(4K) : ALIGN(4K)
+    {
+        *(.magic)
     }
 }
