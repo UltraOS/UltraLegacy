@@ -12,6 +12,7 @@ namespace kernel {
     {
         as_dec,
         as_hex,
+        as_address, // force format char* as address
     };
 
     class AutoLogger
@@ -81,6 +82,9 @@ namespace kernel {
 
     inline AutoLogger& AutoLogger::operator<<(const char* string)
     {
+        if (m_format == format::as_address)
+            return this->operator<<(reinterpret_cast<const void*>(string));
+
         m_logger.write(string);
 
         return *this;
