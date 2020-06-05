@@ -34,7 +34,7 @@ namespace kernel::runtime {
             log() << "Magic test passed!";
         else
         {
-            error() << "Magic test failed! " << "magic_ptr=" << format::as_address << magic_string;
+            error() << "Magic test failed! magic_string=" << format::as_address << magic_string;
             hang();
         }
     }

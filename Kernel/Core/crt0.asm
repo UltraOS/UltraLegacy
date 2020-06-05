@@ -21,6 +21,7 @@ hang:
     hlt
     jmp hang
 
+section .kernel_stack
 align 16
 kernel_stack_end:
     times 16384 db 0
