@@ -2,16 +2,15 @@ ENTRY(start)
 
 SECTIONS
 {
-    /* also defined in UKLoader.asm */
-    . = 0x00100000; /* 1 MB */
+    . = 0xC0100000; /* 3 GB + 1MB */
 
-    .text BLOCK(4K) : ALIGN(4K)
+    .text ALIGN(4K) : AT (ADDR (.text) - 0xC0000000)
     {
         *(.entry)
         *(.text)
     }
 
-    .rodata BLOCK(4K) : ALIGN(4K)
+    .rodata ALIGN(4K) : AT (ADDR (.rodata) - 0xC0000000)
     {
         global_constructors_begin = .;
         *(.ctors)
@@ -20,19 +19,19 @@ SECTIONS
         *(.rodata)
     }
 
-    .data BLOCK(4K) : ALIGN(4K)
+    .data ALIGN(4K) : AT (ADDR (.data) - 0xC0000000)
     {
         *(.data)
     }
 
-    .bss BLOCK(4K) : ALIGN(4K)
+    .bss ALIGN(4K) : AT (ADDR (.bss) - 0xC0000000)
     {
         *(COMMON)
         *(.bss)
         *(.kernel_stack)
     }
 
-    .rodata BLOCK(4K) : ALIGN(4K)
+    .rodata ALIGN(4K) : AT (ADDR (.rodata) - 0xC0000000)
     {
         *(.magic)
     }
