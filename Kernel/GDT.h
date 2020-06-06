@@ -25,9 +25,9 @@ namespace kernel {
         enum flag_attributes : u8
         {
             GRANULARITY_1B  = 0,
-            GRANULARITY_4KB = SET_BIT(7),
+            GRANULARITY_4KB = SET_BIT(3),
             MODE_16_BIT     = 0,
-            MODE_32_BIT     = SET_BIT(6),
+            MODE_32_BIT     = SET_BIT(2),
         };
 
         friend access_attributes operator|(access_attributes l, access_attributes r)

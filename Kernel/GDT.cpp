@@ -45,7 +45,7 @@ namespace kernel {
         this_entry.base_upper  = (base & 0xFF000000) >> 24;
 
         this_entry.access = access;
-        this_entry.flags  = static_cast<flag_attributes>(static_cast<u8>(flags) >> 4);
+        this_entry.flags  = flags;
 
         this_entry.limit_lower =  size & 0x0000FFFF;
         this_entry.limit_upper = (size & 0x000F0000) >> 16;
