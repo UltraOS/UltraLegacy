@@ -43,10 +43,10 @@ namespace kernel {
 
         auto display_write = [] (const char* string, bool carriage_return = false)
                              {
-                                 static u16* memory = reinterpret_cast<u16*>(0xB8000);
+                                 static u16* memory = reinterpret_cast<u16*>(0xB8000 + 0xC0000000);
 
                                  if (carriage_return)
-                                     memory = reinterpret_cast<u16*>(0xB8000);
+                                     memory = reinterpret_cast<u16*>(0xB8000 + 0xC0000000);
 
                                  while (*string)
                                  {

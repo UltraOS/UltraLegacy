@@ -1,5 +1,6 @@
 #include "Core/Logger.h"
 
+#include "GDT.h"
 #include "IDT.h"
 
 namespace kernel {
@@ -28,7 +29,7 @@ namespace kernel {
         the_entry.address_lower  =  reinterpret_cast<u32>(handler) & 0x0000FFFF;
         the_entry.address_higher = (reinterpret_cast<u32>(handler) & 0xFFFF0000) >> 16;
         the_entry.attributes = attrs;
-        the_entry.selector = gdt_selector;
+        the_entry.selector = GDT::kernel_code_selector();
 
         return *this;
     }

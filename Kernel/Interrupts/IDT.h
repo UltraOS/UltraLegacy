@@ -28,8 +28,6 @@ namespace kernel {
 
         static IDT& the();
     private:
-        static constexpr u16 gdt_selector = 0x8;
-
         IDT();
 
         struct PACKED entry

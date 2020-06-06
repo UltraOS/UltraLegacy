@@ -68,25 +68,7 @@ start:
     jmp ecx
 
     higher_half:
-        ; TODO: delete this once I have GDT in C++
-        ; keep the identity mapping for the first MB
-        mov edi, identity_lower
-        mov esi, 0x00000000
-        mov ecx, 256 ; 1 MB (256 * 4096)
-
-        map_identity:
-            mov edx, esi
-            or  edx, (PRESENT | READWRITE)
-            mov [edi], edx
-
-            add esi, PAGE_SIZE
-            add edi, ENTRY_SIZE
-            sub ecx, 1
-
-            cmp ecx, 0
-            jg map_identity
-
-        mov [boot_page_directory], dword TO_PHYSICAL(identity_lower) + (PRESENT | READWRITE)
+        mov [boot_page_directory], dword 0x00000000
 
         ; flush TLB
         mov ecx, cr3
@@ -99,8 +81,7 @@ start:
         push ebx
 
         ; memory map pointer
-        ; TODO: reenable once I don't identity map the 1st MB
-        ;add eax, VIRTUAL_ORIGIN
+        add eax, VIRTUAL_ORIGIN
         push eax
 
     ; Jump into kernel main

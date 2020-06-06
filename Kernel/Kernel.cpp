@@ -2,12 +2,14 @@
 #include "Core/Logger.h"
 #include "Core/Runtime.h"
 #include "Core/Conversions.h"
+#include "GDT.h"
 #include "Interrupts/IDT.h"
 #include "Interrupts/ISR.h"
 #include "Interrupts/IRQManager.h"
 #include "Interrupts/PIC.h"
 #include "Interrupts/PIT.h"
 #include "Memory/PhysicalMemory.h"
+
 
 namespace kernel {
 
@@ -33,6 +35,8 @@ namespace kernel {
         runtime::init_global_objects();
 
         cli();
+        GDT::the().create_basic_descriptors();
+        GDT::the().install();
         PIT timer;
         ISR::install();
         IRQManager::the().install();
