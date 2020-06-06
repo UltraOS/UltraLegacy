@@ -14,3 +14,7 @@
 #define sti()  asm volatile("sti" ::: "memory")
 #define hlt()  asm volatile("hlt" ::: "memory")
 #define hang() for (;;) { cli(); hlt(); }
+
+#define KB (1024)
+#define MB (1024 * KB)
+#define GB (1024 * MB)

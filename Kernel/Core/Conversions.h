@@ -2,6 +2,7 @@
 
 #include "Types.h"
 #include "Traits.h"
+#include "Macros.h"
 
 template<typename T>
 enable_if_t<is_integral_v<T>> to_string(T number, char* string, size_t max_size, bool& ok, bool null_terminate = true)
@@ -88,6 +89,5 @@ enable_if_t<is_integral_v<T>> to_hex_string(T number, char* string, size_t max_s
 template<typename T>
 enable_if_t<is_integral_v<T>, T> bytes_to_megabytes(T bytes)
 {
-    // this is not actually megabytes but whatever
-    return bytes / 1024 / 1024;
+    return bytes / MB;
 }
