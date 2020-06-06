@@ -103,7 +103,7 @@ start:
     mov ecx, cr0
     or  ecx, (WRITE_PROTECT | PAGING)
     mov cr0, ecx
-    xchg bx, bx
+
     mov ecx, higher_half
     jmp ecx
 
