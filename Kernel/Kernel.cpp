@@ -11,11 +11,6 @@
 #include "Memory/PhysicalMemory.h"
 #include "Memory/Allocator.h"
 
-class test
-{
-public:
-    test() = default;
-};
 
 namespace kernel {
 
@@ -45,7 +40,6 @@ namespace kernel {
         cli();
         GDT::the().create_basic_descriptors();
         GDT::the().install();
-        asm volatile("xchg %bx, %bx");
         PIT timer;
         ISR::install();
         IRQManager::the().install();
