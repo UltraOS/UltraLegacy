@@ -9,13 +9,21 @@
 #include "Interrupts/PIC.h"
 #include "Interrupts/PIT.h"
 #include "Memory/PhysicalMemory.h"
+#include "Memory/Allocator.h"
 
+class test
+{
+public:
+    test() = default;
+};
 
 namespace kernel {
 
     void run(MemoryMap memory_map)
     {
         runtime::ensure_loaded_correctly();
+
+        Allocator::initialize();
 
         u64 total_free_memory = 0;
 
@@ -37,6 +45,7 @@ namespace kernel {
         cli();
         GDT::the().create_basic_descriptors();
         GDT::the().install();
+        asm volatile("xchg %bx, %bx");
         PIT timer;
         ISR::install();
         IRQManager::the().install();

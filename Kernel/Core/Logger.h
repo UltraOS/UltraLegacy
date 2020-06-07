@@ -4,6 +4,7 @@
 #include "IO.h"
 #include "Traits.h"
 #include "Conversions.h"
+#include "Core/Runtime.h"
 
 namespace kernel {
     class Logger;
@@ -43,7 +44,7 @@ namespace kernel {
     public:
         virtual Logger& write(const char* text) = 0;
 
-        // TODO: add [virtual ~Logger() = default;] once I have operator delete
+        virtual ~Logger() = default;
     };
 
     // Uses port 0xE9 to log
