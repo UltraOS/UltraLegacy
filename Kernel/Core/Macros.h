@@ -18,3 +18,13 @@
 #define KB (1024)
 #define MB (1024 * KB)
 #define GB (1024 * MB)
+
+// A bunch of things to stop Visual Studio from
+// complaining and actually help me instead
+#ifdef _MSVC_LANG
+#define cli()
+#define hang()
+#define asm __asm
+#define USED
+#define PACKED
+#endif

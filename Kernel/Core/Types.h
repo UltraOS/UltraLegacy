@@ -12,7 +12,14 @@ using u16 = unsigned short int;
 using u32 = unsigned int;
 using u64 = unsigned long long int;
 
+// MSVC complains about size_t redifinition
+// let's just pretend we don't define it
+// (this project cannot actually be compiled with MSVC anyway)
+// I like using visual studio for editing tho.
+#ifndef _MSVC_LANG
 using size_t = long unsigned int;
+#endif
+
 using ptr_t  = u32;
 
 // floating point

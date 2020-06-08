@@ -1,6 +1,7 @@
 Images/
 Toolchain/CrossCompiler/
 Build/
+Project/
 Scripts/vhc
 *.o
 *.bin

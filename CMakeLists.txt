@@ -3,13 +3,19 @@ execute_process(
     RESULT_VARIABLE VHC_BUILD_FAILED
 )
 
-if (VHC_BUILD_FAILED)
-    message(FATAL_ERROR "-- VHC build error.")
-endif()
+if (NOT WIN32)
+    if (VHC_BUILD_FAILED)
+        message(FATAL_ERROR "-- VHC build error.")
+    endif()
+endif(NOT WIN32)
 
 cmake_minimum_required(VERSION 3.10)
 
-set(CMAKE_TOOLCHAIN_FILE ${CMAKE_SOURCE_DIR}/Toolchain/CMakeToolchain.txt)
+if (NOT WIN32)
+    set(CMAKE_TOOLCHAIN_FILE ${CMAKE_SOURCE_DIR}/Toolchain/CMakeToolchain.txt)
+else()
+    add_compile_options("/std:c++latest")
+endif(NOT WIN32)
 
 project(UltraOS)
 
