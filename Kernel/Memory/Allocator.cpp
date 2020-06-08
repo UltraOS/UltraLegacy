@@ -4,7 +4,7 @@
 
 namespace kernel {
 
-    Allocator::HeapBlockHeader* Allocator::m_heap;
+    Allocator::HeapBlockHeader* Allocator::m_heap_block;
 
     void Allocator::initialize()
     {
@@ -22,14 +22,14 @@ namespace kernel {
     {
         auto& new_heap = *reinterpret_cast<HeapBlockHeader*>(ptr);
 
-        if (m_heap)
+        if (m_heap_block)
         {
-            new_heap.next = m_heap->next;
-            m_heap->next = &new_heap;
+            new_heap.next = m_heap_block->next;
+            m_heap_block->next = &new_heap;
         }
         else
         {
-            m_heap = &new_heap;
+            m_heap_block = &new_heap;
             new_heap.next = nullptr;
         }
 
@@ -37,19 +37,20 @@ namespace kernel {
 
         auto chunk_count = pure_size / chunk_size_in_bytes;
 
-        auto bitmap_bytes = 1 + ((chunk_count - 1) / 8);
+        auto bitmap_bytes = 1 + ((chunk_count - 1) / 4);
 
         size_t data_ptr = reinterpret_cast<size_t>(reinterpret_cast<u8*>(ptr) + sizeof(HeapBlockHeader) + bitmap_bytes);
         size_t alignment_overhead = 0;
 
         // align data at chunk size
         if (data_ptr % chunk_size_in_bytes)
-            alignment_overhead = chunk_size_in_bytes - data_ptr % chunk_size_in_bytes;
+            alignment_overhead = chunk_size_in_bytes - (data_ptr % chunk_size_in_bytes);
 
         bitmap_bytes += alignment_overhead;
 
         pure_size -= bitmap_bytes;
 
+        // align data at chunk size
         if (pure_size % chunk_size_in_bytes)
             pure_size -= pure_size % chunk_size_in_bytes;
 
@@ -58,14 +59,12 @@ namespace kernel {
         new_heap.free_chunks = new_heap.chunk_count;
         new_heap.data = new_heap.bitmap() + bitmap_bytes;
 
-        memory_set(new_heap.bitmap(), new_heap.bitmap_size(), 0);
+        memory_set(new_heap.bitmap(), bitmap_bytes, 0);
     }
 
     void* Allocator::allocate(size_t bytes)
     {
-        bytes += sizeof(AllocationHeader);
-
-        for (auto* heap = m_heap; heap; heap = heap->next)
+        for (auto* heap = m_heap_block; heap; heap = heap->next)
         {
             if (heap->free_bytes() < bytes)
                 continue;
@@ -76,11 +75,15 @@ namespace kernel {
             size_t current_free_block = 0;
             size_t at_bit = 0;
 
-            for (size_t i = 0; i < heap->bitmap_size(); ++i)
+            for (size_t i = 0; i < heap->chunk_count * 2; i += 2)
             {
                 auto byte_index = i / 8;
+                auto bit_index  = i - 8 * byte_index;
 
-                bool is_free = !(heap->bitmap()[byte_index] & (1 << (i - (i * (byte_index)))));
+                u8 allocation_mask = (1 << (bit_index + 1)) | (1 << bit_index);
+                u8 allocation_id = heap->bitmap()[byte_index] & allocation_mask;
+
+                bool is_free = !allocation_id;
 
                 if (is_free)
                     ++current_free_block;
@@ -103,20 +106,55 @@ namespace kernel {
 
             if (allocation_succeeded)
             {
-                // mark as allocated
-                for (size_t i = 0; i < chunks_needed; ++i)
-                {
-                    auto true_index = i + at_bit;
+                auto true_index = at_bit;
 
-                    auto byte_index = true_index / 8;
-                    heap->bitmap()[byte_index] |= heap->bitmap()[byte_index] | (1 << (true_index - (true_index * (byte_index))));
+                u8 this_id        = 0;
+                u8 left_neighbor  = 0;
+                u8 right_neighbor = 0;
+
+                // detect left and right neighbors
+                if (true_index)
+                {
+                    auto left = true_index - 2;
+                    auto byte_index = left / 8;
+                    auto bit_index  = left - 8 * byte_index;
+                    auto& control_byte = heap->bitmap()[byte_index];
+
+                    left_neighbor = control_byte & ((1 << (bit_index + 1)) | ((1 << bit_index)));
+                    left_neighbor >>= bit_index;
+                }
+                if (true_index / 2 < heap->chunk_count)
+                {
+                    auto right = true_index + (chunks_needed * 2);
+                    auto byte_index = right / 8;
+                    auto bit_index  = right - 8 * byte_index;
+
+                    auto& control_byte = heap->bitmap()[byte_index];
+
+                    right_neighbor = control_byte & ((1 << (bit_index + 1)) | (1 << bit_index));
+                    right_neighbor >>= bit_index;
                 }
 
-                auto* data = heap->begin() + at_bit * heap->chunk_size;
+                // find a unique id for this allocation
+                for (; this_id == left_neighbor || this_id == right_neighbor || !this_id; ++this_id);
 
-                new (data) AllocationHeader{ chunks_needed };
+                // mark as allocated with the id
+                for (size_t i = 0; i < chunks_needed * 2; i += 2)
+                {
+                    auto true_index = at_bit + i;
+                    auto byte_index = true_index / 8;
+                    auto bit_index  = true_index - 8 * byte_index;
 
-                return data + sizeof(AllocationHeader);
+                    auto& control_byte = heap->bitmap()[byte_index];
+
+                    control_byte |= this_id << bit_index;
+                }
+
+                heap->free_chunks -= chunks_needed;
+
+                auto* data = heap->begin() + (at_bit / 2) * heap->chunk_size;
+
+                return data;
             }
         }
 
@@ -125,22 +163,40 @@ namespace kernel {
 
     void Allocator::free(void* ptr)
     {
-        auto& header = *(reinterpret_cast<AllocationHeader*>(ptr) - 1);
-
-        for (auto heap = m_heap; heap; heap = heap->next)
+        for (auto heap = m_heap_block; heap; heap = heap->next)
         {
-            if (!heap->belongs_to_block(ptr))
+            if (!heap->contains(ptr))
                 continue;
 
             auto at_bit = heap->which_bit(ptr);
 
-            // mark as free
-            for (size_t i = 0; i < header.chunk_count; ++i)
-            {
-                auto true_index = i + at_bit;
+            u8 allocation_id = 0;
 
-                auto byte_index = true_index / 8;
-                heap->bitmap()[byte_index] &= heap->bitmap()[byte_index] ^ (1 << (true_index - (true_index * (byte_index))));
+            // mark as free
+            for (size_t i = at_bit;; i += 2)
+            {
+                auto byte_index = i / 8;
+                auto bit_index  = i - 8 * byte_index;
+
+                auto& control_byte = heap->bitmap()[byte_index];
+                auto scaled_id = allocation_id << bit_index;
+
+                if (!allocation_id)
+                {
+                    u8 allocation_mask = (1 << (bit_index + 1)) | (1 << bit_index);
+                    allocation_id = control_byte & allocation_mask;
+                    scaled_id = allocation_id;
+                    allocation_id >>= bit_index;
+                }
+                else
+                {
+                    if (!(control_byte & scaled_id))
+                        break;
+                }
+
+                control_byte ^= scaled_id;
+
+                heap->free_chunks++;
             }
 
             break;

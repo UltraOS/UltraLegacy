@@ -13,7 +13,7 @@ namespace kernel {
 
         static void* allocate(size_t bytes);
         static void  free(void* ptr);
-    private:
+    public:
         struct HeapBlockHeader
         {
             HeapBlockHeader* next;
@@ -26,17 +26,10 @@ namespace kernel {
             u8* begin()  { return data; }
             u8* end()    { return begin() + chunk_count * chunk_size; }
 
-            size_t which_bit(void* ptr) { return chunk_count - ((end() - reinterpret_cast<u8*>(ptr)) / chunk_size) - 1; }
+            size_t which_bit(void* ptr) { return ((reinterpret_cast<u8*>(ptr) - begin()) / chunk_size) * 2; }
+            size_t free_bytes()         { return free_chunks * chunk_size; }
+            bool contains(void* ptr)    { return ptr <= end(); }
 
-            size_t bitmap_size() { return chunk_count * 8; }
-            size_t free_bytes()  { return free_chunks * chunk_size; }
-            bool belongs_to_block(void* ptr) { return ptr <= end(); }
-
-        } static* m_heap;
-
-        struct AllocationHeader
-        {
-            size_t chunk_count;
-        };
+        } static* m_heap_block;
     };
 }
