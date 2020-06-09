@@ -9,7 +9,7 @@
 #include "Interrupts/PIC.h"
 #include "Interrupts/PIT.h"
 #include "Memory/PhysicalMemory.h"
-#include "Memory/Allocator.h"
+#include "Memory/HeapAllocator.h"
 
 
 namespace kernel {
@@ -18,7 +18,7 @@ namespace kernel {
     {
         runtime::ensure_loaded_correctly();
 
-        Allocator::initialize();
+        HeapAllocator::initialize();
 
         u64 total_free_memory = 0;
 

@@ -73,6 +73,12 @@ struct is_integral<i32> : true_value {};
 template<>
 struct is_integral<i64> : true_value {};
 
+template<>
+struct is_integral<long> : true_value {};
+
+template<>
+struct is_integral<unsigned long> : true_value {};
+
 template<typename T>
 inline constexpr bool is_integral_v = is_integral<T>::value;
 

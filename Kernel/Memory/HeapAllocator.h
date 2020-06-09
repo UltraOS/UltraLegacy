@@ -5,7 +5,7 @@
 
 namespace kernel {
 
-    class Allocator
+    class HeapAllocator
     {
     public:
         static void initialize();
@@ -13,7 +13,7 @@ namespace kernel {
 
         static void* allocate(size_t bytes);
         static void  free(void* ptr);
-    public:
+    private:
         struct HeapBlockHeader
         {
             HeapBlockHeader* next;

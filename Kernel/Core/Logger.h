@@ -4,7 +4,7 @@
 #include "IO.h"
 #include "Traits.h"
 #include "Conversions.h"
-#include "Core/Runtime.h"
+#include "Runtime.h"
 
 namespace kernel {
     class Logger;

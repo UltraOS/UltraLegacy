@@ -1,12 +1,14 @@
-#include "Allocator.h"
+#include "HeapAllocator.h"
+#include "Core/Logger.h"
 #include "Core/Memory.h"
-#include "Core/Runtime.h"
+
+#define HEAP_ALLOCATOR_DEBUG
 
 namespace kernel {
 
-    Allocator::HeapBlockHeader* Allocator::m_heap_block;
+    HeapAllocator::HeapBlockHeader* HeapAllocator::m_heap_block;
 
-    void Allocator::initialize()
+    void HeapAllocator::initialize()
     {
         static constexpr size_t kernel_base_address = 0xC0100000;
         static constexpr size_t kernel_size         = 3 * MB;
@@ -18,7 +20,7 @@ namespace kernel {
         feed_block(reinterpret_cast<void*>(kernel_heap_begin), kernel_heap_size);
     }
 
-    void Allocator::feed_block(void* ptr, size_t size, size_t chunk_size_in_bytes)
+    void HeapAllocator::feed_block(void* ptr, size_t size, size_t chunk_size_in_bytes)
     {
         auto& new_heap = *reinterpret_cast<HeapBlockHeader*>(ptr);
 
@@ -59,10 +61,19 @@ namespace kernel {
         new_heap.free_chunks = new_heap.chunk_count;
         new_heap.data = new_heap.bitmap() + bitmap_bytes;
 
+        #ifdef HEAP_ALLOCATOR_DEBUG
+
+        log() << "Allocator: adding a new heap block "
+              << bytes_to_megabytes(size) << "MB (actual: " << pure_size
+              << " overhead: " << size - pure_size
+              << ") Total chunk count: " << new_heap.chunk_count;
+
+        #endif
+
         memory_set(new_heap.bitmap(), bitmap_bytes, 0);
     }
 
-    void* Allocator::allocate(size_t bytes)
+    void* HeapAllocator::allocate(size_t bytes)
     {
         for (auto* heap = m_heap_block; heap; heap = heap->next)
         {
@@ -154,6 +165,19 @@ namespace kernel {
 
                 auto* data = heap->begin() + (at_bit / 2) * heap->chunk_size;
 
+                #ifdef HEAP_ALLOCATOR_DEBUG
+
+                auto total_allocation_bytes = chunks_needed * heap->chunk_size;
+                auto total_free_bytes = heap->free_bytes();
+
+                log() << "Allocator: allocating "
+                      << total_allocation_bytes
+                      << " bytes (" << chunks_needed << " chunk(s)) Free bytes: "
+                      << total_free_bytes
+                      << " (" << bytes_to_megabytes(total_free_bytes) << " MB)";
+
+                #endif
+
                 return data;
             }
         }
@@ -161,8 +185,15 @@ namespace kernel {
         return nullptr;
     }
 
-    void Allocator::free(void* ptr)
+    void HeapAllocator::free(void* ptr)
     {
+        #ifdef HEAP_ALLOCATOR_DEBUG
+
+        size_t total_freed_chunks = 0;
+        HeapBlockHeader* freed_heap = nullptr;
+
+        #endif
+
         for (auto heap = m_heap_block; heap; heap = heap->next)
         {
             if (!heap->contains(ptr))
@@ -171,6 +202,10 @@ namespace kernel {
             auto at_bit = heap->which_bit(ptr);
 
             u8 allocation_id = 0;
+
+            #ifdef HEAP_ALLOCATOR_DEBUG
+            freed_heap = heap;
+            #endif
 
             // mark as free
             for (size_t i = at_bit;; i += 2)
@@ -197,9 +232,21 @@ namespace kernel {
                 control_byte ^= scaled_id;
 
                 heap->free_chunks++;
+
+                #ifdef HEAP_ALLOCATOR_DEBUG
+                total_freed_chunks++;
+                #endif
             }
 
             break;
         }
+
+        #ifdef HEAP_ALLOCATOR_DEBUG
+
+        log() << "Allocator: freeing " << total_freed_chunks
+              << " chunk(s) (" << total_freed_chunks * freed_heap->chunk_size
+              << " bytes) at address:" << ptr;
+
+        #endif
     }
 }

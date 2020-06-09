@@ -1,6 +1,6 @@
 #pragma once
-#include "Core/Types.h"
-#include "Memory/Allocator.h"
+#include "Types.h"
+#include "Memory/HeapAllocator.h"
 
 namespace kernel::runtime {
     void ensure_loaded_correctly();
@@ -25,30 +25,32 @@ inline void operator delete[](void*, void*) noexcept
 {
 }
 
-inline void operator delete(void*, size_t) noexcept
+inline void* operator new(size_t size)
 {
+    return kernel::HeapAllocator::allocate(size);
 }
 
-inline void operator delete[](void*, size_t) noexcept
+inline void* operator new[](size_t size)
 {
-}
-
-inline void *operator new(size_t size)
-{
-    return kernel::Allocator::allocate(size);
-}
-
-inline void *operator new[](size_t size)
-{
-    return kernel::Allocator::allocate(size);
+    return kernel::HeapAllocator::allocate(size);
 }
 
 inline void operator delete(void* ptr) noexcept
 {
-    kernel::Allocator::free(ptr);
+    kernel::HeapAllocator::free(ptr);
 }
 
 inline void operator delete[](void* ptr) noexcept
 {
-    kernel::Allocator::free(ptr);
+    kernel::HeapAllocator::free(ptr);
+}
+
+inline void operator delete(void* ptr, size_t) noexcept
+{
+    kernel::HeapAllocator::free(ptr);
+}
+
+inline void operator delete[](void* ptr, size_t) noexcept
+{
+    kernel::HeapAllocator::free(ptr);
 }
