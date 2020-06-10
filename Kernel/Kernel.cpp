@@ -40,7 +40,7 @@ namespace kernel {
         cli();
         GDT::the().create_basic_descriptors();
         GDT::the().install();
-        PIT timer;
+        new PIT;
         ISR::install();
         IRQManager::the().install();
         IDT::the().install();

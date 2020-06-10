@@ -64,7 +64,7 @@ namespace kernel {
         #ifdef HEAP_ALLOCATOR_DEBUG
 
         log() << "Allocator: adding a new heap block "
-              << bytes_to_megabytes(size) << "MB (actual: " << pure_size
+              << bytes_to_megabytes_precise(size) << "MB (actual: " << pure_size
               << " overhead: " << size - pure_size
               << ") Total chunk count: " << new_heap.chunk_count;
 
@@ -174,7 +174,7 @@ namespace kernel {
                       << total_allocation_bytes
                       << " bytes (" << chunks_needed << " chunk(s)) Free bytes: "
                       << total_free_bytes
-                      << " (" << bytes_to_megabytes(total_free_bytes) << " MB)";
+                      << " (" << bytes_to_megabytes_precise(total_free_bytes) << " MB)";
 
                 #endif
 

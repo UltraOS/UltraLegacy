@@ -55,6 +55,10 @@ section .entry
 
 global start
 start:
+    ; TODO: actually check if we have one.
+    ; and maybe move this out into a CPU class in C++
+    FNINIT ; initialize the FPU
+
     mov edi, TO_PHYSICAL(boot_page_table)
     mov esi, 0x00000000
     mov ecx, ENTRY_COUNT
