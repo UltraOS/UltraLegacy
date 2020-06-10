@@ -64,12 +64,10 @@ namespace kernel {
 
             display_write("Uptime: ", true);
 
-            bool ok;
             char number[11];
 
-            to_string(seconds_elapsed, number, 11, ok);
-
-            display_write(number);
+            if (to_string(seconds_elapsed, number, 11))
+                display_write(number);
 
             display_write(" seconds");
         }
