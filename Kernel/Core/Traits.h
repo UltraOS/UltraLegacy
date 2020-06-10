@@ -12,6 +12,13 @@ struct true_value
     static constexpr bool value = true;
 };
 
+template<typename T, T v>
+struct integral_constant
+{
+    static constexpr T value = v;
+};
+
+
 // ---- remove_const_volatile ----
 
 template<typename T>
@@ -81,6 +88,35 @@ struct is_integral<unsigned long> : true_value {};
 
 template<typename T>
 inline constexpr bool is_integral_v = is_integral<T>::value;
+
+// --------------------
+
+// ---- is_floating_point ----
+
+template<typename T>
+struct is_floating_point : false_value {};
+
+template<>
+struct is_floating_point<float> : true_value {};
+
+template<>
+struct is_floating_point<double> : true_value {};
+
+template<>
+struct is_floating_point<long double> : true_value {};
+
+template<typename T>
+inline constexpr bool is_floating_point_v = is_floating_point<T>::value;
+
+// --------------------
+
+// ---- is_arithmetic ----
+
+template<typename T>
+struct is_arithmetic : integral_constant<bool, is_floating_point_v<T> || is_integral_v<T>> {};
+
+template<typename T>
+inline constexpr bool is_arithmetic_v = is_arithmetic<T>::value;
 
 // --------------------
 
