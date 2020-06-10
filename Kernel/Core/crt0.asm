@@ -16,6 +16,8 @@ KERNEL_ORIGIN:  equ 0xC0100000;
 PRESENT:        equ 0b01
 READWRITE:      equ 0b10
 ENTRY_SIZE:     equ 4
+EM_BIT:         equ (0b1 << 2)
+TS_BIT:         equ (0b1 << 3)
 
 HEAP_ENTRY_COUNT: equ 1024 ; 4MB of kernel heap
 
@@ -57,7 +59,10 @@ global start
 start:
     ; TODO: actually check if we have one.
     ; and maybe move this out into a CPU class in C++
-    FNINIT ; initialize the FPU
+    mov edx, cr0
+    and edx, ~(EM_BIT | TS_BIT)
+    mov cr0, edx
+    fninit ; initialize the FPU
 
     mov edi, TO_PHYSICAL(boot_page_table)
     mov esi, 0x00000000
