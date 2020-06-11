@@ -18,4 +18,10 @@ namespace kernel {
     {
         set_memory(ptr, size, 0);
     }
+
+    inline void copy_memory(const void* source, void* destination, size_t size)
+    {
+        for (size_t i = 0; i < size; ++i)
+            reinterpret_cast<u8*>(destination)[i] = reinterpret_cast<const u8*>(source)[i];
+    }
 }
