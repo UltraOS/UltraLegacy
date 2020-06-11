@@ -1,6 +1,6 @@
 #include "HeapAllocator.h"
-#include "Core/Logger.h"
-#include "Core/Memory.h"
+#include "Common/Logger.h"
+#include "Common/Memory.h"
 
 #define HEAP_ALLOCATOR_DEBUG
 
@@ -63,14 +63,14 @@ namespace kernel {
 
         #ifdef HEAP_ALLOCATOR_DEBUG
 
-        log() << "Allocator: adding a new heap block "
+        log() << "HeapAllocator: adding a new heap block "
               << bytes_to_megabytes_precise(size) << "MB (actual: " << pure_size
               << " overhead: " << size - pure_size
               << ") Total chunk count: " << new_heap.chunk_count;
 
         #endif
 
-        memory_set(new_heap.bitmap(), bitmap_bytes, 0);
+        set_memory(new_heap.bitmap(), bitmap_bytes, 0);
     }
 
     void* HeapAllocator::allocate(size_t bytes)
@@ -170,7 +170,7 @@ namespace kernel {
                 auto total_allocation_bytes = chunks_needed * heap->chunk_size;
                 auto total_free_bytes = heap->free_bytes();
 
-                log() << "Allocator: allocating "
+                log() << "HeapAllocator: allocating "
                       << total_allocation_bytes
                       << " bytes (" << chunks_needed << " chunk(s)) Free bytes: "
                       << total_free_bytes
@@ -181,6 +181,30 @@ namespace kernel {
                 return data;
             }
         }
+
+        error() << "HeapAllocator: Out of memory!";
+
+        #ifdef HEAP_ALLOCATOR_DEBUG
+
+        if (!m_heap_block)
+            error() << "HeapAllocator: main block is null!";
+        else
+        {
+            size_t i = 0;
+            for (auto* heap = m_heap_block; heap; heap = heap->next)
+            {
+                ++i;
+                info() << "HeapAllocator: block"
+                       << i << " free chunks: "
+                       << heap->free_chunks
+                       << " free memory: "
+                       << heap->free_bytes();
+            }
+        }
+
+        #endif
+
+        hang();
 
         return nullptr;
     }
@@ -243,7 +267,13 @@ namespace kernel {
 
         #ifdef HEAP_ALLOCATOR_DEBUG
 
-        log() << "Allocator: freeing " << total_freed_chunks
+        if (!freed_heap)
+        {
+            error() << "HeapAllocator: Couldn't find a heap block to free from. ptr: " << ptr;
+            hang();
+        }
+
+        log() << "HeapAllocator: freeing " << total_freed_chunks
               << " chunk(s) (" << total_freed_chunks * freed_heap->chunk_size
               << " bytes) at address:" << ptr;
 
