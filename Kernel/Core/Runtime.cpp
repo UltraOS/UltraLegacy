@@ -1,5 +1,5 @@
-#include "Logger.h"
-#include "Macros.h"
+#include "Common/Logger.h"
+#include "Common/Macros.h"
 
 extern "C" void __cxa_pure_virtual()
 {

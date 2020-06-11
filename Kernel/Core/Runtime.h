@@ -1,5 +1,5 @@
 #pragma once
-#include "Types.h"
+#include "Common/Types.h"
 #include "Memory/HeapAllocator.h"
 
 namespace kernel::runtime {

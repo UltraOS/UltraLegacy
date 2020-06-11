@@ -4,7 +4,7 @@
 
 namespace kernel {
 
-    inline void memory_set(void* ptr, size_t size, u8 value)
+    inline void set_memory(void* ptr, size_t size, u8 value)
     {
         auto* byte_ptr = reinterpret_cast<u8*>(ptr);
 
@@ -16,6 +16,6 @@ namespace kernel {
 
     inline void zero_memory(void* ptr, size_t size)
     {
-        memory_set(ptr, size, 0);
+        set_memory(ptr, size, 0);
     }
 }

@@ -1,8 +1,8 @@
-#include "Core/Types.h"
-#include "Core/Logger.h"
 #include "Core/Runtime.h"
-#include "Core/Conversions.h"
-#include "GDT.h"
+#include "Core/GDT.h"
+#include "Common/Types.h"
+#include "Common/Logger.h"
+#include "Common/Conversions.h"
 #include "Interrupts/IDT.h"
 #include "Interrupts/ISR.h"
 #include "Interrupts/IRQManager.h"
@@ -10,7 +10,6 @@
 #include "Interrupts/PIT.h"
 #include "Memory/PhysicalMemory.h"
 #include "Memory/HeapAllocator.h"
-
 
 namespace kernel {
 

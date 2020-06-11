@@ -1,6 +1,6 @@
+#include "Common/Logger.h"
+#include "Common/Macros.h"
 #include "Core/IO.h"
-#include "Core/Logger.h"
-#include "Core/Macros.h"
 
 #include "PIC.h"
 

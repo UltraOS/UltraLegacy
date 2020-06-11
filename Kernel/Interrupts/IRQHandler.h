@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Core/Types.h"
+#include "Common/Types.h"
 
 #include "Common.h"
 #include "PIC.h"

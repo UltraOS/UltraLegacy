@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Core/Types.h"
-#include "Core/Macros.h"
+#include "Common/Types.h"
+#include "Common/Macros.h"
 
 namespace kernel {
 
@@ -28,7 +28,7 @@ namespace kernel {
 
             size_t which_bit(void* ptr) { return ((reinterpret_cast<u8*>(ptr) - begin()) / chunk_size) * 2; }
             size_t free_bytes()         { return free_chunks * chunk_size; }
-            bool contains(void* ptr)    { return ptr <= end(); }
+            bool contains(void* ptr)    { return ptr <= end() && ptr >= begin(); }
 
         } static* m_heap_block;
     };

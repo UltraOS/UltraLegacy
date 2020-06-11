@@ -1,4 +1,4 @@
-#include "Core/Logger.h"
+#include "Common/Logger.h"
 
 #include "IRQHandler.h"
 #include "IDT.h"

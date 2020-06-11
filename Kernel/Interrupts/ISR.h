@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Core/Types.h"
-#include "Core/Macros.h"
+#include "Common/Types.h"
+#include "Common/Macros.h"
 
 #include "Common.h"
 

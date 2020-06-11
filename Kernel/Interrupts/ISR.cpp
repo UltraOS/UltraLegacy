@@ -1,5 +1,5 @@
-#include "Core/Macros.h"
-#include "Core/Logger.h"
+#include "Common/Macros.h"
+#include "Common/Logger.h"
 
 #include "Common.h"
 #include "IDT.h"

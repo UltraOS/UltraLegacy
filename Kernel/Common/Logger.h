@@ -1,10 +1,10 @@
 #pragma once
 
 #include "Types.h"
-#include "IO.h"
 #include "Traits.h"
 #include "Conversions.h"
-#include "Runtime.h"
+#include "Core/IO.h"
+#include "Core/Runtime.h"
 
 namespace kernel {
     class Logger;

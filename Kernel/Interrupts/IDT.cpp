@@ -1,6 +1,6 @@
-#include "Core/Logger.h"
+#include "Common/Logger.h"
 
-#include "GDT.h"
+#include "Core/GDT.h"
 #include "IDT.h"
 
 namespace kernel {

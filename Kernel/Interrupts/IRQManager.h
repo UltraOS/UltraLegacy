@@ -1,7 +1,7 @@
 #pragma once
 
+#include "Common/Types.h"
 #include "Common.h"
-#include "Core/Types.h"
 
 namespace kernel {
     class IRQHandler;
