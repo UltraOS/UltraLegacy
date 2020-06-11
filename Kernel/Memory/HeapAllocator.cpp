@@ -16,7 +16,7 @@ namespace kernel {
         static constexpr size_t kernel_heap_begin   = kernel_end_address;
         static constexpr size_t kernel_heap_size    = 4 * MB; // one page directory
 
-        // feed the preallocated kernel heap page directory
+        // feed the preallocated kernel heap page table
         feed_block(reinterpret_cast<void*>(kernel_heap_begin), kernel_heap_size);
     }
 
@@ -70,7 +70,7 @@ namespace kernel {
 
         #endif
 
-        set_memory(new_heap.bitmap(), bitmap_bytes, 0);
+        zero_memory(new_heap.bitmap(), bitmap_bytes);
     }
 
     void* HeapAllocator::allocate(size_t bytes)
@@ -193,12 +193,14 @@ namespace kernel {
             size_t i = 0;
             for (auto* heap = m_heap_block; heap; heap = heap->next)
             {
+                auto size = heap->free_bytes();
+
                 ++i;
-                info() << "HeapAllocator: block"
-                       << i << " free chunks: "
-                       << heap->free_chunks
-                       << " free memory: "
-                       << heap->free_bytes();
+                error() << "HeapAllocator: block("
+                        << i << ") free chunks:"
+                        << heap->free_chunks << " bytes:" << size
+                        << " (" << bytes_to_megabytes_precise(size)
+                        << "MB)";
             }
         }
 
