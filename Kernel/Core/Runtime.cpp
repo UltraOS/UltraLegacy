@@ -44,4 +44,14 @@ namespace kernel::runtime {
         for (global_constructor_t* ctor = &global_constructors_begin; ctor < &global_constructors_end; ++ctor)
             (*ctor)();
     }
+
+    void on_assertion_failed(const char* message, const char* file, const char* function, u32 line)
+    {
+          error() << "Assertion failed!"
+        << "\n------> Expression : " << message
+        << "\n------> Function   : " << function
+        << "\n------> File       : " << file << ":" << line;
+
+        hang();
+    }
 }
