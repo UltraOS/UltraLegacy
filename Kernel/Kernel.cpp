@@ -8,8 +8,9 @@
 #include "Interrupts/IRQManager.h"
 #include "Interrupts/PIC.h"
 #include "Interrupts/PIT.h"
-#include "Memory/PhysicalMemory.h"
 #include "Memory/HeapAllocator.h"
+#include "Memory/PhysicalMemory.h"
+#include "Memory/MemoryManager.h"
 
 namespace kernel {
 
@@ -19,16 +20,7 @@ namespace kernel {
 
         HeapAllocator::initialize();
 
-        u64 total_free_memory = 0;
-
-        for (const auto& entry : memory_map)
-        {
-            total_free_memory += entry.length;
-
-            log() << entry;
-        }
-
-        log() << "Total free memory: " << bytes_to_megabytes(total_free_memory) << " MB";
+        MemoryManager::inititalize(memory_map);
 
         runtime::init_global_objects();
 

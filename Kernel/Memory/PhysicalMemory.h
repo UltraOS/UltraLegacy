@@ -43,12 +43,13 @@ namespace kernel {
             }
         }
 
-        friend AutoLogger& operator<<(AutoLogger&& logger, const PhysicalRange& range)
+        template<typename LoggerT>
+        friend LoggerT& operator<<(LoggerT&& logger, const PhysicalRange& range)
         {
             logger << "PhysicalRange: start:" 
                    << format::as_hex
                    << range.base_address
-                   << " size:" << range.length
+                   << " size:"  << range.length
                    << " type: " << range.type_as_string();
 
             return logger;
@@ -62,5 +63,8 @@ namespace kernel {
 
         PhysicalRange* begin() { return entries; }
         PhysicalRange* end()   { return entries + entry_count; }
+
+        const PhysicalRange* begin() const { return entries; }
+        const PhysicalRange* end()   const { return entries + entry_count; }
     };
 }
