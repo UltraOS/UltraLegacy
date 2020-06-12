@@ -213,6 +213,15 @@ namespace kernel {
 
     void HeapAllocator::free(void* ptr)
     {
+        if (ptr == nullptr)
+        {
+            #ifdef HEAP_ALLOCATOR_DEBUG
+            log() << "HeapAllocator: " << "tried to free a nullptr, skipped.";
+            #endif
+
+            return;
+        }
+
         #ifdef HEAP_ALLOCATOR_DEBUG
 
         size_t total_freed_chunks = 0;
