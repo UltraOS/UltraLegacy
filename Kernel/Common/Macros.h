@@ -15,9 +15,9 @@
 #define hlt()  asm volatile("hlt" ::: "memory")
 #define hang() for (;;) { cli(); hlt(); }
 
-#define KB (1024)
-#define MB (1024 * KB)
-#define GB (1024 * MB)
+#define KB (1024ull)
+#define MB (1024ull * KB)
+#define GB (1024ull * MB)
 
 // A bunch of things to stop Visual Studio from
 // complaining and actually help me instead

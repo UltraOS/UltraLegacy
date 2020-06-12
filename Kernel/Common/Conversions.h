@@ -80,6 +80,17 @@ enable_if_t<is_floating_point_v<T>, bool> to_string(T number, char* string, size
         ++i;
     }
 
+    if (!i)
+    {
+        if (max_size < 1ul)
+            return false;
+        else
+        {
+            string[i++] = '0';
+            --max_size;
+        }
+    }
+
     if (max_size < 3ul + !!null_terminate)
         return false;
 
