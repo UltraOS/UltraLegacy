@@ -25,11 +25,7 @@ namespace kernel {
         {
             total_free_memory += entry.length;
 
-            log() << "MEMORY -- start:" << format::as_hex
-                  << entry.base_address
-                  << " size:" << entry.length
-                  << " type: "
-                  << (entry.type == region_type::FREE ? "FREE" : "RESERVED");
+            log() << entry;
         }
 
         log() << "Total free memory: " << bytes_to_megabytes(total_free_memory) << " MB";
