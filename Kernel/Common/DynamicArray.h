@@ -19,6 +19,30 @@ namespace kernel {
             grow_by(initial_capacity);
         }
 
+        DynamicArray(const DynamicArray& other)
+        {
+            become(other);
+        }
+
+        DynamicArray(DynamicArray&& other)
+        {
+            become(move(other));
+        }
+
+        DynamicArray& operator=(const DynamicArray& other)
+        {
+            become(other);
+
+            return *this;
+        }
+
+        DynamicArray& operator=(DynamicArray&& other)
+        {
+            become(other);
+
+            return *this;
+        }
+
         [[nodiscard]] T& at(size_t index)
         {
             ASSERT(index < m_size);
@@ -57,6 +81,16 @@ namespace kernel {
         [[nodiscard]] T& operator[](size_t index)
         {
             return at(index);
+        }
+
+        [[nodiscard]] T* data()
+        {
+            return reinterpret_cast<T*>(m_data);
+        }
+
+        [[nodiscard]] const T* data() const
+        {
+            return reinterpret_cast<T*>(m_data);
         }
 
         T& append(T&& value)
@@ -106,6 +140,29 @@ namespace kernel {
         }
 
     private:
+        void become(const DynamicArray& other)
+        {
+            destroy_data();
+            grow_by(other.size());
+
+            if constexpr (is_trivially_copyable_v<T>)
+                copy_memory(other.m_data, m_data, m_size * sizeof(T));
+            else
+            {
+                for (size_t i = 0; i < other.size(); ++i)
+                    new (address_of(i, m_data)) T(other.at(i));
+            }
+
+            m_size = other.m_size;
+        }
+
+        void become(DynamicArray&& other)
+        {
+            swap(m_data, other.m_data);
+            swap(m_size, other.m_size);
+            swap(m_capacity, other.m_capacity);
+        }
+
         void grow_if_full()
         {
             if (m_size < m_capacity)
@@ -138,9 +195,7 @@ namespace kernel {
             ASSERT((reinterpret_cast<decltype(alignof(T))>(new_data) % alignof(T)) == 0);
 
             if constexpr (is_trivially_copyable_v<T>)
-            {
                 copy_memory(m_data, new_data, m_size * sizeof(T));
-            }
             else
             {
                 for (size_t i = 0; i < m_size; ++i)
@@ -154,8 +209,8 @@ namespace kernel {
         }
 
     private:
-        size_t m_size{ 0 };
-        size_t m_capacity{ 0 };
-        u8* m_data{ nullptr };
+        size_t m_size     { 0 };
+        size_t m_capacity { 0 };
+        u8*    m_data     { nullptr };
     };
 }
