@@ -172,9 +172,9 @@ namespace kernel {
 
                 log() << "HeapAllocator: allocating "
                       << total_allocation_bytes
-                      << " bytes (" << chunks_needed << " chunk(s)) Free bytes: "
-                      << total_free_bytes
-                      << " (" << bytes_to_megabytes_precise(total_free_bytes) << " MB)";
+                      << " bytes (" << chunks_needed << " chunk(s)) " << "at address:" << data
+                      << " Free bytes: " << total_free_bytes
+                      << " (" << bytes_to_megabytes_precise(total_free_bytes) << " MB) ";
 
                 #endif
 
