@@ -69,6 +69,16 @@ namespace kernel {
             return last();
         }
 
+        T& append(const T& value)
+        {
+            grow_if_full();
+
+            new (address_of(m_size, m_data)) T(value);
+            ++m_size;
+
+            return last();
+        }
+
         template<typename... Args>
         T& emplace(Args&& ... args)
         {
