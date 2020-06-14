@@ -1,5 +1,6 @@
 #include "Common/Logger.h"
 #include "MemoryManager.h"
+#include "PhysicalRegion.h"
 
 namespace kernel {
 
@@ -19,11 +20,39 @@ namespace kernel {
             auto base_address = entry.base_address;
             auto length = entry.length;
 
-            if (base_address < 1 * MB)
+            // First 8 MB are reserved for the kernel
+            if (base_address < (8 * MB))
             {
-                log() << "MemoryManager: skipping a conventional memory entry at " << format::as_hex << base_address;
+                if ((base_address + length) < (8 * MB))
+                {
+                    log() << "MemoryManager: skipping a lower memory region at " << format::as_hex << base_address;
+                    continue;
+                }
+                else
+                {
+                    log() << "MemoryManager: trimming a low memory region at " << format::as_hex << base_address;
+
+                    auto trim_overhead = 8 * MB - base_address;
+                    base_address += trim_overhead;
+                    length       -= trim_overhead;
+
+                    log() << "MemoryManager: trimmed region:" << format::as_hex << base_address;
+                }
+            }
+
+            // Make use of this once we have PAE
+            if (base_address > (4 * GB))
+            {
+                log() << "MemoryManager: skipping a higher memory region at " << format::as_hex << base_address;
                 continue;
             }
+            else if ((base_address + length) > (4 * GB))
+            {
+                log() << "MemoryManager: trimming a big region (outside of 4GB) at" << format::as_hex << base_address << " length:" << length;
+
+                length -= (base_address + length) - 4 * GB;
+            }
+
             if (base_address % page_size)
             {
                 log() << "MemoryManager: got an unaligned memory map entry " << format::as_hex << base_address << " size:" << length;
@@ -49,20 +78,18 @@ namespace kernel {
                 continue;
             }
 
+            auto& this_region = m_physical_regions.emplace(base_address);
+
             for (auto address = base_address; address < (base_address + length); address += page_size)
             {
-                // First 8 MB are reserved for the kernel
-                if (address < 8 * MB)
-                    continue;
-
-                // Make use of this once we have PAE
-                if (address > 4 * GB)
-                    continue;
-
                 total_free_memory += page_size;
 
-                // save these pages somewhere
+                this_region.expand();
             }
+
+            this_region.seal();
+
+            log() << "MemoryManager: A new physical region -> " << this_region;
         }
 
         log() << "Total free memory: "
