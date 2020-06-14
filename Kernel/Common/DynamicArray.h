@@ -16,7 +16,7 @@ namespace kernel {
 
         DynamicArray(size_t initial_capacity)
         {
-            grow_by(initial_capacity);
+            reserve(initial_capacity);
         }
 
         DynamicArray(const DynamicArray& other)
@@ -41,6 +41,27 @@ namespace kernel {
             become(other);
 
             return *this;
+        }
+
+        void expand_to(size_t count)
+        {
+            if (count < m_size)
+                return;
+
+            reserve(count);
+
+            if (is_trivially_constructible_v<T>)
+                zero_memory(address_of(m_size, m_data), (m_capacity - m_size) * sizeof(T));
+            else
+            {
+                for (size_t i = m_size - 1; i < m_capacity; ++i)
+                    new (address_of(i, m_data)) T();
+            }
+        }
+
+        void reserve(size_t count)
+        {
+            grow_by(count);
         }
 
         [[nodiscard]] T& at(size_t index)
