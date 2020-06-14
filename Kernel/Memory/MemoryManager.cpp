@@ -1,6 +1,7 @@
 #include "Common/Logger.h"
 #include "MemoryManager.h"
 #include "PhysicalRegion.h"
+#include "Page.h"
 
 namespace kernel {
 
@@ -53,48 +54,40 @@ namespace kernel {
                 length -= (base_address + length) - 4 * GB;
             }
 
-            if (base_address % page_size)
+            if (base_address % Page::size)
             {
                 log() << "MemoryManager: got an unaligned memory map entry " << format::as_hex << base_address << " size:" << length;
 
-                auto alignment_overhead = page_size - (base_address % page_size);
+                auto alignment_overhead = Page::size - (base_address % Page::size);
 
                 base_address += alignment_overhead;
                 length       -= alignment_overhead;
 
                 log() << "MemoryManager: aligned address:" << format::as_hex << base_address << " size:" << length;
             }
-            if (length % page_size)
+            if (length % Page::size)
             {
                 log() << "MemoryManager: got an unaligned memory map entry length" << length;
 
-                length -= length % page_size;
+                length -= length % Page::size;
 
                 log() << "MemoryManager: aligned length at " << length;
             }
-            if (length < page_size)
+            if (length < Page::size)
             {
-                log() << "MemoryManager: length is too small, skipping the entry (" << length << " < " << page_size << ")";
+                log() << "MemoryManager: length is too small, skipping the entry (" << length << " < " << Page::size << ")";
                 continue;
             }
 
-            auto& this_region = m_physical_regions.emplace(base_address);
-
-            for (auto address = base_address; address < (base_address + length); address += page_size)
-            {
-                total_free_memory += page_size;
-
-                this_region.expand();
-            }
-
-            this_region.seal();
+            auto& this_region = m_physical_regions.emplace(base_address, length);
 
             log() << "MemoryManager: A new physical region -> " << this_region;
+            total_free_memory += this_region.free_pages() * Page::size;
         }
 
         log() << "Total free memory: "
               << bytes_to_megabytes_precise(total_free_memory) << " MB ("
-              << total_free_memory / page_size << " pages) ";
+              << total_free_memory / Page::size << " pages) ";
     }
 
     MemoryManager& MemoryManager::the()

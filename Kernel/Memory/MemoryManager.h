@@ -10,8 +10,6 @@ namespace kernel {
     class MemoryManager
     {
     public:
-        static constexpr size_t page_size = 4096;
-
         static void inititalize(const MemoryMap& memory_map);
 
         static MemoryManager& the();
