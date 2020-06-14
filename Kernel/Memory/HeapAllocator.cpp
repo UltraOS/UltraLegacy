@@ -14,7 +14,7 @@ namespace kernel {
         static constexpr size_t kernel_size         = 3 * MB;
         static constexpr size_t kernel_end_address  = kernel_base_address + kernel_size;
         static constexpr size_t kernel_heap_begin   = kernel_end_address;
-        static constexpr size_t kernel_heap_size    = 4 * MB; // one page directory
+        static constexpr size_t kernel_heap_size    = 4 * MB; // one page table
 
         // feed the preallocated kernel heap page table
         feed_block(reinterpret_cast<void*>(kernel_heap_begin), kernel_heap_size);
