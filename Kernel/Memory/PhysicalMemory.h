@@ -2,6 +2,7 @@
 
 #include "Common/Types.h"
 #include "Common/Macros.h"
+#include "Common/Logger.h"
 
 namespace kernel {
 
