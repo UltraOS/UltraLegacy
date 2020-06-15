@@ -20,6 +20,9 @@ using u64 = unsigned long long int;
 using size_t = long unsigned int;
 #endif
 
+// A wild posix type appears
+using ssize_t = i32;
+
 using ptr_t  = u32;
 
 // floating point
