@@ -14,6 +14,11 @@ namespace kernel {
         {
         }
 
+        ptr_t address() const
+        {
+            return m_physical_address;
+        }
+
     private:
         ptr_t m_physical_address;
     };
