@@ -57,6 +57,8 @@ namespace kernel {
                 for (size_t i = m_size - 1; i < m_capacity; ++i)
                     new (address_of(i, m_data)) T();
             }
+
+            m_size = count;
         }
 
         void reserve(size_t count)
@@ -158,6 +160,26 @@ namespace kernel {
         ~DynamicArray()
         {
             destroy_data();
+        }
+
+        T* begin()
+        {
+            return data();
+        }
+
+        T* end()
+        {
+            return data() + m_size;
+        }
+
+        const T* begin() const
+        {
+            return data();
+        }
+
+        const T* end() const
+        {
+            return data() + m_size;
         }
 
     private:
