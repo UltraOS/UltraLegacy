@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Common/Math.h"
 #include "DynamicArray.h"
 
 namespace kernel {
@@ -21,12 +22,43 @@ namespace kernel {
             return m_bit_count;
         }
 
+        ssize_t find_range(size_t length, bool of_value)
+        {
+            size_t contiguous_bits = 0;
+            ssize_t first_bit = -1;
+
+            for (size_t i = 0; i < m_bit_count; ++i)
+            {
+                auto is_suitable = of_value == bit_at(i);
+
+                if (is_suitable)
+                {
+                    ++contiguous_bits;
+
+                    if (first_bit == -1)
+                        first_bit = i;
+                }
+                else
+                {
+                    contiguous_bits = 0;
+                    first_bit = -1;
+                }
+
+                if (contiguous_bits == length)
+                    return first_bit;
+            }
+
+            return -1;
+        }
+
         void set_size(size_t bit_count)
         {
             m_bit_count = bit_count;
 
-            if (m_bits.size() < m_bit_count / 8)
-                m_bits.expand_to(m_bit_count / 8);
+            auto bytes_needed = ceiling_divide<size_t>(m_bit_count, 8);
+
+            if (m_bits.size() < bytes_needed)
+                m_bits.expand_to(bytes_needed);
         }
 
         void set_bit(size_t at_index, bool to)
@@ -43,10 +75,19 @@ namespace kernel {
 
         void set_range_to(size_t at_index, size_t count, size_t number)
         {
+            ASSERT(at_index + count <= m_bit_count);
             ASSERT(number <= ((static_cast<decltype(number)>(1) << count) - 1));
 
             for (size_t i = 0; i < count; ++i)
                 set_bit(at_index + i, ((1 << i) & number) >> i);
+        }
+
+        void set_range_to(size_t at_index, size_t count, bool value)
+        {
+            ASSERT(at_index + count <= m_bit_count);
+
+            for (size_t i = 0; i < count; ++i)
+                set_bit(at_index + i, value);
         }
 
         bool bit_at(size_t index)
@@ -85,7 +126,7 @@ namespace kernel {
         }
 
     private:
-        size_t           m_bit_count{ 0 };
+        size_t           m_bit_count { 0 };
         DynamicArray<u8> m_bits;
     };
 }
