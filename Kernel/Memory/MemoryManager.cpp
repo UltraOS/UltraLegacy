@@ -90,12 +90,39 @@ namespace kernel {
             auto& this_region = m_physical_regions.emplace(base_address, length);
 
             log() << "MemoryManager: A new physical region -> " << this_region;
-            total_free_memory += this_region.free_pages() * Page::size;
+            total_free_memory += this_region.free_page_count() * Page::size;
         }
 
-        log() << "Total free memory: "
+        log() << "MemoryManager: Total free memory: "
               << bytes_to_megabytes_precise(total_free_memory) << " MB ("
               << total_free_memory / Page::size << " pages) ";
+    }
+
+    RefPtr<Page> MemoryManager::allocate_page()
+    {
+        for (auto& region : m_physical_regions)
+        {
+            if (!region.has_free_pages())
+                continue;
+
+            auto page = region.allocate_page();
+
+            ASSERT(page);
+
+            return page;
+        }
+
+        error() << "MemoryManager: Out of physical memory!";
+        hang();
+    }
+
+    void MemoryManager::free_page(Page& page)
+    {
+        for (auto& region : m_physical_regions)
+        {
+            if (region.contains(page))
+                region.free_page(page);
+        }
     }
 
     MemoryManager& MemoryManager::the()

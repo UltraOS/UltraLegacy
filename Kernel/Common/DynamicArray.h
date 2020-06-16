@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Traits.h"
-#include "Utililites.h"
+#include "Utilities.h"
 #include "Memory.h"
 
 namespace kernel {

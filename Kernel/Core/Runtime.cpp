@@ -31,10 +31,10 @@ namespace kernel::runtime {
             magic_string[10] == 'E' &&
             magic_string[11] == 'N' &&
             magic_string[12] == 'T')
-            log() << "Magic test passed!";
+            log() << "Runtime: Magic test passed!";
         else
         {
-            error() << "Magic test failed! magic_string=" << format::as_address << magic_string;
+            error() << "Runtime: Magic test failed! magic_string=" << format::as_address << magic_string;
             hang();
         }
     }

@@ -7,9 +7,10 @@
 namespace kernel {
 
     PhysicalRegion::PhysicalRegion(ptr_t starting_address, size_t length)
-        : m_starting_address(starting_address)
+        : m_starting_address(starting_address),
+          m_free_pages(length / Page::size),
+          m_allocation_map(m_free_pages)
     {
-        m_allocation_map.set_size(length / Page::size);
     }
 
     ptr_t PhysicalRegion::bit_as_physical_address(size_t bit)
@@ -24,54 +25,34 @@ namespace kernel {
         return (address - m_starting_address) / Page::size;
     }
 
-    Page PhysicalRegion::allocate_page()
+    RefPtr<Page> PhysicalRegion::allocate_page()
     {
         auto index = m_allocation_map.find_range(1, false);
 
         if (index == -1)
         {
-            error() << "PhysicalRegion: Failed to allocate a physical page (Out of pages)!";
-            hang();
+            warning() << "PhysicalRegion: Failed to allocate a physical page (Out of pages)!";
+            return {};
         }
 
         m_allocation_map.set_bit(index, true);
+        --m_free_pages;
 
         #ifdef PHYSICAL_REGION_DEBUG
         log() << "PhysicalRegion: allocating a page at address "
               << format::as_hex << bit_as_physical_address(index);
         #endif
 
-        return { bit_as_physical_address(index) };
+        return RefPtr<Page>::create(bit_as_physical_address(index));
     }
 
-    DynamicArray<Page> PhysicalRegion::allocate_pages(size_t count)
+    bool PhysicalRegion::contains(const Page& page)
     {
-        auto index = m_allocation_map.find_range(count, false);
-
-        if (index == -1)
-        {
-            error() << "PhysicalRegion: Failed to allocate physical pages (Out of pages)!";
-            hang();
-        }
-
-        DynamicArray<Page> pages(count);
-
-        for (size_t i = 0; i < count; ++i)
-        {
-            m_allocation_map.set_bit(index + i, true);
-
-            #ifdef PHYSICAL_REGION_DEBUG
-            log() << "PhysicalRegion: allocating a page at address"
-                  << format::as_hex << bit_as_physical_address(index + i);
-            #endif
-
-            pages.emplace(bit_as_physical_address(index + i));
-        }
-
-        return pages;
+        return page.address() >= m_starting_address &&
+               page.address() < bit_as_physical_address(m_allocation_map.size() - 1);
     }
 
-    void PhysicalRegion::return_page(const Page& page)
+    void PhysicalRegion::free_page(const Page& page)
     {
         #ifdef PHYSICAL_REGION_DEBUG
         log() << "PhysicalRegion: deallocating a page at index " 
@@ -79,17 +60,11 @@ namespace kernel {
               << " Address:" << format::as_hex << page.address();
         #endif
 
-        ASSERT(page.address() >= m_starting_address &&
-               page.address() < bit_as_physical_address(m_allocation_map.size() - 1));
+        ASSERT(contains(page));
 
         auto bit = physical_address_as_bit(page.address());
 
         m_allocation_map.set_bit(bit, false);
-    }
-
-    void PhysicalRegion::return_pages(const DynamicArray<Page>& pages)
-    {
-        for (const auto& page : pages)
-            return_page(page);
+        ++m_free_pages;
     }
 }
