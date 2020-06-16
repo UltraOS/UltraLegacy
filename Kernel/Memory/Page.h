@@ -1,6 +1,8 @@
 #pragma once
 
 #include "Common/Types.h"
+#include "PhysicalRegion.h"
+#include "MemoryManager.h"
 
 namespace kernel {
 
@@ -17,6 +19,11 @@ namespace kernel {
         ptr_t address() const
         {
             return m_physical_address;
+        }
+
+        ~Page()
+        {
+            MemoryManager::the().free_page(*this);
         }
 
     private:
