@@ -36,13 +36,6 @@ namespace kernel {
         IDT::the().install();
         sti();
 
-        // just a test thing to be removed
-        log() << "TABLE 768 ENTRY 1023: address " << format::as_hex
-
-              << PageDirectory::of_kernel().table_at(768).entry_at(1023).physical_address();
-
-        log() << "TABLE 768 ENTRY 1023: attribs "  << PageDirectory::of_kernel().table_at(768).entry_at(1023).attributes();
-
         for(;;);
     }
 }

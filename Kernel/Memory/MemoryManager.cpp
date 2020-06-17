@@ -121,8 +121,15 @@ namespace kernel {
         for (auto& region : m_physical_regions)
         {
             if (region.contains(page))
+            {
                 region.free_page(page);
+                return;
+            }
         }
+
+        error() << "Couldn't find the region that owns the page at "
+                << format::as_hex << page.address();
+        hang();
     }
 
     MemoryManager& MemoryManager::the()
