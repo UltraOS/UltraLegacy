@@ -2,6 +2,7 @@
 
 #include "Traits.h"
 #include "Utilities.h"
+#include "Macros.h"
 #include "Memory.h"
 
 namespace kernel {

@@ -1,6 +1,7 @@
 #pragma once
 
-#include "Common/Math.h"
+#include "Macros.h"
+#include "Math.h"
 #include "DynamicArray.h"
 
 namespace kernel {

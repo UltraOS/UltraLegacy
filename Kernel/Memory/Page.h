@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Common/Types.h"
-#include "PhysicalRegion.h"
 #include "MemoryManager.h"
 
 namespace kernel {
