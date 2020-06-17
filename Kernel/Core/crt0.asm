@@ -31,10 +31,11 @@ section .data
 ; it simply ignores this if it's a macro
 align 4096
 
-boot_page_directory:
+global kernel_page_directory
+kernel_page_directory:
     times PAGE_SIZE db 0
 
-boot_page_table:
+kernel_page_table:
     times PAGE_SIZE db 0
 
 kernel_heap_table:
@@ -64,7 +65,7 @@ start:
     mov cr0, edx
     fninit ; initialize the FPU
 
-    mov edi, TO_PHYSICAL(boot_page_table)
+    mov edi, TO_PHYSICAL(kernel_page_table)
     mov esi, 0x00000000
     mov ecx, ENTRY_COUNT
 
@@ -98,15 +99,18 @@ start:
         jg map_one_more
 
     ; identity mapping to enable paging
-    mov [TO_PHYSICAL(boot_page_directory)], dword (TO_PHYSICAL(boot_page_table) + (PRESENT | READWRITE))
+    mov [TO_PHYSICAL(kernel_page_directory)], dword (TO_PHYSICAL(kernel_page_table) + (PRESENT | READWRITE))
 
     ; actual mapping
-    mov [TO_PHYSICAL(boot_page_directory + 768 * ENTRY_SIZE)], dword (TO_PHYSICAL(boot_page_table) + (PRESENT | READWRITE))
+    mov [TO_PHYSICAL(kernel_page_directory + 768 * ENTRY_SIZE)], dword (TO_PHYSICAL(kernel_page_table) + (PRESENT | READWRITE))
 
     ; kernel heap
-    mov [TO_PHYSICAL(boot_page_directory + 769 * ENTRY_SIZE)], dword (TO_PHYSICAL(kernel_heap_table) + (PRESENT | READWRITE))
+    mov [TO_PHYSICAL(kernel_page_directory + 769 * ENTRY_SIZE)], dword (TO_PHYSICAL(kernel_heap_table) + (PRESENT | READWRITE))
 
-    mov ecx, TO_PHYSICAL(boot_page_directory)
+    ; recursive paging mapping
+    mov [TO_PHYSICAL(kernel_page_directory + 1023 * ENTRY_SIZE)], dword (TO_PHYSICAL(kernel_page_directory) + (PRESENT | READWRITE))
+
+    mov ecx, TO_PHYSICAL(kernel_page_directory)
     mov cr3, ecx
 
     mov ecx, cr0
@@ -118,7 +122,7 @@ start:
 
     higher_half:
         ; remove the identity mapping here
-        mov [boot_page_directory], dword 0x00000000
+        mov [kernel_page_directory], dword 0x00000000
 
         ; flush TLB
         mov ecx, cr3
