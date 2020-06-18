@@ -48,11 +48,12 @@ kernel_heap_table:
 ; 8MB -> 4GB unsued
 
 ; Current memory layout (virtual)
-; 0x00000000 -> 0xC0000000 user space
+; 0x00000000 -> 0xBFFFFFFF user space
 ; 0xC0000000 -> 0xC0100000 unused (vga memory is here somewhere)
 ; 0xC0100000 -> 0xC03FFFFF kernel
 ; 0xC0400000 -> 0xC07FFFFF kernel heap
-; 0xC0800000 -> 0xFFFFFFFF unused
+; 0xC0800000 -> 0xFFBFFFFF unused
+; 0xFFC00000 -> 0xFFFFFFFF reserved for recursive paging
 
 section .entry
 
