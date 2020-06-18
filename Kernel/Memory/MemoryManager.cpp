@@ -2,6 +2,7 @@
 #include "MemoryManager.h"
 #include "PhysicalRegion.h"
 #include "Page.h"
+#include "PageDirectory.h"
 
 namespace kernel {
 
@@ -130,6 +131,24 @@ namespace kernel {
         error() << "Couldn't find the region that owns the page at "
                 << format::as_hex << page.address();
         hang();
+    }
+
+    void MemoryManager::inititalize(PageDirectory& directory)
+    {
+        // map the directory's physical page somewhere temporarily
+        PageDirectory::of_kernel().allocator(); // .allocate(page)
+
+        // flush
+
+        // copy the kernel mappings
+        directory.entry_at(768, 0xDEADC0DE) = PageDirectory::of_kernel().entry_at(768);
+        directory.entry_at(769, 0xDEADC0DE) = PageDirectory::of_kernel().entry_at(769);
+
+        // copy the recursive mapping
+        directory.entry_at(1023, 0xDEADC0DE) = PageDirectory::of_kernel().entry_at(1023);
+
+        // unmap
+        PageDirectory::of_kernel().allocator(); // .deallocate(page)
     }
 
     MemoryManager& MemoryManager::the()

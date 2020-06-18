@@ -25,7 +25,7 @@ namespace kernel {
         }
 
         RefPtr(const RefPtr& other)
-            : m_ptr(other.get()),
+            : m_ptr(other.m_ptr),
               m_ref_count(other.m_ref_count)
         {
             increment();
