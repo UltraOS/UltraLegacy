@@ -1,8 +1,9 @@
 #pragma once
 
+#include "Core/Runtime.h"
+#include "Macros.h"
 #include "Traits.h"
 #include "Utilities.h"
-#include "Macros.h"
 #include "Memory.h"
 
 namespace kernel {
@@ -148,6 +149,20 @@ namespace kernel {
             return last();
         }
 
+        void erase_at(size_t i)
+        {
+            ASSERT(i < m_size);
+
+            if constexpr (!is_trivially_destructible_v<T>)
+                at(i).~T();
+
+            // if it wasn't the last element we have to copy everything
+            if (i != m_size - 1)
+                move_elements(i + 1, i, m_size - i - 1);
+
+            --m_size;
+        }
+
         size_t size() const
         {
             return m_size;
@@ -183,19 +198,38 @@ namespace kernel {
             return data() + m_size;
         }
 
+        void clear()
+        {
+            destroy_all();
+            m_size = 0;
+        }
+
     private:
+        void move_elements(size_t from, size_t to, size_t count)
+        {
+            if constexpr (is_trivially_copyable_v<T>)
+                move_memory(address_of(from, m_data), address_of(to, m_data), count * sizeof(T));
+            else
+            {
+                // TODO: this only works for moving elements backwars, rewrite to support inserts at random locations
+                for (size_t i = 0; i < count; ++i)
+                {
+                    auto index = from + i;
+
+                    new (address_of(index - 1, m_data)) T(move(at(index)));
+
+                    if constexpr (!is_trivially_destructible_v<T>)
+                        at(index).~T();
+                }
+            }
+        }
+
         void become(const DynamicArray& other)
         {
             destroy_data();
             grow_by(other.size());
 
-            if constexpr (is_trivially_copyable_v<T>)
-                copy_memory(other.m_data, m_data, m_size * sizeof(T));
-            else
-            {
-                for (size_t i = 0; i < other.size(); ++i)
-                    new (address_of(i, m_data)) T(other.at(i));
-            }
+            copy_external_elements(other.m_data, m_data, other.size());
 
             m_size = other.m_size;
         }
@@ -205,6 +239,17 @@ namespace kernel {
             swap(m_data, other.m_data);
             swap(m_size, other.m_size);
             swap(m_capacity, other.m_capacity);
+        }
+
+        void copy_external_elements(void* from, void* to, size_t count)
+        {
+            if constexpr (is_trivially_copyable_v<T>)
+                copy_memory(from, to, count * sizeof(T));
+            else
+            {
+                for (size_t i = 0; i < count; ++i)
+                    new (address_of(i, to)) T(*reinterpret_cast<T*>(address_of(i, from)));
+            }
         }
 
         void grow_if_full()
@@ -222,11 +267,7 @@ namespace kernel {
 
         void destroy_data()
         {
-            if constexpr (!is_trivially_destructible_v<T>)
-            {
-                for (size_t i = 0; i < m_size; ++i)
-                    at(i).~T();
-            }
+            destroy_all();
 
             delete[] m_data;
         }
@@ -250,6 +291,15 @@ namespace kernel {
 
             m_data = new_data;
             m_capacity = new_capacity;
+        }
+
+        void destroy_all()
+        {
+            if constexpr (!is_trivially_destructible_v<T>)
+            {
+                for (size_t i = 0; i < m_size; ++i)
+                    at(i).~T();
+            }
         }
 
     private:
