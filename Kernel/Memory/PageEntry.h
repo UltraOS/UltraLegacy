@@ -9,7 +9,12 @@ namespace kernel {
     public:
         void set_physical_address(ptr_t address)
         {
-            m_physical_address = address;
+            m_physical_address = address >> 12;
+        }
+
+        void set_attributes(u32 attributes)
+        {
+            m_attributes = attributes;
         }
 
         ptr_t physical_address() const
