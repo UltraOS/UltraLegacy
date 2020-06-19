@@ -75,6 +75,12 @@ namespace kernel {
 
     void* HeapAllocator::allocate(size_t bytes)
     {
+        if (bytes == 0)
+        {
+            warning() << "HeapAllocator: looks like somebody tried to allocate 0 bytes (could be a bug?)";
+            return nullptr;
+        }
+
         for (auto* heap = m_heap_block; heap; heap = heap->next)
         {
             if (heap->free_bytes() < bytes)
