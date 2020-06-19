@@ -17,6 +17,8 @@ namespace kernel {
         static constexpr ptr_t  kernel_base    = 0xC0000000;
         static constexpr ptr_t  kernel_ceiling = 0x100000000ull - (1024 * 4096);
         static constexpr size_t kernel_length  = kernel_ceiling - kernel_base;
+        static constexpr ptr_t  kernel_usable_virtual_base = kernel_base + 8 * MB;
+        static constexpr size_t kernel_usable_virtual_length = kernel_ceiling - kernel_usable_virtual_base;
 
         static constexpr ptr_t  userspace_base    = 0x00000000;
         static constexpr ptr_t  userspace_ceiling = kernel_base;

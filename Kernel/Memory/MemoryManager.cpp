@@ -135,20 +135,43 @@ namespace kernel {
 
     void MemoryManager::inititalize(PageDirectory& directory)
     {
-        // map the directory's physical page somewhere temporarily
-        PageDirectory::of_kernel().allocator(); // .allocate(page)
+        // PLEASE DON'T LOOK AT THIS IT'S GONNA BE CHANGED SOON
+        // Memory Managment TODOS:
+        // 1. Fix this function
+           // a. add handling for missing page directories
+           // b. get rid of hardcoded kernel page directory entries (keep them dynamic)
+        // 2. Add enums for all attributes for pages
+        // 3. Add a page fault handler
+        // 4. Add Setters/Getter for all paging structures
+        // 5. cli()/hlt() here somewhere?
+        // 6. Add a page invalidator instead of flushing the entire tlb
+        // 7. Add allocate_aligned_range for VirtualAllocator
+        // 8. A lot more debug logging for all allocators and page table related stuff
+        // 0. more TBD...
 
-        // flush
+        // map the directory's physical page somewhere temporarily
+        auto range = PageDirectory::current().allocator().allocate_range(Page::size);
+
+        auto page = allocate_page();
+        PageDirectory::current().map_page_directory_entry(770, page->address());
+        PageDirectory::current().make_active();
+
+        PageDirectory::current().map_page(range.begin(), directory.physical_address());
+
+        // TODO: add a function to flush a specific page
+        PageDirectory::current().make_active();
 
         // copy the kernel mappings
-        directory.entry_at(768, 0xDEADC0DE) = PageDirectory::of_kernel().entry_at(768);
-        directory.entry_at(769, 0xDEADC0DE) = PageDirectory::of_kernel().entry_at(769);
+        directory.entry_at(768, range.begin()) = PageDirectory::current().entry_at(768);
+        directory.entry_at(769, range.begin()) = PageDirectory::current().entry_at(769);
 
         // copy the recursive mapping
-        directory.entry_at(1023, 0xDEADC0DE) = PageDirectory::of_kernel().entry_at(1023);
+        directory.entry_at(1023, range.begin()) = PageDirectory::current().entry_at(1023);
 
         // unmap
-        PageDirectory::of_kernel().allocator(); // .deallocate(page)
+        PageDirectory::current().unmap_page(range.begin());
+        PageDirectory::current().allocator().deallocate_range(range);
+        PageDirectory::current().make_active();
     }
 
     MemoryManager& MemoryManager::the()
