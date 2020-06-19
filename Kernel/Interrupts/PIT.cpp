@@ -37,7 +37,6 @@ namespace kernel {
     void PIT::on_irq(const RegisterState&)
     {
         static u32 tick = 0;
-        static u32 seconds_elapsed = 0;
 
         ++tick;
 
@@ -57,19 +56,15 @@ namespace kernel {
                                  }
                              };
 
-        if (tick / m_frequency)
-        {
-            info() << "Timer: " << ++seconds_elapsed << " seconds uptime";
-            tick = 0;
+        display_write("Uptime: ", true);
 
-            display_write("Uptime: ", true);
+        char number[11];
 
-            char number[11];
+        float float_seconds = static_cast<float>(tick) / m_frequency;
 
-            if (to_string(seconds_elapsed, number, 11))
-                display_write(number);
+        if (to_string(float_seconds, number, 11))
+            display_write(number);
 
-            display_write(" seconds");
-        }
+        display_write(" seconds");
     }
 }
