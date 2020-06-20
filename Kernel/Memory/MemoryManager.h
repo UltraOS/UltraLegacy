@@ -9,6 +9,7 @@ namespace kernel {
     class PhysicalRegion;
     class Page;
     class PageDirectory;
+    class PageFault;
 
     class MemoryManager
     {
@@ -25,6 +26,8 @@ namespace kernel {
         static constexpr size_t userspace_length  = userspace_ceiling - userspace_base;
 
         static void inititalize(const MemoryMap& memory_map);
+
+        static void handle_page_fault(const PageFault& fault);
 
         static MemoryManager& the();
 

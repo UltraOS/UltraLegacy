@@ -1,5 +1,6 @@
 #include "Common/Logger.h"
 #include "Core/InterruptDisabler.h"
+#include "Interrupts/Common.h"
 #include "MemoryManager.h"
 #include "PhysicalRegion.h"
 #include "Page.h"
@@ -134,6 +135,25 @@ namespace kernel {
         hang();
     }
 
+    void MemoryManager::handle_page_fault(const PageFault& fault)
+    {
+        if (PageDirectory::current().allocator().is_allocated(fault.address()))
+        {
+            log() << "MemoryManager: expected page fault: " << fault;
+
+            auto rounded_address = fault.address() & 0xFFFFF000;
+
+            auto page = the().allocate_page();
+            PageDirectory::current().store_physical_page(page);
+            PageDirectory::current().map_page(rounded_address, page->address());
+        }
+        else
+        {
+            error() << "MemoryManager: unexpected page fault: " << fault;
+            hang();
+        }
+    }
+
     void MemoryManager::inititalize(PageDirectory& directory)
     {
         // PLEASE DON'T LOOK AT THIS IT'S GONNA BE CHANGED SOON
@@ -142,7 +162,7 @@ namespace kernel {
            // a. add handling for missing page directories                              --- kinda done
            // b. get rid of hardcoded kernel page directory entries (keep them dynamic)
         // 2. Add enums for all attributes for pages                                    --- kinda done
-        // 3. Add a page fault handler
+        // 3. Add a page fault handler                                                  --- kinda done
         // 4. Add Setters/Getter for all paging structures                              --- kinda done
         // 5. cli()/hlt() here somewhere?                                               --- kinda done
         // 6. Add a page invalidator instead of flushing the entire tlb                 --- kinda done

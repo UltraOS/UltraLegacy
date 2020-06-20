@@ -47,6 +47,11 @@ namespace kernel {
                        .make_supervisor_present();
     }
 
+    void PageDirectory::store_physical_page(RefPtr<Page> page)
+    {
+        m_physical_pages.append(page);
+    }
+
     void PageDirectory::map_page(ptr_t virtual_address, ptr_t physical_address)
     {
         ASSERT(is_active());

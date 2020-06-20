@@ -1,9 +1,12 @@
 #include "Common/Macros.h"
+#include "Common/Types.h"
 #include "Common/Logger.h"
 
 #include "Common.h"
 #include "IDT.h"
 #include "ISR.h"
+
+#include "Memory/MemoryManager.h"
 
 namespace kernel {
     DEFINE_INTERRUPT_HANDLER_NO_ERROR_CODE(division_by_zero, 24)
@@ -118,12 +121,21 @@ namespace kernel {
         hang();
     }
 
-    DEFINE_INTERRUPT_HANDLER(pagefault, 17)
-    void ISR::pagefault_handler(RegisterState)
+    DEFINE_INTERRUPT_HANDLER(page_fault, 18)
+    void ISR::page_fault_handler(RegisterState state)
     {
-        error() << "Pagefault!";
+        static constexpr u32 type_mask = 0b011;
+        static constexpr u32 user_mask = 0b100;
 
-        hang();
+        ptr_t address_of_fault;
+        asm("movl %%cr2, %%eax" : "=a"(address_of_fault));
+
+        PageFault pf(address_of_fault, state.error_code & user_mask,
+                     static_cast<PageFault::Type>(state.error_code & type_mask));
+
+        MemoryManager::handle_page_fault(pf);
+
+        log() << "PageFaultHandler: page fault resolved, continuing...";
     }
 
     DEFINE_INTERRUPT_HANDLER_NO_ERROR_CODE(floating_point_exception, 32)
@@ -190,7 +202,7 @@ namespace kernel {
                   .register_interrupt_handler(segment_not_present_index, segment_not_present_entry)
                   .register_interrupt_handler(stack_segment_fault_index, stack_segment_fault_entry)
                   .register_interrupt_handler(general_protection_fault_index, general_protection_fault_entry)
-                  .register_interrupt_handler(pagefault_index, pagefault_entry)
+                  .register_interrupt_handler(page_fault_index, page_fault_entry)
                   .register_interrupt_handler(floating_point_exception_index, floating_point_exception_entry)
                   .register_interrupt_handler(alignment_check_exception_index, alignment_check_exception_entry)
                   .register_interrupt_handler(machine_check_exception_index, machine_check_exception_entry)

@@ -42,6 +42,7 @@ namespace kernel {
     VirtualAllocator::VirtualAllocator(ptr_t base, size_t length)
         : m_full_range(base, length)
     {
+        m_free_ranges.emplace(m_full_range);
     }
 
     void VirtualAllocator::set_range(ptr_t base, size_t length)

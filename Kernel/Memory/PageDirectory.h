@@ -34,6 +34,8 @@ namespace kernel {
         VirtualAllocator& allocator();
         ptr_t physical_address();
 
+        void store_physical_page(RefPtr<Page> page);
+
         // TODO: add properties
         void map_page_directory_entry(size_t index, ptr_t physical_address);
         void map_page(ptr_t virtual_address, ptr_t physical_address);

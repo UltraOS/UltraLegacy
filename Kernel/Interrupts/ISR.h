@@ -25,7 +25,7 @@ namespace kernel {
         static void segment_not_present_handler(RegisterState)           USED;
         static void stack_segment_fault_handler(RegisterState)           USED;
         static void general_protection_fault_handler(RegisterState)      USED;
-        static void pagefault_handler(RegisterState)                     USED;
+        static void page_fault_handler(RegisterState)                    USED;
         static void floating_point_exception_handler(RegisterState)      USED;
         static void alignment_check_exception_handler(RegisterState)     USED;
         static void machine_check_exception_handler(RegisterState)       USED;
@@ -47,7 +47,7 @@ namespace kernel {
         static constexpr u16 segment_not_present_index           = 11;
         static constexpr u16 stack_segment_fault_index           = 12;
         static constexpr u16 general_protection_fault_index      = 13;
-        static constexpr u16 pagefault_index                     = 14;
+        static constexpr u16 page_fault_index                    = 14;
         static constexpr u16 floating_point_exception_index      = 16;
         static constexpr u16 alignment_check_exception_index     = 17;
         static constexpr u16 machine_check_exception_index       = 18;
