@@ -138,28 +138,23 @@ namespace kernel {
         // PLEASE DON'T LOOK AT THIS IT'S GONNA BE CHANGED SOON
         // Memory Managment TODOS:
         // 1. Fix this function
-           // a. add handling for missing page directories
+           // a. add handling for missing page directories                              --- kinda done
            // b. get rid of hardcoded kernel page directory entries (keep them dynamic)
-        // 2. Add enums for all attributes for pages
+        // 2. Add enums for all attributes for pages                                    --- kinda done
         // 3. Add a page fault handler
-        // 4. Add Setters/Getter for all paging structures
+        // 4. Add Setters/Getter for all paging structures                              --- kinda done
         // 5. cli()/hlt() here somewhere?
         // 6. Add a page invalidator instead of flushing the entire tlb
         // 7. Add allocate_aligned_range for VirtualAllocator
         // 8. A lot more debug logging for all allocators and page table related stuff
-        // 0. more TBD...
+        // 9. more TBD...
 
         // map the directory's physical page somewhere temporarily
         auto range = PageDirectory::current().allocator().allocate_range(Page::size);
-
-        auto page = allocate_page();
-        PageDirectory::current().map_page_directory_entry(770, page->address());
-        PageDirectory::current().make_active();
-
         PageDirectory::current().map_page(range.begin(), directory.physical_address());
 
         // TODO: add a function to flush a specific page
-        PageDirectory::current().make_active();
+        PageDirectory::current().flush_all();
 
         // copy the kernel mappings
         directory.entry_at(768, range.begin()) = PageDirectory::current().entry_at(768);
@@ -171,7 +166,7 @@ namespace kernel {
         // unmap
         PageDirectory::current().unmap_page(range.begin());
         PageDirectory::current().allocator().deallocate_range(range);
-        PageDirectory::current().make_active();
+        PageDirectory::current().flush_all();
     }
 
     MemoryManager& MemoryManager::the()

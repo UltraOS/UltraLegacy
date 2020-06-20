@@ -35,7 +35,8 @@ namespace kernel {
         s_kernel_dir->allocator().set_range(MemoryManager::kernel_usable_virtual_base,
                                             MemoryManager::kernel_usable_virtual_length);
     }
-
+    
+    // TODO: Maybe add an overload of this function that takes in a const Page&
     void PageDirectory::map_page_directory_entry(size_t index, ptr_t physical_address)
     {
         ASSERT(is_active());
@@ -51,10 +52,21 @@ namespace kernel {
         ASSERT((virtual_address % Page::size) == 0);
         ASSERT((physical_address % Page::size) == 0);
 
-        auto page_directory_entry = virtual_address / (4 * MB);
-        auto page_entry = (virtual_address - (page_directory_entry * 4 * MB)) / 4 * KB;
-        table_at(page_directory_entry).entry_at(page_entry).set_physical_address(physical_address)
-                                                           .make_supervisor_present();
+        auto page_table_index = virtual_address / (4 * MB);
+        auto page_entry = (virtual_address - (page_table_index * 4 * MB)) / 4 * KB;
+
+        if (!entry_at(page_table_index).is_present())
+        {
+            log() << "PageDirectory: tried to access a non-present table " 
+                  << page_table_index << ", allocating...";
+
+            auto page = m_physical_pages.emplace(MemoryManager::the().allocate_page());
+            map_page_directory_entry(page_table_index, page->address());
+            flush_all();
+        }
+
+        table_at(page_table_index).entry_at(page_entry).set_physical_address(physical_address)
+                                                       .make_supervisor_present();
     }
 
     void PageDirectory::unmap_page(ptr_t virtual_address)
@@ -94,6 +106,11 @@ namespace kernel {
         asm volatile("movl %%eax, %%cr3" :: "a"(physical_address()) : "memory");
 
         s_active_dir = this;
+    }
+
+    void PageDirectory::flush_all()
+    {
+        make_active();
     }
 
     PageDirectory& PageDirectory::current()

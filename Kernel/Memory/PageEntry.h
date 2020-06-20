@@ -46,6 +46,11 @@ namespace kernel {
                 set_attributes(attributes() & ~PRESENT);
         }
 
+        bool is_present()
+        {
+            return attributes() & PRESENT;
+        }
+
         void make_global()
         {
             set_attributes(attributes() | GLOBAL);

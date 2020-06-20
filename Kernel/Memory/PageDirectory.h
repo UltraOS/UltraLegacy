@@ -41,6 +41,7 @@ namespace kernel {
 
         bool is_active();
         void make_active();
+        void flush_all();
     private:
         PageDirectory();
 
