@@ -62,6 +62,7 @@ namespace kernel {
 
             auto page = m_physical_pages.emplace(MemoryManager::the().allocate_page());
             map_page_directory_entry(page_table_index, page->address());
+            zero_memory(&table_at(page_table_index), Page::size); // TODO: move this into MemoryManager
             flush_all();
         }
 

@@ -16,6 +16,13 @@ namespace kernel {
             Range(ptr_t start, ptr_t length);
 
             ptr_t begin() const;
+
+            template<typename T>
+            T* as_pointer()
+            {
+                return reinterpret_cast<T*>(m_start);
+            }
+
             ptr_t end() const;
             size_t length() const;
 

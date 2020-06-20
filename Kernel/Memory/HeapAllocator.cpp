@@ -188,7 +188,7 @@ namespace kernel {
             }
         }
 
-        error() << "HeapAllocator: Out of memory!";
+        error() << "HeapAllocator: Out of memory! (tried to allocate " << bytes << " bytes)";
 
         #ifdef HEAP_ALLOCATOR_DEBUG
 

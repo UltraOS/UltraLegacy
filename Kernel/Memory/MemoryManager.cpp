@@ -147,7 +147,10 @@ namespace kernel {
         // 6. Add a page invalidator instead of flushing the entire tlb
         // 7. Add allocate_aligned_range for VirtualAllocator
         // 8. A lot more debug logging for all allocators and page table related stuff
-        // 9. more TBD...
+        // 9. Zero all new pages                                                        --- done for this function
+           // maybe add some sort of quickmap virtual range where I could zero the new pages
+        // 10. make kernel entries global
+        // 11. more TBD...
 
         // map the directory's physical page somewhere temporarily
         auto range = PageDirectory::current().allocator().allocate_range(Page::size);
@@ -155,6 +158,8 @@ namespace kernel {
 
         // TODO: add a function to flush a specific page
         PageDirectory::current().flush_all();
+
+        zero_memory(range.as_pointer<void>(), range.length());
 
         // copy the kernel mappings
         directory.entry_at(768, range.begin()) = PageDirectory::current().entry_at(768);
