@@ -23,6 +23,7 @@
 // complaining and actually help me instead
 #ifdef _MSVC_LANG
 #define cli()
+#define sti()
 #define hang()
 #define asm __asm
 #define USED
