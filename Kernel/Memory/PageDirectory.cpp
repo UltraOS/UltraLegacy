@@ -41,7 +41,8 @@ namespace kernel {
         ASSERT(is_active());
         ASSERT((physical_address % Page::size) == 0);
 
-        entry_at(index) = Entry{ 0x3, physical_address >> 12 };
+        entry_at(index).set_physical_address(physical_address)
+                       .make_supervisor_present();
     }
 
     void PageDirectory::map_page(ptr_t virtual_address, ptr_t physical_address)
@@ -52,8 +53,8 @@ namespace kernel {
 
         auto page_directory_entry = virtual_address / (4 * MB);
         auto page_entry = (virtual_address - (page_directory_entry * 4 * MB)) / 4 * KB;
-        table_at(page_directory_entry).entry_at(page_entry).set_physical_address(physical_address);
-        table_at(page_directory_entry).entry_at(page_entry).set_attributes(3);
+        table_at(page_directory_entry).entry_at(page_entry).set_physical_address(physical_address)
+                                                           .make_supervisor_present();
     }
 
     void PageDirectory::unmap_page(ptr_t virtual_address)
@@ -64,7 +65,7 @@ namespace kernel {
         auto page_directory_entry = virtual_address / (4 * MB);
         auto page_entry = (virtual_address - (page_directory_entry * 4 * MB)) / 4 * KB;
 
-        table_at(page_directory_entry).entry_at(page_entry).set_physical_address(0);
+        table_at(page_directory_entry).entry_at(page_entry).set_present(false);
     }
 
     VirtualAllocator& PageDirectory::allocator()

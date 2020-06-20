@@ -2,6 +2,7 @@
 
 #include "Common/RefPtr.h"
 #include "Page.h"
+#include "PageEntry.h"
 #include "PageTable.h"
 #include "VirtualAllocator.h"
 
@@ -12,11 +13,7 @@ namespace kernel {
     public:
         friend class MemoryManager;
 
-        struct Entry
-        {
-            u32   properties : 12;
-            ptr_t table_ptr  : 20;
-        };
+        using Entry = PageEntry;
 
         static constexpr ptr_t  recursive_directory_base = 0xFFFFF000;
         static constexpr size_t directory_entry_size     = sizeof(ptr_t);
