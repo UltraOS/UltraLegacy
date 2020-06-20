@@ -1,4 +1,5 @@
 #include "Common/Logger.h"
+#include "Core/InterruptDisabler.h"
 #include "MemoryManager.h"
 #include "PhysicalRegion.h"
 #include "Page.h"
@@ -143,8 +144,8 @@ namespace kernel {
         // 2. Add enums for all attributes for pages                                    --- kinda done
         // 3. Add a page fault handler
         // 4. Add Setters/Getter for all paging structures                              --- kinda done
-        // 5. cli()/hlt() here somewhere?
-        // 6. Add a page invalidator instead of flushing the entire tlb
+        // 5. cli()/hlt() here somewhere?                                               --- kinda done
+        // 6. Add a page invalidator instead of flushing the entire tlb                 --- kinda done
         // 7. Add allocate_aligned_range for VirtualAllocator
         // 8. A lot more debug logging for all allocators and page table related stuff
         // 9. Zero all new pages                                                        --- done for this function
@@ -152,12 +153,11 @@ namespace kernel {
         // 10. make kernel entries global
         // 11. more TBD...
 
+        InterruptDisabler d;
+
         // map the directory's physical page somewhere temporarily
         auto range = PageDirectory::current().allocator().allocate_range(Page::size);
         PageDirectory::current().map_page(range.begin(), directory.physical_address());
-
-        // TODO: add a function to flush a specific page
-        PageDirectory::current().flush_all();
 
         zero_memory(range.as_pointer<void>(), range.length());
 
@@ -171,7 +171,6 @@ namespace kernel {
         // unmap
         PageDirectory::current().unmap_page(range.begin());
         PageDirectory::current().allocator().deallocate_range(range);
-        PageDirectory::current().flush_all();
     }
 
     MemoryManager& MemoryManager::the()

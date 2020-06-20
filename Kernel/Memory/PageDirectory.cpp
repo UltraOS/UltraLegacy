@@ -1,4 +1,5 @@
 #include "Common/Math.h"
+#include "Core/InterruptDisabler.h"
 #include "PageTable.h"
 #include "PageDirectory.h"
 #include "VirtualAllocator.h"
@@ -63,11 +64,12 @@ namespace kernel {
             auto page = m_physical_pages.emplace(MemoryManager::the().allocate_page());
             map_page_directory_entry(page_table_index, page->address());
             zero_memory(&table_at(page_table_index), Page::size); // TODO: move this into MemoryManager
-            flush_all();
         }
 
         table_at(page_table_index).entry_at(page_entry).set_physical_address(physical_address)
                                                        .make_supervisor_present();
+
+        flush_at(virtual_address);
     }
 
     void PageDirectory::unmap_page(ptr_t virtual_address)
@@ -79,6 +81,7 @@ namespace kernel {
         auto page_entry = (virtual_address - (page_directory_entry * 4 * MB)) / 4 * KB;
 
         table_at(page_directory_entry).entry_at(page_entry).set_present(false);
+        flush_at(virtual_address);
     }
 
     VirtualAllocator& PageDirectory::allocator()
@@ -104,14 +107,22 @@ namespace kernel {
 
     void PageDirectory::make_active()
     {
-        asm volatile("movl %%eax, %%cr3" :: "a"(physical_address()) : "memory");
+        InterruptDisabler d;
 
+        flush_all();
         s_active_dir = this;
     }
 
     void PageDirectory::flush_all()
     {
-        make_active();
+        asm volatile("movl %%eax, %%cr3" :: "a"(physical_address()) : "memory");
+    }
+
+    void PageDirectory::flush_at(ptr_t virtual_address)
+    {
+        log() << "PageDirectory: flushing a page at " << format::as_hex << virtual_address;
+
+        asm volatile("invlpg %0" :: "m"(*reinterpret_cast<u8*>(virtual_address)) : "memory");
     }
 
     PageDirectory& PageDirectory::current()

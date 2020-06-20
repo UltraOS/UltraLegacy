@@ -42,6 +42,7 @@ namespace kernel {
         bool is_active();
         void make_active();
         void flush_all();
+        void flush_at(ptr_t virtual_address);
     private:
         PageDirectory();
 
