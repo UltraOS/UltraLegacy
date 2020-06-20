@@ -53,8 +53,10 @@ namespace kernel {
         ASSERT((virtual_address % Page::size) == 0);
         ASSERT((physical_address % Page::size) == 0);
 
+        InterruptDisabler d;
+
         auto page_table_index = virtual_address / (4 * MB);
-        auto page_entry = (virtual_address - (page_table_index * 4 * MB)) / 4 * KB;
+        auto page_entry = (virtual_address - (page_table_index * 4 * MB)) / (4 * KB);
 
         if (!entry_at(page_table_index).is_present())
         {
@@ -65,6 +67,10 @@ namespace kernel {
             map_page_directory_entry(page_table_index, page->address());
             zero_memory(&table_at(page_table_index), Page::size); // TODO: move this into MemoryManager
         }
+
+        log() << "PageDirectory: mapping " << format::as_hex << virtual_address
+              << " to " << physical_address << " at table:"  << format::as_dec
+              << page_table_index << " entry: " << page_entry;
 
         table_at(page_table_index).entry_at(page_entry).set_physical_address(physical_address)
                                                        .make_supervisor_present();

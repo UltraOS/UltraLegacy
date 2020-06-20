@@ -166,7 +166,8 @@ namespace kernel {
         directory.entry_at(769, range.begin()) = PageDirectory::current().entry_at(769);
 
         // copy the recursive mapping
-        directory.entry_at(1023, range.begin()) = PageDirectory::current().entry_at(1023);
+        directory.entry_at(1023, range.begin()).set_physical_address(directory.physical_address())
+                                               .make_supervisor_present();
 
         // unmap
         PageDirectory::current().unmap_page(range.begin());
