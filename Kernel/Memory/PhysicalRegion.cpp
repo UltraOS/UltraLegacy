@@ -20,7 +20,7 @@ namespace kernel {
 
     size_t PhysicalRegion::physical_address_as_bit(ptr_t address)
     {
-        ASSERT((address % Page::size) == 0);
+        ASSERT_PAGE_ALIGNED(address);
 
         return (address - m_starting_address) / Page::size;
     }

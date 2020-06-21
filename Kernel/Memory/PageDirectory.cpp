@@ -1,5 +1,6 @@
 #include "Common/Math.h"
 #include "Core/InterruptDisabler.h"
+#include "MemoryManager.h"
 #include "PageTable.h"
 #include "PageDirectory.h"
 #include "VirtualAllocator.h"
@@ -27,7 +28,8 @@ namespace kernel {
     {
         s_kernel_dir = new PageDirectory();
 
-        auto as_physical = reinterpret_cast<ptr_t>(&kernel_page_directory) - MemoryManager::kernel_base;
+        auto as_physical
+            = MemoryManager::kernel_address_as_physical(reinterpret_cast<ptr_t>(&kernel_page_directory));
 
         s_kernel_dir->m_directory_page = RefPtr<Page>::create(as_physical);
 
@@ -45,7 +47,7 @@ namespace kernel {
     void PageDirectory::map_page_directory_entry(size_t index, ptr_t physical_address)
     {
         ASSERT(is_active());
-        ASSERT((physical_address % Page::size) == 0);
+        ASSERT_PAGE_ALIGNED(physical_address);
 
         entry_at(index).set_physical_address(physical_address)
                        .make_supervisor_present();
@@ -59,8 +61,8 @@ namespace kernel {
     void PageDirectory::map_page(ptr_t virtual_address, ptr_t physical_address)
     {
         ASSERT(is_active());
-        ASSERT((virtual_address % Page::size) == 0);
-        ASSERT((physical_address % Page::size) == 0);
+        ASSERT_PAGE_ALIGNED(virtual_address);
+        ASSERT_PAGE_ALIGNED(physical_address);
 
         InterruptDisabler d;
 
@@ -74,7 +76,6 @@ namespace kernel {
 
             auto page = m_physical_pages.emplace(MemoryManager::the().allocate_page());
             map_page_directory_entry(page_table_index, page->address());
-            zero_memory(&table_at(page_table_index), Page::size); // TODO: move this into MemoryManager
         }
 
         log() << "PageDirectory: mapping " << format::as_hex << virtual_address
@@ -90,7 +91,7 @@ namespace kernel {
     void PageDirectory::unmap_page(ptr_t virtual_address)
     {
         ASSERT(is_active());
-        ASSERT((virtual_address % Page::size) == 0);
+        ASSERT_PAGE_ALIGNED(virtual_address);
 
         auto page_directory_entry = virtual_address / (4 * MB);
         auto page_entry = (virtual_address - (page_directory_entry * 4 * MB)) / 4 * KB;

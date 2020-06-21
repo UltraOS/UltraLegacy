@@ -1,6 +1,8 @@
-#include "HeapAllocator.h"
 #include "Common/Logger.h"
 #include "Common/Memory.h"
+
+#include "MemoryManager.h"
+#include "HeapAllocator.h"
 
 // pretty sure i'll need this later
 // #define HEAP_ALLOCATOR_DEBUG
@@ -11,14 +13,9 @@ namespace kernel {
 
     void HeapAllocator::initialize()
     {
-        static constexpr size_t kernel_base_address = 0xC0100000;
-        static constexpr size_t kernel_size         = 3 * MB;
-        static constexpr size_t kernel_end_address  = kernel_base_address + kernel_size;
-        static constexpr size_t kernel_heap_begin   = kernel_end_address;
-        static constexpr size_t kernel_heap_size    = 4 * MB; // one page table
-
         // feed the preallocated kernel heap page table
-        feed_block(reinterpret_cast<void*>(kernel_heap_begin), kernel_heap_size);
+        feed_block(reinterpret_cast<void*>(MemoryManager::kernel_heap_begin),
+                                           MemoryManager::kernel_initial_heap_size);
     }
 
     void HeapAllocator::feed_block(void* ptr, size_t size, size_t chunk_size_in_bytes)

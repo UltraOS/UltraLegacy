@@ -24,10 +24,9 @@ namespace kernel {
             auto base_address = entry.base_address;
             auto length = entry.length;
 
-            // First 8 MB are reserved for the kernel
-            if (base_address < (8 * MB))
+            if (base_address < kernel_reserved_size)
             {
-                if ((base_address + length) < (8 * MB))
+                if ((base_address + length) < kernel_reserved_size)
                 {
                     log() << "MemoryManager: skipping a lower memory region at "
                           << format::as_hex << base_address;
@@ -38,7 +37,7 @@ namespace kernel {
                     log() << "MemoryManager: trimming a low memory region at "
                           << format::as_hex << base_address;
 
-                    auto trim_overhead = 8 * MB - base_address;
+                    auto trim_overhead = kernel_reserved_size - base_address;
                     base_address += trim_overhead;
                     length       -= trim_overhead;
 
@@ -48,21 +47,21 @@ namespace kernel {
             }
 
             // Make use of this once we have PAE
-            if (base_address > (4 * GB))
+            if (base_address > max_memory_address)
             {
                 log() << "MemoryManager: skipping a higher memory region at "
                       << format::as_hex << base_address;
                 continue;
             }
-            else if ((base_address + length) > (4 * GB))
+            else if ((base_address + length) > max_memory_address)
             {
                 log() << "MemoryManager: trimming a big region (outside of 4GB) at" 
                       << format::as_hex << base_address << " length:" << length;
 
-                length -= (base_address + length) - 4 * GB;
+                length -= (base_address + length) - max_memory_address;
             }
 
-            if (base_address % Page::size)
+            if (!Page::is_aligned(base_address))
             {
                 log() << "MemoryManager: got an unaligned memory map entry " 
                       << format::as_hex << base_address << " size:" << length;
@@ -75,7 +74,7 @@ namespace kernel {
                 log() << "MemoryManager: aligned address:"
                       << format::as_hex << base_address << " size:" << length;
             }
-            if (length % Page::size)
+            if (!Page::is_aligned(length))
             {
                 log() << "MemoryManager: got an unaligned memory map entry length" << length;
 
@@ -166,7 +165,7 @@ namespace kernel {
         {
             log() << "MemoryManager: expected page fault: " << fault;
 
-            auto rounded_address = fault.address() & 0xFFFFF000;
+            auto rounded_address = fault.address() & Page::alignment_mask;
 
             auto page = the().allocate_page();
             PageDirectory::current().store_physical_page(page);
@@ -182,7 +181,7 @@ namespace kernel {
     void MemoryManager::inititalize(PageDirectory& directory)
     {
         // Memory Managment TODOS:
-        // 1. Fix this function
+        // 1. Fix this function                                                         --- kinda done
            // a. add handling for missing page directories                              --- kinda done
            // b. get rid of hardcoded kernel page directory entries (keep them dynamic) --- kinda done
         // 2. Add enums for all attributes for pages                                    --- kinda done
@@ -195,7 +194,7 @@ namespace kernel {
         // 9. Zero all new pages                                                             --- kinda done
            // maybe add some sort of quickmap virtual range where I could zero the new pages --- kinda done
         // 10. make kernel entries global                                                    --- kinda done
-        // 11. tons of magic numbers
+        // 11. tons of magic numbers                                                         --- kinda done
         // 12. more TBD...
 
         InterruptDisabler d;
@@ -206,7 +205,7 @@ namespace kernel {
         // copy the kernel mappings
         // TODO: this assumes that all kernel tables are contiguous
         //       so it could backfire later.
-        for (size_t i = 768; i < 1023; ++i)
+        for (size_t i = kernel_first_table_index; i <= kernel_last_table_index; ++i)
         {
             auto& entry = PageDirectory::current().entry_at(i);
 
@@ -217,8 +216,17 @@ namespace kernel {
         }
 
         // create the recursive mapping
-        directory.entry_at(1023, mapping.as_number()).set_physical_address(directory.physical_address())
-                                                     .make_supervisor_present();
+        directory.entry_at(recursive_entry_index, mapping.as_number())
+                 .set_physical_address(directory.physical_address())
+                 .make_supervisor_present();
+    }
+
+    ptr_t MemoryManager::kernel_address_as_physical(ptr_t virtual_address)
+    {
+        ASSERT(virtual_address > kernel_reserved_base &&
+               virtual_address < kernel_end_address);
+
+        return virtual_address - kernel_reserved_base;
     }
 
     void MemoryManager::set_quickmap_range(const VirtualAllocator::Range& range)
