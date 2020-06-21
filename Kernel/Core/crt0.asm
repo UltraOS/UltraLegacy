@@ -26,7 +26,7 @@ PAGING:        equ (0b1 << 31)
 
 %define TO_PHYSICAL(virtual) (virtual - VIRTUAL_ORIGIN)
 
-section .data
+section .paging_structures
 ; can't use PAGE_SIZE here because of a NASM bug
 ; it simply ignores this if it's a macro
 align 4096
@@ -39,6 +39,9 @@ kernel_page_table:
     times PAGE_SIZE db 0
 
 kernel_heap_table:
+    times PAGE_SIZE db 0
+
+kernel_quickmap_table:
     times PAGE_SIZE db 0
 
 ; Current memory layout (physical)
@@ -107,6 +110,9 @@ start:
 
     ; kernel heap
     mov [TO_PHYSICAL(kernel_page_directory + 769 * ENTRY_SIZE)], dword (TO_PHYSICAL(kernel_heap_table) + (PRESENT | READWRITE))
+
+    ; kernel quickmap table
+    mov [TO_PHYSICAL(kernel_page_directory + 770 * ENTRY_SIZE)], dword (TO_PHYSICAL(kernel_quickmap_table) + (PRESENT | READWRITE))
 
     ; recursive paging mapping
     mov [TO_PHYSICAL(kernel_page_directory + 1023 * ENTRY_SIZE)], dword (TO_PHYSICAL(kernel_page_directory) + (PRESENT | READWRITE))
