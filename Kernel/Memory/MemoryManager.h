@@ -21,11 +21,11 @@ namespace kernel {
         static constexpr ptr_t  max_memory_address         = 0xFFFFFFFF;
 
         static constexpr size_t kernel_size              = 3 * MB;
-        static constexpr size_t kernel_initial_heap_size = page_table_address_space;
+        static constexpr size_t kernel_heap_initial_size = page_table_address_space;
         static constexpr ptr_t  kernel_reserved_base     = 3 * GB;
         static constexpr ptr_t  kernel_base_address      = kernel_reserved_base + 1 * MB;
         static constexpr size_t kernel_pre_reserved_size = kernel_base_address - kernel_reserved_base;
-        static constexpr size_t kernel_reserved_size     = kernel_pre_reserved_size + kernel_size + kernel_initial_heap_size;
+        static constexpr size_t kernel_reserved_size     = kernel_pre_reserved_size + kernel_size + kernel_heap_initial_size;
         static constexpr ptr_t  kernel_ceiling           = max_memory_address - page_table_address_space + 1;
         static constexpr ptr_t  kernel_usable_base       = kernel_reserved_base + kernel_reserved_size;
         static constexpr size_t kernel_usable_length     = kernel_ceiling - kernel_usable_base;
