@@ -2,7 +2,8 @@
 #include "Common/Logger.h"
 #include "Common/Memory.h"
 
-#define HEAP_ALLOCATOR_DEBUG
+// pretty sure i'll need this later
+// #define HEAP_ALLOCATOR_DEBUG
 
 namespace kernel {
 

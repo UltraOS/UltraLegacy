@@ -101,6 +101,26 @@ namespace kernel {
               << total_free_memory / Page::size << " pages) ";
     }
 
+    u8* MemoryManager::quickmap_page(ptr_t physical_address)
+    {
+        log() << "MemoryManager: quickmapping " << format::as_hex 
+              << physical_address << " to " << m_quickmap_range.begin();
+
+        PageDirectory::current().map_page(m_quickmap_range.begin(), physical_address);
+
+        return m_quickmap_range.as_pointer<u8>();
+    }
+
+    u8* MemoryManager::quickmap_page(const Page& page)
+    {
+        return quickmap_page(page.address());
+    }
+
+    void MemoryManager::unquickmap_page()
+    {
+        PageDirectory::current().unmap_page(m_quickmap_range.begin());
+    }
+
     RefPtr<Page> MemoryManager::allocate_page()
     {
         for (auto& region : m_physical_regions)
@@ -111,6 +131,11 @@ namespace kernel {
             auto page = region.allocate_page();
 
             ASSERT(page);
+
+            InterruptDisabler d;
+
+            ScopedPageMapping mapping(page->address());
+            zero_memory(mapping.as_pointer(), Page::size);
 
             return page;
         }
@@ -156,11 +181,10 @@ namespace kernel {
 
     void MemoryManager::inititalize(PageDirectory& directory)
     {
-        // PLEASE DON'T LOOK AT THIS IT'S GONNA BE CHANGED SOON
         // Memory Managment TODOS:
         // 1. Fix this function
            // a. add handling for missing page directories                              --- kinda done
-           // b. get rid of hardcoded kernel page directory entries (keep them dynamic)
+           // b. get rid of hardcoded kernel page directory entries (keep them dynamic) --- kinda done
         // 2. Add enums for all attributes for pages                                    --- kinda done
         // 3. Add a page fault handler                                                  --- kinda done
         // 4. Add Setters/Getter for all paging structures                              --- kinda done
@@ -168,30 +192,38 @@ namespace kernel {
         // 6. Add a page invalidator instead of flushing the entire tlb                 --- kinda done
         // 7. Add allocate_aligned_range for VirtualAllocator
         // 8. A lot more debug logging for all allocators and page table related stuff
-        // 9. Zero all new pages                                                        --- done for this function
-           // maybe add some sort of quickmap virtual range where I could zero the new pages
+        // 9. Zero all new pages                                                             --- kinda done
+           // maybe add some sort of quickmap virtual range where I could zero the new pages --- kinda done
         // 10. make kernel entries global
-        // 11. more TBD...
+        // 11. tons of magic numbers
+        // 12. more TBD...
 
         InterruptDisabler d;
 
         // map the directory's physical page somewhere temporarily
-        auto range = PageDirectory::current().allocator().allocate_range(Page::size);
-        PageDirectory::current().map_page(range.begin(), directory.physical_address());
-
-        zero_memory(range.as_pointer<void>(), range.length());
+        ScopedPageMapping mapping(directory.physical_address());
 
         // copy the kernel mappings
-        directory.entry_at(768, range.begin()) = PageDirectory::current().entry_at(768);
-        directory.entry_at(769, range.begin()) = PageDirectory::current().entry_at(769);
+        // TODO: this assumes that all kernel tables are contiguous
+        //       so it could backfire later.
+        for (size_t i = 768; i < 1023; ++i)
+        {
+            auto& entry = PageDirectory::current().entry_at(i);
 
-        // copy the recursive mapping
-        directory.entry_at(1023, range.begin()).set_physical_address(directory.physical_address())
-                                               .make_supervisor_present();
+            if (!entry.is_present())
+                break;
 
-        // unmap
-        PageDirectory::current().unmap_page(range.begin());
-        PageDirectory::current().allocator().deallocate_range(range);
+            directory.entry_at(i, mapping.as_number()) = entry;
+        }
+
+        // create the recursive mapping
+        directory.entry_at(1023, mapping.as_number()).set_physical_address(directory.physical_address())
+                                                     .make_supervisor_present();
+    }
+
+    void MemoryManager::set_quickmap_range(const VirtualAllocator::Range& range)
+    {
+        m_quickmap_range = range;
     }
 
     MemoryManager& MemoryManager::the()

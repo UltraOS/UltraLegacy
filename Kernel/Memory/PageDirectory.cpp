@@ -17,8 +17,8 @@ namespace kernel {
 
     PageDirectory::PageDirectory(RefPtr<Page> directory_page)
         : m_directory_page(directory_page),
-          m_allocator(MemoryManager::userspace_base,
-                      MemoryManager::userspace_length)
+          m_allocator(MemoryManager::userspace_usable_base,
+                      MemoryManager::userspace_usable_length)
     {
         MemoryManager::the().inititalize(*this);
     }
@@ -33,8 +33,12 @@ namespace kernel {
 
         s_kernel_dir->make_active();
 
-        s_kernel_dir->allocator().set_range(MemoryManager::kernel_usable_virtual_base,
-                                            MemoryManager::kernel_usable_virtual_length);
+        s_kernel_dir->allocator().set_range(MemoryManager::kernel_usable_base,
+                                            MemoryManager::kernel_usable_length);
+
+        // allocate a quickmap range
+        auto range = s_kernel_dir->allocator().allocate_range(Page::size);
+        MemoryManager::the().set_quickmap_range(range);
     }
     
     // TODO: Maybe add an overload of this function that takes in a const Page&
