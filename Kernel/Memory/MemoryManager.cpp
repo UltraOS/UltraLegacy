@@ -194,7 +194,7 @@ namespace kernel {
         // 8. A lot more debug logging for all allocators and page table related stuff
         // 9. Zero all new pages                                                             --- kinda done
            // maybe add some sort of quickmap virtual range where I could zero the new pages --- kinda done
-        // 10. make kernel entries global
+        // 10. make kernel entries global                                                    --- kinda done
         // 11. tons of magic numbers
         // 12. more TBD...
 

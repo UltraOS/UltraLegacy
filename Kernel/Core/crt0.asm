@@ -12,12 +12,14 @@ KERNEL_SIZE:    equ 3 * MB
 PAGE_SIZE:      equ 4096
 ENTRY_COUNT:    equ 1024
 VIRTUAL_ORIGIN: equ 0xC0000000
-KERNEL_ORIGIN:  equ 0xC0100000;
+KERNEL_ORIGIN:  equ 0xC0100000
 PRESENT:        equ 0b01
 READWRITE:      equ 0b10
+GLOBAL_PAGE:    equ (1 << 8)
 ENTRY_SIZE:     equ 4
-EM_BIT:         equ (0b1 << 2)
-TS_BIT:         equ (0b1 << 3)
+EM_BIT:         equ (1 << 2)
+TS_BIT:         equ (1 << 3)
+GLOBAL_BIT:     equ (1 << 7)
 
 HEAP_ENTRY_COUNT: equ 1024 ; 4MB of kernel heap
 
@@ -69,13 +71,17 @@ start:
     mov cr0, edx
     fninit ; initialize the FPU
 
+    mov ecx, cr4
+    or  ecx, GLOBAL_BIT
+    mov cr4, ecx
+
     mov edi, TO_PHYSICAL(kernel_page_table)
     mov esi, 0x00000000
     mov ecx, ENTRY_COUNT
 
     map_one:
         mov edx, esi
-        or  edx, (PRESENT | READWRITE)
+        or  edx, (PRESENT | READWRITE | GLOBAL_PAGE)
         mov [edi], edx
 
         add esi, PAGE_SIZE
@@ -92,7 +98,7 @@ start:
 
     map_one_more:
         mov edx, esi
-        or  edx, (PRESENT | READWRITE)
+        or  edx, (PRESENT | READWRITE | GLOBAL_PAGE)
         mov [edi], edx
 
         add esi, PAGE_SIZE
@@ -134,6 +140,7 @@ start:
         ; flush TLB
         mov ecx, cr3
         mov cr3, ecx
+        invlpg [0x00100000]
 
         ; Set up the kernel stack
         mov esp, kernel_stack_begin
