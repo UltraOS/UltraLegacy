@@ -3,6 +3,7 @@
 #include "GDT.h"
 
 namespace kernel {
+
     GDT GDT::s_instance;
 
     GDT::GDT()

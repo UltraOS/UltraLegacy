@@ -1,6 +1,8 @@
 #include "Common/Logger.h"
 #include "Core/IO.h"
 
+#include "Memory/MemoryManager.h"
+
 #include "PIT.h"
 
 namespace kernel {
@@ -30,7 +32,7 @@ namespace kernel {
         }
         IO::out8<timer_command>(write_word | square_wave_mode | timer_0);
 
-        IO::out8<timer_data>(divisor & 0x000000FF);
+        IO::out8<timer_data>( divisor & 0x000000FF);
         IO::out8<timer_data>((divisor & 0x0000FF00) >> 8);
     }
 
@@ -40,29 +42,35 @@ namespace kernel {
 
         ++tick;
 
-        auto display_write = [] (const char* string, bool carriage_return = false)
-                             {
-                                 static u16* memory = reinterpret_cast<u16*>(0xB8000 + 0xC0000000);
+        auto display_write =
+            [] (const char* string, bool carriage_return = false)
+            {
+                static constexpr ptr_t vga_address = 0xB8000;
+                static constexpr ptr_t linear_vga_address = MemoryManager::physical_address_as_kernel(vga_address);
+                static constexpr u8    light_blue = 0x9;
 
-                                 if (carriage_return)
-                                     memory = reinterpret_cast<u16*>(0xB8000 + 0xC0000000);
 
-                                 while (*string)
-                                 {
-                                     u16 colored_char = *(string++);
-                                     colored_char |= 0x2 << 8;
+                static u16* memory = reinterpret_cast<u16*>(linear_vga_address);
 
-                                     *(memory++) = colored_char;
-                                 }
-                             };
+                if (carriage_return)
+                    memory = reinterpret_cast<u16*>(linear_vga_address);
+
+                while (*string)
+                {
+                    u16 colored_char  = *(string++);
+                        colored_char |= light_blue << 8;
+
+                    *(memory++) = colored_char;
+                }
+            };
 
         display_write("Uptime: ", true);
 
         char number[11];
 
-        float float_seconds = static_cast<float>(tick) / m_frequency;
+        float precise_seconds = static_cast<float>(tick) / m_frequency;
 
-        if (to_string(float_seconds, number, 11))
+        if (to_string(precise_seconds, number, 11))
             display_write(number);
 
         display_write(" seconds");

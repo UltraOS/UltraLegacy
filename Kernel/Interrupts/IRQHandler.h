@@ -21,7 +21,7 @@ namespace kernel {
         virtual void on_irq(const RegisterState& registers) = 0;
         virtual void finialize_irq() { PIC::end_of_interrupt(irq_index()); }
 
-        // TODO: add [virtual ~InterruptRequestHandler() = default;] once I have operator delete
+        virtual ~IRQHandler() = default;
     private:
         u16 m_irq_index;
     };

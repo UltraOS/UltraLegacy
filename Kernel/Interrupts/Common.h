@@ -5,6 +5,7 @@
 #include "Common/Logger.h"
 
 namespace kernel {
+
     struct PACKED RegisterState
     {
         u32 ss;
@@ -92,5 +93,12 @@ namespace kernel {
         ptr_t m_address { 0 };
         bool  m_is_user { 0 };
         Type  m_type    { READ_NON_PRESENT };
+    };
+
+    class InterruptDisabler
+    {
+    public:
+        InterruptDisabler()  { cli(); }
+        ~InterruptDisabler() { sti(); }
     };
 }

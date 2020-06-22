@@ -9,6 +9,7 @@
 #include "Memory/MemoryManager.h"
 
 namespace kernel {
+
     DEFINE_INTERRUPT_HANDLER_NO_ERROR_CODE(division_by_zero, 24)
     void ISR::division_by_zero_handler(RegisterState)
     {

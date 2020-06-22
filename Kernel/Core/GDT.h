@@ -4,6 +4,7 @@
 #include "Common/Macros.h"
 
 namespace kernel {
+
     class GDT
     {
     public:
@@ -53,6 +54,7 @@ namespace kernel {
         static constexpr u16 kernel_data_selector() { return 0x10; }
 
         static GDT& the();
+
     private:
         GDT();
 

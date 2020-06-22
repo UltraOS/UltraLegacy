@@ -4,6 +4,7 @@
 #include "IDT.h"
 
 namespace kernel {
+
     IDT IDT::s_instance;
 
     IDT::IDT()
@@ -36,12 +37,12 @@ namespace kernel {
 
     IDT& IDT::register_interrupt_handler(u16 index, isr handler)
     {
-        return register_isr(index, attributes(INTERRUPT_GATE | RING_3 | PRESENT), handler);
+        return register_isr(index, INTERRUPT_GATE | RING_3 | PRESENT, handler);
     }
 
     IDT& IDT::register_user_interrupt_handler(u16 index, isr handler)
     {
-        return register_isr(index, attributes(TRAP_GATE | RING_3 | PRESENT), handler);
+        return register_isr(index, TRAP_GATE | RING_3 | PRESENT, handler);
     }
 
     void IDT::install()

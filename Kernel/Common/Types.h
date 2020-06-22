@@ -23,7 +23,7 @@ using size_t = long unsigned int;
 // A wild posix type appears
 using ssize_t = i32;
 
-using ptr_t  = u32;
+using ptr_t   = u32;
 
 // floating point
 using f32 = float;

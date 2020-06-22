@@ -6,6 +6,7 @@
 
 
 namespace kernel {
+
     void PIC::end_of_interrupt(u8 request_number, bool spurious)
     {
         if (request_number >= 8 && !spurious)

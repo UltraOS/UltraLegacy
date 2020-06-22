@@ -139,7 +139,7 @@ namespace kernel {
         }
 
     private:
-        T* m_ptr            { nullptr };
+        T*      m_ptr       { nullptr };
         size_t* m_ref_count { nullptr };
     };
 }

@@ -6,10 +6,12 @@
 #include "Common.h"
 
 namespace kernel {
+
     class ISR
     {
     public:
         static void install();
+
     private:
         static void division_by_zero_handler(RegisterState)              USED;
         static void debug_handler(RegisterState)                         USED;
@@ -32,6 +34,7 @@ namespace kernel {
         static void simd_floating_point_exception_handler(RegisterState) USED;
         static void virtualization_exception_handler(RegisterState)      USED;
         static void security_exception_handler(RegisterState)            USED;
+
     private:
         static constexpr u16 division_by_zero_index              = 0;
         static constexpr u16 debug_index                         = 1;

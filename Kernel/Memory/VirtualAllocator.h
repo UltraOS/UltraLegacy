@@ -59,6 +59,7 @@ namespace kernel {
         Range allocate_range(size_t length);
         void deallocate_range(const Range& range);
         void deallocate_range(ptr_t base_address);
+
     private:
         void return_back_to_free_pool(size_t allocated_index);
 

@@ -22,6 +22,7 @@ namespace kernel {
         void set_frequency(u32 ticks_per_second);
 
         void on_irq(const RegisterState& registers) override;
+
     private:
         u32 m_frequency {0};
     };

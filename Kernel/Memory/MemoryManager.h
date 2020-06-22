@@ -54,7 +54,20 @@ namespace kernel {
 
         void set_quickmap_range(const VirtualAllocator::Range& range);
 
-        static ptr_t kernel_address_as_physical(ptr_t virtual_address);
+        static constexpr ptr_t kernel_address_as_physical(ptr_t virtual_address)
+        {
+            ASSERT(virtual_address > kernel_reserved_base &&
+                   virtual_address < kernel_end_address);
+
+            return virtual_address - kernel_reserved_base;
+        }
+
+        static constexpr ptr_t physical_address_as_kernel(ptr_t physical_address)
+        {
+            ASSERT(physical_address < kernel_reserved_size);
+
+            return physical_address + kernel_reserved_base;
+        }
 
     private:
         MemoryManager(const MemoryMap& memory_map);

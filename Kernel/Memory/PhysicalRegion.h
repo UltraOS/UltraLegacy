@@ -31,9 +31,11 @@ namespace kernel {
 
             return logger;
         }
+
     private:
         ptr_t bit_as_physical_address(size_t bit);
         size_t physical_address_as_bit(ptr_t address);
+
     private:
         ptr_t  m_starting_address { 0 };
         size_t m_free_pages       { 0 };

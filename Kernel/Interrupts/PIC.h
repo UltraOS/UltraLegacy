@@ -3,6 +3,7 @@
 #include "Common/Types.h"
 
 namespace kernel {
+
     class PIC
     {
     public:

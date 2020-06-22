@@ -60,7 +60,7 @@ namespace kernel {
     struct PACKED MemoryMap
     {
         PhysicalRange* entries;
-        u16 entry_count;
+        u16            entry_count;
 
         PhysicalRange* begin() { return entries; }
         PhysicalRange* end()   { return entries + entry_count; }

@@ -34,6 +34,16 @@ namespace kernel {
         ISR::install();
         IRQManager::the().install();
         IDT::the().install();
+
+        auto page = MemoryManager::the().allocate_page();
+        PageDirectory new_dir(page);
+        new_dir.make_active();
+
+        auto range = new_dir.allocator().allocate_range(4096);
+
+        *(range.as_pointer<u32>() + 8) = 10;
+        log() << "write " << *range.as_pointer<u32>();
+
         sti();
 
         for(;;);

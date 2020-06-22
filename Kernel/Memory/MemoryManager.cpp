@@ -1,5 +1,4 @@
 #include "Common/Logger.h"
-#include "Core/InterruptDisabler.h"
 #include "Interrupts/Common.h"
 #include "MemoryManager.h"
 #include "PhysicalRegion.h"
@@ -219,14 +218,6 @@ namespace kernel {
         directory.entry_at(recursive_entry_index, mapping.as_number())
                  .set_physical_address(directory.physical_address())
                  .make_supervisor_present();
-    }
-
-    ptr_t MemoryManager::kernel_address_as_physical(ptr_t virtual_address)
-    {
-        ASSERT(virtual_address > kernel_reserved_base &&
-               virtual_address < kernel_end_address);
-
-        return virtual_address - kernel_reserved_base;
     }
 
     void MemoryManager::set_quickmap_range(const VirtualAllocator::Range& range)

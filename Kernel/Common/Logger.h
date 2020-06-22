@@ -7,6 +7,7 @@
 #include "Core/Runtime.h"
 
 namespace kernel {
+
     class Logger;
 
     enum class format
@@ -33,6 +34,7 @@ namespace kernel {
         enable_if_t<is_pointer_v<T>, AutoLogger&> operator<<(T pointer);
 
         ~AutoLogger();
+
     private:
         Logger& m_logger;
         format m_format { format::as_dec };
@@ -52,7 +54,7 @@ namespace kernel {
     {
     private:
         constexpr static u8 log_port = 0xE9;
-        static E9Logger s_instance;
+    
     public:
         Logger& write(const char* text) override
         {
@@ -66,6 +68,9 @@ namespace kernel {
         {
             return s_instance;
         }
+
+    private:
+        static E9Logger s_instance;
     };
 
     inline E9Logger E9Logger::s_instance;

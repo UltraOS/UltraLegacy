@@ -1,11 +1,13 @@
 #include "Common/Math.h"
-#include "Core/InterruptDisabler.h"
+
+#include "Interrupts/Common.h"
 #include "MemoryManager.h"
 #include "PageTable.h"
 #include "PageDirectory.h"
 #include "VirtualAllocator.h"
 
 namespace kernel {
+
     // defined in Core/crt0.asm
     extern "C" u8 kernel_page_directory[PageDirectory::directory_entry_count];
 

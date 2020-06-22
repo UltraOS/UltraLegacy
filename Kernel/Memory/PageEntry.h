@@ -89,6 +89,7 @@ namespace kernel {
         {
             return m_attributes;
         }
+
     private:
         Attributes m_attributes       : 12;
         ptr_t      m_physical_address : 20;

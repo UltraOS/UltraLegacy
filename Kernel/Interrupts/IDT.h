@@ -4,6 +4,7 @@
 #include "Common/Macros.h"
 
 namespace kernel {
+
     class IDT
     {
     public:
@@ -17,6 +18,11 @@ namespace kernel {
             PRESENT        = SET_BIT(7),
         };
 
+        friend attributes operator|(attributes l, attributes r)
+        {
+            return static_cast<attributes>(static_cast<u8>(l) | static_cast<u8>(r));
+        }
+
         static constexpr u16 entry_count = 256;
         using isr = void(*)();
 
@@ -27,6 +33,7 @@ namespace kernel {
         void install();
 
         static IDT& the();
+
     private:
         IDT();
 

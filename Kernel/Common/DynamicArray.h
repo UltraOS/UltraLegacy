@@ -1,10 +1,10 @@
 #pragma once
 
-#include "Core/Runtime.h"
 #include "Macros.h"
 #include "Traits.h"
 #include "Utilities.h"
 #include "Memory.h"
+#include "Core/Runtime.h"
 
 namespace kernel {
 
