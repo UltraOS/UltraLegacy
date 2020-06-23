@@ -5,6 +5,8 @@
 #include "PageDirectory.h"
 #include "PhysicalRegion.h"
 
+#define MEMORY_MANAGER_DEBUG
+
 namespace kernel {
 
 MemoryManager* MemoryManager::s_instance;
@@ -24,66 +26,98 @@ MemoryManager::MemoryManager(const MemoryMap& memory_map)
 
         if (base_address < kernel_reserved_size) {
             if ((base_address + length) < kernel_reserved_size) {
+#ifdef MEMORY_MANAGER_DEBUG
                 log() << "MemoryManager: skipping a lower memory region at " << format::as_hex << base_address;
+#endif
+
                 continue;
             } else {
+#ifdef MEMORY_MANAGER_DEBUG
                 log() << "MemoryManager: trimming a low memory region at " << format::as_hex << base_address;
+#endif
 
                 auto trim_overhead = kernel_reserved_size - base_address;
                 base_address += trim_overhead;
                 length -= trim_overhead;
 
+#ifdef MEMORY_MANAGER_DEBUG
                 log() << "MemoryManager: trimmed region:" << format::as_hex << base_address;
+#endif
             }
         }
 
         // Make use of this once we have PAE
         if (base_address > max_memory_address) {
+#ifdef MEMORY_MANAGER_DEBUG
             log() << "MemoryManager: skipping a higher memory region at " << format::as_hex << base_address;
+#endif
+
             continue;
         } else if ((base_address + length) > max_memory_address) {
+#ifdef MEMORY_MANAGER_DEBUG
             log() << "MemoryManager: trimming a big region (outside of 4GB) at" << format::as_hex << base_address
                   << " length:" << length;
+#endif
 
             length -= (base_address + length) - max_memory_address;
         }
 
         if (!Page::is_aligned(base_address)) {
+#ifdef MEMORY_MANAGER_DEBUG
             log() << "MemoryManager: got an unaligned memory map entry " << format::as_hex << base_address
                   << " size:" << length;
+#endif
 
             auto alignment_overhead = Page::size - (base_address % Page::size);
 
             base_address += alignment_overhead;
             length -= alignment_overhead;
 
+#ifdef MEMORY_MANAGER_DEBUG
             log() << "MemoryManager: aligned address:" << format::as_hex << base_address << " size:" << length;
+#endif
         }
         if (!Page::is_aligned(length)) {
+#ifdef MEMORY_MANAGER_DEBUG
             log() << "MemoryManager: got an unaligned memory map entry length" << length;
+#endif
 
             length -= length % Page::size;
 
+#ifdef MEMORY_MANAGER_DEBUG
             log() << "MemoryManager: aligned length at " << length;
+#endif
         }
         if (length < Page::size) {
+
+#ifdef MEMORY_MANAGER_DEBUG
             log() << "MemoryManager: length is too small, skipping the entry (" << length << " < " << Page::size << ")";
+#endif
+
             continue;
         }
 
         auto& this_region = m_physical_regions.emplace(base_address, length);
 
+#ifdef MEMORY_MANAGER_DEBUG
         log() << "MemoryManager: A new physical region -> " << this_region;
+#endif
+
         total_free_memory += this_region.free_page_count() * Page::size;
     }
 
+#ifdef MEMORY_MANAGER_DEBUG
     log() << "MemoryManager: Total free memory: " << bytes_to_megabytes_precise(total_free_memory) << " MB ("
           << total_free_memory / Page::size << " pages) ";
+#endif
 }
 
 u8* MemoryManager::quickmap_page(ptr_t physical_address)
 {
-    log() << "MemoryManager: quickmapping " << format::as_hex << physical_address << " to " << m_quickmap_range.begin();
+#ifdef MEMORY_MANAGER_DEBUG
+    log() << "MemoryManager: quickmapping vaddr " << format::as_hex << m_quickmap_range.begin() << " to "
+          << physical_address;
+#endif
 
     PageDirectory::current().map_page(m_quickmap_range.begin(), physical_address);
 
@@ -113,6 +147,11 @@ RefPtr<Page> MemoryManager::allocate_page()
         InterruptDisabler d;
 
         ScopedPageMapping mapping(page->address());
+
+#ifdef MEMORY_MANAGER_DEBUG
+        log() << "MemoryManager: zeroing the page at physaddr " << format::as_hex << page->address();
+#endif
+
         zero_memory(mapping.as_pointer(), Page::size);
 
         return page;
@@ -138,7 +177,9 @@ void MemoryManager::free_page(Page& page)
 void MemoryManager::handle_page_fault(const PageFault& fault)
 {
     if (PageDirectory::current().allocator().is_allocated(fault.address())) {
+#ifdef MEMORY_MANAGER_DEBUG
         log() << "MemoryManager: expected page fault: " << fault;
+#endif
 
         auto rounded_address = fault.address() & Page::alignment_mask;
 
@@ -163,7 +204,7 @@ void MemoryManager::inititalize(PageDirectory& directory)
     // 5. cli()/hlt() here somewhere?                                               --- kinda done
     // 6. Add a page invalidator instead of flushing the entire tlb                 --- kinda done
     // 7. Add allocate_aligned_range for VirtualAllocator
-    // 8. A lot more debug logging for all allocators and page table related stuff
+    // 8. A lot more debug logging for all allocators and page table related stuff --- kinda done
     // 9. Zero all new pages                                                             --- kinda done
     // maybe add some sort of quickmap virtual range where I could zero the new pages --- kinda done
     // 10. make kernel entries global                                                    --- kinda done
@@ -174,6 +215,11 @@ void MemoryManager::inititalize(PageDirectory& directory)
 
     // map the directory's physical page somewhere temporarily
     ScopedPageMapping mapping(directory.physical_address());
+
+#ifdef MEMORY_MANAGER_DEBUG
+    log() << "MemoryManager: Setting up kernel mappings for the directory at physaddr " << format::as_hex
+          << directory.physical_address();
+#endif
 
     // copy the kernel mappings
     // TODO: this assumes that all kernel tables are contiguous
@@ -200,6 +246,8 @@ void MemoryManager::set_quickmap_range(const VirtualAllocator::Range& range)
 
 MemoryManager& MemoryManager::the()
 {
+    ASSERT(s_instance != nullptr);
+
     return *s_instance;
 }
 

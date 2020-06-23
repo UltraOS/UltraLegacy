@@ -1,5 +1,7 @@
 #include "VirtualAllocator.h"
 
+#define VIRTUAL_ALLOCATOR_DEBUG
+
 namespace kernel {
 
 VirtualAllocator::Range::Range(ptr_t start, ptr_t length) : m_start(start), m_length(length) { }
@@ -84,6 +86,10 @@ VirtualAllocator::Range VirtualAllocator::allocate_range(size_t length)
     auto& initial_range   = m_free_ranges[range_index];
     auto& allocated_range = m_allocated_ranges.emplace(initial_range.begin(), length);
 
+#ifdef VIRTUAL_ALLOCATOR_DEBUG
+    log() << "VirtualAllocator: allocating a new range " << allocated_range;
+#endif
+
     if (initial_range == allocated_range)
         m_free_ranges.erase_at(range_index);
     else
@@ -113,6 +119,9 @@ void VirtualAllocator::deallocate_range(const Range& range)
         auto& allocated_range = m_allocated_ranges[range_index];
 
         if (allocated_range == range) {
+#ifdef VIRTUAL_ALLOCATOR_DEBUG
+            info() << "VirtualAllocator: deallocating range " << allocated_range;
+#endif
             return_back_to_free_pool(range_index);
             return;
         }
@@ -134,6 +143,9 @@ void VirtualAllocator::deallocate_range(ptr_t base_address)
         auto& allocated_range = m_allocated_ranges[range_index];
 
         if (allocated_range.begin() == base_address) {
+#ifdef VIRTUAL_ALLOCATOR_DEBUG
+            info() << "VirtualAllocator: deallocating range " << allocated_range;
+#endif
             return_back_to_free_pool(range_index);
             return;
         }

@@ -6,6 +6,8 @@
 #include "PageTable.h"
 #include "VirtualAllocator.h"
 
+#define PAGE_DIRECTORY_DEBUG
+
 namespace kernel {
 
 // defined in Core/crt0.asm
@@ -46,6 +48,11 @@ void PageDirectory::map_page_directory_entry(size_t index, ptr_t physical_addres
     ASSERT(is_active());
     ASSERT_PAGE_ALIGNED(physical_address);
 
+#ifdef PAGE_DIRECTORY_DEBUG
+    log() << "PageDirectory: mapping a new page table " << index << " at physaddr " << format::as_hex
+          << physical_address;
+#endif
+
     entry_at(index).set_physical_address(physical_address).make_supervisor_present();
 }
 
@@ -66,14 +73,18 @@ void PageDirectory::map_page(ptr_t virtual_address, ptr_t physical_address)
     auto page_entry       = (virtual_address - (page_table_index * 4 * MB)) / (4 * KB);
 
     if (!entry_at(page_table_index).is_present()) {
+#ifdef PAGE_DIRECTORY_DEBUG
         log() << "PageDirectory: tried to access a non-present table " << page_table_index << ", allocating...";
+#endif
 
         auto page = m_physical_pages.emplace(MemoryManager::the().allocate_page());
         map_page_directory_entry(page_table_index, page->address());
     }
 
-    log() << "PageDirectory: mapping " << format::as_hex << virtual_address << " to " << physical_address
-          << " at table:" << format::as_dec << page_table_index << " entry: " << page_entry;
+#ifdef PAGE_DIRECTORY_DEBUG
+    log() << "PageDirectory: mapping the page at vaddr " << format::as_hex << virtual_address << " to "
+          << physical_address << " at table:" << format::as_dec << page_table_index << " entry:" << page_entry;
+#endif
 
     table_at(page_table_index).entry_at(page_entry).set_physical_address(physical_address).make_supervisor_present();
 
@@ -88,6 +99,10 @@ void PageDirectory::unmap_page(ptr_t virtual_address)
     auto page_directory_entry = virtual_address / (4 * MB);
     auto page_entry           = (virtual_address - (page_directory_entry * 4 * MB)) / 4 * KB;
 
+#ifdef PAGE_DIRECTORY_DEBUG
+    log() << "PageDirectory: unmapping the page at vaddr " << format::as_hex << virtual_address;
+#endif
+
     table_at(page_directory_entry).entry_at(page_entry).set_present(false);
     flush_at(virtual_address);
 }
@@ -99,7 +114,7 @@ VirtualAllocator& PageDirectory::allocator()
 
 PageDirectory& PageDirectory::of_kernel()
 {
-    ASSERT(s_kernel_dir);
+    ASSERT(s_kernel_dir != nullptr);
 
     return *s_kernel_dir;
 }
@@ -128,7 +143,9 @@ void PageDirectory::flush_all()
 
 void PageDirectory::flush_at(ptr_t virtual_address)
 {
-    log() << "PageDirectory: flushing a page at " << format::as_hex << virtual_address;
+#ifdef PAGE_DIRECTORY_DEBUG
+    log() << "PageDirectory: flushing the page at vaddr " << format::as_hex << virtual_address;
+#endif
 
     asm volatile("invlpg %0" ::"m"(*reinterpret_cast<u8*>(virtual_address)) : "memory");
 }
