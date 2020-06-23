@@ -23,7 +23,7 @@ using size_t = long unsigned int;
 // A wild posix type appears
 using ssize_t = i32;
 
-using ptr_t   = u32;
+using ptr_t = u32;
 
 // floating point
 using f32 = float;
@@ -42,12 +42,12 @@ using f64 = double;
 #define SIZEOF_F32 4
 #define SIZEOF_F64 8
 
-static_assert(sizeof(i8)  == SIZEOF_I8,  "Incorrect size of 8 bit integer");
+static_assert(sizeof(i8) == SIZEOF_I8, "Incorrect size of 8 bit integer");
 static_assert(sizeof(i16) == SIZEOF_I16, "Incorrect size of 16 bit integer");
 static_assert(sizeof(i32) == SIZEOF_I32, "Incorrect size of 32 bit integer");
 static_assert(sizeof(i64) == SIZEOF_I64, "Incorrect size of 64 bit integer");
 
-static_assert(sizeof(u8)  == SIZEOF_U8,  "Incorrect size of 8 bit unsigned integer");
+static_assert(sizeof(u8) == SIZEOF_U8, "Incorrect size of 8 bit unsigned integer");
 static_assert(sizeof(u16) == SIZEOF_U16, "Incorrect size of 16 bit unsigned integer");
 static_assert(sizeof(u32) == SIZEOF_U32, "Incorrect size of 32 bit unsigned integer");
 static_assert(sizeof(u64) == SIZEOF_U64, "Incorrect size of 64 bit unsigned integer");

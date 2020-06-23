@@ -1,51 +1,52 @@
-#include "Core/Runtime.h"
-#include "Core/GDT.h"
-#include "Common/Types.h"
-#include "Common/Logger.h"
 #include "Common/Conversions.h"
+#include "Common/Logger.h"
+#include "Common/Types.h"
+#include "Core/GDT.h"
+#include "Core/Runtime.h"
 #include "Interrupts/IDT.h"
-#include "Interrupts/ISR.h"
 #include "Interrupts/IRQManager.h"
+#include "Interrupts/ISR.h"
 #include "Interrupts/PIC.h"
 #include "Interrupts/PIT.h"
 #include "Memory/HeapAllocator.h"
-#include "Memory/PhysicalMemory.h"
 #include "Memory/MemoryManager.h"
 #include "Memory/PageDirectory.h"
+#include "Memory/PhysicalMemory.h"
 
 namespace kernel {
 
-    void run(MemoryMap memory_map)
-    {
-        runtime::ensure_loaded_correctly();
+void run(MemoryMap memory_map)
+{
+    runtime::ensure_loaded_correctly();
 
-        HeapAllocator::initialize();
+    HeapAllocator::initialize();
 
-        MemoryManager::inititalize(memory_map);
+    MemoryManager::inititalize(memory_map);
 
-        runtime::init_global_objects();
+    runtime::init_global_objects();
 
-        PageDirectory::inititalize();
+    PageDirectory::inititalize();
 
-        cli();
-        GDT::the().create_basic_descriptors();
-        GDT::the().install();
-        new PIT;
-        ISR::install();
-        IRQManager::the().install();
-        IDT::the().install();
+    cli();
+    GDT::the().create_basic_descriptors();
+    GDT::the().install();
+    new PIT;
+    ISR::install();
+    IRQManager::the().install();
+    IDT::the().install();
 
-        auto page = MemoryManager::the().allocate_page();
-        PageDirectory new_dir(page);
-        new_dir.make_active();
+    auto          page = MemoryManager::the().allocate_page();
+    PageDirectory new_dir(page);
+    new_dir.make_active();
 
-        auto range = new_dir.allocator().allocate_range(4096);
+    auto range = new_dir.allocator().allocate_range(4096);
 
-        *(range.as_pointer<u32>() + 8) = 10;
-        log() << "write " << *range.as_pointer<u32>();
+    *(range.as_pointer<u32>() + 8) = 10;
+    log() << "write " << *range.as_pointer<u32>();
 
-        sti();
+    sti();
 
-        for(;;);
-    }
+    for (;;)
+        ;
+}
 }
