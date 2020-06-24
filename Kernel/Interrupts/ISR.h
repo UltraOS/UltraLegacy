@@ -63,6 +63,9 @@ private:
 // Super specific mangling rules going on here, be careful :)
 #define ISR(handler, len) "_ZN6kernel3ISR" TO_STRING(len) TO_STRING(handler) "ENS_13RegisterStateE"
 
+// Please stop...
+// clang-format off
+
 // title - the interrupt handler title without "_handler"
 // length - the full length of the actual handler, including "_handler"
 // (and yes there isn't any other way to get the length as a literal AFAIK)
@@ -81,14 +84,14 @@ private:
         "    mov %ax, %es\n"                                                                                           \
         "    cld\n"                                                                                                    \
         "    call " ISR(title##_handler, length) "\n"                                                                  \
-                                                 "    add $0x4, %esp \n"                                               \
-                                                 "    popl %gs\n"                                                      \
-                                                 "    popl %fs\n"                                                      \
-                                                 "    popl %es\n"                                                      \
-                                                 "    popl %ds\n"                                                      \
-                                                 "    popa\n"                                                          \
-                                                 "    add $0x4, %esp\n"                                                \
-                                                 "    iret\n");
+        "    add $0x4, %esp \n"                                                                                        \
+        "    popl %gs\n"                                                                                               \
+        "    popl %fs\n"                                                                                               \
+        "    popl %es\n"                                                                                               \
+        "    popl %ds\n"                                                                                               \
+        "    popa\n"                                                                                                   \
+        "    add $0x4, %esp\n"                                                                                         \
+        "    iret\n");
 
 // title - the interrupt handler title without "_handler"
 // length - the full length of the actual handler, including "_handler"
@@ -109,11 +112,13 @@ private:
         "    mov %ax, %es\n"                                                                                           \
         "    cld\n"                                                                                                    \
         "    call " ISR(title##_handler, length) "\n"                                                                  \
-                                                 "    add $0x4, %esp \n"                                               \
-                                                 "    popl %gs\n"                                                      \
-                                                 "    popl %fs\n"                                                      \
-                                                 "    popl %es\n"                                                      \
-                                                 "    popl %ds\n"                                                      \
-                                                 "    popa\n"                                                          \
-                                                 "    add $0x4, %esp\n"                                                \
-                                                 "    iret\n");
+        "    add $0x4, %esp \n"                                                                                        \
+        "    popl %gs\n"                                                                                               \
+        "    popl %fs\n"                                                                                               \
+        "    popl %es\n"                                                                                               \
+        "    popl %ds\n"                                                                                               \
+        "    popa\n"                                                                                                   \
+        "    add $0x4, %esp\n"                                                                                         \
+        "    iret\n");
+
+// clang-format on

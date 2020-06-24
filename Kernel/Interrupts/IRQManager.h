@@ -41,6 +41,8 @@ private:
 // Super specific mangling rules going on here, be careful :)
 #define IRQ(handler, len) "_ZN6kernel10IRQManager" TO_STRING(len) TO_STRING(handler) "EtNS_13RegisterStateE"
 
+// clang-format off
+
 #define DEFINE_IRQ_HANDLER(index)                                                                                      \
     extern "C" void irq##index##_handler();                                                                            \
     asm(".globl irq" #index "_handler\n"                                                                               \
@@ -58,11 +60,13 @@ private:
         "    mov %ax, %es\n"                                                                                           \
         "    cld\n"                                                                                                    \
         "    call " IRQ(irq_handler, 11) "\n"                                                                          \
-                                         "    add $0x6, %esp \n"                                                       \
-                                         "    popl %gs\n"                                                              \
-                                         "    popl %fs\n"                                                              \
-                                         "    popl %es\n"                                                              \
-                                         "    popl %ds\n"                                                              \
-                                         "    popa\n"                                                                  \
-                                         "    add $0x4, %esp\n"                                                        \
-                                         "    iret\n");
+        "    add $0x6, %esp \n"                                                                                        \
+        "    popl %gs\n"                                                                                               \
+        "    popl %fs\n"                                                                                               \
+        "    popl %es\n"                                                                                               \
+        "    popl %ds\n"                                                                                               \
+        "    popa\n"                                                                                                   \
+        "    add $0x4, %esp\n"                                                                                         \
+        "    iret\n");
+
+// clang-format on
