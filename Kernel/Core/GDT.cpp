@@ -16,8 +16,17 @@ GDT& GDT::the()
 void GDT::create_basic_descriptors()
 {
     create_descriptor(0, 0, NULL_SELECTOR, flag_attributes(NULL_SELECTOR));
+
+    // kernel descriptors
     create_descriptor(0, 0xFFFFFFFF, PRESENT | CODE_OR_DATA | EXECUTABLE | READABLE, GRANULARITY_4KB | MODE_32_BIT);
     create_descriptor(0, 0xFFFFFFFF, PRESENT | CODE_OR_DATA | WRITABLE, GRANULARITY_4KB | MODE_32_BIT);
+
+    // userspace descriptors
+    create_descriptor(0,
+                      0xFFFFFFFF,
+                      PRESENT | CODE_OR_DATA | EXECUTABLE | RING_3 | READABLE,
+                      GRANULARITY_4KB | MODE_32_BIT);
+    create_descriptor(0, 0xFFFFFFFF, PRESENT | CODE_OR_DATA | WRITABLE | RING_3, GRANULARITY_4KB | MODE_32_BIT);
 }
 
 GDT::entry& GDT::new_entry()
