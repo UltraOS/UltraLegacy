@@ -29,7 +29,7 @@
 #define cli()
 #define sti()
 #define hang()
-#define asm __asm
+#define asm()
 #define USED
 #define PACKED
 #endif

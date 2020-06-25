@@ -5,7 +5,6 @@
 #include "IRQManager.h"
 #include "PIC.h"
 
-DEFINE_IRQ_HANDLER(0)
 DEFINE_IRQ_HANDLER(1)
 DEFINE_IRQ_HANDLER(2)
 DEFINE_IRQ_HANDLER(3)
@@ -21,6 +20,35 @@ DEFINE_IRQ_HANDLER(12)
 DEFINE_IRQ_HANDLER(13)
 DEFINE_IRQ_HANDLER(14)
 DEFINE_IRQ_HANDLER(15)
+
+// clang-format off
+extern "C" void irq0_handler();
+asm(".globl irq0_handler\n"                                                                                        \
+    "irq0_handler:\n"                                                                                              \
+    "    pushl $0\n"                                                                                               \
+    "    pusha\n"                                                                                                  \
+    "    pushl %ds\n"                                                                                              \
+    "    pushl %es\n"                                                                                              \
+    "    pushl %fs\n"                                                                                              \
+    "    pushl %gs\n"                                                                                              \
+    "    pushl %ss\n"                                                                                              \
+    "    pushw $0\n"                                                                                               \
+    "    mov $0x10, %ax\n"                                                                                         \
+    "    mov %ax, %ds\n"                                                                                           \
+    "    mov %ax, %es\n"                                                                                           \
+    "    cld\n"                                                                                                    \
+    "    call " IRQ(irq_handler, 11) "\n"                                                                          \
+    "    call   _ZN6kernel9Scheduler7on_tickENS_13RegisterStateE\n"                                                \
+    "    mov %esp, %eax\n"                                                                                         \
+    "    add $0x6, %esp \n"                                                                                        \
+    "    popl %gs\n"                                                                                               \
+    "    popl %fs\n"                                                                                               \
+    "    popl %es\n"                                                                                               \
+    "    popl %ds\n"                                                                                               \
+    "    popa\n"                                                                                                   \
+    "    add $0x4, %esp\n"                                                                                         \
+    "    iret\n");
+// clang-format on
 
 namespace kernel {
 
