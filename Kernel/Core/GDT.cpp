@@ -1,6 +1,7 @@
 #include "Common/Logger.h"
 
 #include "GDT.h"
+#include "Multitasking/TSS.h"
 
 namespace kernel {
 
@@ -27,6 +28,23 @@ void GDT::create_basic_descriptors()
                       PRESENT | CODE_OR_DATA | EXECUTABLE | RING_3 | READABLE,
                       GRANULARITY_4KB | MODE_32_BIT);
     create_descriptor(0, 0xFFFFFFFF, PRESENT | CODE_OR_DATA | WRITABLE | RING_3, GRANULARITY_4KB | MODE_32_BIT);
+}
+
+void GDT::create_tss_descriptor(TSS* tss)
+{
+
+    create_descriptor(reinterpret_cast<u32>(tss),
+                      TSS::size,
+                      EXECUTABLE | IS_TSS | RING_3 | PRESENT,
+                      flag_attributes(NULL_SELECTOR));
+    install();
+
+    static constexpr u16 rpl_level_3 = 3;
+
+    u16 this_selector = (m_active_entries - 1) * 8;
+    this_selector |= rpl_level_3;
+
+    asm("ltr %0" ::"a"(this_selector));
 }
 
 GDT::entry& GDT::new_entry()

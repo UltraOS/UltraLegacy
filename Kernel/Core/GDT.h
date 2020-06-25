@@ -5,8 +5,12 @@
 
 namespace kernel {
 
+class TSS;
+
 class GDT {
 public:
+    // TODO: rewrite these garabage enums,
+    //       it's absolutely impossible to tell what's going on...
     enum access_attributes : u8 {
         NULL_SELECTOR = 0,
         RING_0        = 0,
@@ -19,6 +23,8 @@ public:
         ALLOW_LOWER   = SET_BIT(2),
         READABLE      = SET_BIT(1),
         WRITABLE      = SET_BIT(1),
+        IS_TSS        = SET_BIT(0),
+
     };
 
     enum flag_attributes : u8 {
@@ -46,6 +52,7 @@ public:
     void install();
 
     void create_descriptor(u32 base, u32 size, access_attributes access, flag_attributes flags);
+    void create_tss_descriptor(TSS* tss);
 
     static constexpr u16 kernel_code_selector() { return 0x8; }
     static constexpr u16 kernel_data_selector() { return 0x10; }
