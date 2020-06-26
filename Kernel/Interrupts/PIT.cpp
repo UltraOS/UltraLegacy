@@ -2,6 +2,7 @@
 #include "Core/IO.h"
 
 #include "Memory/MemoryManager.h"
+#include "Multitasking/Scheduler.h"
 
 #include "PIT.h"
 
@@ -33,7 +34,7 @@ void PIT::set_frequency(u32 ticks_per_second)
     IO::out8<timer_data>((divisor & 0x0000FF00) >> 8);
 }
 
-void PIT::on_irq(const RegisterState&)
+void PIT::on_irq(const RegisterState& registers)
 {
     static u32 tick = 0;
 
@@ -67,5 +68,10 @@ void PIT::on_irq(const RegisterState&)
         display_write(number);
 
     display_write(" seconds");
+
+    // TODO: make this more pretty
+    // e.g the schedulers subscribes on timer events
+    // through some kind of a global Timer class or whatever
+    Scheduler::on_tick(registers);
 }
 }

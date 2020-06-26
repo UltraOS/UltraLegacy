@@ -12,8 +12,18 @@
 #include "Memory/MemoryManager.h"
 #include "Memory/PageDirectory.h"
 #include "Memory/PhysicalMemory.h"
+#include "Multitasking/Scheduler.h"
 
 namespace kernel {
+
+void thread_1()
+{
+    static auto index  = 0;
+    auto&&      logger = log();
+
+    while (1)
+        logger << "\r thread 1: " << ++index;
+}
 
 void run(MemoryMap memory_map)
 {
@@ -35,18 +45,17 @@ void run(MemoryMap memory_map)
     IRQManager::the().install();
     IDT::the().install();
 
-    auto          page = MemoryManager::the().allocate_page();
-    PageDirectory new_dir(page);
-    new_dir.make_active();
+    Scheduler::inititalize();
 
-    auto range = new_dir.allocator().allocate_range(4096);
-
-    *(range.as_pointer<u32>() + 8) = 10;
-    log() << "write " << *range.as_pointer<u32>();
-
+    auto   r = PageDirectory::current().allocator().allocate_range(4096);
+    Thread t(&PageDirectory::current(), r.end(), reinterpret_cast<ptr_t>(thread_1));
+    Scheduler::the().add_task(t);
     sti();
 
-    for (;;)
-        ;
+    static auto index  = 0;
+    auto&&      logger = log();
+
+    while (1)
+        logger << "\r main thread: " << ++index;
 }
 }

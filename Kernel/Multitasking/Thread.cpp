@@ -10,7 +10,7 @@ void Thread::initialize()
 }
 
 Thread::Thread(PageDirectory* page_directory, ptr_t kernel_stack_top, ptr_t eip)
-    : m_control_block{ kernel_stack_top - 20, page_directory }
+    : m_control_block { kernel_stack_top - 20, page_directory }
 {
     *reinterpret_cast<u32*>(kernel_stack_top - 4)  = eip;
     *reinterpret_cast<u32*>(kernel_stack_top - 8)  = kernel_stack_top;
@@ -21,7 +21,7 @@ Thread::Thread(PageDirectory* page_directory, ptr_t kernel_stack_top, ptr_t eip)
 
 // TODO: this should be private as it's only an acceptible constructor for the kernel's main thread
 Thread::Thread(PageDirectory* page_directory, ptr_t kernel_stack_top)
-    : m_control_block{ kernel_stack_top, page_directory }
+    : m_control_block { kernel_stack_top, page_directory }
 {
 }
 
