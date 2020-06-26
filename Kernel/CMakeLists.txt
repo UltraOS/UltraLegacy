@@ -21,7 +21,8 @@ FILE(GLOB CPP_FILES "${PROJECT_SOURCE_DIR}/*cpp"              "${PROJECT_SOURCE_
                     "${PROJECT_SOURCE_DIR}/Memory/*cpp"       "${PROJECT_SOURCE_DIR}/Memory/*h"
                     "${PROJECT_SOURCE_DIR}/Multitasking/*cpp" "${PROJECT_SOURCE_DIR}/Multitasking/*h")
 
-FILE(GLOB ASM_FILES "${PROJECT_SOURCE_DIR}/Core/*asm")
+FILE(GLOB ASM_FILES "${PROJECT_SOURCE_DIR}/Core/*asm"
+                    "${PROJECT_SOURCE_DIR}/Multitasking/*asm")
 
 set(KERNEL_SOURCES ${CPP_FILES} ${ASM_FILES})
 
