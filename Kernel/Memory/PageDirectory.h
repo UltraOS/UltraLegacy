@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Common/Pair.h"
 #include "Common/RefPtr.h"
 #include "Page.h"
 #include "PageEntry.h"
@@ -35,9 +36,14 @@ public:
 
     void store_physical_page(RefPtr<Page> page);
 
-    // TODO: add properties
-    void map_page_directory_entry(size_t index, ptr_t physical_address);
-    void map_page(ptr_t virtual_address, ptr_t physical_address);
+    void map_supervisor_page_directory_entry(size_t index, ptr_t physical_address);
+    void map_supervisor_page(ptr_t virtual_address, ptr_t physical_address);
+    void map_user_page_directory_entry(size_t index, ptr_t physical_address);
+    void map_user_page(ptr_t virtual_address, ptr_t physical_address);
+
+    void map_page_directory_entry(size_t index, ptr_t physical_address, bool is_supervior = true);
+    void map_page(ptr_t virtual_address, ptr_t physical_address, bool is_supervior = true);
+
     void unmap_page(ptr_t virtual_address);
 
     bool is_active();
@@ -49,6 +55,8 @@ private:
     PageDirectory();
 
     Entry& entry_at(size_t index, ptr_t virtual_base);
+
+    Pair<size_t, size_t> virtual_address_as_paging_indices(ptr_t virtual_address);
 
 private:
     DynamicArray<RefPtr<Page>> m_physical_pages;

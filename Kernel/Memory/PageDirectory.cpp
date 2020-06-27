@@ -43,25 +43,33 @@ void PageDirectory::inititalize()
 }
 
 // TODO: Maybe add an overload of this function that takes in a const Page&
-void PageDirectory::map_page_directory_entry(size_t index, ptr_t physical_address)
+void PageDirectory::map_page_directory_entry(size_t index, ptr_t physical_address, bool is_supervisor)
 {
     ASSERT(is_active());
     ASSERT_PAGE_ALIGNED(physical_address);
 
 #ifdef PAGE_DIRECTORY_DEBUG
     log() << "PageDirectory: mapping a new page table " << index << " at physaddr " << format::as_hex
-          << physical_address;
+          << physical_address << " is_supervisor:" << is_supervisor;
 #endif
 
-    entry_at(index).set_physical_address(physical_address).make_supervisor_present();
+    auto& entry = entry_at(index).set_physical_address(physical_address);
+
+    if (is_supervisor)
+        entry.make_supervisor_present();
+    else
+        entry.make_user_present();
 }
 
-void PageDirectory::store_physical_page(RefPtr<Page> page)
+Pair<size_t, size_t> PageDirectory::virtual_address_as_paging_indices(ptr_t virtual_address)
 {
-    m_physical_pages.append(page);
+    auto page_table_index = virtual_address / (4 * MB);
+    auto page_entry_index = (virtual_address - (page_table_index * 4 * MB)) / (4 * KB);
+
+    return make_pair(static_cast<size_t>(page_table_index), static_cast<size_t>(page_entry_index));
 }
 
-void PageDirectory::map_page(ptr_t virtual_address, ptr_t physical_address)
+void PageDirectory::map_page(ptr_t virtual_address, ptr_t physical_address, bool is_supervisor)
 {
     ASSERT(is_active());
     ASSERT_PAGE_ALIGNED(virtual_address);
@@ -69,8 +77,9 @@ void PageDirectory::map_page(ptr_t virtual_address, ptr_t physical_address)
 
     InterruptDisabler d;
 
-    auto page_table_index = virtual_address / (4 * MB);
-    auto page_entry       = (virtual_address - (page_table_index * 4 * MB)) / (4 * KB);
+    auto  indices          = virtual_address_as_paging_indices(virtual_address);
+    auto& page_table_index = indices.left();
+    auto& page_entry_index = indices.right();
 
     if (!entry_at(page_table_index).is_present()) {
 #ifdef PAGE_DIRECTORY_DEBUG
@@ -78,17 +87,49 @@ void PageDirectory::map_page(ptr_t virtual_address, ptr_t physical_address)
 #endif
 
         auto page = m_physical_pages.emplace(MemoryManager::the().allocate_page());
-        map_page_directory_entry(page_table_index, page->address());
+        map_page_directory_entry(page_table_index, page->address(), is_supervisor);
     }
 
 #ifdef PAGE_DIRECTORY_DEBUG
     log() << "PageDirectory: mapping the page at vaddr " << format::as_hex << virtual_address << " to "
-          << physical_address << " at table:" << format::as_dec << page_table_index << " entry:" << page_entry;
+          << physical_address << " at table:" << format::as_dec << page_table_index << " entry:" << page_entry_index
+          << " is_supervisor:" << is_supervisor;
+    ;
 #endif
 
-    table_at(page_table_index).entry_at(page_entry).set_physical_address(physical_address).make_supervisor_present();
+    auto& entry = table_at(page_table_index).entry_at(page_entry_index).set_physical_address(physical_address);
+
+    if (is_supervisor)
+        entry.make_supervisor_present();
+    else
+        entry.make_user_present();
 
     flush_at(virtual_address);
+}
+
+void PageDirectory::map_user_page_directory_entry(size_t index, ptr_t physical_address)
+{
+    map_page_directory_entry(index, physical_address, false);
+}
+
+void PageDirectory::map_user_page(ptr_t virtual_address, ptr_t physical_address)
+{
+    map_page(virtual_address, physical_address, false);
+}
+
+void PageDirectory::map_supervisor_page_directory_entry(size_t index, ptr_t physical_address)
+{
+    map_page_directory_entry(index, physical_address, true);
+}
+
+void PageDirectory::map_supervisor_page(ptr_t virtual_address, ptr_t physical_address)
+{
+    map_page(virtual_address, physical_address, true);
+}
+
+void PageDirectory::store_physical_page(RefPtr<Page> page)
+{
+    m_physical_pages.append(page);
 }
 
 void PageDirectory::unmap_page(ptr_t virtual_address)
@@ -96,14 +137,15 @@ void PageDirectory::unmap_page(ptr_t virtual_address)
     ASSERT(is_active());
     ASSERT_PAGE_ALIGNED(virtual_address);
 
-    auto page_directory_entry = virtual_address / (4 * MB);
-    auto page_entry           = (virtual_address - (page_directory_entry * 4 * MB)) / 4 * KB;
+    auto  indices          = virtual_address_as_paging_indices(virtual_address);
+    auto& page_table_index = indices.left();
+    auto& page_entry_index = indices.right();
 
 #ifdef PAGE_DIRECTORY_DEBUG
     log() << "PageDirectory: unmapping the page at vaddr " << format::as_hex << virtual_address;
 #endif
 
-    table_at(page_directory_entry).entry_at(page_entry).set_present(false);
+    table_at(page_table_index).entry_at(page_entry_index).set_present(false);
     flush_at(virtual_address);
 }
 
