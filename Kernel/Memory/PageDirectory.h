@@ -38,8 +38,12 @@ public:
 
     void map_supervisor_page_directory_entry(size_t index, ptr_t physical_address);
     void map_supervisor_page(ptr_t virtual_address, ptr_t physical_address);
+    void map_supervisor_page_directory_entry(size_t index, const Page& physical_address);
+    void map_supervisor_page(ptr_t virtual_address, const Page& physical_address);
     void map_user_page_directory_entry(size_t index, ptr_t physical_address);
     void map_user_page(ptr_t virtual_address, ptr_t physical_address);
+    void map_user_page_directory_entry(size_t index, const Page& physical_address);
+    void map_user_page(ptr_t virtual_address, const Page& physical_address);
 
     void map_page_directory_entry(size_t index, ptr_t physical_address, bool is_supervior = true);
     void map_page(ptr_t virtual_address, ptr_t physical_address, bool is_supervior = true);

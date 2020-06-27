@@ -117,6 +117,17 @@ void PageDirectory::map_user_page(ptr_t virtual_address, ptr_t physical_address)
     map_page(virtual_address, physical_address, false);
 }
 
+void PageDirectory::map_user_page_directory_entry(size_t index, const Page& physical_page)
+{
+    map_page_directory_entry(index, physical_page.address(), false);
+}
+
+void PageDirectory::map_user_page(ptr_t virtual_address, const Page& physical_page)
+{
+    map_page(virtual_address, physical_page.address(), false);
+}
+
+
 void PageDirectory::map_supervisor_page_directory_entry(size_t index, ptr_t physical_address)
 {
     map_page_directory_entry(index, physical_address, true);
@@ -125,6 +136,16 @@ void PageDirectory::map_supervisor_page_directory_entry(size_t index, ptr_t phys
 void PageDirectory::map_supervisor_page(ptr_t virtual_address, ptr_t physical_address)
 {
     map_page(virtual_address, physical_address, true);
+}
+
+void PageDirectory::map_supervisor_page_directory_entry(size_t index, const Page& physical_page)
+{
+    map_page_directory_entry(index, physical_page.address(), true);
+}
+
+void PageDirectory::map_supervisor_page(ptr_t virtual_address, const Page& physical_page)
+{
+    map_page(virtual_address, physical_page.address(), true);
 }
 
 void PageDirectory::store_physical_page(RefPtr<Page> page)
