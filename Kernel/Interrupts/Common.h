@@ -37,9 +37,13 @@ public:
         WRITE_PROTECTION  = 3,
     };
 
-    PageFault(ptr_t address, bool is_user, Type type) : m_address(address), m_is_user(is_user), m_type(type) { }
+    PageFault(ptr_t address, ptr_t instruction_pointer, bool is_user, Type type)
+        : m_address(address), m_instruction_pointer(instruction_pointer), m_is_user(is_user), m_type(type)
+    {
+    }
 
     ptr_t address() const { return m_address; }
+    ptr_t instruction_pointer() const { return m_instruction_pointer; }
 
     Type type() const { return m_type; }
 
@@ -63,6 +67,7 @@ public:
     friend LoggerT& operator<<(LoggerT&& logger, const PageFault& fault)
     {
         logger << format::as_hex << "\n------> Address: " << fault.address()
+               << "\n------> Instruction at: " << fault.instruction_pointer()
                << "\n------> Type   : " << type_as_string(fault.type()) << "\n------> Is user: " << fault.is_user();
 
         return logger;
@@ -70,13 +75,25 @@ public:
 
 private:
     ptr_t m_address { 0 };
+    ptr_t m_instruction_pointer { 0 };
     bool  m_is_user { 0 };
     Type  m_type { READ_NON_PRESENT };
 };
 
 class InterruptDisabler {
 public:
-    InterruptDisabler() { cli(); }
-    ~InterruptDisabler() { sti(); }
+    InterruptDisabler()
+    {
+        ++m_refcount;
+        cli();
+    }
+    ~InterruptDisabler()
+    {
+        if (--m_refcount == 0)
+            sti();
+    }
+
+private:
+    inline static size_t m_refcount;
 };
 }

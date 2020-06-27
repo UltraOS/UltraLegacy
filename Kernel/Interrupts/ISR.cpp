@@ -132,6 +132,7 @@ void ISR::page_fault_handler(RegisterState state)
     asm("movl %%cr2, %%eax" : "=a"(address_of_fault));
 
     PageFault pf(address_of_fault,
+                 state.eip,
                  state.error_code & user_mask,
                  static_cast<PageFault::Type>(state.error_code & type_mask));
 
