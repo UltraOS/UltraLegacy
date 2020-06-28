@@ -24,6 +24,7 @@ public:
     AutoLogger& operator<<(const char* string);
     AutoLogger& operator<<(bool value);
     AutoLogger& operator<<(format option);
+    AutoLogger& operator<<(Address addr);
 
     template <typename T>
     enable_if_t<is_arithmetic_v<T>, AutoLogger&> operator<<(T number);
@@ -102,6 +103,11 @@ inline AutoLogger& AutoLogger::operator<<(bool value)
     return *this;
 }
 
+inline AutoLogger& AutoLogger::operator<<(Address addr)
+{
+    return *this << addr.as_pointer<void>();
+}
+
 template <typename T>
 enable_if_t<is_arithmetic_v<T>, AutoLogger&> AutoLogger::operator<<(T number)
 {
@@ -171,4 +177,25 @@ inline AutoLogger log()
 {
     return info();
 }
+
+inline Address vga_log(const char* string, size_t row, size_t column, u8 color)
+{
+    static constexpr size_t vga_columns        = 80;
+    static constexpr size_t vga_bytes_per_char = 2;
+    static constexpr ptr_t  vga_address        = 0xB8000;
+    static constexpr ptr_t  linear_vga_address = 3 * GB + vga_address;
+
+    ptr_t initial_memory = linear_vga_address + vga_columns * vga_bytes_per_char * row;
+
+    u16* memory = reinterpret_cast<u16*>(linear_vga_address + vga_columns * vga_bytes_per_char * row + column);
+
+    while (*string) {
+        u16 colored_char = *(string++);
+        colored_char |= color << 8;
+
+        *(memory++) = colored_char;
+    }
+
+    return reinterpret_cast<ptr_t>(memory) - initial_memory;
+};
 }
