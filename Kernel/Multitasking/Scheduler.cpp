@@ -7,25 +7,43 @@ namespace kernel {
 Scheduler* Scheduler::s_instance;
 Thread*    Scheduler::s_current_thread;
 
-// defined in Core/crt0.asm
-extern "C" ptr_t kernel_stack_begin;
-
 void Scheduler::inititalize()
 {
     Thread::initialize();
-    s_instance       = new Scheduler();
-    s_current_thread = new Thread(&PageDirectory::current(), reinterpret_cast<ptr_t>(&kernel_stack_begin));
-    the().m_threads  = s_current_thread;
+    s_instance = new Scheduler();
+    Process::inititalize();
 }
 
-Thread* Scheduler::current_thread()
+void Scheduler::enqueue_thread(Thread& thread)
 {
-    return s_current_thread;
+    if (!m_thread_queue) {
+        m_thread_queue   = &thread;
+        s_current_thread = &thread;
+        return;
+    }
+
+    auto* last = s_current_thread->next();
+    s_current_thread->set_next(&thread);
+
+    if (last)
+        thread.set_next(last);
+    else
+        thread.set_next(s_current_thread);
 }
 
-void Scheduler::add_task(Thread& thread)
+void Scheduler::register_process(RefPtr<Process> process)
 {
-    m_threads->set_next(&thread);
+    m_processes.emplace(process);
+
+    for (auto& thread: process->threads())
+        enqueue_thread(*thread);
+}
+
+Thread& Scheduler::current_thread()
+{
+    ASSERT(s_current_thread);
+
+    return *s_current_thread;
 }
 
 Scheduler& Scheduler::the()
@@ -37,16 +55,16 @@ Scheduler& Scheduler::the()
 
 void Scheduler::on_tick(const RegisterState&)
 {
-    if (!s_current_thread->get_next())
+    if (!s_current_thread->has_next()) {
+        log() << "Scheduler: no threads to switch to, skipping...";
         return;
+    }
 
     auto* old_thread = s_current_thread;
+    s_current_thread = s_current_thread->next();
 
-    s_current_thread = s_current_thread->get_next();
-    s_current_thread->set_next(old_thread);
-
-    E9Logger e;
-    e.write("\n");
+    old_thread->deactivate();
+    s_current_thread->activate();
 
     switch_task(old_thread->control_block(), s_current_thread->control_block());
 }
