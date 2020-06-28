@@ -4,14 +4,14 @@
 
 namespace kernel {
 
-VirtualAllocator::Range::Range(ptr_t start, ptr_t length) : m_start(start), m_length(length) { }
+VirtualAllocator::Range::Range(Address start, Address length) : m_start(start), m_length(length) { }
 
-ptr_t VirtualAllocator::Range::begin() const
+Address VirtualAllocator::Range::begin() const
 {
     return m_start;
 }
 
-ptr_t VirtualAllocator::Range::end() const
+Address VirtualAllocator::Range::end() const
 {
     return m_start + m_length;
 }
@@ -21,12 +21,12 @@ size_t VirtualAllocator::Range::length() const
     return m_length;
 }
 
-bool VirtualAllocator::Range::contains(ptr_t address)
+bool VirtualAllocator::Range::contains(Address address)
 {
     return address >= begin() && address < end();
 }
 
-void VirtualAllocator::Range::set(ptr_t start, ptr_t length)
+void VirtualAllocator::Range::set(Address start, Address length)
 {
     m_start  = start;
     m_length = length;
@@ -37,12 +37,12 @@ bool VirtualAllocator::Range::operator==(const Range& other) const
     return m_start == other.m_start && m_length == other.m_length;
 }
 
-VirtualAllocator::VirtualAllocator(ptr_t base, size_t length) : m_full_range(base, length)
+VirtualAllocator::VirtualAllocator(Address base, size_t length) : m_full_range(base, length)
 {
     m_free_ranges.emplace(m_full_range);
 }
 
-void VirtualAllocator::set_range(ptr_t base, size_t length)
+void VirtualAllocator::set_range(Address base, size_t length)
 {
     m_full_range.set(base, length);
     m_allocated_ranges.clear();
@@ -51,7 +51,7 @@ void VirtualAllocator::set_range(ptr_t base, size_t length)
     m_free_ranges.emplace(m_full_range);
 }
 
-bool VirtualAllocator::is_allocated(ptr_t address)
+bool VirtualAllocator::is_allocated(Address address)
 {
     // use binary search here
 
@@ -98,7 +98,7 @@ VirtualAllocator::Range VirtualAllocator::allocate_range(size_t length)
     return allocated_range;
 }
 
-bool VirtualAllocator::contains(ptr_t address)
+bool VirtualAllocator::contains(Address address)
 {
     return m_full_range.contains(address);
 }
@@ -131,7 +131,7 @@ void VirtualAllocator::deallocate_range(const Range& range)
     hang();
 }
 
-void VirtualAllocator::deallocate_range(ptr_t base_address)
+void VirtualAllocator::deallocate_range(Address base_address)
 {
     if (!contains(base_address)) {
         error() << "VirtualAlloctor: address " << format::as_hex << base_address

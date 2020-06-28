@@ -6,17 +6,17 @@
 
 namespace kernel {
 
-PhysicalRegion::PhysicalRegion(ptr_t starting_address, size_t length)
+PhysicalRegion::PhysicalRegion(Address starting_address, size_t length)
     : m_starting_address(starting_address), m_free_pages(length / Page::size), m_allocation_map(m_free_pages)
 {
 }
 
-ptr_t PhysicalRegion::bit_as_physical_address(size_t bit)
+Address PhysicalRegion::bit_as_physical_address(size_t bit)
 {
     return m_starting_address + bit * Page::size;
 }
 
-size_t PhysicalRegion::physical_address_as_bit(ptr_t address)
+size_t PhysicalRegion::physical_address_as_bit(Address address)
 {
     ASSERT_PAGE_ALIGNED(address);
 

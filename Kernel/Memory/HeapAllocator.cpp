@@ -14,7 +14,7 @@ HeapAllocator::HeapBlockHeader* HeapAllocator::m_heap_block;
 void HeapAllocator::initialize()
 {
     // feed the preallocated kernel heap page table
-    feed_block(reinterpret_cast<void*>(MemoryManager::kernel_heap_begin), MemoryManager::kernel_heap_initial_size);
+    feed_block(MemoryManager::kernel_heap_begin.as_pointer<void>(), MemoryManager::kernel_heap_initial_size);
 }
 
 void HeapAllocator::feed_block(void* ptr, size_t size, size_t chunk_size_in_bytes)

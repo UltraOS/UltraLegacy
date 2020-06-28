@@ -49,7 +49,7 @@ public:
 
     void make_user_present() { set_attributes(PRESENT | READ_WRITE | USER); }
 
-    PageEntry& set_physical_address(ptr_t address)
+    PageEntry& set_physical_address(Address address)
     {
         m_physical_address = address >> 12;
 
@@ -63,7 +63,7 @@ public:
         return *this;
     }
 
-    ptr_t physical_address() const { return m_physical_address << 12; }
+    Address physical_address() const { return m_physical_address << 12; }
 
     Attributes attributes() const { return m_attributes; }
 

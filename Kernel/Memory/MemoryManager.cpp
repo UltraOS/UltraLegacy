@@ -112,7 +112,7 @@ MemoryManager::MemoryManager(const MemoryMap& memory_map)
 #endif
 }
 
-u8* MemoryManager::quickmap_page(ptr_t physical_address)
+u8* MemoryManager::quickmap_page(Address physical_address)
 {
 #ifdef MEMORY_MANAGER_DEBUG
     log() << "MemoryManager: quickmapping vaddr " << format::as_hex << m_quickmap_range.begin() << " to "
@@ -230,11 +230,11 @@ void MemoryManager::inititalize(PageDirectory& directory)
         if (!entry.is_present())
             break;
 
-        directory.entry_at(i, mapping.as_number()) = entry;
+        directory.entry_at(i, mapping.raw()) = entry;
     }
 
     // create the recursive mapping
-    directory.entry_at(recursive_entry_index, mapping.as_number())
+    directory.entry_at(recursive_entry_index, mapping.raw())
         .set_physical_address(directory.physical_address())
         .make_supervisor_present();
 }

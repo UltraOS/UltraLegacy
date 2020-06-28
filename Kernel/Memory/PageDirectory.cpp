@@ -29,7 +29,7 @@ void PageDirectory::inititalize()
 {
     s_kernel_dir = new PageDirectory();
 
-    auto as_physical = MemoryManager::kernel_address_as_physical(reinterpret_cast<ptr_t>(&kernel_page_directory));
+    auto as_physical = MemoryManager::kernel_address_as_physical(&kernel_page_directory);
 
     s_kernel_dir->m_directory_page = RefPtr<Page>::create(as_physical);
 
@@ -43,7 +43,7 @@ void PageDirectory::inititalize()
 }
 
 // TODO: Maybe add an overload of this function that takes in a const Page&
-void PageDirectory::map_page_directory_entry(size_t index, ptr_t physical_address, bool is_supervisor)
+void PageDirectory::map_page_directory_entry(size_t index, Address physical_address, bool is_supervisor)
 {
     ASSERT(is_active());
     ASSERT_PAGE_ALIGNED(physical_address);
@@ -61,15 +61,13 @@ void PageDirectory::map_page_directory_entry(size_t index, ptr_t physical_addres
         entry.make_user_present();
 }
 
-Pair<size_t, size_t> PageDirectory::virtual_address_as_paging_indices(ptr_t virtual_address)
+Pair<size_t, size_t> PageDirectory::virtual_address_as_paging_indices(Address virtual_address)
 {
-    auto page_table_index = virtual_address / (4 * MB);
-    auto page_entry_index = (virtual_address - (page_table_index * 4 * MB)) / (4 * KB);
-
-    return make_pair(static_cast<size_t>(page_table_index), static_cast<size_t>(page_entry_index));
+    return make_pair(static_cast<size_t>(virtual_address >> 22),
+                     static_cast<size_t>((virtual_address >> 12) & (table_entry_count - 1)));
 }
 
-void PageDirectory::map_page(ptr_t virtual_address, ptr_t physical_address, bool is_supervisor)
+void PageDirectory::map_page(Address virtual_address, Address physical_address, bool is_supervisor)
 {
     ASSERT(is_active());
     ASSERT_PAGE_ALIGNED(virtual_address);
@@ -107,12 +105,12 @@ void PageDirectory::map_page(ptr_t virtual_address, ptr_t physical_address, bool
     flush_at(virtual_address);
 }
 
-void PageDirectory::map_user_page_directory_entry(size_t index, ptr_t physical_address)
+void PageDirectory::map_user_page_directory_entry(size_t index, Address physical_address)
 {
     map_page_directory_entry(index, physical_address, false);
 }
 
-void PageDirectory::map_user_page(ptr_t virtual_address, ptr_t physical_address)
+void PageDirectory::map_user_page(Address virtual_address, Address physical_address)
 {
     map_page(virtual_address, physical_address, false);
 }
@@ -122,18 +120,17 @@ void PageDirectory::map_user_page_directory_entry(size_t index, const Page& phys
     map_page_directory_entry(index, physical_page.address(), false);
 }
 
-void PageDirectory::map_user_page(ptr_t virtual_address, const Page& physical_page)
+void PageDirectory::map_user_page(Address virtual_address, const Page& physical_page)
 {
     map_page(virtual_address, physical_page.address(), false);
 }
 
-
-void PageDirectory::map_supervisor_page_directory_entry(size_t index, ptr_t physical_address)
+void PageDirectory::map_supervisor_page_directory_entry(size_t index, Address physical_address)
 {
     map_page_directory_entry(index, physical_address, true);
 }
 
-void PageDirectory::map_supervisor_page(ptr_t virtual_address, ptr_t physical_address)
+void PageDirectory::map_supervisor_page(Address virtual_address, Address physical_address)
 {
     map_page(virtual_address, physical_address, true);
 }
@@ -143,7 +140,7 @@ void PageDirectory::map_supervisor_page_directory_entry(size_t index, const Page
     map_page_directory_entry(index, physical_page.address(), true);
 }
 
-void PageDirectory::map_supervisor_page(ptr_t virtual_address, const Page& physical_page)
+void PageDirectory::map_supervisor_page(Address virtual_address, const Page& physical_page)
 {
     map_page(virtual_address, physical_page.address(), true);
 }
@@ -153,7 +150,7 @@ void PageDirectory::store_physical_page(RefPtr<Page> page)
     m_physical_pages.append(page);
 }
 
-void PageDirectory::unmap_page(ptr_t virtual_address)
+void PageDirectory::unmap_page(Address virtual_address)
 {
     ASSERT(is_active());
     ASSERT_PAGE_ALIGNED(virtual_address);
@@ -204,13 +201,13 @@ void PageDirectory::flush_all()
     asm volatile("movl %%eax, %%cr3" ::"a"(physical_address()) : "memory");
 }
 
-void PageDirectory::flush_at(ptr_t virtual_address)
+void PageDirectory::flush_at(Address virtual_address)
 {
 #ifdef PAGE_DIRECTORY_DEBUG
     log() << "PageDirectory: flushing the page at vaddr " << format::as_hex << virtual_address;
 #endif
 
-    asm volatile("invlpg %0" ::"m"(*reinterpret_cast<u8*>(virtual_address)) : "memory");
+    asm volatile("invlpg %0" ::"m"(*virtual_address.as_pointer<u8>()) : "memory");
 }
 
 PageDirectory& PageDirectory::current()
@@ -220,7 +217,7 @@ PageDirectory& PageDirectory::current()
     return *s_active_dir;
 }
 
-ptr_t PageDirectory::physical_address()
+Address PageDirectory::physical_address()
 {
     return m_directory_page->address();
 }
@@ -239,7 +236,7 @@ PageDirectory::Entry& PageDirectory::entry_at(size_t index)
     return *reinterpret_cast<Entry*>(recursive_directory_base + directory_entry_size * index);
 }
 
-PageDirectory::Entry& PageDirectory::entry_at(size_t index, ptr_t virtual_base)
+PageDirectory::Entry& PageDirectory::entry_at(size_t index, Address virtual_base)
 {
     return *reinterpret_cast<PageDirectory::Entry*>(virtual_base + index * directory_entry_size);
 }

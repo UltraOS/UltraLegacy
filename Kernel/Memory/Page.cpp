@@ -3,9 +3,9 @@
 
 namespace kernel {
 
-Page::Page(ptr_t physical_address) : m_physical_address(physical_address) { }
+Page::Page(Address physical_address) : m_physical_address(physical_address) { }
 
-ptr_t Page::address() const
+Address Page::address() const
 {
     return m_physical_address;
 }

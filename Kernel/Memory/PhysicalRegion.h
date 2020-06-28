@@ -11,11 +11,11 @@ class Page;
 
 class PhysicalRegion {
 public:
-    PhysicalRegion(ptr_t starting_address, size_t length);
+    PhysicalRegion(Address starting_address, size_t length);
 
-    ptr_t  starting_address() const { return m_starting_address; }
-    size_t free_page_count() const { return m_free_pages; }
-    bool   has_free_pages() const { return m_free_pages; }
+    Address starting_address() const { return m_starting_address; }
+    size_t  free_page_count() const { return m_free_pages; }
+    bool    has_free_pages() const { return m_free_pages; }
 
     [[nodiscard]] RefPtr<Page> allocate_page();
     void                       free_page(const Page& page);
@@ -32,11 +32,11 @@ public:
     }
 
 private:
-    ptr_t  bit_as_physical_address(size_t bit);
-    size_t physical_address_as_bit(ptr_t address);
+    Address bit_as_physical_address(size_t bit);
+    size_t  physical_address_as_bit(Address address);
 
 private:
-    ptr_t           m_starting_address { 0 };
+    Address         m_starting_address { nullptr };
     size_t          m_free_pages { 0 };
     DynamicBitArray m_allocation_map;
 };

@@ -11,22 +11,22 @@ public:
     class Range {
     public:
         Range() = default;
-        Range(ptr_t start, ptr_t length);
+        Range(Address start, Address length);
 
-        ptr_t begin() const;
+        Address begin() const;
 
         template <typename T>
         T* as_pointer()
         {
-            return reinterpret_cast<T*>(m_start);
+            return m_start.as_pointer<T>();
         }
 
-        ptr_t  end() const;
-        size_t length() const;
+        Address end() const;
+        size_t  length() const;
 
-        bool contains(ptr_t address);
+        bool contains(Address address);
 
-        void set(ptr_t start, ptr_t length);
+        void set(Address start, Address length);
 
         bool operator==(const Range& other) const;
 
@@ -40,22 +40,22 @@ public:
         }
 
     private:
-        ptr_t  m_start { 0 };
-        size_t m_length { 0 };
+        Address m_start { nullptr };
+        size_t  m_length { 0 };
     };
 
     VirtualAllocator() = default;
-    VirtualAllocator(ptr_t base, size_t length);
+    VirtualAllocator(Address base, size_t length);
 
-    void set_range(ptr_t base, size_t length);
+    void set_range(Address base, size_t length);
 
-    bool contains(ptr_t address);
+    bool contains(Address address);
     bool contains(const Range& range);
-    bool is_allocated(ptr_t address);
+    bool is_allocated(Address address);
 
     Range allocate_range(size_t length);
     void  deallocate_range(const Range& range);
-    void  deallocate_range(ptr_t base_address);
+    void  deallocate_range(Address base_address);
 
 private:
     void return_back_to_free_pool(size_t allocated_index);
