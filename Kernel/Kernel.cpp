@@ -16,13 +16,23 @@
 
 namespace kernel {
 
-void thread_1()
+void dummy_kernel_process()
 {
-    static auto index  = 0;
-    auto&&      logger = log();
+    static auto           cycles = 0;
+    static constexpr u8   color  = 0xE;
+    static constexpr auto column = 4;
 
-    while (1)
-        logger << "\r thread 1: " << ++index;
+    for (;;) {
+        auto offset = vga_log("Second process: working... [", column, 0, color);
+
+        static constexpr size_t number_length = 21;
+        char                    number[number_length];
+
+        if (to_string(++cycles, number, number_length))
+            offset = vga_log(number, column, offset, color);
+
+        vga_log("]", 4, offset, color);
+    }
 }
 
 void run(MemoryMap memory_map)
@@ -37,7 +47,8 @@ void run(MemoryMap memory_map)
 
     PageDirectory::inititalize();
 
-    cli();
+    InterruptDisabler::increment();
+
     GDT::the().create_basic_descriptors();
     GDT::the().install();
     new PIT;
@@ -47,15 +58,24 @@ void run(MemoryMap memory_map)
 
     Scheduler::inititalize();
 
-    auto   r = PageDirectory::current().allocator().allocate_range(4096);
-    Thread t(&PageDirectory::current(), r.end(), reinterpret_cast<ptr_t>(thread_1));
-    Scheduler::the().add_task(t);
-    sti();
+    Process::create_supervisor(dummy_kernel_process);
 
-    static auto index  = 0;
-    auto&&      logger = log();
+    InterruptDisabler::decrement();
 
-    while (1)
-        logger << "\r main thread: " << ++index;
+    static auto           cycles = 0;
+    static constexpr u8   color  = 0x4;
+    static constexpr auto row    = 3;
+
+    for (;;) {
+        auto offset = vga_log("Main process: working... [", row, 0, color);
+
+        static constexpr size_t number_length = 21;
+        char                    number[number_length];
+
+        if (to_string(++cycles, number, number_length))
+            offset = vga_log(number, row, offset, color);
+
+        vga_log("]", row, offset, color);
+    }
 }
 }
