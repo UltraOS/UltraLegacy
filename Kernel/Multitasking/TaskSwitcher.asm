@@ -1,4 +1,8 @@
 %define switch_task _ZN6kernel9Scheduler11switch_taskEPNS_6Thread12ControlBlockES3_
+%define userland_data_selector 0x20
+%define rpl_ring_3             0x3
+%define current_task_ptr       esp + (4 * 5)
+%define new_task_ptr           esp + (4 * 6)
 
 section .text
 ; void Scheduler::switch_task(Thread::ControlBlock* current_task, Thread::ControlBlock* new_task)
@@ -8,20 +12,30 @@ switch_task:
     push esi
     push edi
     push ebp
-    xchg bx, bx
+
     ; save the current esp
-    mov esi, [esp + (4 * 5)]
-    mov [esi], esp ; ControlBlock.kernel_stack_top = esp
+    mov esi, [current_task_ptr]
+    mov [esi], esp ; current_task->current_kernel_stack_top = esp
 
     ; load the new task esp
-    mov esi, [esp + (4 * 6)]
-    mov esp, [esi] ; esp = ControlBlock.kernel_stack_top
+    mov esi, [new_task_ptr]
+    mov esp, [esi] ; esp = new_task->current_kernel_stack_top
 
     pop ebp
     pop edi
     pop esi
     pop ebx
 
+    ; get rid of this here
     sti
 
     ret
+
+global userland_entrypoint
+userland_entrypoint:
+    mov     ax, userland_data_selector | rpl_ring_3
+    mov     ds, ax
+    mov     es, ax
+    mov     fs, ax
+    mov     gs, ax
+    iret
