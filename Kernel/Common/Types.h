@@ -1,4 +1,5 @@
 #pragma once
+namespace kernel {
 
 // signed types
 using i8  = char;
@@ -12,13 +13,7 @@ using u16 = unsigned short int;
 using u32 = unsigned int;
 using u64 = unsigned long long int;
 
-// MSVC complains about size_t redifinition
-// let's just pretend we don't define it
-// (this project cannot actually be compiled with MSVC anyway)
-// I like using visual studio for editing tho.
-#ifndef _MSVC_LANG
 using size_t = long unsigned int;
-#endif
 
 // A wild posix type appears
 using ssize_t = i32;
@@ -67,3 +62,37 @@ static_assert(sizeof(f64) == SIZEOF_F64, "Incorrect size of 64 bit float");
 #undef SIZEOF_I16
 #undef SIZEOF_I32
 #undef SIZEOF_I64
+
+class Address {
+public:
+    Address() = default;
+
+    template <typename T>
+    constexpr Address(T* ptr) : m_ptr(reinterpret_cast<ptr_t>(ptr))
+    {
+    }
+
+    constexpr Address(decltype(nullptr)) : m_ptr(0) { }
+
+    constexpr Address(ptr_t address) : m_ptr(address) { }
+
+    constexpr ptr_t raw() const { return m_ptr; }
+
+    template <typename T>
+    constexpr T* as_pointer()
+    {
+        return reinterpret_cast<T*>(m_ptr);
+    }
+
+    template <typename T>
+    constexpr T* as_pointer() const
+    {
+        return const_cast<T*>(reinterpret_cast<const T*>(m_ptr));
+    }
+
+    constexpr operator ptr_t() const { return m_ptr; }
+
+private:
+    ptr_t m_ptr;
+};
+}
