@@ -2,6 +2,8 @@
 
 #include "Common/Types.h"
 
+namespace kernel {
+
 class IO {
 public:
     template <u16 port>
@@ -48,3 +50,4 @@ public:
 
     static void wait() { out8<0x80>(0); }
 };
+}
