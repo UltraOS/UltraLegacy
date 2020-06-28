@@ -57,8 +57,8 @@ public:
     static constexpr u16 kernel_code_selector() { return 0x8; }
     static constexpr u16 kernel_data_selector() { return 0x10; }
 
-    static constexpr u16 userspace_code_selector() { return 0x18; }
-    static constexpr u16 userspace_data_selector() { return 0x20; }
+    static constexpr u16 userland_code_selector() { return 0x18; }
+    static constexpr u16 userland_data_selector() { return 0x20; }
 
     static GDT& the();
 
