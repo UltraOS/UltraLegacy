@@ -68,8 +68,8 @@ private:
     };
 
     struct userland_starting_stack_frame {
-        iret_stack_frame         interrupt_frame;
         task_switcher_task_frame switcher_frame;
+        iret_stack_frame         interrupt_frame;
     };
 
     static_assert(sizeof(iret_stack_frame) == 20);

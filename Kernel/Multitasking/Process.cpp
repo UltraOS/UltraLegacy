@@ -43,7 +43,6 @@ void Process::inititalize()
 Process::Process(Address entrypoint, bool is_supervisor)
     : m_process_id(s_next_process_id++), m_page_directory(), m_is_supervisor(is_supervisor)
 {
-
     if (is_user()) {
         m_page_directory       = RefPtr<PageDirectory>::create(MemoryManager::the().allocate_page());
         auto& user_allocator   = m_page_directory->allocator();

@@ -35,7 +35,7 @@ Thread::create_user_thread(PageDirectory& page_dir, Address user_stack, Address 
 {
     Address adjusted_stack = kernel_stack - sizeof(userland_starting_stack_frame);
 
-    auto thread                        = new Thread(page_dir, kernel_stack);
+    auto thread                        = new Thread(page_dir, adjusted_stack);
     thread->m_initial_kernel_stack_top = kernel_stack;
 
     auto* frame      = new (adjusted_stack.as_pointer<userland_starting_stack_frame>()) userland_starting_stack_frame;
@@ -48,10 +48,10 @@ Thread::create_user_thread(PageDirectory& page_dir, Address user_stack, Address 
     iret_frame.data_selector       = GDT::userland_data_selector() | rpl_ring_3;
     iret_frame.stack_pointer       = user_stack;
     iret_frame.eflags              = interrupts_enabled_flag;
-    iret_frame.data_selector       = GDT::userland_code_selector() | rpl_ring_3;
+    iret_frame.code_selector       = GDT::userland_code_selector() | rpl_ring_3;
     iret_frame.instruction_pointer = entrypoint;
 
-    switcher_frame.instruction_pointer = userland_entrypoint;
+    switcher_frame.instruction_pointer = &userland_entrypoint;
     switcher_frame.ebx                 = 0xDEADC0DE;
     switcher_frame.esi                 = 0xDEADBEEF;
     switcher_frame.edi                 = 0xC0DEBEEF;
