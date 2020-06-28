@@ -16,8 +16,7 @@ private:
     static void debug_handler(RegisterState) USED;
     static void non_maskable_handler(RegisterState) USED;
     static void breakpoint_handler(RegisterState) USED;
-    static void overflow_handler(RegisterState);
-    USED;
+    static void overflow_handler(RegisterState) USED;
     static void bound_range_exceeded_handler(RegisterState) USED;
     static void invalid_opcode_handler(RegisterState) USED;
     static void device_not_available_handler(RegisterState) USED;

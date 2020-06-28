@@ -128,7 +128,7 @@ void ISR::page_fault_handler(RegisterState state)
     static constexpr u32 type_mask = 0b011;
     static constexpr u32 user_mask = 0b100;
 
-    ptr_t address_of_fault;
+    Address address_of_fault;
     asm("movl %%cr2, %%eax" : "=a"(address_of_fault));
 
     PageFault pf(address_of_fault,

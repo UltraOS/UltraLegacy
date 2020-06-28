@@ -37,13 +37,13 @@ public:
         WRITE_PROTECTION  = 3,
     };
 
-    PageFault(ptr_t address, ptr_t instruction_pointer, bool is_user, Type type)
+    PageFault(Address address, Address instruction_pointer, bool is_user, Type type)
         : m_address(address), m_instruction_pointer(instruction_pointer), m_is_user(is_user), m_type(type)
     {
     }
 
-    ptr_t address() const { return m_address; }
-    ptr_t instruction_pointer() const { return m_instruction_pointer; }
+    Address address() const { return m_address; }
+    Address instruction_pointer() const { return m_instruction_pointer; }
 
     Type type() const { return m_type; }
 
@@ -74,22 +74,36 @@ public:
     }
 
 private:
-    ptr_t m_address { 0 };
-    ptr_t m_instruction_pointer { 0 };
-    bool  m_is_user { 0 };
-    Type  m_type { READ_NON_PRESENT };
+    Address m_address { nullptr };
+    Address m_instruction_pointer { nullptr };
+    bool    m_is_user { 0 };
+    Type    m_type { READ_NON_PRESENT };
 };
 
 class InterruptDisabler {
 public:
-    InterruptDisabler()
+    InterruptDisabler() { increment(); }
+
+    ~InterruptDisabler() { decrement(); }
+
+    static void increment()
     {
         ++m_refcount;
-        cli();
+        update_state();
     }
-    ~InterruptDisabler()
+    static void decrement()
     {
-        if (--m_refcount == 0)
+        --m_refcount;
+        update_state();
+    }
+    static size_t refcount() { return m_refcount; }
+
+private:
+    static void update_state()
+    {
+        if (m_refcount)
+            cli();
+        else
             sti();
     }
 
