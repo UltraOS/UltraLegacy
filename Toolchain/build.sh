@@ -48,7 +48,7 @@ do
     fi
 done
 
-gcc_version="gcc-9.3.0"
+gcc_version="gcc-10.1.0"
 binutils_version="binutils-2.34"
 gcc_url="ftp://ftp.gnu.org/gnu/gcc/$gcc_version/$gcc_version.tar.gz"
 binutils_url="https://ftp.gnu.org/gnu/binutils/$binutils_version.tar.gz"
