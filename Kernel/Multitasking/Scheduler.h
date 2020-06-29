@@ -22,6 +22,8 @@ public:
 
     void register_process(RefPtr<Process> process);
 
+    static Thread* active_thread() { return s_current_thread; }
+
 private:
     Scheduler() = default;
 

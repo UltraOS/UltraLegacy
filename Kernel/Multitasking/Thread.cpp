@@ -71,6 +71,8 @@ void Thread::activate()
 
     if (is_user())
         s_tss->set_kernel_stack_pointer(m_initial_kernel_stack_top);
+
+    m_page_directory.make_active();
 }
 
 void Thread::deactivate()
