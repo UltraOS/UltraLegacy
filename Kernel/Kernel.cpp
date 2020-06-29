@@ -8,6 +8,7 @@
 #include "Interrupts/ISR.h"
 #include "Interrupts/PIC.h"
 #include "Interrupts/PIT.h"
+#include "Interrupts/SyscallDispatcher.h"
 #include "Memory/HeapAllocator.h"
 #include "Memory/MemoryManager.h"
 #include "Memory/PageDirectory.h"
@@ -35,6 +36,19 @@ void dummy_kernel_process()
     }
 }
 
+void userland_process()
+{
+    char user_string[] = { "syscall test" };
+
+    while (true)
+    {
+        asm ("int $0x80"
+            :
+            : "a"(1), "S"(user_string)
+            : "memory");
+    }
+}
+
 void run(MemoryMap memory_map)
 {
     runtime::ensure_loaded_correctly();
@@ -54,11 +68,22 @@ void run(MemoryMap memory_map)
     new PIT;
     ISR::install();
     IRQManager::the().install();
+    SyscallDispatcher::initialize();
     IDT::the().install();
 
     Scheduler::inititalize();
 
+    // TESTING AREA
+    // ----------------------------------------- //
     Process::create_supervisor(dummy_kernel_process);
+
+    auto page = MemoryManager::the().allocate_page();
+    PageDirectory::of_kernel().map_page(0x0000F000, page->address(), false);
+    // yes we're literally copiying a function :D
+    copy_memory(reinterpret_cast<void*>(userland_process), reinterpret_cast<void*>(0x0000F000), 1028);
+
+    Process::create(0x0000F000);
+    // ----------------------------------------- //
 
     InterruptDisabler::decrement();
 
