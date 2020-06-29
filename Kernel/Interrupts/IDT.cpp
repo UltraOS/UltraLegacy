@@ -17,7 +17,7 @@ IDT& IDT::the()
 IDT& IDT::register_isr(u16 index, attributes attrs, isr handler)
 {
     if (!handler) {
-        error() << "Someone tried to register an invalid (NULL) isr!";
+        error() << "IDT: Someone tried to register an invalid (NULL) isr at index " << index;
         hang();
     }
 
@@ -33,7 +33,7 @@ IDT& IDT::register_isr(u16 index, attributes attrs, isr handler)
 
 IDT& IDT::register_interrupt_handler(u16 index, isr handler)
 {
-    return register_isr(index, INTERRUPT_GATE | RING_3 | PRESENT, handler);
+    return register_isr(index, INTERRUPT_GATE | RING_0 | PRESENT, handler);
 }
 
 IDT& IDT::register_user_interrupt_handler(u16 index, isr handler)
