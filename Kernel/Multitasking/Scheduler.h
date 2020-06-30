@@ -14,6 +14,10 @@ public:
 
     static void on_tick(const RegisterState&);
 
+    static void yield();
+
+    static void pick_next();
+
     static void switch_task(Thread::ControlBlock* current_task, Thread::ControlBlock* new_task);
 
     static Thread& current_thread();
@@ -21,8 +25,6 @@ public:
     void enqueue_thread(Thread& thread);
 
     void register_process(RefPtr<Process> process);
-
-    static Thread* active_thread() { return s_current_thread; }
 
 private:
     Scheduler() = default;

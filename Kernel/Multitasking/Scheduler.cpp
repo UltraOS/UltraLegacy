@@ -41,7 +41,7 @@ void Scheduler::register_process(RefPtr<Process> process)
 
 Thread& Scheduler::current_thread()
 {
-    ASSERT(s_current_thread);
+    ASSERT(s_current_thread != nullptr);
 
     return *s_current_thread;
 }
@@ -53,7 +53,13 @@ Scheduler& Scheduler::the()
     return *s_instance;
 }
 
-void Scheduler::on_tick(const RegisterState&)
+void Scheduler::yield()
+{
+    InterruptDisabler d;
+    pick_next();
+}
+
+void Scheduler::pick_next()
 {
     if (!s_current_thread->has_next()) {
         log() << "Scheduler: no threads to switch to, skipping...";
@@ -67,5 +73,10 @@ void Scheduler::on_tick(const RegisterState&)
     s_current_thread->activate();
 
     switch_task(old_thread->control_block(), s_current_thread->control_block());
+}
+
+void Scheduler::on_tick(const RegisterState&)
+{
+    pick_next();
 }
 }
