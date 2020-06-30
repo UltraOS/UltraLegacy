@@ -2,6 +2,7 @@
 
 #include "Common/Macros.h"
 #include "Common/Utilities.h"
+#include "Core/Runtime.h"
 
 namespace kernel {
 
