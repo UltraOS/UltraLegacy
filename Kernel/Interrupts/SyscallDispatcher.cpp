@@ -16,6 +16,7 @@ void SyscallDispatcher::dispatch(RegisterState registers)
     switch (registers.eax)
     {
     case exit:
+        Syscall::exit(registers.esi);
         break;
     case debug_log:
         // TODO: some safety to make sure this pointer doesn't lead to a ring 0 pagefault :D
