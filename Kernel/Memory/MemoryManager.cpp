@@ -186,7 +186,7 @@ void MemoryManager::handle_page_fault(const PageFault& fault)
 
         auto page = the().allocate_page();
         PageDirectory::current().store_physical_page(page);
-        PageDirectory::current().map_page(rounded_address, page->address(), Scheduler::active_thread()->is_supervisor());
+        PageDirectory::current().map_page(rounded_address, page->address(), Scheduler::current_thread().is_supervisor());
     } else {
         error() << "MemoryManager: unexpected page fault: " << fault;
         hang();
