@@ -20,7 +20,7 @@ public:
 
     void install();
     void register_irq_handler(IRQHandler&);
-    void unregister_irq_handler(IRQManager&);
+    void unregister_irq_handler(IRQHandler&);
 
     static IRQManager& the();
 

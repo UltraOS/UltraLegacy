@@ -29,6 +29,7 @@ IRQManager IRQManager::s_instance;
 IRQManager::IRQManager() : m_handlers {}
 {
     PIC::remap(irq_base_index + 1);
+    PIC::clear_all();
 }
 
 IRQManager& IRQManager::the()
@@ -97,10 +98,22 @@ void IRQManager::irq_handler(u16 request_number, RegisterState registers)
 void IRQManager::register_irq_handler(IRQHandler& handler)
 {
     if (handler.irq_index() > max_irq_index) {
-        error() << "Bad IRQ index " << handler.irq_index();
+        error() << "IRQManager: tried to register out of bounds handler " << handler.irq_index();
         hang();
     }
 
     m_handlers[handler.irq_index()] = &handler;
+    PIC::enable_irq(handler.irq_index());
+}
+
+void IRQManager::unregister_irq_handler(IRQHandler& handler)
+{
+    if (handler.irq_index() > max_irq_index || !m_handlers[handler.irq_index()]) {
+        error() << "IRQManager: tried to unregister non-existant handler " << handler.irq_index();
+        hang();
+    }
+
+    m_handlers[handler.irq_index()] = nullptr;
+    PIC::disable_irq(handler.irq_index());
 }
 }

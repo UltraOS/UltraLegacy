@@ -65,7 +65,6 @@ void run(MemoryMap memory_map)
 
     GDT::the().create_basic_descriptors();
     GDT::the().install();
-    new PIT;
     ISR::install();
     IRQManager::the().install();
     SyscallDispatcher::initialize();
@@ -84,6 +83,8 @@ void run(MemoryMap memory_map)
 
     Process::create(0x0000F000);
     // ----------------------------------------- //
+
+    new PIT;
 
     InterruptDisabler::decrement();
 

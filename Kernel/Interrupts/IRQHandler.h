@@ -17,7 +17,7 @@ public:
     virtual void on_irq(const RegisterState& registers) = 0;
     virtual void finialize_irq() { PIC::end_of_interrupt(irq_index()); }
 
-    virtual ~IRQHandler() = default;
+    virtual ~IRQHandler() { IRQManager::the().unregister_irq_handler(*this); }
 
 private:
     u16 m_irq_index;

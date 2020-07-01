@@ -19,8 +19,16 @@ public:
 
     static void end_of_interrupt(u8 request_number, bool spurious = false);
 
+    static void clear_all();
+
+    static void enable_irq(u8 index);
+    static void disable_irq(u8 index);
+
     static bool is_irq_being_serviced(u8 request_number);
 
     static void remap(u8 offset);
+
+private:
+    static void set_raw_irq_mask(u8 mask, bool master);
 };
 }

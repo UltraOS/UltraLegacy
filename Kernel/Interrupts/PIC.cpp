@@ -14,6 +14,57 @@ void PIC::end_of_interrupt(u8 request_number, bool spurious)
     IO::out8<master_command>(end_of_interrupt_code);
 }
 
+void PIC::clear_all()
+{
+    static constexpr u8 all_off_mask = 0xFF;
+
+    set_raw_irq_mask(all_off_mask, true);
+    set_raw_irq_mask(all_off_mask, false);
+
+    static constexpr u8 slave_irq_index = 2;
+    enable_irq(slave_irq_index);
+}
+
+void PIC::enable_irq(u8 index)
+{
+    u8 current_mask;
+
+    if (index < 8)
+    {
+        current_mask = IO::in8<master_data>();
+        IO::out8<master_data>(current_mask & ~(SET_BIT(index)));
+    }
+    else
+    {
+        current_mask = IO::in8<slave_data>();
+        IO::out8<slave_data>(current_mask & ~(SET_BIT(index - 8)));
+    }
+}
+
+void PIC::disable_irq(u8 index)
+{
+    u8 current_mask;
+
+    if (index < 8)
+    {
+        current_mask = IO::in8<master_data>();
+        IO::out8<master_data>(current_mask | SET_BIT(index));
+    }
+    else
+    {
+        current_mask = IO::in8<slave_data>();
+        IO::out8<slave_data>(current_mask | SET_BIT(index - 8));
+    }
+}
+
+void PIC::set_raw_irq_mask(u8 mask, bool master)
+{
+    if (master)
+        IO::out8<master_data>(mask);
+    else
+        IO::out8<slave_data>(mask);
+}
+
 bool PIC::is_irq_being_serviced(u8 request_number)
 {
     static constexpr u8 read_isr = 0x0b;
