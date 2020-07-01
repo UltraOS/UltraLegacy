@@ -12,8 +12,8 @@ void Syscall::exit(u8 exit_code)
 void Syscall::debug_log(const char* string)
 {
     static auto           cycles = 0;
-    static constexpr u8   color = 0xD;
-    static constexpr auto row   = 0x5;
+    static constexpr u8   color  = 0xD;
+    static constexpr auto row    = 0x5;
 
     auto offset = vga_log("Userland process: working... [", row, 0, color);
 

@@ -40,12 +40,8 @@ void userland_process()
 {
     char user_string[] = { "syscall test" };
 
-    while (true)
-    {
-        asm ("int $0x80"
-            :
-            : "a"(1), "S"(user_string)
-            : "memory");
+    while (true) {
+        asm("int $0x80" : : "a"(1), "b"(user_string) : "memory");
     }
 }
 

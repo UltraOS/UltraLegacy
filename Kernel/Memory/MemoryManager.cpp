@@ -1,10 +1,10 @@
 #include "MemoryManager.h"
 #include "Common/Logger.h"
 #include "Interrupts/Common.h"
+#include "Multitasking/Scheduler.h"
 #include "Page.h"
 #include "PageDirectory.h"
 #include "PhysicalRegion.h"
-#include "Multitasking/Scheduler.h"
 
 #define MEMORY_MANAGER_DEBUG
 
@@ -186,7 +186,9 @@ void MemoryManager::handle_page_fault(const PageFault& fault)
 
         auto page = the().allocate_page();
         PageDirectory::current().store_physical_page(page);
-        PageDirectory::current().map_page(rounded_address, page->address(), Scheduler::current_thread().is_supervisor());
+        PageDirectory::current().map_page(rounded_address,
+                                          page->address(),
+                                          Scheduler::current_thread().is_supervisor());
     } else {
         error() << "MemoryManager: unexpected page fault: " << fault;
         hang();

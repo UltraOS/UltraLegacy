@@ -29,13 +29,10 @@ void PIC::enable_irq(u8 index)
 {
     u8 current_mask;
 
-    if (index < 8)
-    {
+    if (index < 8) {
         current_mask = IO::in8<master_data>();
         IO::out8<master_data>(current_mask & ~(SET_BIT(index)));
-    }
-    else
-    {
+    } else {
         current_mask = IO::in8<slave_data>();
         IO::out8<slave_data>(current_mask & ~(SET_BIT(index - 8)));
     }
@@ -45,13 +42,10 @@ void PIC::disable_irq(u8 index)
 {
     u8 current_mask;
 
-    if (index < 8)
-    {
+    if (index < 8) {
         current_mask = IO::in8<master_data>();
         IO::out8<master_data>(current_mask | SET_BIT(index));
-    }
-    else
-    {
+    } else {
         current_mask = IO::in8<slave_data>();
         IO::out8<slave_data>(current_mask | SET_BIT(index - 8));
     }
