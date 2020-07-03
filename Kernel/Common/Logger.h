@@ -3,6 +3,7 @@
 #include "Conversions.h"
 #include "Core/IO.h"
 #include "Core/Runtime.h"
+#include "String.h"
 #include "Traits.h"
 #include "Types.h"
 
@@ -22,6 +23,7 @@ public:
     AutoLogger(AutoLogger&& logger);
 
     AutoLogger& operator<<(const char* string);
+    AutoLogger& operator<<(StringView string);
     AutoLogger& operator<<(bool value);
     AutoLogger& operator<<(format option);
     AutoLogger& operator<<(Address addr);
@@ -42,7 +44,7 @@ private:
 
 class Logger {
 public:
-    virtual Logger& write(const char* text) = 0;
+    virtual Logger& write(StringView text) = 0;
 
     virtual ~Logger() = default;
 };
@@ -53,10 +55,10 @@ private:
     constexpr static u8 log_port = 0xE9;
 
 public:
-    Logger& write(const char* text) override
+    Logger& write(StringView string) override
     {
-        while (*text)
-            IO::out8<log_port>(*(text++));
+        for (char c: string)
+            IO::out8<log_port>(c);
 
         return s_instance;
     }
@@ -78,8 +80,13 @@ inline AutoLogger::AutoLogger(AutoLogger&& other) : m_logger(other.m_logger), sh
 
 inline AutoLogger& AutoLogger::operator<<(const char* string)
 {
+    return this->operator<<(StringView(string));
+}
+
+inline AutoLogger& AutoLogger::operator<<(StringView string)
+{
     if (m_format == format::as_address)
-        return this->operator<<(reinterpret_cast<const void*>(string));
+        return this->operator<<(reinterpret_cast<const void*>(string.data()));
 
     m_logger.write(string);
 
@@ -178,7 +185,7 @@ inline AutoLogger log()
     return info();
 }
 
-inline Address vga_log(const char* string, size_t row, size_t column, u8 color)
+inline Address vga_log(StringView string, size_t row, size_t column, u8 color)
 {
     static constexpr size_t vga_columns        = 80;
     static constexpr size_t vga_bytes_per_char = 2;
@@ -189,8 +196,8 @@ inline Address vga_log(const char* string, size_t row, size_t column, u8 color)
 
     u16* memory = reinterpret_cast<u16*>(linear_vga_address + vga_columns * vga_bytes_per_char * row + column);
 
-    while (*string) {
-        u16 colored_char = *(string++);
+    for (char c: string) {
+        u16 colored_char = c;
         colored_char |= color << 8;
 
         *(memory++) = colored_char;

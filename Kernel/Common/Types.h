@@ -13,7 +13,9 @@ using u16 = unsigned short int;
 using u32 = unsigned int;
 using u64 = unsigned long long int;
 
+#ifndef _MSVC_LANG
 using size_t = long unsigned int;
+#endif
 
 // A wild posix type appears
 using ssize_t = i32;

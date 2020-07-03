@@ -43,18 +43,18 @@ public:
         return length;
     }
 
-    char* data() { return is_small() ? m_small_string : m_big_string.data; }
+    char*       data() { return is_small() ? m_small_string : m_big_string.data; }
     const char* data() const { return is_small() ? m_small_string : m_big_string.data; }
 
     size_t size() const { return m_size; }
 
     const char& at(size_t index) const { return data()[index]; }
-    char& at(size_t index) { return data()[index]; }
+    char&       at(size_t index) { return data()[index]; }
 
-    char* begin() { return data(); }
+    char*       begin() { return data(); }
     const char* begin() const { return data(); }
 
-    char* end() { return data() + m_size; }
+    char*       end() { return data() + m_size; }
     const char* end() const { return data() + m_size; }
 
     String& append(const String& string) { return append(string.data(), string.size()); }
@@ -101,8 +101,7 @@ public:
         if (size() != str_length)
             return false;
 
-        for (size_t i = 0; i < str_length; ++i)
-        {
+        for (size_t i = 0; i < str_length; ++i) {
             if (at(i) != string[i])
                 return false;
         }
@@ -115,8 +114,7 @@ public:
         if (size() != other.size())
             return false;
 
-        for (size_t i = 0; i < size(); ++i)
-        {
+        for (size_t i = 0; i < size(); ++i) {
             if (at(i) != other.at(i))
                 return false;
         }
@@ -226,13 +224,17 @@ public:
     const char* end() const { return data() + m_size; }
 
     const char* data() const { return m_string; }
-
     size_t      size() const { return m_size; }
 
 private:
     const char* m_string;
     size_t      m_size;
 };
+
+inline StringView operator""_sv(const char* string, size_t size)
+{
+    return StringView(string, size);
+}
 
 inline String::String(StringView view)
 {

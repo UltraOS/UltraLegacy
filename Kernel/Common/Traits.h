@@ -166,6 +166,19 @@ template <typename T>
 inline constexpr bool is_trivially_copyable_v = is_trivially_copyable<T>::value;
 // --------------------
 
+// ---- is_same ----
+template <typename T, typename U>
+struct is_same : false_value {
+};
+
+template <typename T>
+struct is_same<T, T> : true_value {
+};
+
+template <typename T, typename U>
+inline constexpr bool is_same_v = is_same<T, U>::value;
+// --------------------
+
 // ---- remove_reference ----
 template <typename T>
 struct remove_reference {
