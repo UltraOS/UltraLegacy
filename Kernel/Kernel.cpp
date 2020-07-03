@@ -9,6 +9,7 @@
 #include "Interrupts/PIC.h"
 #include "Interrupts/PIT.h"
 #include "Interrupts/SyscallDispatcher.h"
+#include "Interrupts/Timer.h"
 #include "Memory/HeapAllocator.h"
 #include "Memory/MemoryManager.h"
 #include "Memory/PageDirectory.h"
@@ -49,40 +50,44 @@ void run(MemoryMap memory_map)
 {
     runtime::ensure_loaded_correctly();
 
-    HeapAllocator::initialize();
+    InterruptDisabler::increment();
 
-    MemoryManager::inititalize(memory_map);
+    HeapAllocator::initialize();
 
     runtime::init_global_objects();
 
-    PageDirectory::inititalize();
+    MemoryManager::inititalize(memory_map);
 
-    InterruptDisabler::increment();
+    IRQManager::initialize();
+
+    PageDirectory::inititalize();
 
     GDT::the().create_basic_descriptors();
     GDT::the().install();
     ISR::install();
-    IRQManager::the().install();
+    IRQManager::install();
     SyscallDispatcher::initialize();
-    IDT::the().install();
 
     Scheduler::inititalize();
 
-    // TESTING AREA
+    Timer::discover_and_setup();
+
+    IDT::the().install();
+
+    InterruptDisabler::decrement();
+
+    // ---> TESTING AREA
     // ----------------------------------------- //
     Process::create_supervisor(dummy_kernel_process);
 
     auto page = MemoryManager::the().allocate_page();
     PageDirectory::of_kernel().map_page(0x0000F000, page->address(), false);
+
     // yes we're literally copiying a function :D
-    copy_memory(reinterpret_cast<void*>(userland_process), reinterpret_cast<void*>(0x0000F000), 1028);
+    copy_memory(reinterpret_cast<void*>(userland_process), reinterpret_cast<void*>(0x0000F000), 1024);
 
     Process::create(0x0000F000);
     // ----------------------------------------- //
-
-    new PIT;
-
-    InterruptDisabler::decrement();
 
     static auto           cycles = 0;
     static constexpr u8   color  = 0x4;
