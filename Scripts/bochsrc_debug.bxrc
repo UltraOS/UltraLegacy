@@ -32,7 +32,7 @@ cpuid: vmx=1
 print_timestamps: enabled=0
 port_e9_hack: enabled=1
 private_colormap: enabled=0
-clock: sync=none, time0=local, rtc_sync=0
+clock: sync=realtime, time0=local
 # no cmosimage
 log: -
 logprefix: %t%e%d
@@ -50,3 +50,5 @@ com1: enabled=true, mode=null
 com2: enabled=false
 com3: enabled=false
 com4: enabled=false
+display_library: win32, options="gui_debug"
+magic_break: enabled=1

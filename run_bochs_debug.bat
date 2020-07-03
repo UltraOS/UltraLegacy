@@ -3,7 +3,7 @@ call Scripts\build_ultra.bat || goto error
 pushd %~dp0
 set images=%CD%\Images
 popd
-bochsdbg -unlock -f configuration\bochsrc_debug.bxrc
+bochsdbg -unlock -f Scripts\bochsrc_debug.bxrc
 del bx_enh_dbg.ini
 exit 0
 
