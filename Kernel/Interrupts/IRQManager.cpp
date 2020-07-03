@@ -24,17 +24,12 @@ DEFINE_IRQ_HANDLER(15)
 
 namespace kernel {
 
-IRQManager IRQManager::s_instance;
+IRQHandler* IRQManager::m_handlers[IRQManager::entry_count];
 
-IRQManager::IRQManager() : m_handlers {}
+void IRQManager::initialize()
 {
     PIC::remap(irq_base_index + 1);
     PIC::clear_all();
-}
-
-IRQManager& IRQManager::the()
-{
-    return s_instance;
 }
 
 void IRQManager::install()
@@ -85,14 +80,13 @@ void IRQManager::irq_handler(u16 request_number, RegisterState registers)
         return;
     }
 
-    if (!the().has_subscriber(request_number)) {
+    if (!has_subscriber(request_number)) {
         error() << "Unexpected IRQ " << request_number << " with no receiver!";
         hang();
     }
 
-    // TODO: this needs to be fixed
-    the().m_handlers[request_number]->finialize_irq();
-    the().m_handlers[request_number]->on_irq(registers);
+    m_handlers[request_number]->on_irq(registers);
+    m_handlers[request_number]->finialize_irq();
 }
 
 void IRQManager::register_irq_handler(IRQHandler& handler)
@@ -103,7 +97,6 @@ void IRQManager::register_irq_handler(IRQHandler& handler)
     }
 
     m_handlers[handler.irq_index()] = &handler;
-    PIC::enable_irq(handler.irq_index());
 }
 
 void IRQManager::unregister_irq_handler(IRQHandler& handler)
@@ -114,6 +107,5 @@ void IRQManager::unregister_irq_handler(IRQHandler& handler)
     }
 
     m_handlers[handler.irq_index()] = nullptr;
-    PIC::disable_irq(handler.irq_index());
 }
 }

@@ -16,16 +16,14 @@ public:
     static constexpr u16 spurious_master = 7;
     static constexpr u16 spurious_slave  = 15;
 
-    IRQManager();
+    static void initialize();
+    static void install();
 
-    void install();
-    void register_irq_handler(IRQHandler&);
-    void unregister_irq_handler(IRQHandler&);
-
-    static IRQManager& the();
+    static void register_irq_handler(IRQHandler&);
+    static void unregister_irq_handler(IRQHandler&);
 
 private:
-    bool has_subscriber(u16 request_number);
+    static bool has_subscriber(u16 request_number);
 
     static bool is_spurious(u16 request_number);
     static void handle_spurious_irq(u16 request_number);
@@ -33,8 +31,7 @@ private:
     static void irq_handler(u16 request_number, RegisterState) USED;
 
 private:
-    IRQHandler*       m_handlers[entry_count];
-    static IRQManager s_instance;
+    static IRQHandler* m_handlers[entry_count];
 };
 }
 
