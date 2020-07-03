@@ -15,19 +15,20 @@ PIT::PIT() : IRQHandler(timer_irq)
 
 void PIT::set_frequency(u32 ticks_per_second)
 {
-    if (ticks_per_second > timer_frequency) {
+    if (ticks_per_second > max_frequency()) {
         error() << "Cannot set the timer to frequency " << ticks_per_second;
         hang();
     }
 
     m_frequency = ticks_per_second;
 
-    u32 divisor = timer_frequency / ticks_per_second;
+    u32 divisor = max_frequency() / ticks_per_second;
 
     if (divisor > 0xFFFF) {
         error() << "Timer: divisor is too big (" << divisor << ")";
         hang();
     }
+
     IO::out8<timer_command>(write_word | square_wave_mode | timer_0);
 
     IO::out8<timer_data>(divisor & 0x000000FF);
@@ -36,9 +37,7 @@ void PIT::set_frequency(u32 ticks_per_second)
 
 void PIT::on_irq(const RegisterState& registers)
 {
-    static u32 tick = 0;
-
-    ++tick;
+    increment();
 
     auto display_write = [](const char* string, bool carriage_return = false) {
         static constexpr ptr_t vga_address        = 0xB8000;
@@ -62,12 +61,15 @@ void PIT::on_irq(const RegisterState& registers)
 
     char number[11];
 
-    float precise_seconds = static_cast<float>(tick) / m_frequency;
+    float precise_seconds = static_cast<float>(nanoseconds_since_boot()) / Timer::nanoseconds_in_second;
 
     if (to_string(precise_seconds, number, 11))
         display_write(number);
 
     display_write(" seconds");
+
+    // do this here manually since Scheduler::on_tick is very likely to switch the task
+    PIC::end_of_interrupt(irq_index());
 
     // TODO: make this more pretty
     // e.g the schedulers subscribes on timer events
