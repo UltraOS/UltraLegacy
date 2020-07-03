@@ -9,6 +9,8 @@ RefPtr<Process> Process::s_kernel_process;
 
 RefPtr<Process> Process::create(Address entrypoint)
 {
+    InterruptDisabler d;
+
     RefPtr<Process> process = new Process(entrypoint);
     Scheduler::the().register_process(process);
     return process;
@@ -16,6 +18,8 @@ RefPtr<Process> Process::create(Address entrypoint)
 
 RefPtr<Process> Process::create_supervisor(Address entrypoint)
 {
+    InterruptDisabler d;
+
     RefPtr<Process> process = new Process(entrypoint, true);
     Scheduler::the().register_process(process);
     return process;
@@ -47,18 +51,17 @@ Process::Process(Address entrypoint, bool is_supervisor)
         m_page_directory       = RefPtr<PageDirectory>::create(MemoryManager::the().allocate_page());
         auto& user_allocator   = m_page_directory->allocator();
         auto& kernel_allocator = PageDirectory::of_kernel().allocator();
-
-        auto main_thread = Thread::create_user_thread(*m_page_directory,
+        auto  main_thread      = Thread::create_user_thread(*m_page_directory,
                                                       user_allocator.allocate_range(default_userland_stack_size).end(),
                                                       kernel_allocator.allocate_range(default_kerenl_stack_size).end(),
                                                       entrypoint);
-
         m_threads.emplace(main_thread);
     } else {
         auto& kernel_allocator = PageDirectory::of_kernel().allocator();
         auto  main_thread
             = Thread::create_supervisor_thread(kernel_allocator.allocate_range(default_kerenl_stack_size).end(),
                                                entrypoint);
+
         m_threads.emplace(main_thread);
     }
 }

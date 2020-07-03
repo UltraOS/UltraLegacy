@@ -88,26 +88,26 @@ public:
 
     static void increment()
     {
-        ++m_refcount;
+        ++s_refcount;
         update_state();
     }
     static void decrement()
     {
-        --m_refcount;
+        --s_refcount;
         update_state();
     }
-    static size_t refcount() { return m_refcount; }
+    static size_t refcount() { return s_refcount; }
 
 private:
     static void update_state()
     {
-        if (m_refcount)
+        if (s_refcount)
             cli();
         else
             sti();
     }
 
 private:
-    inline static size_t m_refcount;
+    inline static size_t s_refcount;
 };
 }

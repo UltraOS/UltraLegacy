@@ -137,6 +137,8 @@ void MemoryManager::unquickmap_page()
 
 RefPtr<Page> MemoryManager::allocate_page()
 {
+    InterruptDisabler d;
+
     for (auto& region: m_physical_regions) {
         if (!region.has_free_pages())
             continue;
@@ -144,8 +146,6 @@ RefPtr<Page> MemoryManager::allocate_page()
         auto page = region.allocate_page();
 
         ASSERT(page);
-
-        InterruptDisabler d;
 
         ScopedPageMapping mapping(page->address());
 
