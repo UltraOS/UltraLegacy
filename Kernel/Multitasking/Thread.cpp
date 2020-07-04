@@ -2,8 +2,9 @@
 
 namespace kernel {
 
-u32  Thread::s_next_thread_id;
-TSS* Thread::s_tss;
+Thread* Thread::s_current;
+u32     Thread::s_next_thread_id;
+TSS*    Thread::s_tss;
 
 void Thread::initialize()
 {
@@ -73,6 +74,8 @@ void Thread::activate()
         s_tss->set_kernel_stack_pointer(m_initial_kernel_stack_top);
 
     m_page_directory.make_active();
+
+    s_current = this;
 }
 
 void Thread::deactivate()

@@ -33,7 +33,8 @@ void PageDirectory::inititalize()
 
     s_kernel_dir->m_directory_page = RefPtr<Page>::create(as_physical);
 
-    s_kernel_dir->make_active();
+    s_kernel_dir->flush_all();
+    s_active_dir = s_kernel_dir;
 
     s_kernel_dir->allocator().set_range(MemoryManager::kernel_usable_base, MemoryManager::kernel_usable_length);
 
@@ -192,6 +193,9 @@ void PageDirectory::make_active()
 {
     InterruptDisabler d;
 
+    if (is_active())
+        return;
+
     flush_all();
     s_active_dir = this;
 }
@@ -212,7 +216,7 @@ void PageDirectory::flush_at(Address virtual_address)
 
 PageDirectory& PageDirectory::current()
 {
-    ASSERT(s_active_dir);
+    ASSERT(s_active_dir != nullptr);
 
     return *s_active_dir;
 }

@@ -41,6 +41,8 @@ public:
 
     State state() const { return m_state; }
 
+    static Thread* current() { return s_current; }
+
     ControlBlock* control_block() { return &m_control_block; }
 
     bool is_supervisor() const { return m_is_supervisor; }
@@ -88,7 +90,8 @@ private:
     bool           m_is_supervisor { false };
     Thread*        m_next { nullptr };
 
-    static u32  s_next_thread_id;
-    static TSS* s_tss;
+    static Thread* s_current;
+    static u32     s_next_thread_id;
+    static TSS*    s_tss;
 };
 }
