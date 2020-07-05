@@ -8,12 +8,14 @@
 
 namespace kernel::sleep {
 
-    void until(u64 time)
+    inline void until(u64 time)
     {
         cli();
 
-        if (time <= Timer::nanoseconds_since_boot())
+        if (time <= Timer::nanoseconds_since_boot()) {
+            sti();
             return;
+        }
 
         Thread::current()->sleep(time);
         Scheduler::yield();
