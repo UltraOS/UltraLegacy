@@ -39,9 +39,13 @@ void Process::inititalize()
 
     auto main_kernel_thread             = new Thread(PageDirectory::of_kernel(), &kernel_stack_begin);
     main_kernel_thread->m_is_supervisor = true;
+    main_kernel_thread->activate();
+    main_kernel_thread->set_next(main_kernel_thread);
+    main_kernel_thread->set_previous(main_kernel_thread);
+
+    Scheduler::the().register_process(s_kernel_process);
 
     s_kernel_process->m_threads.emplace(main_kernel_thread);
-    Scheduler::the().register_process(s_kernel_process);
 }
 
 Process::Process(Address entrypoint, bool is_supervisor)

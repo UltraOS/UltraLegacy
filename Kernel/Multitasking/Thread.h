@@ -2,6 +2,7 @@
 
 #include "Memory/PageDirectory.h"
 #include "TSS.h"
+#include "Interrupts/Timer.h"
 
 namespace kernel {
 
@@ -36,6 +37,10 @@ public:
     Thread* next() { return m_next; }
     bool    has_next() { return next(); }
 
+    void    set_previous(Thread* thread) { m_previous = thread; }
+    Thread* previous() { return m_previous; }
+    bool    has_previous() { return previous(); }
+
     void activate();
     void deactivate();
 
@@ -47,6 +52,17 @@ public:
 
     bool is_supervisor() const { return m_is_supervisor; }
     bool is_user() const { return !is_supervisor(); }
+
+    void sleep(u64 until)
+    {
+        m_state = State::BLOCKED;
+        m_wake_up_time = until;
+    }
+
+    bool is_sleeping() { return m_state == State::BLOCKED; }
+    void wake_up() { m_state = State::READY; }
+
+    bool should_be_woken_up() { return m_wake_up_time <= Timer::nanoseconds_since_boot(); }
 
 private:
     struct iret_stack_frame {
@@ -87,7 +103,9 @@ private:
     ControlBlock   m_control_block { nullptr };
     Address        m_initial_kernel_stack_top { nullptr };
     State          m_state { State::READY };
+    u64            m_wake_up_time { 0 };
     bool           m_is_supervisor { false };
+    Thread*        m_previous { nullptr };
     Thread*        m_next { nullptr };
 
     static Thread* s_current;

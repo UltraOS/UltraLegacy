@@ -80,6 +80,9 @@ void Thread::activate()
 
 void Thread::deactivate()
 {
+    if (is_sleeping())
+        return;
+
     m_state = State::READY;
 }
 }
