@@ -21,6 +21,9 @@ public:
     static void switch_task(Thread::ControlBlock* current_task, Thread::ControlBlock* new_task);
 
     static void enqueue_thread(Thread& thread);
+    static void enqueue_sleeping_thread(Thread& thread);
+
+    static void wake_up_ready_threads();
 
     void register_process(RefPtr<Process> process);
 
@@ -30,8 +33,7 @@ private:
 private:
     DynamicArray<RefPtr<Process>> m_processes;
 
-    static Thread*    s_first_ready_to_run_thread;
-    static Thread*    s_last_ready_to_run_thread;
+    static Thread*    s_sleeping_threads;
     static Scheduler* s_instance;
 };
 }

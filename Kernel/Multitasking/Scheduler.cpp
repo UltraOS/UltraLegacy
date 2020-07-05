@@ -5,8 +5,7 @@
 namespace kernel {
 
 Scheduler* Scheduler::s_instance;
-Thread*    Scheduler::s_first_ready_to_run_thread;
-Thread*    Scheduler::s_last_ready_to_run_thread;
+Thread*    Scheduler::s_sleeping_threads;
 
 void Scheduler::inititalize()
 {
@@ -17,18 +16,30 @@ void Scheduler::inititalize()
 
 void Scheduler::enqueue_thread(Thread& thread)
 {
-    if (!s_first_ready_to_run_thread && !s_last_ready_to_run_thread) {
-        s_first_ready_to_run_thread = &thread;
-        s_last_ready_to_run_thread  = &thread;
-        thread.activate();
-        return;
+    ASSERT(Thread::current() != nullptr);
+    ASSERT(Thread::current()->has_next());
+    ASSERT(Thread::current()->has_previous());
+
+    auto* last_to_run = Thread::current()->previous();
+    last_to_run->set_next(&thread);
+    Thread::current()->set_previous(&thread);
+
+    thread.set_next(Thread::current());
+    thread.set_previous(last_to_run);
+}
+
+void Scheduler::enqueue_sleeping_thread(Thread& thread)
+{
+    ASSERT(&thread != s_sleeping_threads);
+
+    if (!s_sleeping_threads) {
+        s_sleeping_threads = &thread;
+        thread.set_next(nullptr);
     }
-
-    if (!s_first_ready_to_run_thread)
-        s_first_ready_to_run_thread = &thread;
-
-    s_last_ready_to_run_thread->set_next(&thread);
-    s_last_ready_to_run_thread = &thread;
+    else {
+        thread.set_next(s_sleeping_threads);
+        s_sleeping_threads = &thread;
+    }
 }
 
 void Scheduler::register_process(RefPtr<Process> process)
@@ -48,24 +59,62 @@ Scheduler& Scheduler::the()
 
 void Scheduler::yield()
 {
-    InterruptDisabler d;
+    cli();
     pick_next();
+    sti();
+}
+
+void Scheduler::wake_up_ready_threads()
+{
+    auto* next = s_sleeping_threads;
+    decltype(next) current = nullptr;
+    s_sleeping_threads = nullptr;
+
+    while (next) {
+        current = next;
+        ASSERT(current != nullptr);
+        next = current->next();
+        ASSERT(current != next);
+
+        if (current->should_be_woken_up()) {
+            current->wake_up();
+            enqueue_thread(*current);
+        }
+        else
+            enqueue_sleeping_thread(*current);
+    }
 }
 
 void Scheduler::pick_next()
 {
-    if (!s_first_ready_to_run_thread) {
-        log() << "Scheduler: no threads to switch to, skipping...";
+    wake_up_ready_threads();
+
+    auto* current_thread = Thread::current();
+    auto* next_thread = current_thread->next();
+
+    ASSERT(current_thread != nullptr);
+    ASSERT(current_thread->has_previous());
+    ASSERT(current_thread->has_next());
+
+    ASSERT(next_thread != nullptr);
+    ASSERT(next_thread->has_previous());
+    ASSERT(next_thread->has_next());
+
+    if (current_thread->is_sleeping()) {
+        ASSERT(current_thread != next_thread);
+
+        // dequeue the current thread from the ready list
+        current_thread->previous()->set_next(current_thread->next());
+        current_thread->next()->set_previous(current_thread->previous());
+
+        enqueue_sleeping_thread(*current_thread);
+
+    } else if (current_thread == next_thread) {
+        log() << "Scheduler: only one thread in the queue, skipping...";
         return;
     }
 
-    auto* current_thread = Thread::current();
     current_thread->deactivate();
-
-    auto* next_thread           = s_first_ready_to_run_thread;
-    s_first_ready_to_run_thread = next_thread->next();
-    enqueue_thread(*current_thread);
-
     next_thread->activate();
 
     switch_task(current_thread->control_block(), next_thread->control_block());

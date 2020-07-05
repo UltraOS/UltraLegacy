@@ -15,6 +15,7 @@
 #include "Memory/PageDirectory.h"
 #include "Memory/PhysicalMemory.h"
 #include "Multitasking/Scheduler.h"
+#include "Multitasking/Sleep.h"
 
 namespace kernel {
 
@@ -34,6 +35,8 @@ void dummy_kernel_process()
             offset = vga_log(number, column, offset, color);
 
         vga_log("]", 4, offset, color);
+
+        sleep::for_seconds(1);
     }
 }
 
@@ -85,7 +88,6 @@ void run(MemoryMap memory_map)
 
     // yes we're literally copiying a function :D
     copy_memory(reinterpret_cast<void*>(userland_process), reinterpret_cast<void*>(0x0000F000), 1024);
-
     Process::create(0x0000F000);
     // ----------------------------------------- //
 
@@ -103,6 +105,7 @@ void run(MemoryMap memory_map)
             offset = vga_log(number, row, offset, color);
 
         vga_log("]", row, offset, color);
+        sleep::for_seconds(10);
     }
 }
 }
