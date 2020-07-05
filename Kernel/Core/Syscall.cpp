@@ -1,12 +1,16 @@
 #include "Syscall.h"
 #include "Common/Logger.h"
+#include "Multitasking/Scheduler.h"
 
 namespace kernel {
 
-void Syscall::exit(u8 exit_code)
+void Syscall::exit(u8 code)
 {
-    (void)exit_code;
-    log() << "exit syscall";
+    log() << "Thread " << Thread::current() << " exited with code " << code;
+
+    cli();
+    Thread::current()->exit(code);
+    Scheduler::yield();
 }
 
 void Syscall::debug_log(const char* string)

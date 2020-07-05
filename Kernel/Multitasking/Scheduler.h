@@ -21,6 +21,8 @@ public:
     static void switch_task(Thread::ControlBlock* current_task, Thread::ControlBlock* new_task);
 
     static void enqueue_thread(Thread& thread);
+    static void dequeue_thread(Thread& thread);
+
     static void enqueue_sleeping_thread(Thread& thread);
 
     static void wake_up_ready_threads();

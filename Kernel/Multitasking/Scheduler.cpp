@@ -28,6 +28,15 @@ void Scheduler::enqueue_thread(Thread& thread)
     thread.set_previous(last_to_run);
 }
 
+void Scheduler::dequeue_thread(Thread& thread)
+{
+    ASSERT(thread.has_previous());
+    ASSERT(thread.has_next());
+
+    thread.previous()->set_next(thread.next());
+    thread.next()->set_previous(thread.previous());
+}
+
 void Scheduler::enqueue_sleeping_thread(Thread& thread)
 {
     ASSERT(&thread != s_sleeping_threads);
@@ -35,8 +44,7 @@ void Scheduler::enqueue_sleeping_thread(Thread& thread)
     if (!s_sleeping_threads) {
         s_sleeping_threads = &thread;
         thread.set_next(nullptr);
-    }
-    else {
+    } else {
         thread.set_next(s_sleeping_threads);
         s_sleeping_threads = &thread;
     }
@@ -66,9 +74,9 @@ void Scheduler::yield()
 
 void Scheduler::wake_up_ready_threads()
 {
-    auto* next = s_sleeping_threads;
+    auto*          next    = s_sleeping_threads;
     decltype(next) current = nullptr;
-    s_sleeping_threads = nullptr;
+    s_sleeping_threads     = nullptr;
 
     while (next) {
         current = next;
@@ -79,8 +87,7 @@ void Scheduler::wake_up_ready_threads()
         if (current->should_be_woken_up()) {
             current->wake_up();
             enqueue_thread(*current);
-        }
-        else
+        } else
             enqueue_sleeping_thread(*current);
     }
 }
@@ -90,7 +97,7 @@ void Scheduler::pick_next()
     wake_up_ready_threads();
 
     auto* current_thread = Thread::current();
-    auto* next_thread = current_thread->next();
+    auto* next_thread    = current_thread->next();
 
     ASSERT(current_thread != nullptr);
     ASSERT(current_thread->has_previous());
@@ -103,16 +110,17 @@ void Scheduler::pick_next()
     if (current_thread->is_sleeping()) {
         ASSERT(current_thread != next_thread);
 
-        // dequeue the current thread from the ready list
-        current_thread->previous()->set_next(current_thread->next());
-        current_thread->next()->set_previous(current_thread->previous());
+        dequeue_thread(*current_thread);
 
         enqueue_sleeping_thread(*current_thread);
 
-    } else if (current_thread == next_thread) {
-        log() << "Scheduler: only one thread in the queue, skipping...";
+    } else if (current_thread->is_dead()) {
+        ASSERT(current_thread != next_thread);
+
+        dequeue_thread(*current_thread);
+
+    } else if (current_thread == next_thread)
         return;
-    }
 
     current_thread->deactivate();
     next_thread->activate();

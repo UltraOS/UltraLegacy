@@ -46,6 +46,7 @@ void userland_process()
 
     while (true) {
         asm("int $0x80" : : "a"(1), "b"(user_string) : "memory");
+        asm("int $0x80" : : "a"(0), "b"(99) : "memory");
     }
 }
 
@@ -105,7 +106,6 @@ void run(MemoryMap memory_map)
             offset = vga_log(number, row, offset, color);
 
         vga_log("]", row, offset, color);
-        sleep::for_seconds(10);
     }
 }
 }

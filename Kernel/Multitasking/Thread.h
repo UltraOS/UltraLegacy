@@ -1,8 +1,8 @@
 #pragma once
 
+#include "Interrupts/Timer.h"
 #include "Memory/PageDirectory.h"
 #include "TSS.h"
-#include "Interrupts/Timer.h"
 
 namespace kernel {
 
@@ -55,12 +55,20 @@ public:
 
     void sleep(u64 until)
     {
-        m_state = State::BLOCKED;
+        m_state        = State::BLOCKED;
         m_wake_up_time = until;
+    }
+
+    void exit(u8 code)
+    {
+        m_state     = State::DEAD;
+        m_exit_code = code;
     }
 
     bool is_sleeping() { return m_state == State::BLOCKED; }
     void wake_up() { m_state = State::READY; }
+
+    bool is_dead() { return m_state == State::DEAD; }
 
     bool should_be_woken_up() { return m_wake_up_time <= Timer::nanoseconds_since_boot(); }
 
@@ -105,6 +113,7 @@ private:
     State          m_state { State::READY };
     u64            m_wake_up_time { 0 };
     bool           m_is_supervisor { false };
+    u8             m_exit_code { 0 };
     Thread*        m_previous { nullptr };
     Thread*        m_next { nullptr };
 
