@@ -50,8 +50,8 @@ void PageDirectory::map_page_directory_entry(size_t index, Address physical_addr
     ASSERT_PAGE_ALIGNED(physical_address);
 
 #ifdef PAGE_DIRECTORY_DEBUG
-    log() << "PageDirectory: mapping a new page table " << index << " at physaddr " << format::as_hex
-          << physical_address << " is_supervisor:" << is_supervisor;
+    log() << "PageDirectory: mapping a new page table " << index << " at physaddr " << physical_address
+          << " is_supervisor:" << is_supervisor;
 #endif
 
     auto& entry = entry_at(index).set_physical_address(physical_address);
@@ -90,9 +90,8 @@ void PageDirectory::map_page(Address virtual_address, Address physical_address, 
     }
 
 #ifdef PAGE_DIRECTORY_DEBUG
-    log() << "PageDirectory: mapping the page at vaddr " << format::as_hex << virtual_address << " to "
-          << physical_address << " at table:" << format::as_dec << page_table_index << " entry:" << page_entry_index
-          << " is_supervisor:" << is_supervisor;
+    log() << "PageDirectory: mapping the page at vaddr " << virtual_address << " to " << physical_address
+          << " at table:" << page_table_index << " entry:" << page_entry_index << " is_supervisor:" << is_supervisor;
     ;
 #endif
 
@@ -161,7 +160,7 @@ void PageDirectory::unmap_page(Address virtual_address)
     auto& page_entry_index = indices.right();
 
 #ifdef PAGE_DIRECTORY_DEBUG
-    log() << "PageDirectory: unmapping the page at vaddr " << format::as_hex << virtual_address;
+    log() << "PageDirectory: unmapping the page at vaddr " << virtual_address;
 #endif
 
     table_at(page_table_index).entry_at(page_entry_index).set_present(false);
@@ -208,7 +207,7 @@ void PageDirectory::flush_all()
 void PageDirectory::flush_at(Address virtual_address)
 {
 #ifdef PAGE_DIRECTORY_DEBUG
-    log() << "PageDirectory: flushing the page at vaddr " << format::as_hex << virtual_address;
+    log() << "PageDirectory: flushing the page at vaddr " << virtual_address;
 #endif
 
     asm volatile("invlpg %0" ::"m"(*virtual_address.as_pointer<u8>()) : "memory");

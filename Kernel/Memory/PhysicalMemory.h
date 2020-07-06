@@ -17,15 +17,15 @@ struct PACKED PhysicalRange {
     bool is_free() const { return type == FREE; }
     bool is_reserved() const { return !is_free(); }
 
-    const char* type_as_string() const
+    StringView type_as_string() const
     {
         switch (type) {
-        case FREE: return "free";
-        case RESERVED: return "reserved";
-        case RECLAIMABLE: return "reclaimable";
-        case NON_VOLATILE: return "ACPI non-volatile";
-        case BAD: return "bad";
-        default: return "unknown";
+        case FREE: return "free"_sv;
+        case RESERVED: return "reserved"_sv;
+        case RECLAIMABLE: return "reclaimable"_sv;
+        case NON_VOLATILE: return "ACPI non-volatile"_sv;
+        case BAD: return "bad"_sv;
+        default: return "unknown"_sv;
         }
     }
 

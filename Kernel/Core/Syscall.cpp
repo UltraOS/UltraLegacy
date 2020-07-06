@@ -29,6 +29,6 @@ void Syscall::debug_log(const char* string)
 
     offset = vga_log("]", row, offset, color);
     offset = vga_log(" and says: ", row, offset, color);
-    offset = vga_log(string, row, offset, color);
+    vga_log(string, row, offset, color);
 }
 }

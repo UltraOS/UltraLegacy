@@ -134,8 +134,7 @@ void VirtualAllocator::deallocate_range(const Range& range)
 void VirtualAllocator::deallocate_range(Address base_address)
 {
     if (!contains(base_address)) {
-        error() << "VirtualAlloctor: address " << format::as_hex << base_address
-                << " doesn't belong to this allocator!";
+        error() << "VirtualAlloctor: address " << base_address << " doesn't belong to this allocator!";
         hang();
     }
 
@@ -151,7 +150,7 @@ void VirtualAllocator::deallocate_range(Address base_address)
         }
     }
 
-    error() << "VirtualAlloctor: address " << format::as_hex << base_address << " wasn't found as allocated!";
+    error() << "VirtualAlloctor: address " << base_address << " wasn't found as allocated!";
     hang();
 }
 

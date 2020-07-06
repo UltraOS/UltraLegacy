@@ -16,6 +16,8 @@ RefPtr<Process> Process::create(Address entrypoint)
     return process;
 }
 
+// TODO: figure out the best way to fix the naming inconsistency here
+//       e.g Process::create_supervious and Thread::create_supervisor_thread
 RefPtr<Process> Process::create_supervisor(Address entrypoint)
 {
     InterruptDisabler d;

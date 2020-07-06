@@ -12,22 +12,23 @@ public:
     // TODO: rewrite these garabage enums,
     //       it's absolutely impossible to tell what's going on...
     enum access_attributes : u8 {
-        NULL_SELECTOR = 0,
-        RING_0        = 0,
-        TASK          = 0,
-        PRESENT       = SET_BIT(7),
-        RING_3        = SET_BIT(5) | SET_BIT(6),
-        CODE_OR_DATA  = SET_BIT(4),
-        EXECUTABLE    = SET_BIT(3),
-        GROWS_DOWN    = SET_BIT(2),
-        ALLOW_LOWER   = SET_BIT(2),
-        READABLE      = SET_BIT(1),
-        WRITABLE      = SET_BIT(1),
-        IS_TSS        = SET_BIT(0),
+        NULL_ACCESS  = 0,
+        RING_0       = 0,
+        TASK         = 0,
+        PRESENT      = SET_BIT(7),
+        RING_3       = SET_BIT(5) | SET_BIT(6),
+        CODE_OR_DATA = SET_BIT(4),
+        EXECUTABLE   = SET_BIT(3),
+        GROWS_DOWN   = SET_BIT(2),
+        ALLOW_LOWER  = SET_BIT(2),
+        READABLE     = SET_BIT(1),
+        WRITABLE     = SET_BIT(1),
+        IS_TSS       = SET_BIT(0),
 
     };
 
     enum flag_attributes : u8 {
+        NULL_FLAG       = 0,
         GRANULARITY_1B  = 0,
         GRANULARITY_4KB = SET_BIT(3),
         MODE_16_BIT     = 0,

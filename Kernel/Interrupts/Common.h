@@ -51,13 +51,13 @@ public:
 
     bool is_kernel() const { return !is_user(); }
 
-    static const char* type_as_string(Type t)
+    static StringView type_as_string(Type t)
     {
         switch (t) {
-        case READ_NON_PRESENT: return "non-present page read";
-        case READ_PROTECTION: return "read a non-readable page";
-        case WRITE_NON_PRESENT: return "non-present page write";
-        case WRITE_PROTECTION: return "write a non-writable page";
+        case READ_NON_PRESENT: return "non-present page read"_sv;
+        case READ_PROTECTION: return "read a non-readable page"_sv;
+        case WRITE_NON_PRESENT: return "non-present page write"_sv;
+        case WRITE_PROTECTION: return "write a non-writable page"_sv;
         }
 
         return "unknown";
@@ -66,7 +66,7 @@ public:
     template <typename LoggerT>
     friend LoggerT& operator<<(LoggerT&& logger, const PageFault& fault)
     {
-        logger << format::as_hex << "\n------> Address: " << fault.address()
+        logger << "\n------> Address: " << fault.address()
                << "\n------> Instruction at: " << fault.instruction_pointer()
                << "\n------> Type   : " << type_as_string(fault.type()) << "\n------> Is user: " << fault.is_user();
 
@@ -91,11 +91,15 @@ public:
         ++s_refcount;
         update_state();
     }
+
     static void decrement()
     {
+        ASSERT(s_refcount > 0);
+
         --s_refcount;
         update_state();
     }
+
     static size_t refcount() { return s_refcount; }
 
 private:

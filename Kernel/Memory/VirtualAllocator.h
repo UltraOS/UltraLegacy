@@ -33,8 +33,7 @@ public:
         template <typename LoggerT>
         friend LoggerT& operator<<(LoggerT&& logger, const Range& range)
         {
-            logger << format::as_hex << "start:" << range.begin() << " end:" << range.end()
-                   << " length:" << format::as_dec << range.length();
+            logger << "start:" << range.begin() << " end:" << range.end() << " length:" << range.length();
 
             return logger;
         }

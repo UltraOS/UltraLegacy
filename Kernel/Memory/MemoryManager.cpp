@@ -116,8 +116,7 @@ MemoryManager::MemoryManager(const MemoryMap& memory_map)
 u8* MemoryManager::quickmap_page(Address physical_address)
 {
 #ifdef MEMORY_MANAGER_DEBUG
-    log() << "MemoryManager: quickmapping vaddr " << format::as_hex << m_quickmap_range.begin() << " to "
-          << physical_address;
+    log() << "MemoryManager: quickmapping vaddr " << m_quickmap_range.begin() << " to " << physical_address;
 #endif
 
     PageDirectory::current().map_page(m_quickmap_range.begin(), physical_address);
@@ -150,7 +149,7 @@ RefPtr<Page> MemoryManager::allocate_page()
         ScopedPageMapping mapping(page->address());
 
 #ifdef MEMORY_MANAGER_DEBUG
-        log() << "MemoryManager: zeroing the page at physaddr " << format::as_hex << page->address();
+        log() << "MemoryManager: zeroing the page at physaddr " << page->address();
 #endif
 
         zero_memory(mapping.as_pointer(), Page::size);
@@ -171,7 +170,7 @@ void MemoryManager::free_page(Page& page)
         }
     }
 
-    error() << "Couldn't find the region that owns the page at " << format::as_hex << page.address();
+    error() << "Couldn't find the region that owns the page at " << page.address();
     hang();
 }
 
@@ -218,8 +217,7 @@ void MemoryManager::inititalize(PageDirectory& directory)
     ScopedPageMapping mapping(directory.physical_address());
 
 #ifdef MEMORY_MANAGER_DEBUG
-    log() << "MemoryManager: Setting up kernel mappings for the directory at physaddr " << format::as_hex
-          << directory.physical_address();
+    log() << "MemoryManager: Setting up kernel mappings for the directory at physaddr " << directory.physical_address();
 #endif
 
     // copy the kernel mappings

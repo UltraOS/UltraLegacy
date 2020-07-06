@@ -16,13 +16,15 @@ GDT& GDT::the()
 
 void GDT::create_basic_descriptors()
 {
-    create_descriptor(0, 0, NULL_SELECTOR, flag_attributes(NULL_SELECTOR));
+    // reserved NULL descriptor
+    create_descriptor(0, 0, NULL_ACCESS, NULL_FLAG);
 
     // kernel descriptors
     create_descriptor(0x00000000,
                       0xFFFFFFFF,
                       PRESENT | CODE_OR_DATA | EXECUTABLE | READABLE,
                       GRANULARITY_4KB | MODE_32_BIT);
+
     create_descriptor(0x00000000, 0xFFFFFFFF, PRESENT | CODE_OR_DATA | WRITABLE, GRANULARITY_4KB | MODE_32_BIT);
 
     // userspace descriptors
@@ -40,10 +42,7 @@ void GDT::create_basic_descriptors()
 void GDT::create_tss_descriptor(TSS* tss)
 {
 
-    create_descriptor(reinterpret_cast<u32>(tss),
-                      TSS::size,
-                      EXECUTABLE | IS_TSS | RING_3 | PRESENT,
-                      flag_attributes(NULL_SELECTOR));
+    create_descriptor(reinterpret_cast<u32>(tss), TSS::size, EXECUTABLE | IS_TSS | RING_3 | PRESENT, NULL_FLAG);
     install();
 
     static constexpr u16 rpl_level_3 = 3;

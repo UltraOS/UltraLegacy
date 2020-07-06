@@ -77,7 +77,12 @@ public:
         return at(m_size - 1);
     }
 
-    [[nodiscard]] const T& last() const { return at(m_size - 1); }
+    [[nodiscard]] const T& last() const
+    {
+        ASSERT(m_size);
+
+        return at(m_size - 1);
+    }
 
     [[nodiscard]] const T& operator[](size_t index) const { return at(index); }
 

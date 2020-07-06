@@ -25,8 +25,7 @@ public:
     template <typename LoggerT>
     friend LoggerT& operator<<(LoggerT&& logger, const PhysicalRegion& region)
     {
-        logger << "Starting address:" << format::as_hex << region.m_starting_address
-               << " page count: " << format::as_dec << region.free_page_count();
+        logger << "Starting address:" << region.m_starting_address << " page count: " << region.free_page_count();
 
         return logger;
     }

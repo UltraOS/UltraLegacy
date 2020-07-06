@@ -5,7 +5,7 @@
 
 namespace kernel {
 
-class PIT : public Timer, public IRQHandler {
+class PIT final : public Timer, public IRQHandler {
 public:
     static constexpr u32 frequency = 1193180;
     // TODO: replace with numeric_limits<u16>::max();
@@ -27,7 +27,7 @@ public:
 
     u32 current_frequency() const override { return m_frequency; }
 
-    StringView model() const override { return "PIT (8254)"; };
+    StringView model() const override { return "PIT (8254)"_sv; };
 
     void enable() override { enable_irq(); }
     void disable() override { disable_irq(); }

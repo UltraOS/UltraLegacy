@@ -80,8 +80,7 @@ void Scheduler::wake_up_ready_threads()
 
     while (next) {
         current = next;
-        ASSERT(current != nullptr);
-        next = current->next();
+        next    = current->next();
         ASSERT(current != next);
 
         if (current->should_be_woken_up()) {
@@ -99,11 +98,9 @@ void Scheduler::pick_next()
     auto* current_thread = Thread::current();
     auto* next_thread    = current_thread->next();
 
-    ASSERT(current_thread != nullptr);
     ASSERT(current_thread->has_previous());
     ASSERT(current_thread->has_next());
 
-    ASSERT(next_thread != nullptr);
     ASSERT(next_thread->has_previous());
     ASSERT(next_thread->has_next());
 

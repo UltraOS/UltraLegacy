@@ -36,7 +36,7 @@ RefPtr<Page> PhysicalRegion::allocate_page()
     --m_free_pages;
 
 #ifdef PHYSICAL_REGION_DEBUG
-    log() << "PhysicalRegion: allocating a page at address " << format::as_hex << bit_as_physical_address(index);
+    log() << "PhysicalRegion: allocating a page at address " << bit_as_physical_address(index);
 #endif
 
     return RefPtr<Page>::create(bit_as_physical_address(index));
@@ -52,7 +52,7 @@ void PhysicalRegion::free_page(const Page& page)
 {
 #ifdef PHYSICAL_REGION_DEBUG
     log() << "PhysicalRegion: deallocating a page at index " << physical_address_as_bit(page.address())
-          << " Address:" << format::as_hex << page.address();
+          << " Address:" << page.address();
 #endif
 
     ASSERT(contains(page));
