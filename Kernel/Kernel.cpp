@@ -16,6 +16,7 @@
 #include "Memory/PhysicalMemory.h"
 #include "Multitasking/Scheduler.h"
 #include "Multitasking/Sleep.h"
+#include "Core/CPU.h"
 
 namespace kernel {
 
@@ -77,6 +78,8 @@ void run(MemoryMap memory_map)
     Timer::discover_and_setup();
 
     IDT::the().install();
+
+    CPU::initialize();
 
     InterruptDisabler::decrement();
 
