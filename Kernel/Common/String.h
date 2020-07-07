@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Core/Runtime.h"
 #include "Memory.h"
 #include "Utilities.h"
 
@@ -218,20 +219,65 @@ class StringView {
 public:
     StringView(const char* string) : m_string(string), m_size(String::length_of(string)) { }
     StringView(const String& string) : m_string(string.data()), m_size(string.size()) { }
-    StringView(const char* string, size_t length) : m_string(string), m_size(length) { }
+    constexpr StringView(const char* string, size_t length) : m_string(string), m_size(length) { }
 
-    const char* begin() const { return data(); }
-    const char* end() const { return data() + m_size; }
+    constexpr const char* begin() const { return data(); }
+    constexpr const char* end() const { return data() + m_size; }
 
-    const char* data() const { return m_string; }
-    size_t      size() const { return m_size; }
+    constexpr const char* data() const { return m_string; }
+    constexpr size_t      size() const { return m_size; }
+
+    constexpr const char& at(size_t i) const
+    {
+        ASSERT(i < m_size);
+
+        return data()[i];
+    }
+
+    constexpr bool equals(StringView other) const
+    {
+        if (size() != other.size())
+            return false;
+
+        for (size_t i = 0; i < size(); ++i) {
+            if (at(i) != other.at(i))
+                return false;
+        }
+
+        return true;
+    }
+
+    bool operator==(const char* string) const
+    {
+        return equals(string);
+    }
+
+    constexpr bool operator==(const StringView& other) const
+    {
+        return equals(other);
+    }
+
+    constexpr bool operator!=(const StringView& other) const
+    {
+        return !equals(other);
+    }
+
+    friend bool operator==(const char* string, const StringView& string_view)
+    {
+        return string_view.equals(string);
+    }
+
+    friend bool operator!=(const char* string, const StringView& string_view)
+    {
+        return !string_view.equals(string);
+    }
 
 private:
     const char* m_string;
     size_t      m_size;
 };
 
-inline StringView operator""_sv(const char* string, size_t size)
+inline constexpr StringView operator""_sv(const char* string, size_t size)
 {
     return StringView(string, size);
 }
