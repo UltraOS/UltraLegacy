@@ -13,8 +13,8 @@ public:
     static constexpr size_t max_small_string_size = 7;
 
     String() = default;
-
     String(const char* string) { construct_from(string, length_of(string)); }
+    String(StringView string);
     String(const String& other) { construct_from(other.data(), other.size()); }
     String(String&& other) { become(forward<String>(other)); }
 
@@ -32,7 +32,7 @@ public:
         return *this;
     }
 
-    String(StringView view);
+    StringView to_view() const;
 
     static size_t length_of(const char* string)
     {
@@ -95,22 +95,9 @@ public:
 
     String& operator+=(const char* string) { return append(string); }
 
-    bool operator==(const char* string)
-    {
-        size_t str_length = length_of(string);
+    bool equals(const StringView& string);
 
-        if (size() != str_length)
-            return false;
-
-        for (size_t i = 0; i < str_length; ++i) {
-            if (at(i) != string[i])
-                return false;
-        }
-
-        return true;
-    }
-
-    bool operator==(const String& other)
+    bool equals(const String& other)
     {
         if (size() != other.size())
             return false;
@@ -123,9 +110,19 @@ public:
         return true;
     }
 
-    bool operator!=(const char* string) { return !(*this == string); }
+    bool operator==(const StringView& string)
+    {
+        return equals(string);
+    }
 
-    bool operator!=(const String& other) { return !(*this == other); }
+    bool operator==(const String& other)
+    {
+        return equals(other);
+    }
+
+    bool operator!=(const StringView& string) { return !equals(string); }
+
+    bool operator!=(const String& other) { return !equals(other); }
 
     void clear()
     {
@@ -247,11 +244,6 @@ public:
         return true;
     }
 
-    bool operator==(const char* string) const
-    {
-        return equals(string);
-    }
-
     constexpr bool operator==(const StringView& other) const
     {
         return equals(other);
@@ -262,14 +254,26 @@ public:
         return !equals(other);
     }
 
-    friend bool operator==(const char* string, const StringView& string_view)
+    friend bool operator==(const char* l, const StringView& r)
     {
-        return string_view.equals(string);
+        return r.equals(l);
     }
 
-    friend bool operator!=(const char* string, const StringView& string_view)
+    friend bool operator!=(const char* l, const StringView& r)
     {
-        return !string_view.equals(string);
+        return !r.equals(l);
+    }
+
+    template <size_t Size>
+    friend bool operator==(const char (&l)[Size], const StringView& r)
+    {
+        return r.equals(StringView(l, Size));
+    }
+
+    template <size_t Size>
+    friend bool operator!=(const char(&l)[Size], const StringView& r)
+    {
+        return !r.equals(StringView(l, Size));
     }
 
 private:
@@ -285,5 +289,15 @@ inline constexpr StringView operator""_sv(const char* string, size_t size)
 inline String::String(StringView view)
 {
     construct_from(view.data(), view.size());
+}
+
+inline StringView String::to_view() const
+{
+    return StringView(*this);
+}
+
+inline bool String::equals(const StringView& string)
+{
+    return string.equals(to_view());
 }
 }

@@ -94,6 +94,11 @@ public:
 
     constexpr operator ptr_t() const { return m_ptr; }
 
+    void operator+=(size_t offset)
+    {
+        m_ptr += offset;
+    }
+
 private:
     ptr_t m_ptr;
 };
