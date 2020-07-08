@@ -26,9 +26,6 @@ switch_task:
     pop esi
     pop ebx
 
-    ; get rid of this here
-    sti
-
     ret
 
 global userland_entrypoint
