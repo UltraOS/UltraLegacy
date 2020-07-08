@@ -76,7 +76,7 @@ void CPU::MP::find_floating_pointer_table()
         return;
     }
 
-    log() << "CPU: Couldn't find the floating pointer table :(";
+    warning() << "CPU: Couldn't find the floating pointer table, reverting to single core configuration.";
 }
 
 void CPU::MP::parse_configuration_table()
@@ -88,11 +88,14 @@ void CPU::MP::parse_configuration_table()
         return;
     }
 
-    auto& configuration_table = *MemoryManager::physical_address_as_kernel(s_floating_pointer->configuration_table_pointer).as_pointer<MP::ConfigurationTable>();
+    auto configuration_table_linear =
+        MemoryManager::physical_address_as_kernel(s_floating_pointer->configuration_table_pointer);
+
+    auto& configuration_table = *configuration_table_linear.as_pointer<MP::ConfigurationTable>();
 
     static constexpr auto mp_configuration_table_signature = "PCMP"_sv;
 
-    if (StringView(configuration_table.signature, 4) != mp_configuration_table_signature) {
+    if (configuration_table.signature != mp_configuration_table_signature) {
         warning() << "CPU: incorrect configuration table signature, ignoring the rest of the table...";
         return;
     }
@@ -104,12 +107,25 @@ void CPU::MP::parse_configuration_table()
     for (size_t i = 0; i < configuration_table.entry_count; ++i)
     {
         EntryType type = *entry_address.as_pointer<MP::EntryType>();
-        log() << "type: " << entry_type_to_string(type);
 
         if (type == EntryType::PROCESSOR)
-            entry_address = Address(entry_address + 20);
-        else
-            entry_address = Address(entry_address + 8);
+        {
+            auto& processor = *entry_address.as_pointer<ProcessorEntry>();
+
+            bool is_bsp = processor.flags & ProcessorEntry::Flags::BSP;
+            bool is_ok = processor.flags & ProcessorEntry::Flags::OK;
+
+            log() << "CPU: A new processor -> APIC id:" << processor.local_apic_id
+                  << " type:" << (is_bsp ? "BSP" : "AP") << " is_ok:" << is_ok;
+        } else if (type == EntryType::IO_APIC) {
+            auto& io_apic = *entry_address.as_pointer<IOAPICEntry>();
+
+            bool is_ok = io_apic.flags & IOAPICEntry::Flags::OK;
+
+            log() << "CPU: I/O APIC at " << io_apic.io_apic_pointer << " is_ok:" << is_ok;
+        }
+
+        entry_address += sizeof_entry(type);
     }
 }
 }
