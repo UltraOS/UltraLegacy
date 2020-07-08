@@ -1,6 +1,7 @@
 #include "Common/Conversions.h"
 #include "Common/Logger.h"
 #include "Common/Types.h"
+#include "Core/CPU.h"
 #include "Core/GDT.h"
 #include "Core/Runtime.h"
 #include "Interrupts/IDT.h"
@@ -16,7 +17,6 @@
 #include "Memory/PhysicalMemory.h"
 #include "Multitasking/Scheduler.h"
 #include "Multitasking/Sleep.h"
-#include "Core/CPU.h"
 
 namespace kernel {
 

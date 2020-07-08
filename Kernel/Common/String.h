@@ -110,15 +110,9 @@ public:
         return true;
     }
 
-    bool operator==(const StringView& string)
-    {
-        return equals(string);
-    }
+    bool operator==(const StringView& string) { return equals(string); }
 
-    bool operator==(const String& other)
-    {
-        return equals(other);
-    }
+    bool operator==(const String& other) { return equals(other); }
 
     bool operator!=(const StringView& string) { return !equals(string); }
 
@@ -244,25 +238,13 @@ public:
         return true;
     }
 
-    constexpr bool operator==(const StringView& other) const
-    {
-        return equals(other);
-    }
+    constexpr bool operator==(const StringView& other) const { return equals(other); }
 
-    constexpr bool operator!=(const StringView& other) const
-    {
-        return !equals(other);
-    }
+    constexpr bool operator!=(const StringView& other) const { return !equals(other); }
 
-    friend bool operator==(const char* l, const StringView& r)
-    {
-        return r.equals(l);
-    }
+    friend bool operator==(const char* l, const StringView& r) { return r.equals(l); }
 
-    friend bool operator!=(const char* l, const StringView& r)
-    {
-        return !r.equals(l);
-    }
+    friend bool operator!=(const char* l, const StringView& r) { return !r.equals(l); }
 
     template <size_t Size>
     friend bool operator==(const char (&l)[Size], const StringView& r)
@@ -271,7 +253,7 @@ public:
     }
 
     template <size_t Size>
-    friend bool operator!=(const char(&l)[Size], const StringView& r)
+    friend bool operator!=(const char (&l)[Size], const StringView& r)
     {
         return !r.equals(StringView(l, Size));
     }
