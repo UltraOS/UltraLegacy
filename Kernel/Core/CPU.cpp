@@ -106,7 +106,7 @@ void CPU::MP::parse_configuration_table()
         return;
     }
 
-    log() << "CPU: Configuration table entries: " << configuration_table.entry_count;
+    log() << "CPU: Local APIC at " << configuration_table.local_apic_pointer;
 
     Address entry_address = &configuration_table + 1;
 

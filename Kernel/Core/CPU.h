@@ -63,13 +63,13 @@ private:
         };
 
         struct FloatingPointer {
-            char                signature[4];
-            ConfigurationTable* configuration_table_pointer;
-            u8                  length;
-            u8                  specification_revision;
-            u8                  checksum;
-            u8                  default_configuration;
-            u32                 features;
+            char    signature[4];
+            Address configuration_table_pointer;
+            u8      length;
+            u8      specification_revision;
+            u8      checksum;
+            u8      default_configuration;
+            u32     features;
         };
 
         struct ProcessorEntry {

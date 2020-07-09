@@ -90,7 +90,7 @@ void run(MemoryMap memory_map)
     auto page = MemoryManager::the().allocate_page();
     PageDirectory::of_kernel().map_page(0x0000F000, page->address(), false);
 
-    // yes we're literally copiying a function :D
+    // yes we're literally copying a function :D
     copy_memory(reinterpret_cast<void*>(userland_process), reinterpret_cast<void*>(0x0000F000), 1024);
     Process::create(0x0000F000);
     // ----------------------------------------- //

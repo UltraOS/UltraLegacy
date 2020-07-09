@@ -41,7 +41,6 @@ void GDT::create_basic_descriptors()
 
 void GDT::create_tss_descriptor(TSS* tss)
 {
-
     create_descriptor(reinterpret_cast<u32>(tss), TSS::size, EXECUTABLE | IS_TSS | RING_3 | PRESENT, NULL_FLAG);
     install();
 
