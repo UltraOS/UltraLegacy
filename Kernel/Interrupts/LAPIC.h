@@ -5,7 +5,7 @@
 
 namespace kernel {
 
-class APIC {
+class LAPIC {
 public:
     enum class Register {
         ID                                  = 0x20,
@@ -36,12 +36,14 @@ public:
         DIVIDE_CONFIGURATION                = 0x3E0
     };
 
-    APIC(Address physical_base);
+    static void set_base_address(Address physical_address);
 
-    void write_register(Register, u32 value);
-    u32  read_register(Register);
+    static void initialize_for_this_processor();
+
+    static void write_register(Register, u32 value);
+    static u32  read_register(Register);
 
 private:
-    Address m_base;
+    static Address s_base;
 };
 }
