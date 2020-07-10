@@ -40,8 +40,8 @@ public:
     static void ensure_disabled();
 
 private:
-    bool        is_irq_being_serviced(u8 request_number);
-    static void remap(u8 offset);
-    static void set_raw_irq_mask(u8 mask, bool master);
+    bool is_irq_being_serviced(u8 request_number);
+    void remap(u8 offset);
+    void set_raw_irq_mask(u8 mask, bool master);
 };
 }
