@@ -4,7 +4,7 @@
 namespace kernel {
 
 CPU::MP::FloatingPointer* CPU::MP::s_floating_pointer;
-CPU::SMPData* CPU::s_smp_data;
+CPU::SMPData*             CPU::s_smp_data;
 
 void CPU::initialize()
 {
@@ -111,7 +111,7 @@ void CPU::MP::parse_configuration_table()
 
     Address entry_address = &configuration_table + 1;
 
-    s_smp_data = new SMPData;
+    s_smp_data                     = new SMPData;
     s_smp_data->local_apic_address = configuration_table.local_apic_pointer;
 
     for (size_t i = 0; i < configuration_table.entry_count; ++i) {

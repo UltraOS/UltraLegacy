@@ -1,6 +1,6 @@
 #include "InterruptController.h"
-#include "LAPIC.h"
 #include "Core/CPU.h"
+#include "LAPIC.h"
 #include "PIC.h"
 
 namespace kernel {

@@ -1,6 +1,7 @@
 #include "Common/Logger.h"
 #include "Core/IO.h"
 
+#include "InterruptController.h"
 #include "Memory/MemoryManager.h"
 #include "Multitasking/Scheduler.h"
 
@@ -69,7 +70,7 @@ void PIT::on_irq(const RegisterState& registers)
     display_write(" seconds");
 
     // do this here manually since Scheduler::on_tick is very likely to switch the task
-    PIC::end_of_interrupt(irq_index());
+    InterruptController::the().end_of_interrupt(irq_index());
 
     // TODO: make this more pretty
     // e.g the schedulers subscribes on timer events

@@ -7,6 +7,7 @@
 #include "Interrupts/IDT.h"
 #include "Interrupts/IRQManager.h"
 #include "Interrupts/ISR.h"
+#include "Interrupts/InterruptController.h"
 #include "Interrupts/PIC.h"
 #include "Interrupts/PIT.h"
 #include "Interrupts/SyscallDispatcher.h"
@@ -63,9 +64,11 @@ void run(MemoryMap memory_map)
 
     MemoryManager::inititalize(memory_map);
 
-    IRQManager::initialize();
-
     PageDirectory::inititalize();
+
+    CPU::initialize();
+
+    InterruptController::discover_and_initialize();
 
     GDT::the().create_basic_descriptors();
     GDT::the().install();
@@ -78,8 +81,6 @@ void run(MemoryMap memory_map)
     Timer::discover_and_setup();
 
     IDT::the().install();
-
-    CPU::initialize();
 
     InterruptDisabler::decrement();
 

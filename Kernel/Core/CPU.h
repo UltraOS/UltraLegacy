@@ -1,8 +1,8 @@
 #pragma once
 
+#include "Common/DynamicArray.h"
 #include "Common/String.h"
 #include "Common/Types.h"
-#include "Common/DynamicArray.h"
 
 namespace kernel {
 

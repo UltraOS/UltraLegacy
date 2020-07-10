@@ -2,13 +2,44 @@
 #include "Common/Macros.h"
 #include "Core/IO.h"
 
+#include "IRQManager.h"
 #include "PIC.h"
 
 namespace kernel {
 
-void PIC::end_of_interrupt(u8 request_number, bool spurious)
+PIC::PIC()
 {
-    if (request_number >= 8 && !spurious)
+    remap(IRQManager::irq_base_index + 1);
+    clear_all();
+}
+
+bool PIC::is_spurious(u8 request_number)
+{
+    if (request_number == spurious_master || request_number == spurious_slave)
+        return !is_irq_being_serviced(request_number);
+
+    return false;
+}
+
+void PIC::handle_spurious_irq(u8 request_number)
+{
+    // if it came from the slave we only need to EOI the master, otherwise do nothing
+    if (request_number == spurious_slave)
+        IO::out8<master_command>(end_of_interrupt_code);
+}
+
+void PIC::ensure_disabled()
+{
+    // just call the constructor, which already gets us to the state we're looking for
+    auto pic = PIC();
+
+    // don't keep the slave IRQ enabled, we don't care
+    pic.disable_irq(slave_irq_index);
+}
+
+void PIC::end_of_interrupt(u8 request_number)
+{
+    if (request_number >= 8)
         IO::out8<slave_command>(end_of_interrupt_code);
 
     IO::out8<master_command>(end_of_interrupt_code);
@@ -18,11 +49,8 @@ void PIC::clear_all()
 {
     static constexpr u8 all_off_mask = 0xFF;
 
-    set_raw_irq_mask(all_off_mask, true);
+    set_raw_irq_mask(all_off_mask & ~(slave_irq_index), true);
     set_raw_irq_mask(all_off_mask, false);
-
-    static constexpr u8 slave_irq_index = 2;
-    enable_irq(slave_irq_index);
 }
 
 void PIC::enable_irq(u8 index)

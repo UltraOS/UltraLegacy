@@ -1,11 +1,19 @@
 #pragma once
 
 #include "Common/Types.h"
+#include "IRQHandler.h"
+#include "InterruptController.h"
 
 namespace kernel {
 
-class PIC {
+class PIC : public InterruptController {
 public:
+    static constexpr u16 max_irq_index   = 15;
+    static constexpr u8  slave_irq_index = 2;
+
+    static constexpr u16 spurious_master = 7;
+    static constexpr u16 spurious_slave  = 15;
+
     static constexpr u8 master_port = 0x20;
     static constexpr u8 slave_port  = 0xA0;
 
@@ -17,18 +25,23 @@ public:
 
     static constexpr u8 end_of_interrupt_code = 0x20;
 
-    static void end_of_interrupt(u8 request_number, bool spurious = false);
+    PIC();
 
-    static void clear_all();
+    void end_of_interrupt(u8 request_number) override;
 
-    static void enable_irq(u8 index);
-    static void disable_irq(u8 index);
+    void clear_all() override;
 
-    static bool is_irq_being_serviced(u8 request_number);
+    void enable_irq(u8 index) override;
+    void disable_irq(u8 index) override;
 
-    static void remap(u8 offset);
+    bool is_spurious(u8 request_number) override;
+    void handle_spurious_irq(u8 request_number) override;
+
+    static void ensure_disabled();
 
 private:
+    bool        is_irq_being_serviced(u8 request_number);
+    static void remap(u8 offset);
     static void set_raw_irq_mask(u8 mask, bool master);
 };
 }
