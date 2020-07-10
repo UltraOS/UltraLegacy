@@ -3,7 +3,7 @@
 #include "IDT.h"
 #include "IRQHandler.h"
 #include "IRQManager.h"
-#include "PIC.h"
+#include "InterruptController.h"
 
 DEFINE_IRQ_HANDLER(0)
 DEFINE_IRQ_HANDLER(1)
@@ -25,12 +25,6 @@ DEFINE_IRQ_HANDLER(15)
 namespace kernel {
 
 IRQHandler* IRQManager::m_handlers[IRQManager::entry_count];
-
-void IRQManager::initialize()
-{
-    PIC::remap(irq_base_index + 1);
-    PIC::clear_all();
-}
 
 void IRQManager::install()
 {
@@ -58,30 +52,16 @@ bool IRQManager::has_subscriber(u16 request_number)
     return m_handlers[request_number];
 }
 
-bool IRQManager::is_spurious(u16 request_number)
-{
-    if (request_number == spurious_master || request_number == spurious_slave)
-        return !PIC::is_irq_being_serviced(request_number);
-
-    return false;
-}
-
-void IRQManager::handle_spurious_irq(u16 request_number)
-{
-    if (request_number == spurious_slave)
-        PIC::end_of_interrupt(request_number, true);
-}
-
 void IRQManager::irq_handler(u16 request_number, RegisterState registers)
 {
-    if (is_spurious(request_number)) {
-        warning() << "Spurious IRQ " << request_number << "!";
-        handle_spurious_irq(request_number);
+    if (InterruptController::the().is_spurious(request_number)) {
+        warning() << "IRQManager: Spurious IRQ " << request_number << "!";
+        InterruptController::the().handle_spurious_irq(request_number);
         return;
     }
 
     if (!has_subscriber(request_number)) {
-        error() << "Unexpected IRQ " << request_number << " with no receiver!";
+        error() << "IRQManager: Unexpected IRQ " << request_number << " with no receiver!";
         hang();
     }
 
@@ -91,7 +71,7 @@ void IRQManager::irq_handler(u16 request_number, RegisterState registers)
 
 void IRQManager::register_irq_handler(IRQHandler& handler)
 {
-    if (handler.irq_index() > max_irq_index) {
+    if (handler.irq_index() >= entry_count) {
         error() << "IRQManager: tried to register out of bounds handler " << handler.irq_index();
         hang();
     }
@@ -101,7 +81,7 @@ void IRQManager::register_irq_handler(IRQHandler& handler)
 
 void IRQManager::unregister_irq_handler(IRQHandler& handler)
 {
-    if (handler.irq_index() > max_irq_index || !m_handlers[handler.irq_index()]) {
+    if (handler.irq_index() >= entry_count || !m_handlers[handler.irq_index()]) {
         error() << "IRQManager: tried to unregister non-existant handler " << handler.irq_index();
         hang();
     }

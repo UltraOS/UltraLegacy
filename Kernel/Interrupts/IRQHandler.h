@@ -4,7 +4,7 @@
 
 #include "Common.h"
 #include "IRQManager.h"
-#include "PIC.h"
+#include "InterruptController.h"
 
 namespace kernel {
 
@@ -15,10 +15,10 @@ public:
     u16 irq_index() const { return m_irq_index; }
 
     virtual void on_irq(const RegisterState& registers) = 0;
-    virtual void finialize_irq() { PIC::end_of_interrupt(irq_index()); }
+    virtual void finialize_irq() { InterruptController::the().end_of_interrupt(irq_index()); }
 
-    virtual void enable_irq() { PIC::enable_irq(irq_index()); }
-    virtual void disable_irq() { PIC::disable_irq(irq_index()); }
+    virtual void enable_irq() { InterruptController::the().enable_irq(irq_index()); }
+    virtual void disable_irq() { InterruptController::the().disable_irq(irq_index()); }
 
     virtual ~IRQHandler() { IRQManager::unregister_irq_handler(*this); }
 

@@ -9,14 +9,9 @@ class IRQHandler;
 
 class IRQManager {
 public:
-    static constexpr u16 irq_base_index = 32;
     static constexpr u16 entry_count    = 16;
-    static constexpr u16 max_irq_index  = 15;
+    static constexpr u16 irq_base_index = 32;
 
-    static constexpr u16 spurious_master = 7;
-    static constexpr u16 spurious_slave  = 15;
-
-    static void initialize();
     static void install();
 
     static void register_irq_handler(IRQHandler&);
@@ -24,9 +19,6 @@ public:
 
 private:
     static bool has_subscriber(u16 request_number);
-
-    static bool is_spurious(u16 request_number);
-    static void handle_spurious_irq(u16 request_number);
 
     static void irq_handler(u16 request_number, RegisterState) USED;
 
