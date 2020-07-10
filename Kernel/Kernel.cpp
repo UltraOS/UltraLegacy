@@ -8,8 +8,6 @@
 #include "Interrupts/IRQManager.h"
 #include "Interrupts/ISR.h"
 #include "Interrupts/InterruptController.h"
-#include "Interrupts/PIC.h"
-#include "Interrupts/PIT.h"
 #include "Interrupts/SyscallDispatcher.h"
 #include "Interrupts/Timer.h"
 #include "Memory/HeapAllocator.h"
@@ -68,7 +66,7 @@ void run(MemoryMap memory_map)
 
     CPU::initialize();
 
-    InterruptController::discover_and_initialize();
+    InterruptController::discover_and_setup();
 
     GDT::the().create_basic_descriptors();
     GDT::the().install();

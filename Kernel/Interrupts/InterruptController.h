@@ -6,7 +6,7 @@ namespace kernel {
 
 class InterruptController {
 public:
-    static void discover_and_initialize();
+    static void discover_and_setup();
 
     static InterruptController& the();
 

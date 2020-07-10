@@ -7,7 +7,7 @@ namespace kernel {
 
 InterruptController* InterruptController::s_instance;
 
-void InterruptController::discover_and_initialize()
+void InterruptController::discover_and_setup()
 {
     if (CPU::supports_smp()) {
         log() << "InteruptController: SMP support detected. Initializing LAPIC and IOAPIC...";
