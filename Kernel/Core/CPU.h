@@ -2,12 +2,29 @@
 
 #include "Common/String.h"
 #include "Common/Types.h"
+#include "Common/DynamicArray.h"
 
 namespace kernel {
 
 class CPU {
 public:
     static void initialize();
+
+    struct SMPData {
+        DynamicArray<u8> application_processor_apic_ids;
+        u8               bootstrap_processor_apic_id;
+        Address          local_apic_address;
+        Address          io_apic_address;
+    } static* s_smp_data;
+
+    static bool supports_smp() { return s_smp_data; }
+
+    static SMPData& smp_data()
+    {
+        ASSERT(s_smp_data != nullptr);
+
+        return *s_smp_data;
+    }
 
 private:
     static Address find_string_in_range(Address begin, Address end, size_t step, StringView string);

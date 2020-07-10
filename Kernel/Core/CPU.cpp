@@ -4,6 +4,7 @@
 namespace kernel {
 
 CPU::MP::FloatingPointer* CPU::MP::s_floating_pointer;
+CPU::SMPData* CPU::s_smp_data;
 
 void CPU::initialize()
 {
@@ -110,6 +111,9 @@ void CPU::MP::parse_configuration_table()
 
     Address entry_address = &configuration_table + 1;
 
+    s_smp_data = new SMPData;
+    s_smp_data->local_apic_address = configuration_table.local_apic_pointer;
+
     for (size_t i = 0; i < configuration_table.entry_count; ++i) {
         EntryType type = *entry_address.as_pointer<MP::EntryType>();
 
@@ -121,12 +125,20 @@ void CPU::MP::parse_configuration_table()
 
             log() << "CPU: A new processor -> APIC id:" << processor.local_apic_id
                   << " type:" << (is_bsp ? "BSP" : "AP") << " is_ok:" << is_ok;
+
+            if (is_bsp)
+                s_smp_data->bootstrap_processor_apic_id = processor.local_apic_id;
+            else
+                s_smp_data->application_processor_apic_ids.append(processor.local_apic_id);
+
         } else if (type == EntryType::IO_APIC) {
             auto& io_apic = *entry_address.as_pointer<IOAPICEntry>();
 
             bool is_ok = io_apic.flags & IOAPICEntry::Flags::OK;
 
             log() << "CPU: I/O APIC at " << io_apic.io_apic_pointer << " is_ok:" << is_ok;
+
+            s_smp_data->io_apic_address = io_apic.io_apic_pointer;
         }
 
         entry_address += sizeof_entry(type);
