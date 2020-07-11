@@ -49,7 +49,7 @@ void PIC::clear_all()
 {
     static constexpr u8 all_off_mask = 0xFF;
 
-    set_raw_irq_mask(all_off_mask & ~(slave_irq_index), true);
+    set_raw_irq_mask(all_off_mask & ~SET_BIT(slave_irq_index), true);
     set_raw_irq_mask(all_off_mask, false);
 }
 

@@ -7,6 +7,8 @@ namespace kernel {
 
 class LAPIC {
 public:
+    static constexpr u32 spurious_irq_index = 0xFF;
+
     enum class Register {
         ID                                  = 0x20,
         VERSION                             = 0x30,
@@ -42,6 +44,8 @@ public:
 
     static void write_register(Register, u32 value);
     static u32  read_register(Register);
+
+    static void end_of_interrupt();
 
 private:
     static Address s_base;

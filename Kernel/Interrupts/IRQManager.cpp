@@ -4,6 +4,7 @@
 #include "IRQHandler.h"
 #include "IRQManager.h"
 #include "InterruptController.h"
+#include "LAPIC.h"
 
 DEFINE_IRQ_HANDLER(0)
 DEFINE_IRQ_HANDLER(1)
@@ -21,6 +22,7 @@ DEFINE_IRQ_HANDLER(12)
 DEFINE_IRQ_HANDLER(13)
 DEFINE_IRQ_HANDLER(14)
 DEFINE_IRQ_HANDLER(15)
+DEFINE_IRQ_HANDLER(255) // APIC spurious vector
 
 namespace kernel {
 
@@ -44,7 +46,8 @@ void IRQManager::install()
         .register_interrupt_handler(irq_base_index + 12, irq12_handler)
         .register_interrupt_handler(irq_base_index + 13, irq13_handler)
         .register_interrupt_handler(irq_base_index + 14, irq14_handler)
-        .register_interrupt_handler(irq_base_index + 15, irq15_handler);
+        .register_interrupt_handler(irq_base_index + 15, irq15_handler)
+        .register_interrupt_handler(LAPIC::spurious_irq_index, irq255_handler);
 }
 
 bool IRQManager::has_subscriber(u16 request_number)
