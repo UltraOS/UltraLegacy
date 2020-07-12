@@ -41,7 +41,7 @@ extern "C" void application_processor_entrypoint();
 
 void LAPIC::send_init_to(u8 id)
 {
-    ICR icr{};
+    ICR icr {};
 
     icr.delivery_mode    = DeliveryMode::INIT;
     icr.destination_mode = DestinationMode::PHYSICAL;
@@ -53,41 +53,44 @@ void LAPIC::send_init_to(u8 id)
     volatile auto* icr_pointer = Address(&icr).as_pointer<volatile u32>();
 
     write_register(Register::INTERRUPT_COMMAND_REGISTER_HIGHER, *(icr_pointer + 1));
-    write_register(Register::INTERRUPT_COMMAND_REGISTER_LOWER,  *icr_pointer);
+    write_register(Register::INTERRUPT_COMMAND_REGISTER_LOWER, *icr_pointer);
 }
 
 void LAPIC::send_startup_to(u8 id)
 {
-    ICR icr{};
+    ICR icr {};
 
-    icr.entrypoint_page = 1;
-    icr.delivery_mode = DeliveryMode::SIPI;
+    icr.entrypoint_page  = 1;
+    icr.delivery_mode    = DeliveryMode::SIPI;
     icr.destination_mode = DestinationMode::PHYSICAL;
-    icr.level = Level::ASSERT;
-    icr.trigger_mode = TriggerMode::EDGE;
+    icr.level            = Level::ASSERT;
+    icr.trigger_mode     = TriggerMode::EDGE;
     icr.destination_type = DestinationType::DEFAULT;
-    icr.destination_id = id;
+    icr.destination_id   = id;
 
     volatile auto* icr_pointer = Address(&icr).as_pointer<volatile u32>();
 
     write_register(Register::INTERRUPT_COMMAND_REGISTER_HIGHER, *(icr_pointer + 1));
-    write_register(Register::INTERRUPT_COMMAND_REGISTER_LOWER,  *icr_pointer);
+    write_register(Register::INTERRUPT_COMMAND_REGISTER_LOWER, *icr_pointer);
 }
 
 void LAPIC::start_processor(u8 id)
 {
     log() << "LAPIC: Starting application processor " << id << "...";
 
-    static bool entrypoint_relocated = false;
-    static constexpr Address entrypoint_base = 0x1000;
+    static bool              entrypoint_relocated   = false;
+    static constexpr Address entrypoint_base        = 0x1000;
     static constexpr Address entrypoint_base_linear = MemoryManager::physical_address_as_kernel(entrypoint_base);
 
     if (!entrypoint_relocated) {
-        copy_memory(reinterpret_cast<void*>(&application_processor_entrypoint), entrypoint_base_linear.as_pointer<void>(), Page::size);
+        copy_memory(reinterpret_cast<void*>(&application_processor_entrypoint),
+                    entrypoint_base_linear.as_pointer<void>(),
+                    Page::size);
         entrypoint_relocated = true;
     }
 
-    volatile auto* magic_memory_address = Address(MemoryManager::physical_address_as_kernel(0x2000)).as_pointer<volatile u16>();
+    volatile auto* magic_memory_address
+        = Address(MemoryManager::physical_address_as_kernel(0x2000)).as_pointer<volatile u16>();
     *magic_memory_address = 0xBEEF;
 
     send_init_to(id);
@@ -102,7 +105,7 @@ void LAPIC::start_processor(u8 id)
         char str[2];
         to_string(id, str, 2);
         auto offset = vga_log("Processor ", 8 + id, 0, 0x3);
-        offset = vga_log(str, 8 + id, offset, 0x3);
+        offset      = vga_log(str, 8 + id, offset, 0x3);
         vga_log(" started successfully!", 8 + id, offset, 0x3);
 
         return;
@@ -120,11 +123,10 @@ void LAPIC::start_processor(u8 id)
         char str[2];
         to_string(id, str, 2);
         auto offset = vga_log("Processor ", 8 + id, 0, 0x3);
-        offset = vga_log(str, 8 + id, offset, 0x3);
+        offset      = vga_log(str, 8 + id, offset, 0x3);
         vga_log(" started successfully after two SIPIs!", 8 + id, offset, 0x3);
         log() << "LAPIC: Application processor " << id << " started successfully after second SIPI";
-    }
-    else
+    } else
         error() << "LAPIC: Application processor " << id << " failed to start after 2 SIPIs";
 }
 }

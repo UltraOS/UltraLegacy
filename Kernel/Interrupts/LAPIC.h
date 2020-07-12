@@ -25,7 +25,7 @@ public:
         INTERRUPT_REQUEST                   = 0x200, // 0x200 -> 0x270
         ERROR_STATUS                        = 0x280,
         CORRECTED_MACHING_CHECK_INTERRUPT   = 0x2F0,
-        INTERRUPT_COMMAND_REGISTER_LOWER    = 0x300, // 0x300 -> 0x310
+        INTERRUPT_COMMAND_REGISTER_LOWER    = 0x300,
         INTERRUPT_COMMAND_REGISTER_HIGHER   = 0x310,
         LVT_TIMER                           = 0x320,
         LVT_THERMAL_SENSOR                  = 0x330,
@@ -50,36 +50,15 @@ public:
     static void start_processor(u8);
 
 private:
-    enum class DeliveryMode {
-        NORMAL          = 0,
-        LOWEST_PRIORITY = 1,
-        SMI             = 2,
-        NMI             = 4,
-        INIT            = 5,
-        SIPI            = 6
-    };
+    enum class DeliveryMode : u8 { NORMAL = 0, LOWEST_PRIORITY = 1, SMI = 2, NMI = 4, INIT = 5, SIPI = 6 };
 
-    enum class DestinationMode {
-        PHYSICAL,
-        LOGICAL
-    };
+    enum class DestinationMode : u8 { PHYSICAL, LOGICAL };
 
-    enum class Level {
-        DE_ASSERT,
-        ASSERT
-    };
+    enum class Level : u8 { DE_ASSERT, ASSERT };
 
-    enum class TriggerMode {
-        EDGE,
-        LEVEL
-    };
+    enum class TriggerMode : u8 { EDGE, LEVEL };
 
-    enum class DestinationType {
-        DEFAULT,
-        SELF,
-        ALL_INCLUDING_SELF,
-        ALL_EXCLUDING_SELF
-    };
+    enum class DestinationType : u8 { DEFAULT, SELF, ALL_INCLUDING_SELF, ALL_EXCLUDING_SELF };
 
     struct ICR {
         // ICR LOWER
@@ -87,19 +66,19 @@ private:
             u8 vector_number;
             u8 entrypoint_page;
         };
-        DeliveryMode delivery_mode : 3;
+        DeliveryMode    delivery_mode : 3;
         DestinationMode destination_mode : 1;
-        bool is_pending : 1;
-        u8 reserved_1 : 1;
-        Level level : 1;
-        TriggerMode trigger_mode : 1;
-        u8 reserved_2 : 2;
+        bool            is_pending : 1;
+        u8              reserved_1 : 1;
+        Level           level : 1;
+        TriggerMode     trigger_mode : 1;
+        u8              reserved_2 : 2;
         DestinationType destination_type : 2;
-        u16 reserved_3 : 12;
+        u16             reserved_3 : 12;
 
         // ICR HIGHER
         u32 reserved_4 : 24;
-        u8 destination_id;
+        u8  destination_id;
     };
 
     static constexpr size_t icr_size = 8;
