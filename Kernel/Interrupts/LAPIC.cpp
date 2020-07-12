@@ -99,6 +99,8 @@ void LAPIC::start_processor(u8 id)
 
     send_startup_to(id);
 
+    Timer::the().mili_delay(1);
+
     if (*magic_memory_address == 0xDEAD) {
         log() << "LAPIC: Application processor " << id << " started successfully";
 
