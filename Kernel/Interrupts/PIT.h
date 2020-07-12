@@ -16,6 +16,7 @@ public:
     static constexpr u8 timer_data       = 0x40;
     static constexpr u8 timer_command    = 0x43;
     static constexpr u8 timer_0          = 0x00;
+
     static constexpr u8 square_wave_mode = 0x06;
     static constexpr u8 write_word       = 0x30;
 
@@ -31,6 +32,8 @@ public:
 
     void enable() override { enable_irq(); }
     void disable() override { disable_irq(); }
+
+    void nano_delay(u32 ns) override;
 
     // don't do anything since we finalize manually
     void finialize_irq() override { }

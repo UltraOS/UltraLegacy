@@ -11,7 +11,6 @@ void Timer::discover_and_setup()
 {
     // TODO: add HPET and maybe something else?
     s_timer = new PIT;
-    s_timer->set_frequency(default_ticks_per_second);
     s_timer->enable();
 }
 

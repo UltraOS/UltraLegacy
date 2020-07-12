@@ -77,4 +77,33 @@ void PIT::on_irq(const RegisterState& registers)
     // through some kind of a global Timer class or whatever
     Scheduler::on_tick(registers);
 }
+
+void PIT::nano_delay(u32 ns)
+{
+    IO::out8<timer_command>(write_word);
+
+    u32 ticks = max_frequency() * (ns / static_cast<float>(Timer::nanoseconds_in_second));
+
+    if (ticks > 0xFFFF) {
+        error() << "PIT: cannot sleep for more than 0xFFFF ticks (got " << format::as_hex << ticks << ")";
+        hang();
+    }
+
+    IO::out8<timer_data>(ticks & 0xFF);
+    IO::out8<timer_data>((ticks & 0xFF00) >> 8);
+
+    static constexpr u16 latch_count_flag = SET_BIT(5);
+    static constexpr u16 timer_channel_0 = SET_BIT(1);
+    static constexpr u8 timer_done_flag = SET_BIT(7);
+
+    for (;;) {
+        IO::out8<timer_command>(write_word | latch_count_flag | timer_channel_0);
+
+        if (IO::in8<timer_data>() & timer_done_flag)
+            break;
+    }
+
+    // go back to the normal mode
+    set_frequency(default_ticks_per_second);
+}
 }
