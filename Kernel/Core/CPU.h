@@ -26,6 +26,8 @@ public:
         return *s_smp_data;
     }
 
+    static void start_all_processors();
+
 private:
     static Address find_string_in_range(Address begin, Address end, size_t step, StringView string);
 

@@ -1,5 +1,7 @@
 #include "CPU.h"
 #include "Memory/MemoryManager.h"
+#include "Interrupts/Common.h"
+#include "Interrupts/LAPIC.h"
 
 namespace kernel {
 
@@ -15,6 +17,14 @@ void CPU::initialize()
 
         MP::parse_configuration_table();
     }
+}
+
+void CPU::start_all_processors()
+{
+    ASSERT(s_smp_data != nullptr);
+
+    for (auto processor_id : s_smp_data->application_processor_apic_ids)
+        LAPIC::start_processor(processor_id);
 }
 
 Address CPU::find_string_in_range(Address begin, Address end, size_t step, StringView string)

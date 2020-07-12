@@ -47,6 +47,68 @@ public:
 
     static void end_of_interrupt();
 
+    static void start_processor(u8);
+
+private:
+    enum class DeliveryMode {
+        NORMAL          = 0,
+        LOWEST_PRIORITY = 1,
+        SMI             = 2,
+        NMI             = 4,
+        INIT            = 5,
+        SIPI            = 6
+    };
+
+    enum class DestinationMode {
+        PHYSICAL,
+        LOGICAL
+    };
+
+    enum class Level {
+        DE_ASSERT,
+        ASSERT
+    };
+
+    enum class TriggerMode {
+        EDGE,
+        LEVEL
+    };
+
+    enum class DestinationType {
+        DEFAULT,
+        SELF,
+        ALL_INCLUDING_SELF,
+        ALL_EXCLUDING_SELF
+    };
+
+    struct ICR {
+        // ICR LOWER
+        union {
+            u8 vector_number;
+            u8 entrypoint_page;
+        };
+        DeliveryMode delivery_mode : 3;
+        DestinationMode destination_mode : 1;
+        bool is_pending : 1;
+        u8 reserved_1 : 1;
+        Level level : 1;
+        TriggerMode trigger_mode : 1;
+        u8 reserved_2 : 2;
+        DestinationType destination_type : 2;
+        u16 reserved_3 : 12;
+
+        // ICR HIGHER
+        u32 reserved_4 : 24;
+        u8 destination_id;
+    };
+
+    static constexpr size_t icr_size = 8;
+
+    static_assert(sizeof(ICR) == icr_size);
+
+    static void send_init_to(u8);
+    static void send_startup_to(u8);
+
 private:
     static Address s_base;
 };

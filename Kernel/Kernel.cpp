@@ -80,6 +80,8 @@ void run(MemoryMap memory_map)
 
     IDT::the().install();
 
+    CPU::start_all_processors();
+
     InterruptDisabler::decrement();
 
     // ---> TESTING AREA
