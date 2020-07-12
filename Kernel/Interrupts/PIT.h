@@ -13,9 +13,9 @@ public:
     static constexpr u8  timer_irq   = 0;
 
     // ---- I/O Ports ----
-    static constexpr u8 timer_data       = 0x40;
-    static constexpr u8 timer_command    = 0x43;
-    static constexpr u8 timer_0          = 0x00;
+    static constexpr u8 timer_data    = 0x40;
+    static constexpr u8 timer_command = 0x43;
+    static constexpr u8 timer_0       = 0x00;
 
     static constexpr u8 square_wave_mode = 0x06;
     static constexpr u8 write_word       = 0x30;

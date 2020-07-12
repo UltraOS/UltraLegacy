@@ -7,7 +7,7 @@ namespace kernel {
 
 class Timer {
 public:
-    static constexpr u32 default_ticks_per_second = 100;
+    static constexpr u32 default_ticks_per_second   = 100;
     static constexpr u32 nanoseconds_in_microsecond = 1000;
     static constexpr u32 nanoseconds_in_millisecond = 1000000;
     static constexpr u32 nanoseconds_in_second      = 1000000000;
