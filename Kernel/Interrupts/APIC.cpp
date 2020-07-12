@@ -12,10 +12,6 @@ APIC::APIC()
     LAPIC::set_base_address(CPU::smp_data().local_apic_address);
     LAPIC::initialize_for_this_processor();
     IOAPIC::set_base_address(CPU::smp_data().io_apic_address);
-
-    // yay it works
-    IOAPIC::map_legacy_irq(1, IRQManager::irq_base_index + 1, CPU::smp_data().bootstrap_processor_apic_id);
-    IOAPIC::map_legacy_irq(2, IRQManager::irq_base_index, CPU::smp_data().bootstrap_processor_apic_id);
 }
 
 void APIC::end_of_interrupt(u8)
@@ -27,7 +23,14 @@ void APIC::clear_all() { }
 
 void APIC::enable_irq(u8 index)
 {
-    (void)index;
+    // TODO: Fix this hack, its super dirty.
+    //       (it assumes there's an override entry for the PIT)
+    if (index == 0) {
+        IOAPIC::map_legacy_irq(2, IRQManager::irq_base_index, CPU::smp_data().bootstrap_processor_apic_id);
+        return;
+    }
+
+    IOAPIC::map_legacy_irq(index, IRQManager::irq_base_index + index, CPU::smp_data().bootstrap_processor_apic_id);
 }
 
 void APIC::disable_irq(u8 index)
