@@ -28,23 +28,23 @@ PAGING:        equ (0b1 << 31)
 
 %define TO_PHYSICAL(virtual) (virtual - VIRTUAL_ORIGIN)
 
-section .paging_structures
+section .bss
 ; can't use PAGE_SIZE here because of a NASM bug
 ; it simply ignores this if it's a macro
 align 4096
 
 global kernel_page_directory
 kernel_page_directory:
-    times PAGE_SIZE db 0
+    resb PAGE_SIZE
 
 kernel_page_table:
-    times PAGE_SIZE db 0
+    resb PAGE_SIZE
 
 kernel_heap_table:
-    times PAGE_SIZE db 0
+    resb PAGE_SIZE
 
 kernel_quickmap_table:
-    times PAGE_SIZE db 0
+    resb PAGE_SIZE
 
 ; Current memory layout (physical)
 ; 0MB -> 1MB unused (bootloader and bios stuff)
@@ -62,8 +62,20 @@ kernel_quickmap_table:
 
 section .entry
 
+extern section_bss_begin
+extern section_bss_end
+
 global start
 start:
+    ; zero section bss
+    mov ecx, TO_PHYSICAL(section_bss_end)
+    sub ecx, TO_PHYSICAL(section_bss_begin)
+    mov edi, TO_PHYSICAL(section_bss_begin)
+    mov ebp, eax ; save the eax
+    mov eax, 0
+    rep stosb
+    mov eax, ebp
+
     ; TODO: actually check if we have one.
     ; and maybe move this out into a CPU class in C++
     mov edx, cr0
@@ -159,10 +171,10 @@ hang:
     hlt
     jmp hang
 
-section .kernel_stack
+section .bss
 align 16
 kernel_stack_end:
-    times 16384 db 0
+    resb 16384
 global kernel_stack_begin
 kernel_stack_begin:
 

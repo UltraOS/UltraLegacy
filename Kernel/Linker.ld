@@ -22,18 +22,18 @@ SECTIONS
     .data ALIGN(4K) : AT (ADDR (.data) - 0xC0000000)
     {
         *(.data)
-        *(.paging_structures)
+    }
+
+    .magic ALIGN(4K) : AT (ADDR (.magic) - 0xC0000000)
+    {
+        *(.magic)
     }
 
     .bss ALIGN(4K) : AT (ADDR (.bss) - 0xC0000000)
     {
+        section_bss_begin = .;
         *(COMMON)
         *(.bss)
-        *(.kernel_stack)
-    }
-
-    .rodata ALIGN(4K) : AT (ADDR (.rodata) - 0xC0000000)
-    {
-        *(.magic)
+        section_bss_end = .;
     }
 }
