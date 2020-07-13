@@ -12,27 +12,27 @@ public:
     static void install();
 
 private:
-    static void division_by_zero_handler(RegisterState) USED;
-    static void debug_handler(RegisterState) USED;
-    static void non_maskable_handler(RegisterState) USED;
-    static void breakpoint_handler(RegisterState) USED;
-    static void overflow_handler(RegisterState) USED;
-    static void bound_range_exceeded_handler(RegisterState) USED;
-    static void invalid_opcode_handler(RegisterState) USED;
-    static void device_not_available_handler(RegisterState) USED;
-    static void double_fault_handler(RegisterState) USED;
-    static void coprocessor_segment_overrun_handler(RegisterState) USED;
-    static void invalid_tss_handler(RegisterState) USED;
-    static void segment_not_present_handler(RegisterState) USED;
-    static void stack_segment_fault_handler(RegisterState) USED;
-    static void general_protection_fault_handler(RegisterState) USED;
-    static void page_fault_handler(RegisterState) USED;
-    static void floating_point_exception_handler(RegisterState) USED;
-    static void alignment_check_exception_handler(RegisterState) USED;
-    static void machine_check_exception_handler(RegisterState) USED;
-    static void simd_floating_point_exception_handler(RegisterState) USED;
-    static void virtualization_exception_handler(RegisterState) USED;
-    static void security_exception_handler(RegisterState) USED;
+    static void division_by_zero_handler(RegisterState*) USED;
+    static void debug_handler(RegisterState*) USED;
+    static void non_maskable_handler(RegisterState*) USED;
+    static void breakpoint_handler(RegisterState*) USED;
+    static void overflow_handler(RegisterState*) USED;
+    static void bound_range_exceeded_handler(RegisterState*) USED;
+    static void invalid_opcode_handler(RegisterState*) USED;
+    static void device_not_available_handler(RegisterState*) USED;
+    static void double_fault_handler(RegisterState*) USED;
+    static void coprocessor_segment_overrun_handler(RegisterState*) USED;
+    static void invalid_tss_handler(RegisterState*) USED;
+    static void segment_not_present_handler(RegisterState*) USED;
+    static void stack_segment_fault_handler(RegisterState*) USED;
+    static void general_protection_fault_handler(RegisterState*) USED;
+    static void page_fault_handler(RegisterState*) USED;
+    static void floating_point_exception_handler(RegisterState*) USED;
+    static void alignment_check_exception_handler(RegisterState*) USED;
+    static void machine_check_exception_handler(RegisterState*) USED;
+    static void simd_floating_point_exception_handler(RegisterState*) USED;
+    static void virtualization_exception_handler(RegisterState*) USED;
+    static void security_exception_handler(RegisterState*) USED;
 
 private:
     static constexpr u16 division_by_zero_index              = 0;
@@ -60,7 +60,7 @@ private:
 }
 
 // Super specific mangling rules going on here, be careful :)
-#define ISR(handler, len) "_ZN6kernel3ISR" TO_STRING(len) TO_STRING(handler) "ENS_13RegisterStateE"
+#define ISR(handler, len) "_ZN6kernel3ISR" TO_STRING(len) TO_STRING(handler) "EPNS_13RegisterStateE"
 
 // Please stop...
 // clang-format off
@@ -82,8 +82,9 @@ private:
         "    mov %ax, %ds\n"                                                                                           \
         "    mov %ax, %es\n"                                                                                           \
         "    cld\n"                                                                                                    \
+        "    pushl %esp\n"                                                                                             \
         "    call " ISR(title##_handler, length) "\n"                                                                  \
-        "    add $0x4, %esp \n"                                                                                        \
+        "    add $0x8, %esp \n"                                                                                        \
         "    popl %gs\n"                                                                                               \
         "    popl %fs\n"                                                                                               \
         "    popl %es\n"                                                                                               \
@@ -110,8 +111,9 @@ private:
         "    mov %ax, %ds\n"                                                                                           \
         "    mov %ax, %es\n"                                                                                           \
         "    cld\n"                                                                                                    \
+        "    pushl %esp\n"                                                                                             \
         "    call " ISR(title##_handler, length) "\n"                                                                  \
-        "    add $0x4, %esp \n"                                                                                        \
+        "    add $0x8, %esp \n"                                                                                        \
         "    popl %gs\n"                                                                                               \
         "    popl %fs\n"                                                                                               \
         "    popl %es\n"                                                                                               \

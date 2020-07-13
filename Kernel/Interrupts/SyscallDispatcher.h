@@ -12,6 +12,6 @@ public:
     static constexpr u32 debug_log = 1;
 
     static void initialize();
-    static void dispatch(RegisterState) USED;
+    static void dispatch(RegisterState*) USED;
 };
 }

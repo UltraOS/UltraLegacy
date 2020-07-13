@@ -20,7 +20,7 @@ public:
 private:
     static bool has_subscriber(u16 request_number);
 
-    static void irq_handler(u16 request_number, RegisterState) USED;
+    static void irq_handler(u16 request_number, RegisterState*) USED;
 
 private:
     static IRQHandler* m_handlers[entry_count];
@@ -28,7 +28,7 @@ private:
 }
 
 // Super specific mangling rules going on here, be careful :)
-#define IRQ(handler, len) "_ZN6kernel10IRQManager" TO_STRING(len) TO_STRING(handler) "EtNS_13RegisterStateE"
+#define IRQ(handler, len) "_ZN6kernel10IRQManager" TO_STRING(len) TO_STRING(handler) "EtPNS_13RegisterStateE"
 
 // clang-format off
 
@@ -43,13 +43,14 @@ private:
         "    pushl %fs\n"                                                                                              \
         "    pushl %gs\n"                                                                                              \
         "    pushl %ss\n"                                                                                              \
+        "    pushl %esp\n"                                                                                             \
         "    pushw $" #index "\n"                                                                                      \
         "    mov $0x10, %ax\n"                                                                                         \
         "    mov %ax, %ds\n"                                                                                           \
         "    mov %ax, %es\n"                                                                                           \
         "    cld\n"                                                                                                    \
         "    call " IRQ(irq_handler, 11) "\n"                                                                          \
-        "    add $0x6, %esp \n"                                                                                        \
+        "    add $0xA, %esp \n"                                                                                        \
         "    popl %gs\n"                                                                                               \
         "    popl %fs\n"                                                                                               \
         "    popl %es\n"                                                                                               \

@@ -11,7 +11,7 @@
 namespace kernel {
 
 DEFINE_INTERRUPT_HANDLER_NO_ERROR_CODE(division_by_zero, 24)
-void ISR::division_by_zero_handler(RegisterState)
+void ISR::division_by_zero_handler(RegisterState*)
 {
     error() << "Division by zero!";
 
@@ -19,7 +19,7 @@ void ISR::division_by_zero_handler(RegisterState)
 }
 
 DEFINE_INTERRUPT_HANDLER_NO_ERROR_CODE(debug, 13)
-void ISR::debug_handler(RegisterState)
+void ISR::debug_handler(RegisterState*)
 {
     error() << "Debug handler!";
 
@@ -27,7 +27,7 @@ void ISR::debug_handler(RegisterState)
 }
 
 DEFINE_INTERRUPT_HANDLER_NO_ERROR_CODE(non_maskable, 20)
-void ISR::non_maskable_handler(RegisterState)
+void ISR::non_maskable_handler(RegisterState*)
 {
     error() << "Non maskable interrupt!";
 
@@ -35,7 +35,7 @@ void ISR::non_maskable_handler(RegisterState)
 }
 
 DEFINE_INTERRUPT_HANDLER_NO_ERROR_CODE(breakpoint, 18)
-void ISR::breakpoint_handler(RegisterState)
+void ISR::breakpoint_handler(RegisterState*)
 {
     error() << "Breakpoint interrupt!";
 
@@ -43,7 +43,7 @@ void ISR::breakpoint_handler(RegisterState)
 }
 
 DEFINE_INTERRUPT_HANDLER_NO_ERROR_CODE(overflow, 16)
-void ISR::overflow_handler(RegisterState)
+void ISR::overflow_handler(RegisterState*)
 {
     error() << "Overflow interrupt!";
 
@@ -51,7 +51,7 @@ void ISR::overflow_handler(RegisterState)
 }
 
 DEFINE_INTERRUPT_HANDLER_NO_ERROR_CODE(bound_range_exceeded, 28)
-void ISR::bound_range_exceeded_handler(RegisterState)
+void ISR::bound_range_exceeded_handler(RegisterState*)
 {
     error() << "Bound range exceeded!";
 
@@ -59,7 +59,7 @@ void ISR::bound_range_exceeded_handler(RegisterState)
 }
 
 DEFINE_INTERRUPT_HANDLER_NO_ERROR_CODE(invalid_opcode, 22)
-void ISR::invalid_opcode_handler(RegisterState)
+void ISR::invalid_opcode_handler(RegisterState*)
 {
     error() << "Invalid OPcode!";
 
@@ -67,7 +67,7 @@ void ISR::invalid_opcode_handler(RegisterState)
 }
 
 DEFINE_INTERRUPT_HANDLER_NO_ERROR_CODE(device_not_available, 28)
-void ISR::device_not_available_handler(RegisterState)
+void ISR::device_not_available_handler(RegisterState*)
 {
     error() << "Device not available!";
 
@@ -75,7 +75,7 @@ void ISR::device_not_available_handler(RegisterState)
 }
 
 DEFINE_INTERRUPT_HANDLER(double_fault, 20)
-void ISR::double_fault_handler(RegisterState)
+void ISR::double_fault_handler(RegisterState*)
 {
     error() << "Double fault!";
 
@@ -83,7 +83,7 @@ void ISR::double_fault_handler(RegisterState)
 }
 
 DEFINE_INTERRUPT_HANDLER_NO_ERROR_CODE(coprocessor_segment_overrun, 35)
-void ISR::coprocessor_segment_overrun_handler(RegisterState)
+void ISR::coprocessor_segment_overrun_handler(RegisterState*)
 {
     error() << "Coprocessor segment overrun! (really?)";
 
@@ -91,7 +91,7 @@ void ISR::coprocessor_segment_overrun_handler(RegisterState)
 }
 
 DEFINE_INTERRUPT_HANDLER(invalid_tss, 19)
-void ISR::invalid_tss_handler(RegisterState)
+void ISR::invalid_tss_handler(RegisterState*)
 {
     error() << "Invalid TSS!";
 
@@ -99,7 +99,7 @@ void ISR::invalid_tss_handler(RegisterState)
 }
 
 DEFINE_INTERRUPT_HANDLER(segment_not_present, 27)
-void ISR::segment_not_present_handler(RegisterState)
+void ISR::segment_not_present_handler(RegisterState*)
 {
     error() << "Segment not present!";
 
@@ -107,7 +107,7 @@ void ISR::segment_not_present_handler(RegisterState)
 }
 
 DEFINE_INTERRUPT_HANDLER(stack_segment_fault, 27)
-void ISR::stack_segment_fault_handler(RegisterState)
+void ISR::stack_segment_fault_handler(RegisterState*)
 {
     error() << "Stack segment fault!";
 
@@ -115,7 +115,7 @@ void ISR::stack_segment_fault_handler(RegisterState)
 }
 
 DEFINE_INTERRUPT_HANDLER(general_protection_fault, 32)
-void ISR::general_protection_fault_handler(RegisterState)
+void ISR::general_protection_fault_handler(RegisterState*)
 {
     error() << "General protection fault!";
 
@@ -123,7 +123,7 @@ void ISR::general_protection_fault_handler(RegisterState)
 }
 
 DEFINE_INTERRUPT_HANDLER(page_fault, 18)
-void ISR::page_fault_handler(RegisterState state)
+void ISR::page_fault_handler(RegisterState* state)
 {
     static constexpr u32 type_mask = 0b011;
     static constexpr u32 user_mask = 0b100;
@@ -132,9 +132,9 @@ void ISR::page_fault_handler(RegisterState state)
     asm("movl %%cr2, %%eax" : "=a"(address_of_fault));
 
     PageFault pf(address_of_fault,
-                 state.eip,
-                 state.error_code & user_mask,
-                 static_cast<PageFault::Type>(state.error_code & type_mask));
+                 state->eip,
+                 state->error_code & user_mask,
+                 static_cast<PageFault::Type>(state->error_code & type_mask));
 
     MemoryManager::handle_page_fault(pf);
 
@@ -142,7 +142,7 @@ void ISR::page_fault_handler(RegisterState state)
 }
 
 DEFINE_INTERRUPT_HANDLER_NO_ERROR_CODE(floating_point_exception, 32)
-void ISR::floating_point_exception_handler(RegisterState)
+void ISR::floating_point_exception_handler(RegisterState*)
 {
     error() << "Floating point exception!";
 
@@ -150,7 +150,7 @@ void ISR::floating_point_exception_handler(RegisterState)
 }
 
 DEFINE_INTERRUPT_HANDLER(alignment_check_exception, 33)
-void ISR::alignment_check_exception_handler(RegisterState)
+void ISR::alignment_check_exception_handler(RegisterState*)
 {
     error() << "Alignment Check exception!";
 
@@ -158,7 +158,7 @@ void ISR::alignment_check_exception_handler(RegisterState)
 }
 
 DEFINE_INTERRUPT_HANDLER_NO_ERROR_CODE(machine_check_exception, 31)
-void ISR::machine_check_exception_handler(RegisterState)
+void ISR::machine_check_exception_handler(RegisterState*)
 {
     error() << "Machine check exception!";
 
@@ -166,7 +166,7 @@ void ISR::machine_check_exception_handler(RegisterState)
 }
 
 DEFINE_INTERRUPT_HANDLER_NO_ERROR_CODE(simd_floating_point_exception, 37)
-void ISR::simd_floating_point_exception_handler(RegisterState)
+void ISR::simd_floating_point_exception_handler(RegisterState*)
 {
     error() << "SIMD floating point exception!";
 
@@ -174,7 +174,7 @@ void ISR::simd_floating_point_exception_handler(RegisterState)
 }
 
 DEFINE_INTERRUPT_HANDLER_NO_ERROR_CODE(virtualization_exception, 32)
-void ISR::virtualization_exception_handler(RegisterState)
+void ISR::virtualization_exception_handler(RegisterState*)
 {
     error() << "Virtualization exception!";
 
@@ -182,7 +182,7 @@ void ISR::virtualization_exception_handler(RegisterState)
 }
 
 DEFINE_INTERRUPT_HANDLER(security_exception, 26)
-void ISR::security_exception_handler(RegisterState)
+void ISR::security_exception_handler(RegisterState*)
 {
     error() << "Security exception!";
 

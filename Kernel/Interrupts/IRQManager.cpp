@@ -55,7 +55,7 @@ bool IRQManager::has_subscriber(u16 request_number)
     return m_handlers[request_number];
 }
 
-void IRQManager::irq_handler(u16 request_number, RegisterState registers)
+void IRQManager::irq_handler(u16 request_number, RegisterState* registers)
 {
     if (InterruptController::the().is_spurious(request_number)) {
         warning() << "IRQManager: Spurious IRQ " << request_number << "!";
@@ -68,7 +68,7 @@ void IRQManager::irq_handler(u16 request_number, RegisterState registers)
         hang();
     }
 
-    m_handlers[request_number]->on_irq(registers);
+    m_handlers[request_number]->on_irq(*registers);
     m_handlers[request_number]->finialize_irq();
 }
 
