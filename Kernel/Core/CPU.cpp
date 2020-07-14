@@ -19,6 +19,16 @@ void CPU::initialize()
     }
 }
 
+CPU::EFLAGS CPU::flags()
+{
+    EFLAGS flags;
+    asm volatile("pushf\n"
+                 "pop %0\n"
+                 : "=a"(flags)::"memory");
+
+    return flags;
+}
+
 void CPU::start_all_processors()
 {
     ASSERT(s_smp_data != nullptr);

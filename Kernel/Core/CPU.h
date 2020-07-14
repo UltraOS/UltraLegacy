@@ -10,6 +10,22 @@ class CPU {
 public:
     static void initialize();
 
+    enum class EFLAGS : size_t {
+        CARRY      = SET_BIT(0),
+        PARITY     = SET_BIT(2),
+        ADJUST     = SET_BIT(4),
+        ZERO       = SET_BIT(6),
+        SIGN       = SET_BIT(7),
+        INTERRUPTS = SET_BIT(9),
+        DIRECTION  = SET_BIT(10),
+        OVERFLOW   = SET_BIT(11),
+        CPUID      = SET_BIT(21),
+    };
+
+    friend bool operator&(EFLAGS l, EFLAGS r) { return static_cast<size_t>(l) & static_cast<size_t>(r); }
+
+    static EFLAGS flags();
+
     struct SMPData {
         DynamicArray<u8> application_processor_apic_ids;
         u8               bootstrap_processor_apic_id;
@@ -124,6 +140,37 @@ private:
             u8        version;
             Flags     flags;
             Address   io_apic_pointer;
+        };
+
+        struct IOInterruptEntry {
+            enum class InterruptType : u8 {
+                INT    = 0,
+                NMI    = 1,
+                SMI    = 2,
+                ExtINT = 3
+            };
+
+            enum class Polarity : u8 {
+                CONFORMING  = 0,
+                ACTIVE_HIGH = 1,
+                ACTIVE_LOW  = 3
+            };
+
+            enum class TriggerMode : u8 {
+                CONFORMING  = 0,
+                EDGE        = 1,
+                LEVEL       = 3
+            };
+
+            EntryType type;
+            InterruptType interrupt_type;
+            Polarity polarity : 2;
+            TriggerMode trigger_mode : 2;
+            u16 reserved : 12;
+            u8 source_bus_id;
+            u8 source_bus_irq;
+            u8 destination_ioapic_id;
+            u8 destination_ioapic_pin;
         };
 
         static void find_floating_pointer_table();
