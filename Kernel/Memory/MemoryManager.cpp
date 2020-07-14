@@ -136,7 +136,7 @@ void MemoryManager::unquickmap_page()
 
 RefPtr<Page> MemoryManager::allocate_page()
 {
-    InterruptDisabler d;
+    Interrupts::ScopedDisabler d;
 
     for (auto& region: m_physical_regions) {
         if (!region.has_free_pages())
@@ -211,7 +211,7 @@ void MemoryManager::inititalize(PageDirectory& directory)
     // 11. tons of magic numbers                                                         --- kinda done
     // 12. more TBD...
 
-    InterruptDisabler d;
+    Interrupts::ScopedDisabler d;
 
     // map the directory's physical page somewhere temporarily
     ScopedPageMapping mapping(directory.physical_address());

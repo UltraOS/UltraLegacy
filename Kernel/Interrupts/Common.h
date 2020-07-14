@@ -3,6 +3,7 @@
 #include "Common/Logger.h"
 #include "Common/Macros.h"
 #include "Common/Types.h"
+#include "Core/CPU.h"
 
 namespace kernel {
 
@@ -80,38 +81,25 @@ private:
     Type    m_type { READ_NON_PRESENT };
 };
 
-class InterruptDisabler {
-public:
-    InterruptDisabler() { increment(); }
+namespace Interrupts {
+    inline bool are_enabled() { return CPU::flags() & CPU::EFLAGS::INTERRUPTS; }
 
-    ~InterruptDisabler() { decrement(); }
+    inline void enable() { sti(); }
 
-    static void increment()
-    {
-        ++s_refcount;
-        update_state();
-    }
+    inline void disable() { cli(); }
 
-    static void decrement()
-    {
-        ASSERT(s_refcount > 0);
+    class ScopedDisabler {
+    public:
+        ScopedDisabler() : m_should_enable(are_enabled()) { disable(); }
 
-        --s_refcount;
-        update_state();
-    }
+        ~ScopedDisabler()
+        {
+            if (m_should_enable)
+                enable();
+        }
 
-    static size_t refcount() { return s_refcount; }
-
-private:
-    static void update_state()
-    {
-        if (s_refcount)
-            cli();
-        else
-            sti();
-    }
-
-private:
-    inline static size_t s_refcount;
-};
+    private:
+        bool m_should_enable { false };
+    };
+}
 }

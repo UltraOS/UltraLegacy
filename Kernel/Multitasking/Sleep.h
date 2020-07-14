@@ -10,16 +10,13 @@ namespace kernel::sleep {
 
 inline void until(u64 time)
 {
-    cli();
+    Interrupts::ScopedDisabler d;
 
-    if (time <= Timer::nanoseconds_since_boot()) {
-        sti();
+    if (time <= Timer::nanoseconds_since_boot())
         return;
-    }
 
     Thread::current()->sleep(time);
     Scheduler::yield();
-    sti();
 }
 
 inline void for_nanoseconds(u64 time)

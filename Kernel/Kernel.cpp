@@ -54,8 +54,6 @@ void run(MemoryMap memory_map)
 {
     runtime::ensure_loaded_correctly();
 
-    InterruptDisabler::increment();
-
     HeapAllocator::initialize();
 
     runtime::init_global_objects();
@@ -82,7 +80,7 @@ void run(MemoryMap memory_map)
 
     CPU::start_all_processors();
 
-    InterruptDisabler::decrement();
+    Interrupts::enable();
 
     // ---> TESTING AREA
     // ----------------------------------------- //

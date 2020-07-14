@@ -8,7 +8,7 @@ void Syscall::exit(u8 code)
 {
     log() << "Thread " << Thread::current() << " exited with code " << code;
 
-    cli();
+    Interrupts::ScopedDisabler d;
     Thread::current()->exit(code);
     Scheduler::yield();
 }

@@ -143,34 +143,21 @@ private:
         };
 
         struct IOInterruptEntry {
-            enum class InterruptType : u8 {
-                INT    = 0,
-                NMI    = 1,
-                SMI    = 2,
-                ExtINT = 3
-            };
+            enum class InterruptType : u8 { INT = 0, NMI = 1, SMI = 2, ExtINT = 3 };
 
-            enum class Polarity : u8 {
-                CONFORMING  = 0,
-                ACTIVE_HIGH = 1,
-                ACTIVE_LOW  = 3
-            };
+            enum class Polarity : u8 { CONFORMING = 0, ACTIVE_HIGH = 1, ACTIVE_LOW = 3 };
 
-            enum class TriggerMode : u8 {
-                CONFORMING  = 0,
-                EDGE        = 1,
-                LEVEL       = 3
-            };
+            enum class TriggerMode : u8 { CONFORMING = 0, EDGE = 1, LEVEL = 3 };
 
-            EntryType type;
+            EntryType     type;
             InterruptType interrupt_type;
-            Polarity polarity : 2;
-            TriggerMode trigger_mode : 2;
-            u16 reserved : 12;
-            u8 source_bus_id;
-            u8 source_bus_irq;
-            u8 destination_ioapic_id;
-            u8 destination_ioapic_pin;
+            Polarity      polarity : 2;
+            TriggerMode   trigger_mode : 2;
+            u16           reserved : 12;
+            u8            source_bus_id;
+            u8            source_bus_irq;
+            u8            destination_ioapic_id;
+            u8            destination_ioapic_pin;
         };
 
         static void find_floating_pointer_table();

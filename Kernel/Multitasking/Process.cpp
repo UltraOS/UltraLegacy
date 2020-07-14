@@ -9,7 +9,7 @@ RefPtr<Process> Process::s_kernel_process;
 
 RefPtr<Process> Process::create(Address entrypoint)
 {
-    InterruptDisabler d;
+    Interrupts::ScopedDisabler d;
 
     RefPtr<Process> process = new Process(entrypoint);
     Scheduler::the().register_process(process);
@@ -20,7 +20,7 @@ RefPtr<Process> Process::create(Address entrypoint)
 //       e.g Process::create_supervious and Thread::create_supervisor_thread
 RefPtr<Process> Process::create_supervisor(Address entrypoint)
 {
-    InterruptDisabler d;
+    Interrupts::ScopedDisabler d;
 
     RefPtr<Process> process = new Process(entrypoint, true);
     Scheduler::the().register_process(process);

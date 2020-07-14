@@ -74,7 +74,7 @@ void PageDirectory::map_page(Address virtual_address, Address physical_address, 
     ASSERT_PAGE_ALIGNED(virtual_address);
     ASSERT_PAGE_ALIGNED(physical_address);
 
-    InterruptDisabler d;
+    Interrupts::ScopedDisabler d;
 
     auto  indices          = virtual_address_as_paging_indices(virtual_address);
     auto& page_table_index = indices.left();
@@ -190,7 +190,7 @@ bool PageDirectory::is_active()
 
 void PageDirectory::make_active()
 {
-    InterruptDisabler d;
+    Interrupts::ScopedDisabler d;
 
     if (is_active())
         return;

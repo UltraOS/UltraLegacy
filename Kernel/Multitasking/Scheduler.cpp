@@ -67,9 +67,8 @@ Scheduler& Scheduler::the()
 
 void Scheduler::yield()
 {
-    cli();
+    Interrupts::ScopedDisabler d;
     pick_next();
-    sti();
 }
 
 void Scheduler::wake_up_ready_threads()
