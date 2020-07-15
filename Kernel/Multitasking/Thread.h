@@ -1,15 +1,17 @@
 #pragma once
 
+#include "Core/CPU.h"
 #include "Interrupts/Timer.h"
 #include "Memory/PageDirectory.h"
 #include "TSS.h"
 
 namespace kernel {
 
-using userland_entrypoint_t = void (*)();
+using entrypoint_t = void (*)();
 
 // defined in Core/crt0.asm
-extern "C" userland_entrypoint_t userland_entrypoint;
+extern "C" entrypoint_t user_thread_entrypoint;
+extern "C" entrypoint_t supervisor_thread_entrypoint;
 
 class Thread {
 public:
@@ -73,35 +75,37 @@ public:
     bool should_be_woken_up() { return m_wake_up_time <= Timer::nanoseconds_since_boot(); }
 
 private:
-    struct iret_stack_frame {
-        Address instruction_pointer;
-        u32     code_selector;
-        u32     eflags;
-        Address stack_pointer;
-        u32     data_selector;
+    struct supervisor_iret_frame {
+        Address     instruction_pointer;
+        u32         code_selector;
+        CPU::EFLAGS eflags;
     };
 
-    struct task_switcher_task_frame {
-        u32     ebp;
-        u32     edi;
-        u32     esi;
-        u32     ebx;
-        Address instruction_pointer;
+    struct user_iret_stack_frame {
+        Address     instruction_pointer;
+        u32         code_selector;
+        CPU::EFLAGS eflags;
+        Address     stack_pointer;
+        u32         data_selector;
     };
 
-    struct supervisor_starting_stack_frame {
-        task_switcher_task_frame switcher_frame;
+    struct task_switcher_stack_frame {
+        u32         ebp;
+        u32         edi;
+        u32         esi;
+        u32         ebx;
+        Address     instruction_pointer;
     };
 
-    struct userland_starting_stack_frame {
-        task_switcher_task_frame switcher_frame;
-        iret_stack_frame         interrupt_frame;
+    struct supervisor_thread_stack_frame {
+        task_switcher_stack_frame switcher_frame;
+        supervisor_iret_frame     iret_frame;
     };
 
-    static_assert(sizeof(iret_stack_frame) == 20);
-    static_assert(sizeof(task_switcher_task_frame) == 20);
-    static_assert(sizeof(supervisor_starting_stack_frame) == 20);
-    static_assert(sizeof(userland_starting_stack_frame) == 40);
+    struct user_thread_stack_frame {
+        task_switcher_stack_frame switcher_frame;
+        user_iret_stack_frame     iret_frame;
+    };
 
     Thread(PageDirectory& page_dir, Address kernel_stack);
 

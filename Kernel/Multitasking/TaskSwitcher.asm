@@ -1,8 +1,8 @@
 %define switch_task _ZN6kernel9Scheduler11switch_taskEPNS_6Thread12ControlBlockES3_
-%define userland_data_selector 0x20
-%define rpl_ring_3             0x3
-%define current_task_ptr       esp + (4 * 5)
-%define new_task_ptr           esp + (4 * 6)
+%define user_data_selector 0x20
+%define rpl_ring_3         0x3
+%define current_task_ptr   esp + (4 * 5)
+%define new_task_ptr       esp + (4 * 6)
 
 section .text
 ; void Scheduler::switch_task(Thread::ControlBlock* current_task, Thread::ControlBlock* new_task)
@@ -28,11 +28,15 @@ switch_task:
 
     ret
 
-global userland_entrypoint
-userland_entrypoint:
-    mov     ax, userland_data_selector | rpl_ring_3
+global user_thread_entrypoint
+user_thread_entrypoint:
+    mov     ax, user_data_selector | rpl_ring_3
     mov     ds, ax
     mov     es, ax
     mov     fs, ax
     mov     gs, ax
+    iret
+
+global supervisor_thread_entrypoint
+supervisor_thread_entrypoint:
     iret

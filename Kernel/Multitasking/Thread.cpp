@@ -13,16 +13,21 @@ void Thread::initialize()
 
 RefPtr<Thread> Thread::create_supervisor_thread(Address kernel_stack, Address entrypoint)
 {
-    Address adjusted_stack = kernel_stack - sizeof(supervisor_starting_stack_frame);
+    Address adjusted_stack = kernel_stack - sizeof(supervisor_thread_stack_frame);
 
     auto thread                        = new Thread(PageDirectory::of_kernel(), adjusted_stack);
     thread->m_is_supervisor            = true;
     thread->m_initial_kernel_stack_top = kernel_stack;
 
-    auto* frame = new (adjusted_stack.as_pointer<supervisor_starting_stack_frame>()) supervisor_starting_stack_frame;
+    auto* frame          = new (adjusted_stack.as_pointer<void>()) supervisor_thread_stack_frame;
     auto& switcher_frame = frame->switcher_frame;
+    auto& iret_frame = frame->iret_frame;
 
-    switcher_frame.instruction_pointer = entrypoint;
+    iret_frame.eflags              = CPU::EFLAGS::INTERRUPTS;
+    iret_frame.code_selector       = GDT::kernel_code_selector();
+    iret_frame.instruction_pointer = entrypoint;
+
+    switcher_frame.instruction_pointer = &supervisor_thread_entrypoint;
     switcher_frame.ebx                 = 0xDEADC0DE;
     switcher_frame.esi                 = 0xDEADBEEF;
     switcher_frame.edi                 = 0xC0DEBEEF;
@@ -34,25 +39,24 @@ RefPtr<Thread> Thread::create_supervisor_thread(Address kernel_stack, Address en
 RefPtr<Thread>
 Thread::create_user_thread(PageDirectory& page_dir, Address user_stack, Address kernel_stack, Address entrypoint)
 {
-    Address adjusted_stack = kernel_stack - sizeof(userland_starting_stack_frame);
+    Address adjusted_stack = kernel_stack - sizeof(user_thread_stack_frame);
 
     auto thread                        = new Thread(page_dir, adjusted_stack);
     thread->m_initial_kernel_stack_top = kernel_stack;
 
-    auto* frame      = new (adjusted_stack.as_pointer<userland_starting_stack_frame>()) userland_starting_stack_frame;
-    auto& iret_frame = frame->interrupt_frame;
+    auto* frame          = new (adjusted_stack.as_pointer<void>()) user_thread_stack_frame;
+    auto& iret_frame     = frame->iret_frame;
     auto& switcher_frame = frame->switcher_frame;
 
-    static constexpr auto interrupts_enabled_flag = 0x200;
-    static constexpr auto rpl_ring_3              = 0x3;
+    static constexpr auto rpl_ring_3 = 0x3;
 
     iret_frame.data_selector       = GDT::userland_data_selector() | rpl_ring_3;
     iret_frame.stack_pointer       = user_stack;
-    iret_frame.eflags              = interrupts_enabled_flag;
+    iret_frame.eflags              = CPU::EFLAGS::INTERRUPTS;
     iret_frame.code_selector       = GDT::userland_code_selector() | rpl_ring_3;
     iret_frame.instruction_pointer = entrypoint;
 
-    switcher_frame.instruction_pointer = &userland_entrypoint;
+    switcher_frame.instruction_pointer = &user_thread_entrypoint;
     switcher_frame.ebx                 = 0xDEADC0DE;
     switcher_frame.esi                 = 0xDEADBEEF;
     switcher_frame.edi                 = 0xC0DEBEEF;
