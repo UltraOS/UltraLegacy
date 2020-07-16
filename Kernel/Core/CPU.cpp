@@ -151,14 +151,35 @@ void CPU::MP::parse_configuration_table()
             else
                 s_smp_data->application_processor_apic_ids.append(processor.local_apic_id);
 
+        } else if (type == EntryType::BUS) {
+            auto& bus = *entry_address.as_pointer<BusEntry>();
+
+            log() << "CPU: Bus id " << bus.id << " type " << StringView(bus.type_string, 6);
+
         } else if (type == EntryType::IO_APIC) {
             auto& io_apic = *entry_address.as_pointer<IOAPICEntry>();
 
             bool is_ok = io_apic.flags & IOAPICEntry::Flags::OK;
 
-            log() << "CPU: I/O APIC at " << io_apic.io_apic_pointer << " is_ok:" << is_ok;
+            log() << "CPU: I/O APIC at " << io_apic.io_apic_pointer << " is_ok:" << is_ok << " id:" << io_apic.id;
 
             s_smp_data->io_apic_address = io_apic.io_apic_pointer;
+        } else if (type == EntryType::IO_INTERRUPT_ASSIGNMENT || type == EntryType::LOCAL_INTERRUPT_ASSIGNMENT) {
+            auto& interrupt = *entry_address.as_pointer<InterruptEntry>();
+
+            const char* str_type = type == EntryType::IO_INTERRUPT_ASSIGNMENT ? "I/O Interrupt Assignment"
+                                                                              : "Local Interrupt Assignment";
+
+            const char* str_apic = type == EntryType::IO_INTERRUPT_ASSIGNMENT ? "IOAPIC" : "LAPIC";
+
+            log() << "CPU: " << str_type << " entry:"
+                  << "\n----> Type: " << InterruptEntry::to_string(interrupt.interrupt_type) << " Interrupt"
+                  << "\n----> Polarity: " << InterruptEntry::to_string(interrupt.polarity)
+                  << "\n----> Trigger mode: " << InterruptEntry::to_string(interrupt.trigger_mode)
+                  << "\n----> Source bus ID: " << interrupt.source_bus_id
+                  << "\n----> Source bus IRQ: " << interrupt.source_bus_irq << "\n----> Destination " << str_apic
+                  << " id: " << interrupt.destination_ioapic_id << "\n----> Destination " << str_apic
+                  << " pin: " << interrupt.destination_ioapic_pin;
         }
 
         entry_address += sizeof_entry(type);

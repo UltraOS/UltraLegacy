@@ -69,18 +69,6 @@ private:
             }
         }
 
-        static StringView entry_type_to_string(EntryType t)
-        {
-            switch (t) {
-            case EntryType::PROCESSOR: return "Processor"_sv;
-            case EntryType::BUS: return "Bus"_sv;
-            case EntryType::IO_APIC: return "I/O APIC"_sv;
-            case EntryType::IO_INTERRUPT_ASSIGNMENT: return "I/O interrupt assignment"_sv;
-            case EntryType::LOCAL_INTERRUPT_ASSIGNMENT: return "Local interrupt assignment"_sv;
-            default: return "Unknown"_sv;
-            }
-        }
-
         struct ConfigurationTable {
             char    signature[4];
             u16     length;
@@ -142,12 +130,43 @@ private:
             Address   io_apic_pointer;
         };
 
-        struct IOInterruptEntry {
+        struct InterruptEntry {
             enum class InterruptType : u8 { INT = 0, NMI = 1, SMI = 2, ExtINT = 3 };
 
             enum class Polarity : u8 { CONFORMING = 0, ACTIVE_HIGH = 1, ACTIVE_LOW = 3 };
 
             enum class TriggerMode : u8 { CONFORMING = 0, EDGE = 1, LEVEL = 3 };
+
+            static StringView to_string(InterruptType t)
+            {
+                switch (t) {
+                case InterruptType::INT: return "Vectored"_sv;
+                case InterruptType::NMI: return "Nonmaskable"_sv;
+                case InterruptType::SMI: return "System Management"_sv;
+                case InterruptType::ExtINT: return "External"_sv;
+                default: return "Unknown"_sv;
+                }
+            }
+
+            static StringView to_string(Polarity p)
+            {
+                switch (p) {
+                case Polarity::CONFORMING: return "Conforming"_sv;
+                case Polarity::ACTIVE_HIGH: return "Active High"_sv;
+                case Polarity::ACTIVE_LOW: return "Active Low"_sv;
+                default: return "Unknown"_sv;
+                }
+            }
+
+            static StringView to_string(TriggerMode t)
+            {
+                switch (t) {
+                case TriggerMode::CONFORMING: return "Conforming"_sv;
+                case TriggerMode::EDGE: return "Edge"_sv;
+                case TriggerMode::LEVEL: return "Level"_sv;
+                default: return "Unknown"_sv;
+                }
+            }
 
             EntryType     type;
             InterruptType interrupt_type;
@@ -158,6 +177,12 @@ private:
             u8            source_bus_irq;
             u8            destination_ioapic_id;
             u8            destination_ioapic_pin;
+        };
+
+        struct BusEntry {
+            EntryType type;
+            u8 id;
+            char type_string[6];
         };
 
         static void find_floating_pointer_table();
