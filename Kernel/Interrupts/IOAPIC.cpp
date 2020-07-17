@@ -28,21 +28,21 @@ IOAPIC::Register IOAPIC::redirection_entry(u8 index, bool is_lower)
     return static_cast<Register>(static_cast<u32>(Register::REDIRECTION_TABLE) + (index * 2) + (is_lower ? 0 : 1));
 }
 
-void IOAPIC::map_legacy_irq(u8 index, u8 to_index, u8 local_apic_id)
+void IOAPIC::map_irq(const InterruptController::IRQInfo& irq, u8 to_index)
 {
     RedirectionEntry re {};
     re.index            = to_index;
     re.delivery_mode    = DeliveryMode::FIXED;
     re.destination_mode = DestinationMode::PHYSICAL;
-    re.pin_polarity     = PinPolarity::ACTIVE_HIGH;
-    re.trigger_mode     = TriggerMode::EDGE;
+    re.pin_polarity     = irq.is_active_high ? PinPolarity::ACTIVE_HIGH : PinPolarity::ACTIVE_LOW;
+    re.trigger_mode     = irq.is_edge ? TriggerMode::EDGE : TriggerMode::LEVEL;
     re.is_disabled      = false;
-    re.local_apic_id    = local_apic_id;
+    re.local_apic_id    = InterruptController::smp_data().bootstrap_processor_apic_id;
 
     volatile auto* redirection_lower = Address(&re).as_pointer<u32>();
 
-    write_register(redirection_entry(index, true), *redirection_lower);
-    write_register(redirection_entry(index, false), *(redirection_lower + 1));
+    write_register(redirection_entry(irq.redirected_irq_index, true), *redirection_lower);
+    write_register(redirection_entry(irq.redirected_irq_index, false), *(redirection_lower + 1));
 }
 
 void IOAPIC::select_register(Register reg)

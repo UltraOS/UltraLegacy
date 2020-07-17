@@ -62,8 +62,6 @@ void run(MemoryMap memory_map)
 
     PageDirectory::inititalize();
 
-    CPU::initialize();
-
     InterruptController::discover_and_setup();
 
     GDT::the().create_basic_descriptors();

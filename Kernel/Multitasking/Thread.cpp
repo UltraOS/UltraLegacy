@@ -21,7 +21,7 @@ RefPtr<Thread> Thread::create_supervisor_thread(Address kernel_stack, Address en
 
     auto* frame          = new (adjusted_stack.as_pointer<void>()) supervisor_thread_stack_frame;
     auto& switcher_frame = frame->switcher_frame;
-    auto& iret_frame = frame->iret_frame;
+    auto& iret_frame     = frame->iret_frame;
 
     iret_frame.eflags              = CPU::EFLAGS::INTERRUPTS;
     iret_frame.code_selector       = GDT::kernel_code_selector();

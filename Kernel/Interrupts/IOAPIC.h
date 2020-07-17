@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Common/Types.h"
+#include "InterruptController.h"
 
 namespace kernel {
 
@@ -22,7 +23,7 @@ public:
 
     static u32 redirection_entry_count();
 
-    static void map_legacy_irq(u8 index, u8 to_index, u8 local_apic_id);
+    static void map_irq(const InterruptController::IRQInfo& irq, u8 to_index);
 
 private:
     static Register redirection_entry(u8, bool is_lower);

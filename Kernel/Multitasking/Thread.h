@@ -90,11 +90,11 @@ private:
     };
 
     struct task_switcher_stack_frame {
-        u32         ebp;
-        u32         edi;
-        u32         esi;
-        u32         ebx;
-        Address     instruction_pointer;
+        u32     ebp;
+        u32     edi;
+        u32     esi;
+        u32     ebx;
+        Address instruction_pointer;
     };
 
     struct supervisor_thread_stack_frame {

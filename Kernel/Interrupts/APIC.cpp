@@ -9,9 +9,9 @@ namespace kernel {
 APIC::APIC()
 {
     PIC::ensure_disabled();
-    LAPIC::set_base_address(CPU::smp_data().local_apic_address);
+    LAPIC::set_base_address(smp_data().lapic_address);
     LAPIC::initialize_for_this_processor();
-    IOAPIC::set_base_address(CPU::smp_data().io_apic_address);
+    IOAPIC::set_base_address(smp_data().ioapic_address);
 }
 
 void APIC::end_of_interrupt(u8)
@@ -23,14 +23,18 @@ void APIC::clear_all() { }
 
 void APIC::enable_irq(u8 index)
 {
-    // TODO: Fix this hack, its super dirty.
-    //       (it assumes there's an override entry for the PIT)
-    if (index == 0) {
-        IOAPIC::map_legacy_irq(2, IRQManager::irq_base_index, CPU::smp_data().bootstrap_processor_apic_id);
-        return;
+    bool mapped_at_least_one = false;
+
+    // for whatver reason there can be more than 1 IRQ with the same index
+    // so we have to do this in a loop without even a "break" statement
+    for (const auto& irq: smp_data().irqs) {
+        if (irq.original_irq_index == index) {
+            mapped_at_least_one = true;
+            IOAPIC::map_irq(irq, IRQManager::irq_base_index + index);
+        }
     }
 
-    IOAPIC::map_legacy_irq(index, IRQManager::irq_base_index + index, CPU::smp_data().bootstrap_processor_apic_id);
+    ASSERT(mapped_at_least_one);
 }
 
 void APIC::disable_irq(u8 index)
