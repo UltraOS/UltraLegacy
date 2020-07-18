@@ -42,6 +42,21 @@ template <typename T>
 using remove_const_volatile_t = typename remove_const_volatile<T>::type;
 // --------------------
 
+// ---- remove_pointer ----
+template <typename T>
+struct remove_pointer {
+    using type = T;
+};
+
+template <typename T>
+struct remove_pointer<T*> {
+    using type = T;
+};
+
+template <typename T>
+using remove_pointer_t = typename remove_pointer<T>::type;
+// --------------------
+
 // ---- is_integral ----
 // TODO: implement is_any_of and remove_const_volatile here
 template <typename T>
