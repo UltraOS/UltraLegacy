@@ -74,6 +74,9 @@ void LAPIC::send_startup_to(u8 id)
     write_register(Register::INTERRUPT_COMMAND_REGISTER_LOWER, *icr_pointer);
 }
 
+extern "C" bool alive;
+extern "C" bool allowed_to_boot;
+
 void LAPIC::start_processor(u8 id)
 {
     log() << "LAPIC: Starting application processor " << id << "...";
@@ -82,16 +85,25 @@ void LAPIC::start_processor(u8 id)
     static constexpr Address entrypoint_base        = 0x1000;
     static constexpr Address entrypoint_base_linear = MemoryManager::physical_address_as_kernel(entrypoint_base);
 
+    auto address_of_var = [](auto addr) {
+        size_t offset = Address(addr).as_pointer<volatile u8>()
+                        - reinterpret_cast<volatile u8*>(&application_processor_entrypoint);
+
+        Address var_address = entrypoint_base.as_pointer<volatile u8>() + offset;
+
+        return MemoryManager::physical_address_as_kernel(var_address)
+            .as_pointer<volatile remove_pointer_t<decltype(addr)>>();
+    };
+
+    auto* is_ap_alive        = address_of_var(&alive);
+    auto* is_allowed_to_boot = address_of_var(&allowed_to_boot);
+
     if (!entrypoint_relocated) {
         copy_memory(reinterpret_cast<void*>(&application_processor_entrypoint),
                     entrypoint_base_linear.as_pointer<void>(),
                     Page::size);
         entrypoint_relocated = true;
     }
-
-    volatile auto* magic_memory_address
-        = Address(MemoryManager::physical_address_as_kernel(0x2000)).as_pointer<volatile u16>();
-    *magic_memory_address = 0xBEEF;
 
     send_init_to(id);
 
@@ -101,7 +113,7 @@ void LAPIC::start_processor(u8 id)
 
     Timer::the().mili_delay(1);
 
-    if (*magic_memory_address == 0xDEAD) {
+    if (*is_ap_alive) {
         log() << "LAPIC: Application processor " << id << " started successfully";
 
         char str[2];
@@ -109,6 +121,9 @@ void LAPIC::start_processor(u8 id)
         auto offset = vga_log("Processor ", 8 + id, 0, 0x3);
         offset      = vga_log(str, 8 + id, offset, 0x3);
         vga_log(" started successfully!", 8 + id, offset, 0x3);
+
+        // allow the ap to boot further
+        *is_allowed_to_boot = true;
 
         return;
     }
@@ -121,13 +136,17 @@ void LAPIC::start_processor(u8 id)
     for (size_t i = 0; i < 20; ++i)
         Timer::the().mili_delay(50);
 
-    if (*magic_memory_address == 0xDEAD) {
+    if (*is_ap_alive) {
         char str[2];
         to_string(id, str, 2);
         auto offset = vga_log("Processor ", 8 + id, 0, 0x3);
         offset      = vga_log(str, 8 + id, offset, 0x3);
         vga_log(" started successfully after two SIPIs!", 8 + id, offset, 0x3);
         log() << "LAPIC: Application processor " << id << " started successfully after second SIPI";
+
+        // allow the ap to boot further
+        *is_allowed_to_boot = true;
+
     } else
         error() << "LAPIC: Application processor " << id << " failed to start after 2 SIPIs";
 }
