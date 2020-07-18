@@ -193,8 +193,11 @@ void InterruptController::MP::parse_configuration_table(FloatingPointer* fp_tabl
 
             auto& interrupt = *entry_address.as_pointer<InterruptEntry>();
 
-            // TODO: handle lapic assignemnts separetely (LINT0/LINT1 stuff)
-            if (type == EntryType::LOCAL_INTERRUPT_ASSIGNMENT) {
+            // TODO: 1. handle lapic assignemnts separetely (LINT0/LINT1 stuff)
+            //       2. handle interrupt types other than the default vectored
+            //       3. handle interrupts that are coming from the PCI bus
+            if (type == EntryType::LOCAL_INTERRUPT_ASSIGNMENT || interrupt.interrupt_type != InterruptEntry::Type::INT
+                || interrupt.source_bus_id != isa_bus_id) {
                 entry_address += sizeof_entry(type);
                 continue;
             }
@@ -228,6 +231,7 @@ void InterruptController::MP::parse_configuration_table(FloatingPointer* fp_tabl
                 warning()
                     << "InterruptController: interrupt polarity was declared conforming but the default mode for bus "
                     << interrupt.source_bus_id << " is unknown.\n";
+                entry_address += sizeof_entry(type);
                 continue;
             }
 
@@ -241,7 +245,7 @@ void InterruptController::MP::parse_configuration_table(FloatingPointer* fp_tabl
                 warning() << "InterruptController: interrupt trigger mode was declared conforming\n"
                              "          but the default mode for bus "
                           << interrupt.source_bus_id << " is unknown.\n";
-
+                entry_address += sizeof_entry(type);
                 continue;
             }
 

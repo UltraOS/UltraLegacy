@@ -23,18 +23,14 @@ void APIC::clear_all() { }
 
 void APIC::enable_irq(u8 index)
 {
-    bool mapped_at_least_one = false;
-
-    // for whatver reason there can be more than 1 IRQ with the same index
-    // so we have to do this in a loop without even a "break" statement
     for (const auto& irq: smp_data().irqs) {
         if (irq.original_irq_index == index) {
-            mapped_at_least_one = true;
             IOAPIC::map_irq(irq, IRQManager::irq_base_index + index);
+            return;
         }
     }
 
-    ASSERT(mapped_at_least_one);
+    ASSERT(false);
 }
 
 void APIC::disable_irq(u8 index)

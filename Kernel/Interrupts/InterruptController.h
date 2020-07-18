@@ -132,19 +132,19 @@ private:
         };
 
         struct InterruptEntry {
-            enum class InterruptType : u8 { INT = 0, NMI = 1, SMI = 2, ExtINT = 3 };
+            enum class Type : u8 { INT = 0, NMI = 1, SMI = 2, ExtINT = 3 };
 
             enum class Polarity : u8 { CONFORMING = 0, ACTIVE_HIGH = 1, ACTIVE_LOW = 3 };
 
             enum class TriggerMode : u8 { CONFORMING = 0, EDGE = 1, LEVEL = 3 };
 
-            static StringView to_string(InterruptType t)
+            static StringView to_string(Type t)
             {
                 switch (t) {
-                case InterruptType::INT: return "Vectored"_sv;
-                case InterruptType::NMI: return "Nonmaskable"_sv;
-                case InterruptType::SMI: return "System Management"_sv;
-                case InterruptType::ExtINT: return "External"_sv;
+                case Type::INT: return "Vectored"_sv;
+                case Type::NMI: return "Nonmaskable"_sv;
+                case Type::SMI: return "System Management"_sv;
+                case Type::ExtINT: return "External"_sv;
                 default: return "Unknown"_sv;
                 }
             }
@@ -169,15 +169,15 @@ private:
                 }
             }
 
-            EntryType     type;
-            InterruptType interrupt_type;
-            Polarity      polarity : 2;
-            TriggerMode   trigger_mode : 2;
-            u16           reserved : 12;
-            u8            source_bus_id;
-            u8            source_bus_irq;
-            u8            destination_ioapic_id;
-            u8            destination_ioapic_pin;
+            EntryType   type;
+            Type        interrupt_type;
+            Polarity    polarity : 2;
+            TriggerMode trigger_mode : 2;
+            u16         reserved : 12;
+            u8          source_bus_id;
+            u8          source_bus_irq;
+            u8          destination_ioapic_id;
+            u8          destination_ioapic_pin;
         };
 
         struct BusEntry {
