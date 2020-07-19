@@ -2,8 +2,6 @@
 
 extern KERNEL_ENTRYPOINT
 
-section .bss
-
 %define KB (1024)
 %define MB (1024 * KB)
 
@@ -37,6 +35,7 @@ global kernel_page_directory
 kernel_page_directory:
     resb PAGE_SIZE
 
+global kernel_page_table
 kernel_page_table:
     resb PAGE_SIZE
 

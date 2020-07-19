@@ -37,6 +37,11 @@ void LAPIC::end_of_interrupt()
     write_register(Register::END_OF_INTERRUPT, 0);
 }
 
+u32 LAPIC::my_id()
+{
+    return (read_register(Register::ID) >> 24) & 0xFF;
+}
+
 extern "C" void application_processor_entrypoint();
 
 void LAPIC::send_init_to(u8 id)
@@ -116,12 +121,6 @@ void LAPIC::start_processor(u8 id)
     if (*is_ap_alive) {
         log() << "LAPIC: Application processor " << id << " started successfully";
 
-        char str[2];
-        to_string(id, str, 2);
-        auto offset = vga_log("Processor ", 8 + id, 0, 0x3);
-        offset      = vga_log(str, 8 + id, offset, 0x3);
-        vga_log(" started successfully!", 8 + id, offset, 0x3);
-
         // allow the ap to boot further
         *is_allowed_to_boot = true;
 
@@ -137,11 +136,6 @@ void LAPIC::start_processor(u8 id)
         Timer::the().mili_delay(50);
 
     if (*is_ap_alive) {
-        char str[2];
-        to_string(id, str, 2);
-        auto offset = vga_log("Processor ", 8 + id, 0, 0x3);
-        offset      = vga_log(str, 8 + id, offset, 0x3);
-        vga_log(" started successfully after two SIPIs!", 8 + id, offset, 0x3);
         log() << "LAPIC: Application processor " << id << " started successfully after second SIPI";
 
         // allow the ap to boot further
@@ -149,5 +143,19 @@ void LAPIC::start_processor(u8 id)
 
     } else
         error() << "LAPIC: Application processor " << id << " failed to start after 2 SIPIs";
+}
+
+extern "C" void ap_entrypoint() {
+
+    static size_t row = 7;
+
+    auto offset = vga_log("Hello from core ", row, 0, 0xF);
+
+    char buf[4];
+    to_string(LAPIC::my_id(), buf, 4);
+
+    vga_log(buf, row++, offset, 0xf);
+
+    hang();
 }
 }

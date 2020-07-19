@@ -49,6 +49,8 @@ public:
 
     static void start_processor(u8);
 
+    static u32 my_id();
+
 private:
     enum class DeliveryMode : u8 { NORMAL = 0, LOWEST_PRIORITY = 1, SMI = 2, NMI = 4, INIT = 5, SIPI = 6 };
 
