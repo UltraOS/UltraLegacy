@@ -8,9 +8,10 @@ main:
 %include "BPB.inc"
 %include "CommonMacros.inc"
 
-SIZEOF_IDT:     equ 2048
-SIZEOF_GDT:     equ 40
-LOAD_KERNEL_AT: equ 0x00100000 ; 1MB
+SIZEOF_IDT:        equ 2048
+SIZEOF_GDT:        equ 40
+LOAD_KERNEL_AT:    equ 0x00100000
+KERNEL_ENTRYPOINT: equ 0xFFFFFFFF80000000 + LOAD_KERNEL_AT
 
 start:
     ; copy the boot context from VBR
@@ -131,7 +132,8 @@ start:
 
     switch_to_protected
 
-BITS 32
+%ifdef ULTRA_32
+BITS32
 jump_to_kernel:
     ; pass kernel the memory map
     xor eax, eax
@@ -140,6 +142,19 @@ jump_to_kernel:
 
     ; jump to the kernel
     jmp LOAD_KERNEL_AT
+
+%elifdef ULTRA_64
+BITS 64
+switch_to_long_mode:
+    ; do something interesting here
+
+jump_to_kernel:
+    mov rax, KERNEL_ENTRYPOINT
+    jmp rax
+%else
+    %error Couldn't detect the target architecture
+%endif
+
 BITS 16
 
 %include "Common.inc"

@@ -1,6 +1,6 @@
 @echo off
 pushd %~dp0
-wsl ./build_ultra.sh || goto error
+wsl ./build_ultra.sh %1 || goto error
 popd
 exit /B 0
 

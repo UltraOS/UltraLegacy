@@ -15,7 +15,7 @@ source $true_path/utils.sh
 pushd $root_path
 mkdir -p Build || on_error
 pushd Build
-cmake .. || on_error
+cmake .. -DARCH=$1 || on_error
 cmake --build . || on_error
 popd
 popd
