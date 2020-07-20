@@ -11,6 +11,8 @@ endif(NOT WIN32)
 
 cmake_minimum_required(VERSION 3.10)
 
+set(ENV{ULTRA_ARCH} ${ARCH})
+
 if (NOT WIN32)
     set(CMAKE_TOOLCHAIN_FILE ${CMAKE_SOURCE_DIR}/Toolchain/CMakeToolchain.txt)
 else()

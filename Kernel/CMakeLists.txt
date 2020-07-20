@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.10)
 
+set(ENV{ULTRA_ARCH} ${ARCH})
 set(CMAKE_TOOLCHAIN_FILE ${CMAKE_CURRENT_SOURCE_DIR}/../Toolchain/CMakeToolchain.txt)
 
 project(Kernel)
@@ -12,7 +13,12 @@ set(CMAKE_CXX_FLAGS_RELEASE ${CXX_FLAGS})
 set(CMAKE_EXE_LINKER_FLAGS  "-T ${PROJECT_SOURCE_DIR}/Linker.ld ${LINKER_FLAGS}")
 
 set(CMAKE_ASM_NASM_COMPILE_OBJECT "<CMAKE_ASM_NASM_COMPILER> <FLAGS> -o <OBJECT> <SOURCE>")
-set(CMAKE_ASM_NASM_FLAGS "-felf32")
+
+if (ARCH MATCHES "64")
+    set(CMAKE_ASM_NASM_FLAGS "-felf64")
+else ()
+    set(CMAKE_ASM_NASM_FLAGS "-felf32")
+endif ()
 
 FILE(GLOB CPP_FILES "${PROJECT_SOURCE_DIR}/*cpp"              "${PROJECT_SOURCE_DIR}/*h"
                     "${PROJECT_SOURCE_DIR}/Core/*cpp"         "${PROJECT_SOURCE_DIR}/Core/*h"

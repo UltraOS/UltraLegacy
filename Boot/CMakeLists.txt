@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.10)
 
 project(Bootloader)
-
+set(CMAKE_VERBOSE_MAKEFILE TRUE)
 enable_language(ASM_NASM)
-set(CMAKE_ASM_NASM_COMPILE_OBJECT "<CMAKE_ASM_NASM_COMPILER> <INCLUDES> <FLAGS> -o <OBJECT> <SOURCE>")
+set(CMAKE_ASM_NASM_COMPILE_OBJECT "<CMAKE_ASM_NASM_COMPILER> -D ULTRA_${ARCH} <INCLUDES> <FLAGS> -o <OBJECT> <SOURCE>")
 
 # A workaround to make cmake not try to link our flat binary file
 set(CMAKE_ASM_NASM_LINK_EXECUTABLE "cp <OBJECTS> <TARGET>")
