@@ -9,15 +9,37 @@ on_error()
     exit 1
 }
 
+arch="32"
+
+if [ "$1" ]
+  then
+    if [ $1 != "64" ] && [ $1 != "32" ]
+    then
+      echo "Unknown architecture $1"
+      on_error
+    else
+      arch="$1"
+    fi
+fi
+
+compiler_prefix="i686"
+
+if [ $arch = "64" ]
+then
+  compiler_prefix="x86_64"
+else
+  compiler_prefix="i686"
+fi
+
 source $root_path/Scripts/utils.sh
 
 pushd $true_path
 
-if [ -e "CrossCompiler/Tools/bin/i686-elf-g++" ]
+if [ -e "CrossCompiler/Tools$arch/bin/$compiler_prefix-elf-g++" ]
 then
   exit 0
 else
-  echo "Building the cross-compiler..."
+  echo "Building the cross-compiler for $compiler_prefix..."
 fi
 
 sudo apt update
@@ -81,14 +103,14 @@ else
   echo "binutils is already downloaded!"
 fi
 
-export PREFIX="$true_path/CrossCompiler/Tools"
-export TARGET=i686-elf
+export PREFIX="$true_path/CrossCompiler/Tools$arch"
+export TARGET=$compiler_prefix-elf
 export PATH="$PREFIX/bin:$PATH"
 
 echo "Building binutils..."
-mkdir -p "CrossCompiler/binutils_build" || on_error
+mkdir -p "CrossCompiler/binutils_build$arch" || on_error
 
-pushd "CrossCompiler/binutils_build"
+pushd "CrossCompiler/binutils_build$arch"
 ../binutils/configure --target=$TARGET \
                       --prefix="$PREFIX" \
                       --with-sysroot \
@@ -99,8 +121,8 @@ make install || on_error
 popd
 
 echo "Building GCC..."
-mkdir -p "CrossCompiler/gcc_build" || on_error
-pushd "CrossCompiler/gcc_build"
+mkdir -p "CrossCompiler/gcc_build$arch" || on_error
+pushd "CrossCompiler/gcc_build$arch"
 ../gcc/configure --target=$TARGET \
                  --prefix="$PREFIX" \
                  --disable-nls \

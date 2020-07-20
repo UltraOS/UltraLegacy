@@ -1,5 +1,13 @@
+set(ARCH $ENV{ULTRA_ARCH})
+
+if (NOT ARCH)
+    set(ARCH "32")
+elseif ((NOT ARCH MATCHES "32") AND (NOT ARCH MATCHES "64"))
+    message(FATAL_ERROR "Unknown architechture ${ARCH}")
+endif ()
+
 execute_process(
-    COMMAND /bin/bash ${CMAKE_CURRENT_LIST_DIR}/build.sh
+    COMMAND /bin/bash ${CMAKE_CURRENT_LIST_DIR}/build.sh ${ARCH}
     RESULT_VARIABLE TOOLCHAIN_BUILD_FAILED
 )
 
@@ -7,11 +15,17 @@ if (TOOLCHAIN_BUILD_FAILED)
     message(FATAL_ERROR "-- Toolchain build error.")
 endif()
 
-set(CMAKE_SYSTEM_PROCESSOR 86)
+if (ARCH MATCHES 64)
+    set(COMPILER_PREFIX "x86_64")
+else ()
+    set(COMPILER_PREFIX "i686")
+endif ()
+
+set(CMAKE_SYSTEM_PROCESSOR ${COMPILER_PREFIX})
 
 set(TOOLCHAIN_PATH     "${CMAKE_CURRENT_LIST_DIR}")
-set(CMAKE_C_COMPILER   "${TOOLCHAIN_PATH}/CrossCompiler/Tools/bin/i686-elf-gcc")
-set(CMAKE_CXX_COMPILER "${TOOLCHAIN_PATH}/CrossCompiler/Tools/bin/i686-elf-g++")
+set(CMAKE_C_COMPILER   "${TOOLCHAIN_PATH}/CrossCompiler/Tools${ARCH}/bin/${COMPILER_PREFIX}-elf-gcc")
+set(CMAKE_CXX_COMPILER "${TOOLCHAIN_PATH}/CrossCompiler/Tools${ARCH}/bin/${COMPILER_PREFIX}-elf-g++")
 
 set(LINKER_FLAGS "-Wl,--oformat=binary -ffreestanding -O2 -nostdlib")
 set(CXX_FLAGS "-std=c++17 -ffreestanding -O2 -Wall -Wextra -Werror -fno-use-cxa-atexit -fno-rtti -fno-exceptions")
