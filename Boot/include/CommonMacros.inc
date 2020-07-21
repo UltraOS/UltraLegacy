@@ -184,12 +184,12 @@ REAL_MODE_DATA:            equ 0x20
     or  eax, 1
     mov cr0, eax
 
-    jmp 0x08:%%.reset_selector
+    jmp gdt_ptr.code_32:%%.reset_selector
 
     BITS 32
     %%.reset_selector:
         ; setup segments
-        mov ax, 0x10
+        mov ax,  gdt_ptr.data_32
         mov ds, ax
         mov es, ax
         mov fs, ax
@@ -201,11 +201,11 @@ REAL_MODE_DATA:            equ 0x20
 %macro switch_to_real 0
 
     cli
-    jmp REAL_MODE_CODE:%%.reset_selector
+    jmp gdt_ptr.code_16:%%.reset_selector
 
     %%.reset_selector:
     BITS 16
-    mov eax, REAL_MODE_DATA
+    mov eax, gdt_ptr.data_16
     mov ds, eax
     mov es, eax
     mov fs, eax
@@ -224,7 +224,6 @@ REAL_MODE_DATA:            equ 0x20
         mov es, ax
         mov ss, ax
         mov sp, 0x7C00
-        ;lidt [real_mode_idt]
         sti
 %endmacro
 

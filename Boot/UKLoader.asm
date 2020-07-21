@@ -69,48 +69,6 @@ start:
     mov si, loading_msg
     call write_string
 
-    ; ---- set up GDT ----
-
-    ; NULL descriptor
-    mov di, gdt_ptr
-    mov cx, 4
-    rep stosw
-
-    ; code segment descriptor
-    mov [es:di],     word 0xFFFF ; limit
-    mov [es:di + 2], word 0x0000 ; base
-    mov [es:di + 4], byte 0x00   ; base
-    mov [es:di + 5], byte 0x9A   ; access
-    mov [es:di + 6], byte 0xCF   ; granularity
-    mov [es:di + 7], byte 0x00   ; base
-    add di, 8
-
-    ; data segment descriptor
-    mov [es:di],     word 0xFFFF ; limit
-    mov [es:di + 2], word 0x0000 ; base
-    mov [es:di + 4], byte 0x00   ; base
-    mov [es:di + 5], byte 0x92   ; access
-    mov [es:di + 6], byte 0xCF   ; granularity
-    mov [es:di + 7], byte 0x00   ; base
-    add di, 8
-
-    ; 16 bit code segment descriptor
-    mov [es:di],     word 0xFFFF ; limit
-    mov [es:di + 2], word 0x0000 ; base
-    mov [es:di + 4], byte 0x00   ; base
-    mov [es:di + 5], byte 0x98   ; access
-    mov [es:di + 6], byte 0x00   ; granularity
-    mov [es:di + 7], byte 0x00   ; base
-    add di, 8
-
-    ; 16 bit data segment descriptor
-    mov [es:di],     word 0xFFFF ; limit
-    mov [es:di + 2], word 0x0000 ; base
-    mov [es:di + 4], byte 0x00   ; base
-    mov [es:di + 5], byte 0x92   ; access
-    mov [es:di + 6], byte 0x00   ; granularity
-    mov [es:di + 7], byte 0x00   ; base
-
     ; read the first sector of the root directory
     read_root_directory [boot_drive], FAT_DIRECTORY_SEGMENT, 0x0000
 
@@ -120,8 +78,34 @@ start:
     mov es, ax
     retrieve_memory_map memory_map, memory_map_entry_count
 
+    %ifdef ULTRA_64
+
+    GET_HIGHEST_EXTENDED_FUNCTION: equ 0x80000000
+    EXTENDED_PROCESSOR_INFO:       equ 0x80000001
+    LONG_MODE_SUPPORTED_BIT:       equ 1 << 29
+
+    ; TODO: we kinda assmume that CPUID is supported here, should we check for it?
+
+    mov eax, GET_HIGHEST_EXTENDED_FUNCTION
+    cpuid
+    cmp eax, EXTENDED_PROCESSOR_INFO
+    jl no_long_mode
+
+    mov eax, EXTENDED_PROCESSOR_INFO
+    cpuid
+    test edx, LONG_MODE_SUPPORTED_BIT
+    jnz long_mode_supported
+
+    no_long_mode:
+        mov si, no_long_mode_message
+        call write_string
+        call reboot
+
+    long_mode_supported:
+    %endif
+
     ; enable color 80x25 text mode
-    ; for future use in protected mode
+    ; for future use in protected/long mode
     mov ax, 0x0003
     int 0x10
 
@@ -133,24 +117,86 @@ start:
     switch_to_protected
 
 %ifdef ULTRA_32
-BITS32
+
 jump_to_kernel:
     ; pass kernel the memory map
-    xor eax, eax
-    mov ax, memory_map
+    mov   eax, memory_map
     movzx ebx, word [memory_map_entry_count]
 
     ; jump to the kernel
     jmp LOAD_KERNEL_AT
 
 %elifdef ULTRA_64
-BITS 64
-switch_to_long_mode:
-    ; do something interesting here
 
+PAGE_SIZE:      equ 4096
+DWORDS_IN_PAGE: equ PAGE_SIZE / 4
+PT_ENTRY_SIZE:  equ 8
+ENTRY_COUNT:    equ 512
+PAE_BIT:        equ 1 << 5
+EFER_NUMBER:    equ 0xC0000080
+LONG_MODE_BIT:  equ 1 << 8
+PAGING_BIT:     equ 1 << 31
+PRESENT:        equ 1 << 0
+READWRITE:      equ 1 << 1
+
+switch_to_long_mode:
+    mov edi, PML4
+    mov cr3, edi
+
+    xor eax, eax
+    mov ecx, DWORDS_IN_PAGE * 4 ; zero 4 pages
+    rep stosd
+
+    mov edi, cr3
+
+    mov [edi], dword PDPT | PRESENT | READWRITE
+    add  edi,  PAGE_SIZE
+    mov [edi], dword PDT  | PRESENT | READWRITE
+    add  edi,  PAGE_SIZE
+    mov [edi], dword PT   | PRESENT | READWRITE
+    add  edi,  PAGE_SIZE
+
+    mov ebx, 0x00000000   | PRESENT | READWRITE
+    mov ecx, ENTRY_COUNT
+
+    set_one:
+        mov [edi], ebx
+        add ebx, PAGE_SIZE
+        add edi, PT_ENTRY_SIZE
+        loop set_one
+ xchg bx, bx
+    mov eax, cr4
+    or  eax, PAE_BIT
+    mov cr4, eax
+
+    mov ecx, EFER_NUMBER
+    rdmsr
+    or eax, LONG_MODE_BIT
+    wrmsr
+
+    mov eax, cr0
+    or  eax, PAGING_BIT
+    mov cr0, eax
+
+    lgdt [gdt_entry]
+
+    jmp gdt_ptr.code_64:jump_to_kernel
+
+BITS 64
 jump_to_kernel:
+    mov ax, gdt_ptr.null
+    mov ss, ax
+    mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
+
+    cli
+    hlt
+
     mov rax, KERNEL_ENTRYPOINT
     jmp rax
+
 %else
     %error Couldn't detect the target architecture
 %endif
@@ -165,7 +211,7 @@ sector_offset:   dd 0
 memory_offset:   dd 0
 
 gdt_entry:
-    dw SIZEOF_GDT - 1
+    dw gdt_end - gdt_ptr - 1
     dd gdt_ptr
 
 boot_context:
@@ -178,10 +224,71 @@ loading_msg:   db "Preparing kernel environment...", CR, LF, 0
 a20fail_msg:   db "Failed to enable A20!", CR, LF, 0
 no_file_error: db "Couldn't find the kernel file!", CR, LF, 0
 
+%ifdef ULTRA_64
+no_long_mode_message: db "This CPU doesn't support x86_64", CR, LF, 0
+
+PML4: equ 0x1000
+PDPT: equ 0x2000
+PDT:  equ 0x3000
+PT:   equ 0x4000
+
+%endif
+
 kernel_file db "Kernel  bin"
 
 kernel_sector: times SECTOR_SIZE db 0
-gdt_ptr:       times SIZEOF_GDT  db 0
+gdt_ptr:
+    .null: equ $ - gdt_ptr
+    dq 0
+
+    .code_32: equ $ - gdt_ptr
+    ; 32 bit code segment descriptor
+    dw 0xFFFF ; limit
+    dw 0x0000 ; base
+    db 0x00   ; base
+    db 0x9A   ; access
+    db 0xCF   ; granularity
+    db 0x00   ; base
+
+    .data_32: equ $ - gdt_ptr
+    ; 32 bit data segment descriptor
+    dw 0xFFFF ; limit
+    dw 0x0000 ; base
+    db 0x00   ; base
+    db 0x92   ; access
+    db 0xCF   ; granularity
+    db 0x00   ; base
+
+    .code_16: equ $ - gdt_ptr
+    ; 16 bit code segment descriptor
+    dw 0xFFFF ; limit
+    dw 0x0000 ; base
+    db 0x00   ; base
+    db 0x98   ; access
+    db 0x00   ; granularity
+    db 0x00   ; base
+
+    .data_16: equ $ - gdt_ptr
+    ; 16 bit data segment descriptor
+    dw 0xFFFF ; limit
+    dw 0x0000 ; base
+    db 0x00   ; base
+    db 0x92   ; access
+    db 0x00   ; granularity
+    db 0x00   ; base
+
+    %ifdef ULTRA_64
+    .code_64: equ $ - gdt_ptr
+    ; 64 bit code segment
+    dw 0
+    dw 0
+    db 0
+    db 0x9A
+    db 0b10101111
+    db 0
+
+    %endif
+gdt_end:
 
 memory_map_entry_count: dw 0x0000
 memory_map:
