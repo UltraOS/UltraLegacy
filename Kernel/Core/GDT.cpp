@@ -96,7 +96,7 @@ void GDT::create_descriptor(u32 base, u32 size, access_attributes access, flag_a
     this_entry.limit_upper = (size & 0x000F0000) >> 16;
 }
 
-void NOINLINE GDT::install()
+void GDT::install()
 {
     m_pointer.size -= 1;
     asm("lgdt %0" ::"m"(m_pointer));
@@ -112,7 +112,7 @@ void NOINLINE GDT::install()
     #endif
 
     asm volatile(
-        "ljmp $0x8, $reset_selector\n"
-        "reset_selector:");
+        "ljmp $0x8, $1f\n"
+        "1:");
 }
 }
