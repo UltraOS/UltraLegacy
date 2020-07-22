@@ -1,3 +1,4 @@
+#include "Common/Macros.h"
 #include "Common/Logger.h"
 
 #include "GDT.h"
@@ -19,6 +20,8 @@ void GDT::create_basic_descriptors()
     // reserved NULL descriptor
     create_descriptor(0, 0, NULL_ACCESS, NULL_FLAG);
 
+    #ifdef ULTRA_32
+
     // kernel descriptors
     create_descriptor(0x00000000,
                       0xFFFFFFFF,
@@ -37,6 +40,19 @@ void GDT::create_basic_descriptors()
                       0xFFFFFFFF,
                       PRESENT | CODE_OR_DATA | WRITABLE | RING_3,
                       GRANULARITY_4KB | MODE_32_BIT);
+
+    #elif defined(ULTRA_64)
+    create_descriptor(0x00000000,
+                      0xFFFFFFFF,
+                      PRESENT | CODE_OR_DATA | EXECUTABLE | READABLE,
+                      GRANULARITY_4KB | MODE_64_BIT)
+
+    create_descriptor(0x00000000,
+                      0xFFFFFFFF,
+                      PRESENT | CODE_OR_DATA | EXECUTABLE | READABLE | RING_3,
+                      GRANULARITY_4KB | MODE_64_BIT)
+
+    #endif
 }
 
 void GDT::create_tss_descriptor(TSS* tss)
@@ -80,10 +96,23 @@ void GDT::create_descriptor(u32 base, u32 size, access_attributes access, flag_a
     this_entry.limit_upper = (size & 0x000F0000) >> 16;
 }
 
-void GDT::install()
+void NOINLINE GDT::install()
 {
     m_pointer.size -= 1;
     asm("lgdt %0" ::"m"(m_pointer));
     m_pointer.size += 1;
+
+    #ifdef ULTRA_32
+    asm volatile(
+        "mov %%ax, %%ds\n"
+        "mov %%ax, %%es\n"
+        "mov %%ax, %%gs\n"
+        "mov %%ax, %%ss\n" ::"a"(GDT::kernel_data_selector())
+        : "memory");
+    #endif
+
+    asm volatile(
+        "ljmp $0x8, $reset_selector\n"
+        "reset_selector:");
 }
 }
