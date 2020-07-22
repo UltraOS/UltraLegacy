@@ -64,35 +64,19 @@ struct is_integral : false_value {
 };
 
 template <>
-struct is_integral<u8> : true_value {
+struct is_integral<char> : true_value {
 };
 
 template <>
-struct is_integral<u16> : true_value {
+struct is_integral<unsigned char> : true_value {
 };
 
 template <>
-struct is_integral<u32> : true_value {
+struct is_integral<int> : true_value {
 };
 
 template <>
-struct is_integral<u64> : true_value {
-};
-
-template <>
-struct is_integral<i8> : true_value {
-};
-
-template <>
-struct is_integral<i16> : true_value {
-};
-
-template <>
-struct is_integral<i32> : true_value {
-};
-
-template <>
-struct is_integral<i64> : true_value {
+struct is_integral<unsigned int> : true_value {
 };
 
 template <>
@@ -101,6 +85,14 @@ struct is_integral<long> : true_value {
 
 template <>
 struct is_integral<unsigned long> : true_value {
+};
+
+template <>
+struct is_integral<long long> : true_value {
+};
+
+template <>
+struct is_integral<unsigned long long> : true_value {
 };
 
 template <typename T>

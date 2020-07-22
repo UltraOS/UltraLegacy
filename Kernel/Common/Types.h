@@ -1,26 +1,29 @@
 #pragma once
+
+#include <stdint.h>
+#include <stddef.h>
+
 namespace kernel {
 
 // signed types
-using i8  = char;
-using i16 = short int;
-using i32 = int;
-using i64 = long long int;
+using i8  = int8_t;
+using i16 = int16_t;
+using i32 = int32_t;
+using i64 = int64_t;
 
 // unsigned types
-using u8  = unsigned char;
-using u16 = unsigned short int;
-using u32 = unsigned int;
-using u64 = unsigned long long int;
+using u8  = uint8_t;
+using u16 = uint16_t;
+using u32 = uint32_t;
+using u64 = uint64_t;
 
-#ifndef _MSVC_LANG
-using size_t = long unsigned int;
-#endif
+using ptr_t = size_t;
 
-// A wild posix type appears
+#ifdef ULTRA_32
 using ssize_t = i32;
-
-using ptr_t = u32;
+#else
+using ssize_t = i64;
+#endif
 
 // floating point
 using f32 = float;
