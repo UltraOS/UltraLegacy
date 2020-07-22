@@ -144,27 +144,43 @@ switch_to_long_mode:
     mov cr3, edi
 
     xor eax, eax
-    mov ecx, DWORDS_IN_PAGE * 4 ; zero 4 pages
+    mov ecx, DWORDS_IN_PAGE * 10 ; zero 10 pages
     rep stosd
 
     mov edi, cr3
 
-    mov [edi], dword PDPT | PRESENT | READWRITE
+    mov [edi], dword PDPT_0 | PRESENT | READWRITE
     add  edi,  PAGE_SIZE
-    mov [edi], dword PDT  | PRESENT | READWRITE
-    add  edi,  PAGE_SIZE
-    mov [edi], dword PT   | PRESENT | READWRITE
+    mov [edi], dword PDT | PRESENT | READWRITE
+    add  edi,  PAGE_SIZE * 3
+    mov [edi     ], dword PT_0 | PRESENT | READWRITE
+    mov [edi + 8 ], dword PT_1 | PRESENT | READWRITE
+    mov [edi + 16], dword PT_2 | PRESENT | READWRITE
+    mov [edi + 24], dword PT_3 | PRESENT | READWRITE
+    mov [edi + 32], dword PT_4 | PRESENT | READWRITE
     add  edi,  PAGE_SIZE
 
     mov ebx, 0x00000000   | PRESENT | READWRITE
-    mov ecx, ENTRY_COUNT
+    mov ecx, ENTRY_COUNT * 5 ; 5 page tables
 
     set_one:
         mov [edi], ebx
-        add ebx, PAGE_SIZE
-        add edi, PT_ENTRY_SIZE
+        add  ebx, PAGE_SIZE
+        add  edi, PT_ENTRY_SIZE
         loop set_one
- xchg bx, bx
+
+    mov  edi,  PDPT_3
+    mov [edi], dword PDT | PRESENT | READWRITE
+
+    mov edi, PML4 + 256 * 8
+    mov [edi], dword PDPT_3 | PRESENT | READWRITE
+
+    mov  edi, PDPT_1 + 510 * 8
+    mov [edi], dword PDT | PRESENT | READWRITE
+
+    mov edi, PML4 + 511 * 8
+    mov [edi], dword PDPT_1 | PRESENT | READWRITE
+
     mov eax, cr4
     or  eax, PAE_BIT
     mov cr4, eax
@@ -227,10 +243,18 @@ no_file_error: db "Couldn't find the kernel file!", CR, LF, 0
 %ifdef ULTRA_64
 no_long_mode_message: db "This CPU doesn't support x86_64", CR, LF, 0
 
-PML4: equ 0x1000
-PDPT: equ 0x2000
-PDT:  equ 0x3000
-PT:   equ 0x4000
+PML4:   equ 0x10000
+PDPT_0: equ 0x11000
+PDPT_1: equ 0x12000
+PDPT_3: equ 0x13000
+PDT:    equ 0x14000
+
+; 10 MB
+PT_0: equ 0x15000
+PT_1: equ 0x16000
+PT_2: equ 0x17000
+PT_3: equ 0x18000
+PT_4: equ 0x19000
 
 %endif
 
@@ -240,24 +264,6 @@ kernel_sector: times SECTOR_SIZE db 0
 gdt_ptr:
     .null: equ $ - gdt_ptr
     dq 0
-
-    .code_32: equ $ - gdt_ptr
-    ; 32 bit code segment descriptor
-    dw 0xFFFF ; limit
-    dw 0x0000 ; base
-    db 0x00   ; base
-    db 0x9A   ; access
-    db 0xCF   ; granularity
-    db 0x00   ; base
-
-    .data_32: equ $ - gdt_ptr
-    ; 32 bit data segment descriptor
-    dw 0xFFFF ; limit
-    dw 0x0000 ; base
-    db 0x00   ; base
-    db 0x92   ; access
-    db 0xCF   ; granularity
-    db 0x00   ; base
 
     .code_16: equ $ - gdt_ptr
     ; 16 bit code segment descriptor
@@ -277,6 +283,24 @@ gdt_ptr:
     db 0x00   ; granularity
     db 0x00   ; base
 
+    .code_32: equ $ - gdt_ptr
+    ; 32 bit code segment descriptor
+    dw 0xFFFF ; limit
+    dw 0x0000 ; base
+    db 0x00   ; base
+    db 0x9A   ; access
+    db 0xCF   ; granularity
+    db 0x00   ; base
+
+    .data_32: equ $ - gdt_ptr
+    ; 32 bit data segment descriptor
+    dw 0xFFFF ; limit
+    dw 0x0000 ; base
+    db 0x00   ; base
+    db 0x92   ; access
+    db 0xCF   ; granularity
+    db 0x00   ; base
+
     %ifdef ULTRA_64
     .code_64: equ $ - gdt_ptr
     ; 64 bit code segment
@@ -284,7 +308,7 @@ gdt_ptr:
     dw 0
     db 0
     db 0x9A
-    db 0b10101111
+    db 0xAF
     db 0
 
     %endif
