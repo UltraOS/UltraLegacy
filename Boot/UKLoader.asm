@@ -268,12 +268,7 @@ kernel_file db "Kernel  bin"
 kernel_sector: times SECTOR_SIZE db 0
 gdt_ptr:
     .null: equ $ - gdt_ptr
-    dw 0xFFFF ; limit
-    dw 0x0000 ; base
-    db 0x00   ; base
-    db 0x98   ; access
-    db 0x00   ; granularity
-    db 0x00   ; base
+    dq 0x0000000000000000
 
     .code_16: equ $ - gdt_ptr
     ; 16 bit code segment descriptor
