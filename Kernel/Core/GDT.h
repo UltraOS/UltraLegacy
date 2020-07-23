@@ -56,19 +56,11 @@ public:
     void create_descriptor(u32 base, u32 size, access_attributes access, flag_attributes flags);
     void create_tss_descriptor(TSS* tss);
 
-    #ifdef ULTRA_32
     static constexpr u16 kernel_code_selector() { return 0x8; }
     static constexpr u16 kernel_data_selector() { return 0x10; }
 
     static constexpr u16 userland_code_selector() { return 0x18; }
     static constexpr u16 userland_data_selector() { return 0x20; }
-    #elif defined(ULTRA_64)
-    static constexpr u16 kernel_code_selector() { return 0x8; }
-    static constexpr u16 kernel_data_selector() { return 0x0; }
-
-    static constexpr u16 userland_code_selector() { return 0x10; }
-    static constexpr u16 userland_data_selector() { return 0x0; }
-    #endif
 
     static GDT& the();
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#define PACKED [[gnu::packed]]
+#define PACKED   [[gnu::packed]]
 #define NOINLINE __attribute__((noinline))
 
 #define USED __attribute__((used))

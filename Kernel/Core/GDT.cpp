@@ -1,5 +1,5 @@
-#include "Common/Macros.h"
 #include "Common/Logger.h"
+#include "Common/Macros.h"
 
 #include "GDT.h"
 #include "Multitasking/TSS.h"
@@ -20,39 +20,40 @@ void GDT::create_basic_descriptors()
     // reserved NULL descriptor
     create_descriptor(0, 0, NULL_ACCESS, NULL_FLAG);
 
-    #ifdef ULTRA_32
-
-    // kernel descriptors
+// kernel code
+#ifdef ULTRA_32
     create_descriptor(0x00000000,
                       0xFFFFFFFF,
                       PRESENT | CODE_OR_DATA | EXECUTABLE | READABLE,
                       GRANULARITY_4KB | MODE_32_BIT);
+#elif defined(ULTRA_64)
+    create_descriptor(0x00000000,
+                      0xFFFFFFFF,
+                      PRESENT | CODE_OR_DATA | EXECUTABLE | READABLE,
+                      GRANULARITY_4KB | MODE_64_BIT);
+#endif
 
+    // kernel data
     create_descriptor(0x00000000, 0xFFFFFFFF, PRESENT | CODE_OR_DATA | WRITABLE, GRANULARITY_4KB | MODE_32_BIT);
 
-    // userspace descriptors
+// userspace code
+#ifdef ULTRA_32
     create_descriptor(0x00000000,
                       0xFFFFFFFF,
                       PRESENT | CODE_OR_DATA | EXECUTABLE | RING_3 | READABLE,
                       GRANULARITY_4KB | MODE_32_BIT);
+#elif defined(ULTRA_64)
+    create_descriptor(0x00000000,
+                      0xFFFFFFFF,
+                      PRESENT | CODE_OR_DATA | EXECUTABLE | READABLE | RING_3,
+                      GRANULARITY_4KB | MODE_64_BIT);
+#endif
 
+    // userspace data
     create_descriptor(0x00000000,
                       0xFFFFFFFF,
                       PRESENT | CODE_OR_DATA | WRITABLE | RING_3,
                       GRANULARITY_4KB | MODE_32_BIT);
-
-    #elif defined(ULTRA_64)
-    create_descriptor(0x00000000,
-                      0xFFFFFFFF,
-                      PRESENT | CODE_OR_DATA | EXECUTABLE | READABLE,
-                      GRANULARITY_4KB | MODE_64_BIT)
-
-    create_descriptor(0x00000000,
-                      0xFFFFFFFF,
-                      PRESENT | CODE_OR_DATA | EXECUTABLE | READABLE | RING_3,
-                      GRANULARITY_4KB | MODE_64_BIT)
-
-    #endif
 }
 
 void GDT::create_tss_descriptor(TSS* tss)
@@ -102,17 +103,16 @@ void GDT::install()
     asm("lgdt %0" ::"m"(m_pointer));
     m_pointer.size += 1;
 
-    #ifdef ULTRA_32
-    asm volatile(
-        "mov %%ax, %%ds\n"
-        "mov %%ax, %%es\n"
-        "mov %%ax, %%gs\n"
-        "mov %%ax, %%ss\n" ::"a"(GDT::kernel_data_selector())
-        : "memory");
-    #endif
+#ifdef ULTRA_32
+    asm volatile("mov %%ax, %%ds\n"
+                 "mov %%ax, %%es\n"
+                 "mov %%ax, %%fs\n"
+                 "mov %%ax, %%gs\n"
+                 "mov %%ax, %%ss\n" ::"a"(GDT::kernel_data_selector())
+                 : "memory");
+#endif
 
-    asm volatile(
-        "ljmp $0x8, $1f\n"
-        "1:");
+    asm volatile("ljmp $0x8, $1f\n"
+                 "1:");
 }
 }
