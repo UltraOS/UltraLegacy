@@ -102,6 +102,12 @@ start:
         call reboot
 
     long_mode_supported:
+        NOTIFY_BIOS:    0xEC00
+        LONG_MODE_ONLY: 0x2
+
+        mov ax, NOTIFY_BIOS
+        mov bl, LONG_MODE_ONLY
+        int 0x15
     %endif
 
     ; enable color 80x25 text mode
@@ -200,7 +206,7 @@ switch_to_long_mode:
 
 BITS 64
 jump_to_kernel:
-    mov ax, gdt_ptr.null
+    mov ax, gdt_ptr.data_32
     mov ss, ax
     mov ds, ax
     mov es, ax
@@ -210,8 +216,7 @@ jump_to_kernel:
     cli
     hlt
 
-    mov rax, KERNEL_ENTRYPOINT
-    jmp rax
+    jmp KERNEL_ENTRYPOINT
 
 %else
     %error Couldn't detect the target architecture
@@ -263,7 +268,12 @@ kernel_file db "Kernel  bin"
 kernel_sector: times SECTOR_SIZE db 0
 gdt_ptr:
     .null: equ $ - gdt_ptr
-    dq 0
+    dw 0xFFFF ; limit
+    dw 0x0000 ; base
+    db 0x00   ; base
+    db 0x98   ; access
+    db 0x00   ; granularity
+    db 0x00   ; base
 
     .code_16: equ $ - gdt_ptr
     ; 16 bit code segment descriptor
