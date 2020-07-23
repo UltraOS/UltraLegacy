@@ -145,7 +145,8 @@ void LAPIC::start_processor(u8 id)
         error() << "LAPIC: Application processor " << id << " failed to start after 2 SIPIs";
 }
 
-extern "C" void ap_entrypoint() {
+extern "C" void ap_entrypoint()
+{
 
     static size_t row = 7;
 

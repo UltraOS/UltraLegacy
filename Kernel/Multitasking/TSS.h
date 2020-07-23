@@ -5,9 +5,9 @@
 
 namespace kernel {
 
-class TSS {
+class PACKED TSS {
 public:
-    static constexpr size_t size = 64;
+    static constexpr size_t size = 104;
 
     TSS()
     {
@@ -15,15 +15,19 @@ public:
         GDT::the().install();
     }
 
-    void set_kernel_stack_pointer(Address ptr) { m_kernel_stack_pointer = ptr; }
+    void set_kernel_stack_pointer(Address ptr) { m_kernel_stack_pointer = ptr.as_pointer<u8>(); }
 
 private:
+#ifdef ULTRA_32
     // unused since we don't do hardware switching
-    u32 m_previous_tss { 0 };
-
-    Address m_kernel_stack_pointer { nullptr };
-    u32     m_kernel_stack_segment = GDT::kernel_data_selector();
-    u8      m_unused[52] {};
+    u32 m_unused_1;
+    u8* m_kernel_stack_pointer { nullptr };
+    u32 m_kernel_stack_segment = GDT::kernel_data_selector();
+#elif defined(ULTRA_64)
+    u32 m_unused_1;
+    u8* m_kernel_stack_pointer { nullptr };
+#endif
+    u32 m_unused_2[23] {};
 };
 
 static_assert(sizeof(TSS) == TSS::size);
