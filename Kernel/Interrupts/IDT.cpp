@@ -17,16 +17,19 @@ IDT& IDT::the()
 IDT& IDT::register_isr(u16 index, attributes attrs, isr handler)
 {
     if (!handler) {
-        error() << "IDT: Someone tried to register an invalid (NULL) isr at index " << index;
+        error() << "IDT: Tried to register an invalid (NULL) isr at index " << index;
         hang();
     }
 
     auto& the_entry = m_entries[index];
 
-    the_entry.address_lower  = reinterpret_cast<u32>(handler) & 0x0000FFFF;
-    the_entry.address_higher = (reinterpret_cast<u32>(handler) & 0xFFFF0000) >> 16;
-    the_entry.attributes     = attrs;
-    the_entry.selector       = GDT::kernel_code_selector();
+    the_entry.address_1 = reinterpret_cast<size_t>(handler) & 0x0000FFFF;
+    the_entry.address_2 = (reinterpret_cast<size_t>(handler) & 0xFFFF0000) >> 16;
+#ifdef ULTRA_64
+    the_entry.address_3 = (reinterpret_cast<size_t>(handler) & 0xFFFFFFFF00000000) >> 32;
+#endif
+    the_entry.attributes = attrs;
+    the_entry.selector   = GDT::kernel_code_selector();
 
     return *this;
 }

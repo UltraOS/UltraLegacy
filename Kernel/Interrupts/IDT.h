@@ -36,11 +36,16 @@ private:
     IDT();
 
     struct PACKED entry {
-        u16 address_lower;
+        u16 address_1;
         u16 selector;
         u8  unused;
         u8  attributes;
-        u16 address_higher;
+        u16 address_2;
+
+#ifdef ULTRA_64
+        u32 address_3;
+        u32 reserved;
+#endif
     } m_entries[entry_count];
 
     struct PACKED pointer {
