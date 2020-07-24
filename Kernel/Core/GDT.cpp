@@ -58,7 +58,7 @@ void GDT::create_basic_descriptors()
 
 void GDT::create_tss_descriptor(TSS* tss)
 {
-    create_descriptor(reinterpret_cast<u32>(tss), TSS::size, EXECUTABLE | IS_TSS | RING_3 | PRESENT, NULL_FLAG);
+    create_descriptor(reinterpret_cast<ptr_t>(tss), TSS::size, EXECUTABLE | IS_TSS | RING_3 | PRESENT, NULL_FLAG);
     install();
 
     static constexpr u16 rpl_level_3 = 3;
@@ -100,19 +100,41 @@ void GDT::create_descriptor(u32 base, u32 size, access_attributes access, flag_a
 void GDT::install()
 {
     m_pointer.size -= 1;
-    asm("lgdt %0" ::"m"(m_pointer));
-    m_pointer.size += 1;
+
+    asm volatile("lgdt %0\n"
 
 #ifdef ULTRA_32
-    asm volatile("mov %%ax, %%ds\n"
-                 "mov %%ax, %%es\n"
-                 "mov %%ax, %%fs\n"
-                 "mov %%ax, %%gs\n"
-                 "mov %%ax, %%ss\n" ::"a"(GDT::kernel_data_selector())
-                 : "memory");
+                 "pushl %%ebp\n"
+                 "movl %%esp, %%ebp\n"
+                 "pushfl\n"
+                 "pushl %2\n"
+                 "pushl $1f\n"
+                 "iret\n"
+                 "1:\n"
+                 "popl %%ebp\n"
+#elif defined(ULTRA_64)
+                 "pushq %%rbp\n"
+                 "movq %%rsp, %%rbp\n"
+                 "pushq %1\n"
+                 "pushq %%rbp\n"
+                 "pushfq\n"
+                 "pushq %2\n"
+                 "pushq $1f\n"
+                 "iretq\n"
+                 "1:\n"
+                 "popq %%rbp\n"
 #endif
+                 "mov %1, %%ds\n"
+                 "mov %1, %%es\n"
+                 "mov %1, %%fs\n"
+                 "mov %1, %%gs\n"
+                 "mov %1, %%ss"
+                 :
+                 : "m"(m_pointer),
+                   "r"(static_cast<ptr_t>(kernel_data_selector())),
+                   "r"(static_cast<ptr_t>(kernel_code_selector()))
+                 : "memory");
 
-    asm volatile("ljmp $0x8, $1f\n"
-                 "1:");
+    m_pointer.size += 1;
 }
 }
