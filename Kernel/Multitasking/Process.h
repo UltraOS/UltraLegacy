@@ -33,7 +33,7 @@ private:
 
 private:
     u32                          m_process_id { 0 };
-    RefPtr<PageDirectory>        m_page_directory;
+    RefPtr<AddressSpace>         m_page_directory;
     bool                         m_is_supervisor { false };
     DynamicArray<RefPtr<Thread>> m_threads;
 

@@ -45,10 +45,7 @@ public:
 
 #ifdef ULTRA_64
 
-    void set_executable(bool setting)
-    {
-        m_no_execute = setting;
-    }
+    void set_executable(bool setting) { m_no_execute = setting; }
 
     bool is_executable() { return !m_no_execute; }
 
@@ -81,13 +78,13 @@ public:
 private:
     Attributes m_attributes : 12;
 
-    #ifdef ULTRA_32
+#ifdef ULTRA_32
     ptr_t m_physical_address : 20;
-    #elif defined(ULTRA_64)
+#elif defined(ULTRA_64)
     ptr_t m_physical_address : 40;
-    u16   m_unused           : 11;
-    bool  m_no_execute       : 1;
-    #endif
+    u16   m_unused : 11;
+    bool  m_no_execute : 1;
+#endif
 };
 
 static_assert(sizeof(GenericPagingEntry) == sizeof(ptr_t));

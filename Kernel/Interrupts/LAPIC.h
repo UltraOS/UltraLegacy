@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Common/Types.h"
-#include "Memory/PageDirectory.h"
+#include "Memory/AddressSpace.h"
 
 namespace kernel {
 

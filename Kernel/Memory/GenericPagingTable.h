@@ -9,9 +9,9 @@ public:
     using Entry = GenericPagingEntry;
 
 #ifdef ULTRA_32
-    static constexpr size_t  entry_count = 1024;
+    static constexpr size_t entry_count = 1024;
 #elif defined(ULTRA_64)
-    static constexpr size_t entry_count  = 512;
+    static constexpr size_t entry_count = 512;
 #endif
 
     static constexpr size_t entry_size = sizeof(Address);

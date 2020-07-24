@@ -9,7 +9,7 @@
 namespace kernel {
 
 class PhysicalRegion;
-class PageDirectory;
+class AddressSpace;
 class PageFault;
 
 class MemoryManager {
@@ -18,11 +18,20 @@ public:
     static constexpr size_t page_table_entry_count     = 1024;
     static constexpr size_t page_table_address_space   = page_table_entry_count * Page::size;
 
-    static constexpr Address max_memory_address = 0xFFFFFFFF;
+#ifdef ULTRA_32
+    static constexpr Address max_memory_address       = 0xFFFFFFFF;
+    static constexpr Address kernel_reserved_base     = 3 * GB;
+    static constexpr size_t  kernel_first_table_index = 768;
+    static constexpr size_t  kernel_last_table_index  = 1022;
+    static constexpr size_t  recursive_entry_index    = 1023;
+#elif defined(ULTRA_64)
+    static constexpr Address max_memory_address   = 0xFFFFFFFFFFFFFFFF;
+    static constexpr Address kernel_reserved_base = max_memory_address - 2 * GB;
+    static constexpr Address physical_memory_base = 0xFFFF800000000000;
+#endif
 
     static constexpr size_t  kernel_size              = 3 * MB;
     static constexpr size_t  kernel_heap_initial_size = page_table_address_space;
-    static constexpr Address kernel_reserved_base     = 3 * GB;
     static constexpr Address kernel_base_address      = kernel_reserved_base + 1 * MB;
     static constexpr size_t  kernel_pre_reserved_size = kernel_base_address - kernel_reserved_base;
     static constexpr size_t  kernel_reserved_binary   = kernel_pre_reserved_size + kernel_size;
@@ -32,9 +41,6 @@ public:
     static constexpr size_t  kernel_usable_length     = kernel_ceiling - kernel_usable_base;
     static constexpr Address kernel_end_address       = kernel_base_address + kernel_size;
     static constexpr Address kernel_heap_begin        = kernel_end_address;
-    static constexpr size_t  kernel_first_table_index = 768;
-    static constexpr size_t  kernel_last_table_index  = 1022;
-    static constexpr size_t  recursive_entry_index    = 1023;
 
     static constexpr Address userspace_base           = static_cast<ptr_t>(0x00000000);
     static constexpr size_t  userspace_reserved       = 1 * MB;
@@ -48,7 +54,7 @@ public:
 
     static MemoryManager& the();
 
-    void inititalize(PageDirectory& directory);
+    void inititalize(AddressSpace& directory);
 
     [[nodiscard]] RefPtr<Page> allocate_page();
     void                       free_page(Page& page);

@@ -1,9 +1,9 @@
 #include "MemoryManager.h"
+#include "AddressSpace.h"
 #include "Common/Logger.h"
 #include "Interrupts/Common.h"
 #include "Multitasking/Scheduler.h"
 #include "Page.h"
-#include "PageDirectory.h"
 #include "PhysicalRegion.h"
 
 #define MEMORY_MANAGER_DEBUG
@@ -47,7 +47,7 @@ MemoryManager::MemoryManager(const MemoryMap& memory_map)
             }
         }
 
-        // Make use of this once we have PAE
+#ifdef ULTRA_32
         if (base_address > max_memory_address) {
 #ifdef MEMORY_MANAGER_DEBUG
             log() << "MemoryManager: skipping a higher memory region at " << format::as_hex << base_address;
@@ -62,6 +62,7 @@ MemoryManager::MemoryManager(const MemoryMap& memory_map)
 
             length -= (base_address + length) - max_memory_address;
         }
+#endif
 
         if (!Page::is_aligned(base_address)) {
 #ifdef MEMORY_MANAGER_DEBUG
@@ -119,7 +120,7 @@ u8* MemoryManager::quickmap_page(Address physical_address)
     log() << "MemoryManager: quickmapping vaddr " << m_quickmap_range.begin() << " to " << physical_address;
 #endif
 
-    PageDirectory::current().map_page(m_quickmap_range.begin(), physical_address);
+    AddressSpace::current().map_page(m_quickmap_range.begin(), physical_address);
 
     return m_quickmap_range.as_pointer<u8>();
 }
@@ -131,7 +132,7 @@ u8* MemoryManager::quickmap_page(const Page& page)
 
 void MemoryManager::unquickmap_page()
 {
-    PageDirectory::current().unmap_page(m_quickmap_range.begin());
+    AddressSpace::current().unmap_page(m_quickmap_range.begin());
 }
 
 RefPtr<Page> MemoryManager::allocate_page()
@@ -176,7 +177,7 @@ void MemoryManager::free_page(Page& page)
 
 void MemoryManager::handle_page_fault(const PageFault& fault)
 {
-    if (PageDirectory::current().allocator().is_allocated(fault.address())) {
+    if (AddressSpace::current().allocator().is_allocated(fault.address())) {
 #ifdef MEMORY_MANAGER_DEBUG
         log() << "MemoryManager: expected page fault: " << fault;
 #endif
@@ -184,33 +185,16 @@ void MemoryManager::handle_page_fault(const PageFault& fault)
         auto rounded_address = fault.address() & Page::alignment_mask;
 
         auto page = the().allocate_page();
-        PageDirectory::current().store_physical_page(page);
-        PageDirectory::current().map_page(rounded_address, page->address(), Thread::current()->is_supervisor());
+        AddressSpace::current().store_physical_page(page);
+        AddressSpace::current().map_page(rounded_address, page->address(), Thread::current()->is_supervisor());
     } else {
         error() << "MemoryManager: unexpected page fault: " << fault;
         hang();
     }
 }
 
-void MemoryManager::inititalize(PageDirectory& directory)
+void MemoryManager::inititalize(AddressSpace& directory)
 {
-    // Memory Managment TODOS:
-    // 1. Fix this function                                                         --- kinda done
-    // a. add handling for missing page directories                              --- kinda done
-    // b. get rid of hardcoded kernel page directory entries (keep them dynamic) --- kinda done
-    // 2. Add enums for all attributes for pages                                    --- kinda done
-    // 3. Add a page fault handler                                                  --- kinda done
-    // 4. Add Setters/Getter for all paging structures                              --- kinda done
-    // 5. cli()/hlt() here somewhere?                                               --- kinda done
-    // 6. Add a page invalidator instead of flushing the entire tlb                 --- kinda done
-    // 7. Add allocate_aligned_range for VirtualAllocator
-    // 8. A lot more debug logging for all allocators and page table related stuff --- kinda done
-    // 9. Zero all new pages                                                             --- kinda done
-    // maybe add some sort of quickmap virtual range where I could zero the new pages --- kinda done
-    // 10. make kernel entries global                                                    --- kinda done
-    // 11. tons of magic numbers                                                         --- kinda done
-    // 12. more TBD...
-
     Interrupts::ScopedDisabler d;
 
     // map the directory's physical page somewhere temporarily
@@ -224,7 +208,7 @@ void MemoryManager::inititalize(PageDirectory& directory)
     // TODO: this assumes that all kernel tables are contiguous
     //       so it could backfire later.
     for (size_t i = kernel_first_table_index; i <= kernel_last_table_index; ++i) {
-        auto& entry = PageDirectory::current().entry_at(i);
+        auto& entry = AddressSpace::current().entry_at(i);
 
         if (!entry.is_present())
             break;
@@ -233,7 +217,7 @@ void MemoryManager::inititalize(PageDirectory& directory)
     }
 
     // TODO: remove this later when removing ring 3 tests
-    directory.entry_at(0, mapping.raw()) = PageDirectory::current().entry_at(0);
+    directory.entry_at(0, mapping.raw()) = AddressSpace::current().entry_at(0);
 
     // create the recursive mapping
     directory.entry_at(recursive_entry_index, mapping.raw())

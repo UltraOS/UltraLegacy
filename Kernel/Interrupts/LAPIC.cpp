@@ -8,9 +8,9 @@ Address LAPIC::s_base;
 
 void LAPIC::set_base_address(Address physical_base)
 {
-    s_base = PageDirectory::of_kernel().allocator().allocate_range(4096).begin();
+    s_base = AddressSpace::of_kernel().allocator().allocate_range(4096).begin();
 
-    PageDirectory::of_kernel().map_page(s_base, physical_base);
+    AddressSpace::of_kernel().map_page(s_base, physical_base);
 }
 
 void LAPIC::initialize_for_this_processor()

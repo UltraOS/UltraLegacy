@@ -9,11 +9,7 @@ class PACKED TSS {
 public:
     static constexpr size_t size = 104;
 
-    TSS()
-    {
-        GDT::the().create_tss_descriptor(this);
-        GDT::the().install();
-    }
+    TSS() { GDT::the().create_tss_descriptor(this); }
 
     void set_kernel_stack_pointer(Address ptr) { m_kernel_stack_pointer = ptr.as_pointer<u8>(); }
 

@@ -15,7 +15,7 @@ RefPtr<Thread> Thread::create_supervisor_thread(Address kernel_stack, Address en
 {
     Address adjusted_stack = kernel_stack - sizeof(supervisor_thread_stack_frame);
 
-    auto thread                        = new Thread(PageDirectory::of_kernel(), adjusted_stack);
+    auto thread                        = new Thread(AddressSpace::of_kernel(), adjusted_stack);
     thread->m_is_supervisor            = true;
     thread->m_initial_kernel_stack_top = kernel_stack;
 
@@ -37,7 +37,7 @@ RefPtr<Thread> Thread::create_supervisor_thread(Address kernel_stack, Address en
 }
 
 RefPtr<Thread>
-Thread::create_user_thread(PageDirectory& page_dir, Address user_stack, Address kernel_stack, Address entrypoint)
+Thread::create_user_thread(AddressSpace& page_dir, Address user_stack, Address kernel_stack, Address entrypoint)
 {
     Address adjusted_stack = kernel_stack - sizeof(user_thread_stack_frame);
 
@@ -65,7 +65,7 @@ Thread::create_user_thread(PageDirectory& page_dir, Address user_stack, Address 
     return thread;
 }
 
-Thread::Thread(PageDirectory& page_dir, Address kernel_stack)
+Thread::Thread(AddressSpace& page_dir, Address kernel_stack)
     : m_thread_id(s_next_thread_id++), m_page_directory(page_dir), m_control_block { kernel_stack }
 {
 }

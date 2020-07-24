@@ -2,35 +2,60 @@
 
 #include "Common/Pair.h"
 #include "Common/RefPtr.h"
+#include "GenericPagingEntry.h"
+#include "GenericPagingTable.h"
 #include "Page.h"
-#include "PageEntry.h"
-#include "PageTable.h"
 #include "VirtualAllocator.h"
 
 namespace kernel {
 
-class PageDirectory {
+class AddressSpace {
 public:
     friend class MemoryManager;
 
-    using Entry = PageEntry;
-
-    static constexpr Address recursive_directory_base = 0xFFFFF000;
-    static constexpr size_t  directory_entry_size     = sizeof(Address);
+#ifdef ULTRA_32
     static constexpr Address recursive_table_base     = 0xFFC00000;
-    static constexpr size_t  table_entry_count        = 1024;
-    static constexpr size_t  directory_entry_count    = 1024;
-    static constexpr size_t  table_entry_size         = sizeof(Address);
-    static constexpr size_t  table_size               = table_entry_count * table_entry_size;
+    static constexpr Address recursive_directory_base = 0xFFFFF000;
+#endif
 
-    PageDirectory(RefPtr<Page> directory_page);
+    using Entry = GenericPagingEntry;
+    using Table = GenericPagingTable;
 
-    static void           inititalize();
-    static PageDirectory& of_kernel();
-    static PageDirectory& current();
+    class PT : public GenericPagingTable {
+    };
 
-    PageTable&        table_at(size_t index);
-    Entry&            entry_at(size_t index);
+    static_assert(sizeof(PT) == Page::size);
+
+#ifdef ULTRA_64
+    class PDT : public Table {
+    public:
+        PT& pt_at(size_t index) { return *accessible_address_of(index).as_pointer<PT>(); }
+    };
+
+    class PDPT : public Table {
+        Entry& entry_at(size_t index) { return m_entries[index]; }
+
+        PDT& pdt_at(size_t index) { return *accessible_address_of(index).as_pointer<PDT>(); }
+
+    private:
+        Entry m_entries[table_entry_count];
+    };
+#endif
+
+    AddressSpace(RefPtr<Page> directory_page);
+
+    static void          inititalize();
+    static AddressSpace& of_kernel();
+    static AddressSpace& current();
+
+#ifdef ULTRA_32
+    PT& pt_at(size_t index);
+#elif defined(ULTRA_64)
+    PDTP& pdpt_at(size_t index);
+#endif
+
+    Entry& entry_at(size_t index);
+
     VirtualAllocator& allocator();
     Address           physical_address();
 
@@ -56,18 +81,20 @@ public:
     void flush_at(Address virtual_address);
 
 private:
-    PageDirectory();
+    AddressSpace();
 
+#ifdef ULTRA_32
     Entry& entry_at(size_t index, Address virtual_base);
+#endif
 
     Pair<size_t, size_t> virtual_address_as_paging_indices(Address virtual_address);
 
 private:
     DynamicArray<RefPtr<Page>> m_physical_pages;
-    RefPtr<Page>               m_directory_page;
+    RefPtr<Page>               m_main_page;
     VirtualAllocator           m_allocator;
 
-    static PageDirectory* s_kernel_dir;
-    static PageDirectory* s_active_dir;
+    static AddressSpace* s_of_kernel;
+    static AddressSpace* s_active;
 };
 }

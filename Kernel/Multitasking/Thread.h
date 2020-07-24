@@ -2,7 +2,7 @@
 
 #include "Core/CPU.h"
 #include "Interrupts/Timer.h"
-#include "Memory/PageDirectory.h"
+#include "Memory/AddressSpace.h"
 #include "TSS.h"
 
 namespace kernel {
@@ -33,7 +33,7 @@ public:
     static RefPtr<Thread> create_supervisor_thread(Address kernel_stack, Address entrypoint);
 
     static RefPtr<Thread>
-    create_user_thread(PageDirectory& page_dir, Address user_stack, Address kernel_stack, Address entrypoint);
+    create_user_thread(AddressSpace& page_dir, Address user_stack, Address kernel_stack, Address entrypoint);
 
     void    set_next(Thread* thread) { m_next = thread; }
     Thread* next() { return m_next; }
@@ -107,19 +107,19 @@ private:
         user_iret_stack_frame     iret_frame;
     };
 
-    Thread(PageDirectory& page_dir, Address kernel_stack);
+    Thread(AddressSpace& page_dir, Address kernel_stack);
 
 private:
-    u32            m_thread_id;
-    PageDirectory& m_page_directory;
-    ControlBlock   m_control_block { nullptr };
-    Address        m_initial_kernel_stack_top { nullptr };
-    State          m_state { State::READY };
-    u64            m_wake_up_time { 0 };
-    bool           m_is_supervisor { false };
-    u8             m_exit_code { 0 };
-    Thread*        m_previous { nullptr };
-    Thread*        m_next { nullptr };
+    u32           m_thread_id;
+    AddressSpace& m_page_directory;
+    ControlBlock  m_control_block { nullptr };
+    Address       m_initial_kernel_stack_top { nullptr };
+    State         m_state { State::READY };
+    u64           m_wake_up_time { 0 };
+    bool          m_is_supervisor { false };
+    u8            m_exit_code { 0 };
+    Thread*       m_previous { nullptr };
+    Thread*       m_next { nullptr };
 
     static Thread* s_current;
     static u32     s_next_thread_id;

@@ -10,9 +10,9 @@
 #include "Interrupts/InterruptController.h"
 #include "Interrupts/SyscallDispatcher.h"
 #include "Interrupts/Timer.h"
+#include "Memory/AddressSpace.h"
 #include "Memory/HeapAllocator.h"
 #include "Memory/MemoryManager.h"
-#include "Memory/PageDirectory.h"
 #include "Memory/PhysicalMemory.h"
 #include "Multitasking/Scheduler.h"
 #include "Multitasking/Sleep.h"
@@ -60,7 +60,7 @@ void run(MemoryMap memory_map)
 
     MemoryManager::inititalize(memory_map);
 
-    PageDirectory::inititalize();
+    AddressSpace::inititalize();
 
     InterruptController::discover_and_setup();
 
@@ -85,7 +85,7 @@ void run(MemoryMap memory_map)
     Process::create_supervisor(dummy_kernel_process);
 
     auto page = MemoryManager::the().allocate_page();
-    PageDirectory::of_kernel().map_page(0x0000F000, page->address(), false);
+    AddressSpace::of_kernel().map_page(0x0000F000, page->address(), false);
 
     // yes we're literally copying a function :D
     copy_memory(reinterpret_cast<void*>(userland_process), reinterpret_cast<void*>(0x0000F000), 1024);
