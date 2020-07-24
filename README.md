@@ -7,11 +7,11 @@ An operating system that doesn't try to be UNIX. Made completely from scratch wi
 - Support for both x86 and x86-64, the latter is in progress atm
 - Own bootloader for both x86 and x86-64
 - Basic SMP (multicore) support
-
+---
 ## Getting started
 
-Windows
----
+### Windows
+
 Windows support is fully based on WSL, so you can't currently build the system without it.
 
 - Install QEMU, add it into your `Path`
@@ -19,8 +19,7 @@ Windows support is fully based on WSL, so you can't currently build the system w
 - Install nasm for your WSL
 - run `run_qemu.bat`
 
-Linux
----
+### Linux
 - Install QEMU
 - Install nasm
 - run `run_qemu.sh`
