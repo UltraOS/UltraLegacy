@@ -17,6 +17,7 @@ endif()
 
 if (ARCH MATCHES 64)
     set(COMPILER_PREFIX "x86_64")
+    set(ADDITIONAL_FLAGS "-mcmodel=kernel -mno-red-zone")
 else ()
     set(COMPILER_PREFIX "i686")
 endif ()
@@ -28,7 +29,7 @@ set(CMAKE_C_COMPILER   "${TOOLCHAIN_PATH}/CrossCompiler/Tools${ARCH}/bin/${COMPI
 set(CMAKE_CXX_COMPILER "${TOOLCHAIN_PATH}/CrossCompiler/Tools${ARCH}/bin/${COMPILER_PREFIX}-elf-g++")
 
 set(LINKER_FLAGS "-ffreestanding -O2 -nostdlib")
-set(CXX_FLAGS "-std=c++17 -ffreestanding -O2 -Wall -Wextra -Werror -fno-use-cxa-atexit -fno-rtti -fno-exceptions")
+set(CXX_FLAGS "-std=c++17 -ffreestanding -O2 -Wall -Wextra -Werror -fno-use-cxa-atexit -fno-rtti -fno-exceptions ${ADDITIONAL_FLAGS}")
 set(CMAKE_EXE_LINKER_FLAGS_INIT "${LINKER_FLAGS}")
 set(CMAKE_CXX_FLAGS         ${CXX_FLAGS})
 set(CMAKE_CXX_FLAGS_DEBUG   ${CXX_FLAGS})

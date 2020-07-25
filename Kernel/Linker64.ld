@@ -3,7 +3,7 @@ OUTPUT_FORMAT("binary")
 
 SECTIONS
 {
-    kernel_space_begin = 0xFFFFFFFF80000000 /* MAX - 2GB */
+    kernel_space_begin = 0xFFFFFFFF80000000; /* MAX - 2GB */
     . = kernel_space_begin + 0x100000; /* 1MB into the address space */
 
     .text ALIGN(4K) : AT (ADDR (.text) - kernel_space_begin)
