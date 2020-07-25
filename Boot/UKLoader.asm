@@ -102,8 +102,8 @@ start:
         call reboot
 
     long_mode_supported:
-        NOTIFY_BIOS:    0xEC00
-        LONG_MODE_ONLY: 0x2
+        NOTIFY_BIOS:    equ 0xEC00
+        LONG_MODE_ONLY: equ 0x2
 
         mov ax, NOTIFY_BIOS
         mov bl, LONG_MODE_ONLY
@@ -213,8 +213,8 @@ jump_to_kernel:
     mov fs, ax
     mov gs, ax
 
-    cli
-    hlt
+    mov   rax, memory_map
+    movzx rbx, word [memory_map_entry_count]
 
     jmp KERNEL_ENTRYPOINT
 
