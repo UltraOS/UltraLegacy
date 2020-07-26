@@ -17,7 +17,7 @@ endif()
 
 if (ARCH MATCHES 64)
     set(COMPILER_PREFIX "x86_64")
-    set(ADDITIONAL_FLAGS "-mcmodel=kernel -mno-red-zone")
+    set(ADDITIONAL_FLAGS "-mcmodel=kernel -mno-red-zone -mno-mmx -mno-sse -mno-sse2")
 else ()
     set(COMPILER_PREFIX "i686")
 endif ()

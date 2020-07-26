@@ -1,4 +1,4 @@
-%define KERNEL_ENTRYPOINT _ZN6kernel3runENS_9MemoryMapE
+%define KERNEL_ENTRYPOINT _ZN6kernel3runEPNS_9MemoryMapE
 
 extern KERNEL_ENTRYPOINT
 
@@ -162,6 +162,8 @@ start:
         ; memory map pointer
         add eax, VIRTUAL_ORIGIN
         push eax
+
+        push esp
 
     ; Jump into kernel main
     call KERNEL_ENTRYPOINT
