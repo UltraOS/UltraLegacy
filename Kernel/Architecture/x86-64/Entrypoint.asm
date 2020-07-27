@@ -9,9 +9,14 @@ extern section_bss_end
 
 EM_BIT: equ (1 << 2)
 TS_BIT: equ (1 << 3)
+VIRTUAL_ORIGIN: equ 0xFFFFFFFF80000000
 
 global start
 start:
+    mov r8, cr3
+    mov qword [r8], 0x0000000000000000
+    mov cr3, r8
+
     ; Set up the kernel stack
     mov rsp, kernel_stack_begin
 
@@ -20,6 +25,7 @@ start:
 
     ; memory map pointer
     mov r9, rax
+    add r9, VIRTUAL_ORIGIN
 
     ; zero section bss
     mov rcx, section_bss_end
