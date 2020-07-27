@@ -50,7 +50,7 @@ void userland_process()
     }
 }
 
-void run(MemoryMap memory_map)
+void run(MemoryMap* memory_map)
 {
     runtime::ensure_loaded_correctly();
 
@@ -58,7 +58,7 @@ void run(MemoryMap memory_map)
 
     runtime::init_global_objects();
 
-    MemoryManager::inititalize(memory_map);
+    MemoryManager::inititalize(*memory_map);
 
     AddressSpace::inititalize();
 
@@ -66,8 +66,11 @@ void run(MemoryMap memory_map)
 
     GDT::the().create_basic_descriptors();
     GDT::the().install();
+
     ISR::install();
+
     IRQManager::install();
+
     SyscallDispatcher::initialize();
 
     Scheduler::inititalize();

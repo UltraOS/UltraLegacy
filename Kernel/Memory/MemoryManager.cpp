@@ -109,11 +109,12 @@ MemoryManager::MemoryManager(const MemoryMap& memory_map)
     }
 
 #ifdef MEMORY_MANAGER_DEBUG
-    log() << "MemoryManager: Total free memory: " << bytes_to_megabytes_precise(total_free_memory) << " MB ("
+    log() << "MemoryManager: Total free memory: " << bytes_to_megabytes(total_free_memory) << " MB ("
           << total_free_memory / Page::size << " pages) ";
 #endif
 }
 
+#ifdef ULTRA_32
 u8* MemoryManager::quickmap_page(Address physical_address)
 {
 #ifdef MEMORY_MANAGER_DEBUG
@@ -134,6 +135,7 @@ void MemoryManager::unquickmap_page()
 {
     AddressSpace::current().unmap_page(m_quickmap_range.begin());
 }
+#endif
 
 RefPtr<Page> MemoryManager::allocate_page()
 {
@@ -147,13 +149,18 @@ RefPtr<Page> MemoryManager::allocate_page()
 
         ASSERT(page);
 
-        ScopedPageMapping mapping(page->address());
-
 #ifdef MEMORY_MANAGER_DEBUG
         log() << "MemoryManager: zeroing the page at physaddr " << page->address();
 #endif
 
+#ifdef ULTRA_32
+        ScopedPageMapping mapping(page->address());
+
         zero_memory(mapping.as_pointer(), Page::size);
+
+#elif defined(ULTRA_64)
+        zero_memory(physical_to_virtual(page->address()).as_pointer<void>(), Page::size);
+#endif
 
         return page;
     }
@@ -181,7 +188,6 @@ void MemoryManager::handle_page_fault(const PageFault& fault)
 #ifdef MEMORY_MANAGER_DEBUG
         log() << "MemoryManager: expected page fault: " << fault;
 #endif
-
         auto rounded_address = fault.address() & Page::alignment_mask;
 
         auto page = the().allocate_page();
@@ -196,7 +202,7 @@ void MemoryManager::handle_page_fault(const PageFault& fault)
 void MemoryManager::inititalize(AddressSpace& directory)
 {
     Interrupts::ScopedDisabler d;
-
+#ifdef ULTRA_32
     // map the directory's physical page somewhere temporarily
     ScopedPageMapping mapping(directory.physical_address());
 
@@ -223,12 +229,18 @@ void MemoryManager::inititalize(AddressSpace& directory)
     directory.entry_at(recursive_entry_index, mapping.raw())
         .set_physical_address(directory.physical_address())
         .make_supervisor_present();
+#elif defined(ULTRA_64)
+    (void)directory;
+    ASSERT(false && "implement me");
+#endif
 }
 
+#ifdef ULTRA_32
 void MemoryManager::set_quickmap_range(const VirtualAllocator::Range& range)
 {
     m_quickmap_range = range;
 }
+#endif
 
 MemoryManager& MemoryManager::the()
 {

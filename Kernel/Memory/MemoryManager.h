@@ -26,7 +26,7 @@ public:
     static constexpr size_t  recursive_entry_index    = 1023;
 #elif defined(ULTRA_64)
     static constexpr Address max_memory_address   = 0xFFFFFFFFFFFFFFFF;
-    static constexpr Address kernel_reserved_base = max_memory_address - 2 * GB;
+    static constexpr Address kernel_reserved_base = max_memory_address - 2 * GB + 1;
     static constexpr Address physical_memory_base = 0xFFFF800000000000;
 #endif
 
@@ -59,14 +59,8 @@ public:
     [[nodiscard]] RefPtr<Page> allocate_page();
     void                       free_page(Page& page);
 
+#ifdef ULTRA_32
     void set_quickmap_range(const VirtualAllocator::Range& range);
-
-    static constexpr Address kernel_address_as_physical(Address virtual_address)
-    {
-        ASSERT(virtual_address > kernel_reserved_base && virtual_address < kernel_end_address);
-
-        return virtual_address - kernel_reserved_base;
-    }
 
     static constexpr Address physical_address_as_kernel(Address physical_address)
     {
@@ -75,9 +69,39 @@ public:
         return physical_address + kernel_reserved_base;
     }
 
+    static constexpr Address kernel_address_as_physical(Address virtual_address)
+    {
+        ASSERT(virtual_address > kernel_reserved_base && virtual_address < kernel_end_address);
+
+        return virtual_address - kernel_reserved_base;
+    }
+#elif defined(ULTRA_64)
+    static constexpr Address physical_to_virtual(Address physical_address)
+    {
+        return physical_memory_base + physical_address;
+    }
+
+    static constexpr Address physical_address_as_kernel(Address physical_address)
+    {
+        return physical_to_virtual(physical_address);
+    }
+
+    static constexpr Address kernel_address_as_physical(Address virtual_address)
+    {
+        ASSERT(virtual_address > physical_memory_base);
+
+        if (virtual_address > kernel_reserved_base)
+            return virtual_address - kernel_reserved_base;
+        else
+            return virtual_address - physical_memory_base;
+    }
+#endif
+
 private:
     MemoryManager(const MemoryMap& memory_map);
 
+// Not needed for 64 bit as we have all the phys memory mapped
+#ifdef ULTRA_32
     u8*  quickmap_page(const Page&);
     u8*  quickmap_page(Address);
     void unquickmap_page();
@@ -98,11 +122,15 @@ private:
     private:
         u8* m_pointer { nullptr };
     };
+#endif
 
 private:
     static MemoryManager* s_instance;
 
-    VirtualAllocator::Range      m_quickmap_range;
     DynamicArray<PhysicalRegion> m_physical_regions;
+
+#ifdef ULTRA_32
+    VirtualAllocator::Range m_quickmap_range;
+#endif
 };
 }

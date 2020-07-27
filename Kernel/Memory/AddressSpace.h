@@ -21,7 +21,7 @@ public:
     using Entry = GenericPagingEntry;
     using Table = GenericPagingTable;
 
-    class PT : public GenericPagingTable {
+    class PT : public Table {
     };
 
     static_assert(sizeof(PT) == Page::size);
@@ -33,12 +33,8 @@ public:
     };
 
     class PDPT : public Table {
-        Entry& entry_at(size_t index) { return m_entries[index]; }
-
+    public:
         PDT& pdt_at(size_t index) { return *accessible_address_of(index).as_pointer<PDT>(); }
-
-    private:
-        Entry m_entries[table_entry_count];
     };
 #endif
 
@@ -51,7 +47,7 @@ public:
 #ifdef ULTRA_32
     PT& pt_at(size_t index);
 #elif defined(ULTRA_64)
-    PDTP& pdpt_at(size_t index);
+    PDPT&                                pdpt_at(size_t index);
 #endif
 
     Entry& entry_at(size_t index);
@@ -61,17 +57,13 @@ public:
 
     void store_physical_page(RefPtr<Page> page);
 
-    void map_supervisor_page_directory_entry(size_t index, Address physical_address);
-    void map_supervisor_page(Address virtual_address, Address physical_address);
-    void map_supervisor_page_directory_entry(size_t index, const Page& physical_address);
-    void map_supervisor_page(Address virtual_address, const Page& physical_address);
-    void map_user_page_directory_entry(size_t index, Address physical_address);
-    void map_user_page(Address virtual_address, Address physical_address);
-    void map_user_page_directory_entry(size_t index, const Page& physical_address);
-    void map_user_page(Address virtual_address, const Page& physical_address);
-
-    void map_page_directory_entry(size_t index, Address physical_address, bool is_supervior = true);
     void map_page(Address virtual_address, Address physical_address, bool is_supervior = true);
+
+    void map_user_page(Address virtual_address, const Page& physical_address);
+    void map_user_page(Address virtual_address, Address physical_address);
+
+    void map_supervisor_page(Address virtual_address, const Page& physical_address);
+    void map_supervisor_page(Address virtual_address, Address physical_address);
 
     void unmap_page(Address virtual_address);
 
@@ -83,11 +75,20 @@ public:
 private:
     AddressSpace();
 
-#ifdef ULTRA_32
-    Entry& entry_at(size_t index, Address virtual_base);
-#endif
+    void map_supervisor_page_directory_entry(size_t index, Address physical_address);
+    void map_supervisor_page_directory_entry(size_t index, const Page& physical_address);
 
+    void map_user_page_directory_entry(size_t index, Address physical_address);
+    void map_user_page_directory_entry(size_t index, const Page& physical_address);
+
+    void map_page_directory_entry(size_t index, Address physical_address, bool is_supervior = true);
+
+#ifdef ULTRA_32
+    Entry&               entry_at(size_t index, Address virtual_base);
     Pair<size_t, size_t> virtual_address_as_paging_indices(Address virtual_address);
+#elif defined(ULTRA_64)
+    Quad<size_t, size_t, size_t, size_t> virtual_address_as_paging_indices(Address virtual_address);
+#endif
 
 private:
     DynamicArray<RefPtr<Page>> m_physical_pages;

@@ -5,13 +5,17 @@
 #include "MemoryManager.h"
 #include "VirtualAllocator.h"
 
-#define PAGE_DIRECTORY_DEBUG
+#define ADDRESS_SPACE_DEBUG
 
 namespace kernel {
 
 #ifdef ULTRA_32
-// defined in Core/crt0.asm
+// defined in Architecture/x86/Entrypoint.asm
 extern "C" u8 kernel_page_directory[AddressSpace::Table::entry_count];
+#elif defined(ULTRA_64)
+// defined by the bootloader
+// TODO: don't reuse bootloader stuff
+static constexpr Address kernel_pml4_address = 0x10000;
 #endif
 
 AddressSpace* AddressSpace::s_of_kernel;
@@ -30,7 +34,11 @@ void AddressSpace::inititalize()
 {
     s_of_kernel = new AddressSpace();
 
+#ifdef ULTRA_32
     auto as_physical = MemoryManager::kernel_address_as_physical(&kernel_page_directory);
+#elif defined(ULTRA_64)
+    auto as_physical = kernel_pml4_address;
+#endif
 
     s_of_kernel->m_main_page = RefPtr<Page>::create(as_physical);
 
@@ -39,18 +47,19 @@ void AddressSpace::inititalize()
 
     s_of_kernel->allocator().set_range(MemoryManager::kernel_usable_base, MemoryManager::kernel_usable_length);
 
+#ifdef ULTRA_32
     // allocate a quickmap range
     auto range = s_of_kernel->allocator().allocate_range(Page::size);
     MemoryManager::the().set_quickmap_range(range);
+#endif
 }
 
-// TODO: Maybe add an overload of this function that takes in a const Page&
 void AddressSpace::map_page_directory_entry(size_t index, Address physical_address, bool is_supervisor)
 {
     ASSERT(is_active());
     ASSERT_PAGE_ALIGNED(physical_address);
 
-#ifdef PAGE_DIRECTORY_DEBUG
+#ifdef ADDRESS_SPACE_DEBUG
     log() << "AddressSpace: mapping a new page table " << index << " at physaddr " << physical_address
           << " is_supervisor:" << is_supervisor;
 #endif
@@ -63,12 +72,25 @@ void AddressSpace::map_page_directory_entry(size_t index, Address physical_addre
         entry.make_user_present();
 }
 
+#ifdef ULTRA_32
 Pair<size_t, size_t> AddressSpace::virtual_address_as_paging_indices(Address virtual_address)
 {
     return make_pair(static_cast<size_t>(virtual_address >> 22),
                      static_cast<size_t>((virtual_address >> 12) & (Table::entry_count - 1)));
 }
+#elif defined(ULTRA_64)
+Quad<size_t, size_t, size_t, size_t> AddressSpace::virtual_address_as_paging_indices(Address virtual_address)
+{
+    size_t pml4_index = (virtual_address >> 39) & (Table::entry_count - 1);
+    size_t pdpt_index = (virtual_address >> 30) & (Table::entry_count - 1);
+    size_t pdt_index  = (virtual_address >> 21) & (Table::entry_count - 1);
+    size_t pt_index   = (virtual_address >> 12) & (Table::entry_count - 1);
 
+    return make_quad(pml4_index, pdpt_index, pdt_index, pt_index);
+}
+#endif
+
+#ifdef ULTRA_32
 void AddressSpace::map_page(Address virtual_address, Address physical_address, bool is_supervisor)
 {
     ASSERT(is_active());
@@ -82,7 +104,7 @@ void AddressSpace::map_page(Address virtual_address, Address physical_address, b
     auto& page_entry_index = indices.right();
 
     if (!entry_at(page_table_index).is_present()) {
-#ifdef PAGE_DIRECTORY_DEBUG
+#ifdef ADDRESS_SPACE_DEBUG
         log() << "AddressSpace: tried to access a non-present table " << page_table_index << ", allocating...";
 #endif
 
@@ -90,7 +112,7 @@ void AddressSpace::map_page(Address virtual_address, Address physical_address, b
         map_page_directory_entry(page_table_index, page->address(), is_supervisor);
     }
 
-#ifdef PAGE_DIRECTORY_DEBUG
+#ifdef ADDRESS_SPACE_DEBUG
     log() << "AddressSpace: mapping the page at vaddr " << virtual_address << " to " << physical_address
           << " at table:" << page_table_index << " entry:" << page_entry_index << " is_supervisor:" << is_supervisor;
     ;
@@ -105,6 +127,71 @@ void AddressSpace::map_page(Address virtual_address, Address physical_address, b
 
     flush_at(virtual_address);
 }
+#elif defined(ULTRA_64)
+void AddressSpace::map_page(Address virtual_address, Address physical_address, bool is_supervisor)
+{
+    ASSERT_PAGE_ALIGNED(virtual_address);
+    ASSERT_PAGE_ALIGNED(physical_address);
+
+    Interrupts::ScopedDisabler d;
+
+#ifdef ADDRESS_SPACE_DEBUG
+    log() << "AddressSpace: mapping the page at vaddr " << virtual_address << " to " << physical_address
+          << " is_supervisor:" << is_supervisor;
+#endif
+
+    auto indices = virtual_address_as_paging_indices(virtual_address);
+
+    if (!entry_at(indices.first()).is_present()) {
+#ifdef ADDRESS_SPACE_DEBUG
+        log() << "AddressSpace: tried to access a non-present pdpt " << indices.first() << ", allocating...";
+#endif
+        auto  page  = m_physical_pages.emplace(MemoryManager::the().allocate_page());
+        auto& entry = entry_at(indices.first());
+        entry.set_physical_address(page->address());
+        if (is_supervisor)
+            entry.make_supervisor_present();
+        else
+            entry.make_user_present();
+    }
+
+    if (!pdpt_at(indices.first()).entry_at(indices.second()).is_present()) {
+#ifdef ADDRESS_SPACE_DEBUG
+        log() << "AddressSpace: tried to access a non-present pdt " << indices.second() << ", allocating...";
+#endif
+        auto  page  = m_physical_pages.emplace(MemoryManager::the().allocate_page());
+        auto& entry = pdpt_at(indices.first()).entry_at(indices.second());
+        entry.set_physical_address(page->address());
+        if (is_supervisor)
+            entry.make_supervisor_present();
+        else
+            entry.make_user_present();
+    }
+
+    if (!pdpt_at(indices.first()).pdt_at(indices.second()).entry_at(indices.third()).is_present()) {
+#ifdef ADDRESS_SPACE_DEBUG
+        log() << "AddressSpace: tried to access a non-present pt " << indices.second() << ", allocating...";
+#endif
+        auto  page  = m_physical_pages.emplace(MemoryManager::the().allocate_page());
+        auto& entry = pdpt_at(indices.first()).pdt_at(indices.second()).entry_at(indices.third());
+        entry.set_physical_address(page->address());
+        if (is_supervisor)
+            entry.make_supervisor_present();
+        else
+            entry.make_user_present();
+    }
+
+    auto& page_entry
+        = pdpt_at(indices.first()).pdt_at(indices.second()).pt_at(indices.third()).entry_at(indices.fourth());
+
+    page_entry.set_physical_address(physical_address);
+
+    if (is_supervisor)
+        page_entry.make_supervisor_present();
+    else
+        page_entry.make_user_present();
+}
+#endif
 
 void AddressSpace::map_user_page_directory_entry(size_t index, Address physical_address)
 {
@@ -151,22 +238,43 @@ void AddressSpace::store_physical_page(RefPtr<Page> page)
     m_physical_pages.append(page);
 }
 
+#ifdef ULTRA_32
 void AddressSpace::unmap_page(Address virtual_address)
 {
     ASSERT(is_active());
     ASSERT_PAGE_ALIGNED(virtual_address);
 
-    auto  indices          = virtual_address_as_paging_indices(virtual_address);
-    auto& page_table_index = indices.left();
-    auto& page_entry_index = indices.right();
+    const auto indices          = virtual_address_as_paging_indices(virtual_address);
+    auto&      page_table_index = indices.left();
+    auto&      page_entry_index = indices.right();
 
-#ifdef PAGE_DIRECTORY_DEBUG
+#ifdef ADDRESS_SPACE_DEBUG
     log() << "AddressSpace: unmapping the page at vaddr " << virtual_address;
 #endif
 
     pt_at(page_table_index).entry_at(page_entry_index).set_present(false);
     flush_at(virtual_address);
 }
+#elif defined(ULTRA_64)
+void AddressSpace::unmap_page(Address virtual_address)
+{
+    ASSERT_PAGE_ALIGNED(virtual_address);
+
+    const auto indices = virtual_address_as_paging_indices(virtual_address);
+
+#ifdef ADDRESS_SPACE_DEBUG
+    log() << "AddressSpace: unmapping the page at vaddr " << virtual_address;
+#endif
+
+    pdpt_at(indices.first())
+        .pdt_at(indices.second())
+        .pt_at(indices.fourth())
+        .entry_at(indices.fourth())
+        .set_present(false);
+
+    flush_at(virtual_address);
+}
+#endif
 
 VirtualAllocator& AddressSpace::allocator()
 {
@@ -207,7 +315,7 @@ void AddressSpace::flush_all()
 
 void AddressSpace::flush_at(Address virtual_address)
 {
-#ifdef PAGE_DIRECTORY_DEBUG
+#ifdef ADDRESS_SPACE_DEBUG
     log() << "AddressSpace: flushing the page at vaddr " << virtual_address;
 #endif
 
