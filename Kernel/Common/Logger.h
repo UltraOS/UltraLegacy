@@ -190,7 +190,11 @@ inline Address vga_log(StringView string, size_t row, size_t column, u8 color)
     static constexpr size_t vga_columns        = 80;
     static constexpr size_t vga_bytes_per_char = 2;
     static constexpr ptr_t  vga_address        = 0xB8000;
+#ifdef ULTRA_32
     static constexpr ptr_t  linear_vga_address = 3 * GB + vga_address;
+#elif defined(ULTRA_64)
+    static constexpr ptr_t  linear_vga_address = 0xFFFF800000000000 + vga_address;
+#endif
 
     ptr_t initial_memory = linear_vga_address + vga_columns * vga_bytes_per_char * row;
 

@@ -23,7 +23,7 @@ private:
     u32 m_unused_1;
     u8* m_kernel_stack_pointer { nullptr };
 #endif
-    u32 m_unused_2[23] {};
+    u32 m_unused_2[23];
 };
 
 static_assert(sizeof(TSS) == TSS::size);

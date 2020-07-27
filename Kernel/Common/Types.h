@@ -68,18 +68,19 @@ static_assert(sizeof(f64) == SIZEOF_F64, "Incorrect size of 64 bit float");
 #undef SIZEOF_I32
 #undef SIZEOF_I64
 
-class Address {
+template <typename SizeT>
+class BasicAddress {
 public:
-    Address() = default;
+    BasicAddress() = default;
 
     template <typename T>
-    constexpr Address(T* ptr) : m_ptr(reinterpret_cast<ptr_t>(ptr))
+    constexpr BasicAddress(T* ptr) : m_ptr(reinterpret_cast<ptr_t>(ptr))
     {
     }
 
-    constexpr Address(decltype(nullptr)) : m_ptr(0) { }
+    constexpr BasicAddress(decltype(nullptr)) : m_ptr(0) { }
 
-    constexpr Address(ptr_t address) : m_ptr(address) { }
+    constexpr BasicAddress(SizeT address) : m_ptr(address) { }
 
     constexpr ptr_t raw() const { return m_ptr; }
 
@@ -100,6 +101,10 @@ public:
     void operator+=(size_t offset) { m_ptr += offset; }
 
 private:
-    ptr_t m_ptr;
+    SizeT m_ptr;
 };
+
+using Address   = BasicAddress<ptr_t>;
+using Address32 = BasicAddress<u32>;
+using Address64 = BasicAddress<u64>;
 }

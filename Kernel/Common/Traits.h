@@ -72,6 +72,14 @@ struct is_integral<unsigned char> : true_value {
 };
 
 template <>
+struct is_integral<short> : true_value {
+};
+
+template <>
+struct is_integral<unsigned short> : true_value {
+};
+
+template <>
 struct is_integral<int> : true_value {
 };
 
