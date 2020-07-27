@@ -128,7 +128,8 @@ void InterruptController::MP::parse_configuration_table(FloatingPointer* fp_tabl
         return;
     }
 
-    auto configuration_table_linear = MemoryManager::physical_address_as_kernel(fp_table->configuration_table_pointer);
+    auto configuration_table_linear
+        = MemoryManager::physical_address_as_kernel(fp_table->configuration_table_pointer.raw());
 
     auto& configuration_table = *configuration_table_linear.as_pointer<MP::ConfigurationTable>();
 
@@ -144,7 +145,7 @@ void InterruptController::MP::parse_configuration_table(FloatingPointer* fp_tabl
     Address entry_address = &configuration_table + 1;
 
     s_smp_data                = new SMPData;
-    s_smp_data->lapic_address = configuration_table.local_apic_pointer;
+    s_smp_data->lapic_address = static_cast<ptr_t>(configuration_table.local_apic_pointer);
 
     u8 isa_bus_id = 0xFF;
     u8 pci_bus_id = 0xFF;
@@ -187,7 +188,7 @@ void InterruptController::MP::parse_configuration_table(FloatingPointer* fp_tabl
             log() << "InterruptController: I/O APIC at " << io_apic.io_apic_pointer << " is_ok:" << is_ok
                   << " id:" << io_apic.id;
 
-            s_smp_data->ioapic_address = io_apic.io_apic_pointer;
+            s_smp_data->ioapic_address = static_cast<ptr_t>(io_apic.io_apic_pointer);
         } else if (type == EntryType::IO_INTERRUPT_ASSIGNMENT || type == EntryType::LOCAL_INTERRUPT_ASSIGNMENT) {
             ASSERT(isa_bus_id != 0xFF);
 

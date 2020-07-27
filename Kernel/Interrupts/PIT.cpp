@@ -40,34 +40,16 @@ void PIT::on_irq(const RegisterState& registers)
 {
     increment();
 
-    auto display_write = [](const char* string, bool carriage_return = false) {
-        static constexpr ptr_t vga_address        = 0xB8000;
-        static constexpr ptr_t linear_vga_address = MemoryManager::physical_address_as_kernel(vga_address);
-        static constexpr u8    light_blue         = 0x9;
+    auto offset = vga_log("Uptime: ", 0, 0, 0x9);
 
-        static u16* memory = reinterpret_cast<u16*>(linear_vga_address);
-
-        if (carriage_return)
-            memory = reinterpret_cast<u16*>(linear_vga_address);
-
-        while (*string) {
-            u16 colored_char = *(string++);
-            colored_char |= light_blue << 8;
-
-            *(memory++) = colored_char;
-        }
-    };
-
-    display_write("Uptime: ", true);
-
-    char number[11];
+    char number[16];
 
     float precise_seconds = static_cast<float>(nanoseconds_since_boot()) / Timer::nanoseconds_in_second;
 
     if (to_string(precise_seconds, number, 11))
-        display_write(number);
+        offset = vga_log(number, 0, offset, 0x9);
 
-    display_write(" seconds");
+    vga_log(" seconds", 0, offset, 0x9);
 
     // do this here manually since Scheduler::on_tick is very likely to switch the task
     InterruptController::the().end_of_interrupt(irq_index());

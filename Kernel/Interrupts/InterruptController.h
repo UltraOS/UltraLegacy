@@ -71,29 +71,29 @@ private:
         }
 
         struct ConfigurationTable {
-            char    signature[4];
-            u16     length;
-            u8      specification_revision;
-            u8      checksum;
-            char    oem_id[8];
-            char    product_id[12];
-            Address oem_table_pointer;
-            u16     oem_table_size;
-            u16     entry_count;
-            Address local_apic_pointer;
-            u16     extended_table_length;
-            u8      extended_table_checksum;
-            u8      reserved;
+            char      signature[4];
+            u16       length;
+            u8        specification_revision;
+            u8        checksum;
+            char      oem_id[8];
+            char      product_id[12];
+            Address32 oem_table_pointer;
+            u16       oem_table_size;
+            u16       entry_count;
+            Address32 local_apic_pointer;
+            u16       extended_table_length;
+            u8        extended_table_checksum;
+            u8        reserved;
         };
 
         struct FloatingPointer {
-            char    signature[4];
-            Address configuration_table_pointer;
-            u8      length;
-            u8      specification_revision;
-            u8      checksum;
-            u8      default_configuration;
-            u32     features;
+            char      signature[4];
+            Address32 configuration_table_pointer;
+            u8        length;
+            u8        specification_revision;
+            u8        checksum;
+            u8        default_configuration;
+            u32       features;
         };
 
         struct ProcessorEntry {
@@ -128,7 +128,7 @@ private:
             u8        id;
             u8        version;
             Flags     flags;
-            Address   io_apic_pointer;
+            Address32 io_apic_pointer;
         };
 
         struct InterruptEntry {
