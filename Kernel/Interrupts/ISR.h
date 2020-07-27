@@ -65,6 +65,7 @@ private:
 // Please stop...
 // clang-format off
 
+#ifdef ULTRA_32
 // title - the interrupt handler title without "_handler"
 // length - the full length of the actual handler, including "_handler"
 // (and yes there isn't any other way to get the length as a literal AFAIK)
@@ -121,5 +122,88 @@ private:
         "    popa\n"                                                                                                   \
         "    add $0x4, %esp\n"                                                                                         \
         "    iret\n");
+#elif defined(ULTRA_64)
+#define DEFINE_INTERRUPT_HANDLER_NO_ERROR_CODE(title, length)                                                      \
+    extern "C" void title##_entry();                                                                               \
+    asm(".globl " #title "_entry\n"                                                                                \
+        "" #title "_entry: \n"                                                                                     \
+        "    pushq $0\n"                                                                                           \
+        "    pushq %rax\n"                                                                                         \
+        "    pushq %rbx\n"                                                                                         \
+        "    pushq %rcx\n"                                                                                         \
+        "    pushq %rdx\n"                                                                                         \
+        "    pushq %rsi\n"                                                                                         \
+        "    pushq %rdi\n"                                                                                         \
+        "    pushq %rbp\n"                                                                                         \
+        "    pushq %r8\n"                                                                                          \
+        "    pushq %r9\n"                                                                                          \
+        "    pushq %r10\n"                                                                                         \
+        "    pushq %r11\n"                                                                                         \
+        "    pushq %r12\n"                                                                                         \
+        "    pushq %r13\n"                                                                                         \
+        "    pushq %r14\n"                                                                                         \
+        "    pushq %r15\n"                                                                                         \
+        "    movq %rsp, %rdi\n"                                                                                    \
+        "    cld\n"                                                                                                \
+        "    call " ISR(title##_handler, length) "\n"                                                              \
+        "    popq %r15\n"                                                                                          \
+        "    popq %r14\n"                                                                                          \
+        "    popq %r13\n"                                                                                          \
+        "    popq %r12\n"                                                                                          \
+        "    popq %r11\n"                                                                                          \
+        "    popq %r10\n"                                                                                          \
+        "    popq %r9\n"                                                                                           \
+        "    popq %r8\n"                                                                                           \
+        "    popq %rbp\n"                                                                                          \
+        "    popq %rdi\n"                                                                                          \
+        "    popq %rsi\n"                                                                                          \
+        "    popq %rdx\n"                                                                                          \
+        "    popq %rcx\n"                                                                                          \
+        "    popq %rbx\n"                                                                                          \
+        "    popq %rax\n"                                                                                          \
+        "    add $0x8, %rsp\n"                                                                                     \
+        "    iretq\n");
+
+#define DEFINE_INTERRUPT_HANDLER(title, length)                                                                \
+    extern "C" void title##_entry();                                                                           \
+    asm(".globl " #title "_entry\n"                                                                            \
+        "" #title "_entry: \n"                                                                                 \
+        "    pushq $0\n"                                                                                       \
+        "    pushq %rax\n"                                                                                     \
+        "    pushq %rbx\n"                                                                                     \
+        "    pushq %rcx\n"                                                                                     \
+        "    pushq %rdx\n"                                                                                     \
+        "    pushq %rsi\n"                                                                                     \
+        "    pushq %rdi\n"                                                                                     \
+        "    pushq %rbp\n"                                                                                     \
+        "    pushq %r8\n"                                                                                      \
+        "    pushq %r9\n"                                                                                      \
+        "    pushq %r10\n"                                                                                     \
+        "    pushq %r11\n"                                                                                     \
+        "    pushq %r12\n"                                                                                     \
+        "    pushq %r13\n"                                                                                     \
+        "    pushq %r14\n"                                                                                     \
+        "    pushq %r15\n"                                                                                     \
+        "    movq %rsp, %rdi\n"                                                                                \
+        "    cld\n"                                                                                            \
+        "    call " ISR(title##_handler, length) "\n"                                                          \
+        "    popq %r15\n"                                                                                      \
+        "    popq %r14\n"                                                                                      \
+        "    popq %r13\n"                                                                                      \
+        "    popq %r12\n"                                                                                      \
+        "    popq %r11\n"                                                                                      \
+        "    popq %r10\n"                                                                                      \
+        "    popq %r9\n"                                                                                       \
+        "    popq %r8\n"                                                                                       \
+        "    popq %rbp\n"                                                                                      \
+        "    popq %rdi\n"                                                                                      \
+        "    popq %rsi\n"                                                                                      \
+        "    popq %rdx\n"                                                                                      \
+        "    popq %rcx\n"                                                                                      \
+        "    popq %rbx\n"                                                                                      \
+        "    popq %rax\n"                                                                                      \
+        "    add $0x8, %rsp\n"                                                                                 \
+        "    iretq\n");
+#endif
 
 // clang-format on

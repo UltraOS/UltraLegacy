@@ -57,7 +57,7 @@ void GDT::create_basic_descriptors()
 }
 
 void GDT::create_tss_descriptor(TSS* tss)
-{   
+{
 #ifdef ULTRA_32
     create_descriptor(reinterpret_cast<ptr_t>(tss), TSS::size, EXECUTABLE | IS_TSS | RING_3 | PRESENT, NULL_FLAG);
 
@@ -68,9 +68,9 @@ void GDT::create_tss_descriptor(TSS* tss)
 
     ptr_t base = reinterpret_cast<ptr_t>(tss);
 
-    this_entry.base_lower  = base & 0x0000FFFF;
-    this_entry.base_middle = (base & 0x00FF0000) >> 16;
-    this_entry.base_upper  = (base & 0xFF000000) >> 24;
+    this_entry.base_lower   = base & 0x0000FFFF;
+    this_entry.base_middle  = (base & 0x00FF0000) >> 16;
+    this_entry.base_upper   = (base & 0xFF000000) >> 24;
     this_entry.base_upper_2 = (base & 0xFFFFFFFF00000000ull) >> 32;
 
     this_entry.access = EXECUTABLE | IS_TSS | RING_3 | PRESENT;

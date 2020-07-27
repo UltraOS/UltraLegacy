@@ -81,7 +81,7 @@ private:
         u8                base_upper;
     } m_entries[entry_count];
 
-    #ifdef ULTRA_64
+#ifdef ULTRA_64
     struct PACKED tss_entry {
         u16               limit_lower;
         u16               base_lower;
@@ -95,7 +95,7 @@ private:
     };
 
     tss_entry& new_tss_entry();
-    #endif
+#endif
 
     entry& new_entry();
 

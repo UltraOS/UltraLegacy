@@ -129,10 +129,14 @@ void ISR::page_fault_handler(RegisterState* state)
     static constexpr u32 user_mask = 0b100;
 
     Address address_of_fault;
-    asm("movl %%cr2, %%eax" : "=a"(address_of_fault));
+    asm("mov %%cr2, %0" : "=a"(address_of_fault));
 
     PageFault pf(address_of_fault,
+#ifdef ULTRA_32
                  state->eip,
+#elif defined(ULTRA_64)
+                 state->rip,
+#endif
                  state->error_code & user_mask,
                  static_cast<PageFault::Type>(state->error_code & type_mask));
 

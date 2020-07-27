@@ -8,12 +8,14 @@ template <typename Left, typename Right>
 class Pair {
 public:
     template <typename LeftT, typename RightT>
-    Pair(LeftT&& left, RightT&& right) : m_left(forward<LeftT>(left)), m_right(forward<RightT>(right)) { }
+    Pair(LeftT&& left, RightT&& right) : m_left(forward<LeftT>(left)), m_right(forward<RightT>(right))
+    {
+    }
 
-    Left& left() { return m_left; }
+    Left&       left() { return m_left; }
     const Left& left() const { return m_left; }
 
-    Right& right() { return m_right; }
+    Right&       right() { return m_right; }
     const Right& right() const { return m_right; }
 
 private:
@@ -26,20 +28,21 @@ class Quad {
 public:
     template <typename FirstT, typename SecondT, typename ThirdT, typename FourthT>
     Quad(FirstT&& first, SecondT&& second, ThirdT&& third, FourthT&& fourth)
-        : m_first(forward<FirstT>(first)), m_second(forward<SecondT>(second)),
-          m_third(forward<ThirdT>(third)), m_fourth(forward<FourthT>(fourth)){ }
+        : m_first(forward<FirstT>(first)), m_second(forward<SecondT>(second)), m_third(forward<ThirdT>(third)),
+          m_fourth(forward<FourthT>(fourth))
+    {
+    }
 
-    First& first() { return m_first; }
+    First&       first() { return m_first; }
     const First& first() const { return m_first; }
 
-    Second& second() { return m_second; }
+    Second&       second() { return m_second; }
     const Second& second() const { return m_second; }
 
-    Third& third() { return m_third; }
+    Third&       third() { return m_third; }
     const Third& third() const { return m_third; }
 
-
-    Fourth& fourth() { return m_fourth; }
+    Fourth&       fourth() { return m_fourth; }
     const Fourth& fourth() const { return m_fourth; }
 
 private:
@@ -61,7 +64,10 @@ template <typename First, typename Second, typename Third, typename Fourth>
 auto make_quad(First&& first, Second&& second, Third&& third, Fourth&& fourth)
 {
     // TODO: this should really be decay_t
-    using QuadType = Quad<remove_reference_t<First>, remove_reference_t<Second>, remove_reference_t<Third>, remove_reference_t<Fourth>>;
+    using QuadType = Quad<remove_reference_t<First>,
+                          remove_reference_t<Second>,
+                          remove_reference_t<Third>,
+                          remove_reference_t<Fourth>>;
 
     return QuadType(forward<First>(first), forward<Second>(second), forward<Third>(third), forward<Fourth>(fourth));
 }
