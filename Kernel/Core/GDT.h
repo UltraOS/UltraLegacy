@@ -9,6 +9,8 @@ class TSS;
 
 class GDT {
 public:
+    static constexpr size_t entry_size = 8;
+
     // TODO: rewrite these garabage enums,
     //       it's absolutely impossible to tell what's going on...
     enum access_attributes : u8 {
@@ -78,6 +80,22 @@ private:
         flag_attributes   flags : 4;
         u8                base_upper;
     } m_entries[entry_count];
+
+    #ifdef ULTRA_64
+    struct PACKED tss_entry {
+        u16               limit_lower;
+        u16               base_lower;
+        u8                base_middle;
+        access_attributes access;
+        u8                limit_upper : 4;
+        flag_attributes   flags : 4;
+        u8                base_upper;
+        u32               base_upper_2;
+        u32               reserved;
+    };
+
+    tss_entry& new_tss_entry();
+    #endif
 
     entry& new_entry();
 

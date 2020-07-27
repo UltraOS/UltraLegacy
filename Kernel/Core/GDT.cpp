@@ -57,14 +57,32 @@ void GDT::create_basic_descriptors()
 }
 
 void GDT::create_tss_descriptor(TSS* tss)
-{
+{   
+#ifdef ULTRA_32
     create_descriptor(reinterpret_cast<ptr_t>(tss), TSS::size, EXECUTABLE | IS_TSS | RING_3 | PRESENT, NULL_FLAG);
+
+    u16 this_selector = (m_active_entries - 1) * entry_size;
+
+#elif defined(ULTRA_64)
+    auto& this_entry = new_tss_entry();
+
+    ptr_t base = reinterpret_cast<ptr_t>(tss);
+
+    this_entry.base_lower  = base & 0x0000FFFF;
+    this_entry.base_middle = (base & 0x00FF0000) >> 16;
+    this_entry.base_upper  = (base & 0xFF000000) >> 24;
+    this_entry.base_upper_2 = (base & 0xFFFFFFFF00000000ull) >> 32;
+
+    this_entry.access = EXECUTABLE | IS_TSS | RING_3 | PRESENT;
+    this_entry.flags  = NULL_FLAG;
+
+    this_entry.limit_lower = TSS::size & 0x0000FFFF;
+    this_entry.limit_upper = (TSS::size & 0x000F0000) >> 16;
+
+    u16 this_selector = (m_active_entries - 2) * entry_size;
+#endif
+
     install();
-
-    static constexpr u16 rpl_level_3 = 3;
-
-    u16 this_selector = (m_active_entries - 1) * 8;
-    this_selector |= rpl_level_3;
 
     asm("ltr %0" ::"a"(this_selector));
 }
@@ -81,6 +99,21 @@ GDT::entry& GDT::new_entry()
 
     return m_entries[m_active_entries - 1];
 }
+
+#ifdef ULTRA_64
+GDT::tss_entry& GDT::new_tss_entry()
+{
+    if (m_active_entries >= entry_count) {
+        error() << "GDT is out of free entries!";
+        hang();
+    }
+
+    m_active_entries += 2;
+    m_pointer.size += sizeof(tss_entry);
+
+    return *reinterpret_cast<tss_entry*>(&m_entries[m_active_entries - 2]);
+}
+#endif
 
 void GDT::create_descriptor(u32 base, u32 size, access_attributes access, flag_attributes flags)
 {
