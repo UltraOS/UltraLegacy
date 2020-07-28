@@ -4,9 +4,9 @@
 #include "Core/CPU.h"
 #include "Core/GDT.h"
 #include "Core/Runtime.h"
+#include "Interrupts/ExceptionDispatcher.h"
 #include "Interrupts/IDT.h"
 #include "Interrupts/IRQManager.h"
-#include "Interrupts/ExceptionDispatcher.h"
 #include "Interrupts/InterruptController.h"
 #include "Interrupts/SyscallDispatcher.h"
 #include "Interrupts/Timer.h"
@@ -79,20 +79,20 @@ void run(MemoryMap* memory_map)
 
     IDT::the().install();
 
-    CPU::start_all_processors();
+    //CPU::start_all_processors();
 
     Interrupts::enable();
 
     // ---> TESTING AREA
     // ----------------------------------------- //
-    Process::create_supervisor(dummy_kernel_process);
-
-    auto page = MemoryManager::the().allocate_page();
-    AddressSpace::of_kernel().map_page(0x0000F000, page->address(), false);
-
-    // yes we're literally copying a function :D
-    copy_memory(reinterpret_cast<void*>(userland_process), reinterpret_cast<void*>(0x0000F000), 1024);
-    Process::create(0x0000F000);
+    //Process::create_supervisor(dummy_kernel_process);
+    //
+    //auto page = MemoryManager::the().allocate_page();
+    //AddressSpace::of_kernel().map_page(0x0000F000, page->address(), false);
+    //
+    //// yes we're literally copying a function :D
+    //copy_memory(reinterpret_cast<void*>(userland_process), reinterpret_cast<void*>(0x0000F000), 1024);
+    //Process::create(0x0000F000);
     // ----------------------------------------- //
 
     static auto           cycles = 0;

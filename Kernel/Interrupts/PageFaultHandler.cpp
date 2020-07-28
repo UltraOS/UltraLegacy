@@ -7,9 +7,10 @@ class PageFaultHandler : public ExceptionHandler {
 public:
     static constexpr auto exception_number = 0xE;
 
-    PageFaultHandler() : ExceptionHandler(exception_number) {}
+    PageFaultHandler() : ExceptionHandler(exception_number) { }
 
-    void handle(const RegisterState& state) override {
+    void handle(const RegisterState& state) override
+    {
         ++m_occurances;
 
         static constexpr u32 type_mask = 0b011;
@@ -20,12 +21,12 @@ public:
 
         PageFault pf(address_of_fault,
 #ifdef ULTRA_32
-            state.eip,
+                     state.eip,
 #elif defined(ULTRA_64)
-            state.rip,
+                     state.rip,
 #endif
-            state.error_code & user_mask,
-            static_cast<PageFault::Type>(state.error_code & type_mask));
+                     state.error_code & user_mask,
+                     static_cast<PageFault::Type>(state.error_code & type_mask));
 
         MemoryManager::handle_page_fault(pf);
 
@@ -33,8 +34,9 @@ public:
     }
 
     size_t occurances() const { return m_occurances; }
+
 private:
-    size_t m_occurances { 0 };
+    size_t                  m_occurances { 0 };
     static PageFaultHandler s_instance;
 };
 

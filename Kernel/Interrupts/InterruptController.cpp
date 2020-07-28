@@ -185,8 +185,8 @@ void InterruptController::MP::parse_configuration_table(FloatingPointer* fp_tabl
 
             bool is_ok = io_apic.flags & IOAPICEntry::Flags::OK;
 
-            log() << "InterruptController: I/O APIC at " << format::as_hex << io_apic.io_apic_pointer.raw() << " is_ok:" << is_ok
-                  << " id:" << io_apic.id;
+            log() << "InterruptController: I/O APIC at " << format::as_hex << io_apic.io_apic_pointer.raw()
+                  << " is_ok:" << is_ok << " id:" << io_apic.id;
 
             s_smp_data->ioapic_address = static_cast<ptr_t>(io_apic.io_apic_pointer);
         } else if (type == EntryType::IO_INTERRUPT_ASSIGNMENT || type == EntryType::LOCAL_INTERRUPT_ASSIGNMENT) {
