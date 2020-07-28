@@ -23,7 +23,7 @@ RefPtr<Thread> Thread::create_supervisor_thread(Address kernel_stack, Address en
     auto& switcher_frame = frame->switcher_frame;
     auto& iret_frame     = frame->iret_frame;
 
-    iret_frame.eflags              = CPU::EFLAGS::INTERRUPTS;
+    iret_frame.eflags              = CPU::FLAGS::INTERRUPTS;
     iret_frame.code_selector       = GDT::kernel_code_selector();
     iret_frame.instruction_pointer = entrypoint;
 
@@ -52,7 +52,7 @@ Thread::create_user_thread(AddressSpace& page_dir, Address user_stack, Address k
 
     iret_frame.data_selector       = GDT::userland_data_selector() | rpl_ring_3;
     iret_frame.stack_pointer       = user_stack;
-    iret_frame.eflags              = CPU::EFLAGS::INTERRUPTS;
+    iret_frame.eflags              = CPU::FLAGS::INTERRUPTS;
     iret_frame.code_selector       = GDT::userland_code_selector() | rpl_ring_3;
     iret_frame.instruction_pointer = entrypoint;
 

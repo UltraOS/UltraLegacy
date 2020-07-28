@@ -8,7 +8,7 @@ namespace kernel {
 
 class CPU {
 public:
-    enum class EFLAGS : size_t {
+    enum class FLAGS : size_t {
         CARRY      = SET_BIT(0),
         PARITY     = SET_BIT(2),
         ADJUST     = SET_BIT(4),
@@ -20,9 +20,9 @@ public:
         CPUID      = SET_BIT(21),
     };
 
-    friend bool operator&(EFLAGS l, EFLAGS r) { return static_cast<size_t>(l) & static_cast<size_t>(r); }
+    friend bool operator&(FLAGS l, FLAGS r) { return static_cast<size_t>(l) & static_cast<size_t>(r); }
 
-    static EFLAGS flags();
+    static FLAGS flags();
 
     static bool supports_smp();
 

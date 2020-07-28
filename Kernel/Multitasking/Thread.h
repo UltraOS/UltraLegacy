@@ -78,13 +78,13 @@ private:
     struct supervisor_iret_frame {
         Address     instruction_pointer;
         u32         code_selector;
-        CPU::EFLAGS eflags;
+        CPU::FLAGS eflags;
     };
 
     struct user_iret_stack_frame {
         Address     instruction_pointer;
         u32         code_selector;
-        CPU::EFLAGS eflags;
+        CPU::FLAGS eflags;
         Address     stack_pointer;
         u32         data_selector;
     };

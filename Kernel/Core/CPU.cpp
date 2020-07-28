@@ -6,9 +6,9 @@
 
 namespace kernel {
 
-CPU::EFLAGS CPU::flags()
+CPU::FLAGS CPU::flags()
 {
-    EFLAGS flags;
+    FLAGS flags;
     asm volatile("pushf\n"
                  "pop %0\n"
                  : "=a"(flags)::"memory");
