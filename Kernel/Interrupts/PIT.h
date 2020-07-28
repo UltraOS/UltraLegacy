@@ -36,9 +36,9 @@ public:
     void nano_delay(u32 ns) override;
 
     // don't do anything since we finalize manually
-    void finialize_irq() override { }
+    void finalize_irq() override { }
 
-    void on_irq(const RegisterState& registers) override;
+    void handle_irq(const RegisterState& registers) override;
 
     ~PIT() { disable_irq(); }
 

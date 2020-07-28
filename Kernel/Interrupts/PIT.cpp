@@ -36,7 +36,7 @@ void PIT::set_frequency(u32 ticks_per_second)
     IO::out8<timer_data>((divisor & 0x0000FF00) >> 8);
 }
 
-void PIT::on_irq(const RegisterState& registers)
+void PIT::handle_irq(const RegisterState& registers)
 {
     increment();
 

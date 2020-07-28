@@ -6,27 +6,27 @@
 #include "InterruptController.h"
 #include "LAPIC.h"
 
-DEFINE_IRQ_HANDLER(0)
-DEFINE_IRQ_HANDLER(1)
-DEFINE_IRQ_HANDLER(2)
-DEFINE_IRQ_HANDLER(3)
-DEFINE_IRQ_HANDLER(4)
-DEFINE_IRQ_HANDLER(5)
-DEFINE_IRQ_HANDLER(6)
-DEFINE_IRQ_HANDLER(7)
-DEFINE_IRQ_HANDLER(8)
-DEFINE_IRQ_HANDLER(9)
-DEFINE_IRQ_HANDLER(10)
-DEFINE_IRQ_HANDLER(11)
-DEFINE_IRQ_HANDLER(12)
-DEFINE_IRQ_HANDLER(13)
-DEFINE_IRQ_HANDLER(14)
-DEFINE_IRQ_HANDLER(15)
-DEFINE_IRQ_HANDLER(255) // APIC spurious vector
+IRQ_HANDLER_SYMBOL(0);
+IRQ_HANDLER_SYMBOL(1);
+IRQ_HANDLER_SYMBOL(2);
+IRQ_HANDLER_SYMBOL(3);
+IRQ_HANDLER_SYMBOL(4);
+IRQ_HANDLER_SYMBOL(5);
+IRQ_HANDLER_SYMBOL(6);
+IRQ_HANDLER_SYMBOL(7);
+IRQ_HANDLER_SYMBOL(8);
+IRQ_HANDLER_SYMBOL(9);
+IRQ_HANDLER_SYMBOL(10);
+IRQ_HANDLER_SYMBOL(11);
+IRQ_HANDLER_SYMBOL(12);
+IRQ_HANDLER_SYMBOL(13);
+IRQ_HANDLER_SYMBOL(14);
+IRQ_HANDLER_SYMBOL(15);
+IRQ_HANDLER_SYMBOL(255); // APIC spurious vector
 
 namespace kernel {
 
-IRQHandler* IRQManager::m_handlers[IRQManager::entry_count];
+IRQHandler* IRQManager::s_handlers[IRQManager::entry_count];
 
 void IRQManager::install()
 {
@@ -52,11 +52,13 @@ void IRQManager::install()
 
 bool IRQManager::has_subscriber(u16 request_number)
 {
-    return m_handlers[request_number];
+    return s_handlers[request_number];
 }
 
-void IRQManager::irq_handler(u16 request_number, RegisterState* registers)
+void IRQManager::irq_handler(RegisterState* registers)
 {
+    const auto& request_number = registers->irq_number;
+
     if (InterruptController::the().is_spurious(request_number)) {
         warning() << "IRQManager: Spurious IRQ " << request_number << "!";
         InterruptController::the().handle_spurious_irq(request_number);
@@ -68,8 +70,8 @@ void IRQManager::irq_handler(u16 request_number, RegisterState* registers)
         hang();
     }
 
-    m_handlers[request_number]->on_irq(*registers);
-    m_handlers[request_number]->finialize_irq();
+    s_handlers[request_number]->handle_irq(*registers);
+    s_handlers[request_number]->finalize_irq();
 }
 
 void IRQManager::register_irq_handler(IRQHandler& handler)
@@ -79,16 +81,16 @@ void IRQManager::register_irq_handler(IRQHandler& handler)
         hang();
     }
 
-    m_handlers[handler.irq_index()] = &handler;
+    s_handlers[handler.irq_index()] = &handler;
 }
 
 void IRQManager::unregister_irq_handler(IRQHandler& handler)
 {
-    if (handler.irq_index() >= entry_count || !m_handlers[handler.irq_index()]) {
+    if (handler.irq_index() >= entry_count || !s_handlers[handler.irq_index()]) {
         error() << "IRQManager: tried to unregister non-existant handler " << handler.irq_index();
         hang();
     }
 
-    m_handlers[handler.irq_index()] = nullptr;
+    s_handlers[handler.irq_index()] = nullptr;
 }
 }

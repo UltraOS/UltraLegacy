@@ -268,7 +268,7 @@ void AddressSpace::unmap_page(Address virtual_address)
 
     pdpt_at(indices.first())
         .pdt_at(indices.second())
-        .pt_at(indices.fourth())
+        .pt_at(indices.third())
         .entry_at(indices.fourth())
         .set_present(false);
 

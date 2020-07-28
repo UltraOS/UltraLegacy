@@ -14,8 +14,8 @@ public:
 
     u16 irq_index() const { return m_irq_index; }
 
-    virtual void on_irq(const RegisterState& registers) = 0;
-    virtual void finialize_irq() { InterruptController::the().end_of_interrupt(irq_index()); }
+    virtual void handle_irq(const RegisterState& registers) = 0;
+    virtual void finalize_irq() { InterruptController::the().end_of_interrupt(irq_index()); }
 
     virtual void enable_irq() { InterruptController::the().enable_irq(irq_index()); }
     virtual void disable_irq() { InterruptController::the().disable_irq(irq_index()); }

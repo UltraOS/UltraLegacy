@@ -6,7 +6,7 @@
 #include "Core/Runtime.h"
 #include "Interrupts/IDT.h"
 #include "Interrupts/IRQManager.h"
-#include "Interrupts/ISR.h"
+#include "Interrupts/ExceptionDispatcher.h"
 #include "Interrupts/InterruptController.h"
 #include "Interrupts/SyscallDispatcher.h"
 #include "Interrupts/Timer.h"
@@ -67,7 +67,7 @@ void run(MemoryMap* memory_map)
     GDT::the().create_basic_descriptors();
     GDT::the().install();
 
-    ISR::install();
+    ExceptionDispatcher::install();
 
     IRQManager::install();
 
