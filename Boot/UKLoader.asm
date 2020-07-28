@@ -175,11 +175,11 @@ switch_to_long_mode:
         add  edi, PT_ENTRY_SIZE
         loop set_one
 
-    mov  edi,  PDPT_3
+    mov  edi,  PDPT_2
     mov [edi], dword PDT | PRESENT | READWRITE
 
     mov edi, PML4 + 256 * 8
-    mov [edi], dword PDPT_3 | PRESENT | READWRITE
+    mov [edi], dword PDPT_2 | PRESENT | READWRITE
 
     mov  edi, PDPT_1 + 510 * 8
     mov [edi], dword PDT | PRESENT | READWRITE
@@ -251,7 +251,7 @@ no_long_mode_message: db "This CPU doesn't support x86_64", CR, LF, 0
 PML4:   equ 0x10000
 PDPT_0: equ 0x11000
 PDPT_1: equ 0x12000
-PDPT_3: equ 0x13000
+PDPT_2: equ 0x13000
 PDT:    equ 0x14000
 
 ; 10 MB
