@@ -22,6 +22,12 @@ struct PACKED RegisterState {
     u32 edx;
     u32 ecx;
     u32 eax;
+
+    union {
+        u32 irq_number;
+        u32 exception_number;
+    };
+
     u32 error_code;
     u32 eip;
     u32 cs;
@@ -46,6 +52,12 @@ struct PACKED RegisterState {
     u64 rcx;
     u64 rbx;
     u64 rax;
+
+    union {
+        u64 irq_number;
+        u64 exception_number;
+    };
+
     u64 error_code;
     u64 rip;
     u64 cs;
@@ -108,7 +120,7 @@ private:
 };
 
 namespace Interrupts {
-    inline bool are_enabled() { return CPU::flags() & CPU::EFLAGS::INTERRUPTS; }
+    inline bool are_enabled() { return CPU::flags() & CPU::FLAGS::INTERRUPTS; }
 
     inline void enable() { sti(); }
 
