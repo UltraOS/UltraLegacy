@@ -12,10 +12,6 @@ namespace kernel {
 #ifdef ULTRA_32
 // defined in Architecture/x86/Entrypoint.asm
 extern "C" u8 kernel_page_directory[AddressSpace::Table::entry_count];
-#elif defined(ULTRA_64)
-// defined by the bootloader
-// TODO: don't reuse bootloader stuff
-static constexpr Address kernel_pml4_address = 0x10000;
 #endif
 
 AddressSpace* AddressSpace::s_of_kernel;
@@ -35,14 +31,58 @@ void AddressSpace::inititalize()
     s_of_kernel = new AddressSpace();
 
 #ifdef ULTRA_32
-    auto as_physical = MemoryManager::kernel_address_as_physical(&kernel_page_directory);
+    auto as_physical = MemoryManager::virtual_to_physical(&kernel_page_directory);
+    s_of_kernel->m_main_page = RefPtr<Page>::create(as_physical);
 #elif defined(ULTRA_64)
-    auto as_physical = kernel_pml4_address;
+    s_of_kernel->m_main_page = MemoryManager::the().allocate_page();
+
+    static constexpr size_t lower_indentity_size = 4 * GB;
+
+    for (size_t i = 0; i < lower_indentity_size / Page::huge_size; ++i)
+        s_of_kernel->map_huge_supervisor_page(MemoryManager::physical_memory_base + Page::huge_size * i, Page::huge_size * i);
+
+    for (const auto& entry : MemoryManager::the().memory_map()) {
+        if (entry.base_address < lower_indentity_size)
+            continue; // we already have this mapped
+
+        size_t base_address;
+        size_t length;
+
+        if (!Page::is_huge_aligned(entry.base_address)) {
+            auto alignment_overhead = entry.base_address % Page::huge_size;
+            base_address = entry.base_address - alignment_overhead;
+            length = entry.length + alignment_overhead;
+
+#ifdef ADDRESS_SPACE_DEBUG
+            log() << "AddressSpace: " << " aligning the entry at " << format::as_hex << entry.base_address
+                  << "length " << entry.length << " to " << base_address << " length " << length;
+#endif
+        } else {
+            base_address = entry.base_address;
+            length = entry.length;
+        }
+
+        auto total_pages = ceiling_divide(length, Page::huge_size);
+
+#ifdef ADDRESS_SPACE_DEBUG
+        log() << "AddressSpace: Mapping " << total_pages << " pages at " << format::as_hex << base_address;
+#endif
+        for (size_t i = 0; i < total_pages; ++i) {
+            auto physical_address = base_address + Page::huge_size * i;
+            s_of_kernel->map_huge_supervisor_page(MemoryManager::physical_to_virtual(physical_address), physical_address);
+        }
+    }
+
+    static constexpr size_t kernel_address_space = 2 * GB;
+
+    for (size_t i = 0; i <  kernel_address_space / Page::huge_size; ++i) {
+        auto physical_address = Page::huge_size * i;
+        s_of_kernel->map_huge_supervisor_page(MemoryManager::kernel_reserved_base + physical_address, physical_address);
+    }
 #endif
 
-    s_of_kernel->m_main_page = RefPtr<Page>::create(as_physical);
-
     s_of_kernel->flush_all();
+
     s_active = s_of_kernel;
 
     s_of_kernel->allocator().set_range(MemoryManager::kernel_usable_base, MemoryManager::kernel_usable_length);
@@ -190,6 +230,77 @@ void AddressSpace::map_page(Address virtual_address, Address physical_address, b
         page_entry.make_supervisor_present();
     else
         page_entry.make_user_present();
+}
+
+void AddressSpace::map_huge_page(Address virtual_address, Address physical_address, bool is_supervisor)
+{
+    ASSERT((virtual_address  % (2 * MB)) == 0);
+    ASSERT((physical_address % (2 * MB)) == 0);
+
+// this is very loud
+#ifdef ADDRESS_SPACE_SUPER_DEBUG
+    log() << "AddressSpace: mapping the 2MB page at vaddr " << virtual_address << " to " << physical_address
+          << " is_supervisor:" << is_supervisor;
+#endif
+
+    auto indices = virtual_address_as_paging_indices(virtual_address);
+
+    if (!entry_at(indices.first()).is_present()) {
+#ifdef ADDRESS_SPACE_DEBUG
+        log() << "AddressSpace: tried to access a non-present pdpt " << indices.first() << ", allocating...";
+#endif
+        auto  page  = m_physical_pages.emplace(MemoryManager::the().allocate_page());
+        auto& entry = entry_at(indices.first());
+        entry.set_physical_address(page->address());
+        if (is_supervisor)
+            entry.make_supervisor_present();
+        else
+            entry.make_user_present();
+    }
+
+    if (!pdpt_at(indices.first()).entry_at(indices.second()).is_present()) {
+#ifdef ADDRESS_SPACE_DEBUG
+        log() << "AddressSpace: tried to access a non-present pdt " << indices.second() << ", allocating...";
+#endif
+        auto  page  = m_physical_pages.emplace(MemoryManager::the().allocate_page());
+        auto& entry = pdpt_at(indices.first()).entry_at(indices.second());
+        entry.set_physical_address(page->address());
+        if (is_supervisor)
+            entry.make_supervisor_present();
+        else
+            entry.make_user_present();
+    }
+
+    auto& page_entry = pdpt_at(indices.first()).pdt_at(indices.second()).entry_at(indices.third());
+
+    page_entry.set_physical_address(physical_address);
+
+    if (is_supervisor)
+        page_entry.make_supervisor_present();
+    else
+        page_entry.make_user_present();
+
+    page_entry.set_huge(true);
+}
+
+void AddressSpace::map_huge_user_page(Address virtual_address, const Page& physical_address)
+{
+    map_huge_page(virtual_address, physical_address.address(), false);
+}
+
+void AddressSpace::map_huge_user_page(Address virtual_address, Address physical_address)
+{
+    map_huge_page(virtual_address, physical_address, false);
+}
+
+void AddressSpace::map_huge_supervisor_page(Address virtual_address, const Page& physical_address)
+{
+    map_huge_page(virtual_address, physical_address.address(), true);
+}
+
+void AddressSpace::map_huge_supervisor_page(Address virtual_address, Address physical_address)
+{
+    map_huge_page(virtual_address, physical_address, true);
 }
 #endif
 

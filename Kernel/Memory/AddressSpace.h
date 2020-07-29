@@ -47,7 +47,7 @@ public:
 #ifdef ULTRA_32
     PT& pt_at(size_t index);
 #elif defined(ULTRA_64)
-    PDPT&                                pdpt_at(size_t index);
+    PDPT& pdpt_at(size_t index);
 #endif
 
     Entry& entry_at(size_t index);
@@ -64,6 +64,16 @@ public:
 
     void map_supervisor_page(Address virtual_address, const Page& physical_address);
     void map_supervisor_page(Address virtual_address, Address physical_address);
+
+#ifdef ULTRA_64
+    void map_huge_page(Address virtual_address, Address physical_address, bool is_supervior = true);
+
+    void map_huge_user_page(Address virtual_address, const Page& physical_address);
+    void map_huge_user_page(Address virtual_address, Address physical_address);
+
+    void map_huge_supervisor_page(Address virtual_address, const Page& physical_address);
+    void map_huge_supervisor_page(Address virtual_address, Address physical_address);
+#endif
 
     void unmap_page(Address virtual_address);
 
