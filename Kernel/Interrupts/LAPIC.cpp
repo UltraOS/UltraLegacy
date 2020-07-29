@@ -8,9 +8,13 @@ Address LAPIC::s_base;
 
 void LAPIC::set_base_address(Address physical_base)
 {
+#ifdef ULTRA_32
     s_base = AddressSpace::of_kernel().allocator().allocate_range(4096).begin();
 
     AddressSpace::of_kernel().map_page(s_base, physical_base);
+#elif defined(ULTRA_64)
+    s_base = MemoryManager::physical_to_virtual(physical_base);
+#endif
 }
 
 void LAPIC::initialize_for_this_processor()
@@ -88,7 +92,7 @@ void LAPIC::start_processor(u8 id)
 
     static bool              entrypoint_relocated   = false;
     static constexpr Address entrypoint_base        = 0x1000;
-    static constexpr Address entrypoint_base_linear = MemoryManager::physical_address_as_kernel(entrypoint_base);
+    static constexpr Address entrypoint_base_linear = MemoryManager::physical_to_virtual(entrypoint_base);
 
     auto address_of_var = [](auto addr) {
         size_t offset = Address(addr).as_pointer<volatile u8>()
@@ -96,7 +100,7 @@ void LAPIC::start_processor(u8 id)
 
         Address var_address = entrypoint_base.as_pointer<volatile u8>() + offset;
 
-        return MemoryManager::physical_address_as_kernel(var_address)
+        return MemoryManager::physical_to_virtual(var_address)
             .as_pointer<volatile remove_pointer_t<decltype(addr)>>();
     };
 

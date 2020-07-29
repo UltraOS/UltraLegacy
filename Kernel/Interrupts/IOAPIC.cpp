@@ -1,5 +1,6 @@
 #include "IOAPIC.h"
 #include "Memory/AddressSpace.h"
+#include "Memory/MemoryManager.h"
 
 namespace kernel {
 Address IOAPIC::s_base;
@@ -7,10 +8,14 @@ u8      IOAPIC::s_cached_redirection_entry_count;
 
 void IOAPIC::set_base_address(Address physical_base)
 {
+#ifdef ULTRA_32
     // TODO: this is supposed to be 8 bytes, not a full page. replace with 8 once we support allocate_aligned
     s_base = AddressSpace::of_kernel().allocator().allocate_range(4096).begin();
 
     AddressSpace::of_kernel().map_page(s_base, physical_base);
+#elif defined(ULTRA_64)
+    s_base = MemoryManager::physical_to_virtual(physical_base);
+#endif
 }
 
 u32 IOAPIC::redirection_entry_count()
