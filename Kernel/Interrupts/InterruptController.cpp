@@ -18,7 +18,7 @@ void InterruptController::discover_and_setup()
 
     if (floating_pointer) {
         log() << "InterruptController: Found the floating pointer table at "
-              << MemoryManager::kernel_address_as_physical(floating_pointer);
+              << MemoryManager::virtual_to_physical(floating_pointer);
 
         MP::parse_configuration_table(floating_pointer);
 
@@ -57,8 +57,8 @@ InterruptController::MP::FloatingPointer* InterruptController::MP::find_floating
 
     static constexpr Address ebda_base        = 0x80000;
     static constexpr Address ebda_end         = 0x9FFFF;
-    static constexpr Address ebda_base_linear = MemoryManager::physical_address_as_kernel(ebda_base);
-    static constexpr Address ebda_end_linear  = MemoryManager::physical_address_as_kernel(ebda_end);
+    static constexpr Address ebda_base_linear = MemoryManager::physical_to_virtual(ebda_base);
+    static constexpr Address ebda_end_linear  = MemoryManager::physical_to_virtual(ebda_end);
 
     log() << "InterruptController: Trying to find the floating pointer table in the EBDA...";
 
@@ -66,12 +66,12 @@ InterruptController::MP::FloatingPointer* InterruptController::MP::find_floating
         = find_string_in_range(ebda_base_linear, ebda_end_linear, table_alignment, mp_floating_pointer_signature);
 
     if (address)
-        return MemoryManager::physical_address_as_kernel(address).as_pointer<MP::FloatingPointer>();
+        return MemoryManager::physical_to_virtual(address).as_pointer<MP::FloatingPointer>();
 
     static constexpr Address bios_rom_base        = 0xF0000;
     static constexpr Address bios_rom_end         = 0xFFFFF;
-    static constexpr Address bios_rom_base_linear = MemoryManager::physical_address_as_kernel(bios_rom_base);
-    static constexpr Address bios_rom_end_linear  = MemoryManager::physical_address_as_kernel(bios_rom_end);
+    static constexpr Address bios_rom_base_linear = MemoryManager::physical_to_virtual(bios_rom_base);
+    static constexpr Address bios_rom_end_linear  = MemoryManager::physical_to_virtual(bios_rom_end);
 
     log() << "InterruptController: Couldn't find the floating pointer table in the EBDA, trying ROM...";
 
@@ -84,11 +84,11 @@ InterruptController::MP::FloatingPointer* InterruptController::MP::find_floating
         return address.as_pointer<FloatingPointer>();
 
     static constexpr Address bda_address                  = 0x400;
-    static constexpr Address bda_address_linear           = MemoryManager::physical_address_as_kernel(bda_address);
+    static constexpr Address bda_address_linear           = MemoryManager::physical_to_virtual(bda_address);
     static constexpr size_t  kilobytes_before_ebda_offset = 0x13;
 
     auto kilobytes_before_ebda = *Address(bda_address_linear + kilobytes_before_ebda_offset).as_pointer<u16>();
-    auto last_base_kilobyte    = MemoryManager::physical_address_as_kernel((kilobytes_before_ebda - 1) * KB);
+    auto last_base_kilobyte    = MemoryManager::physical_to_virtual((kilobytes_before_ebda - 1) * KB);
 
     log() << "InterruptController: Couldn't find the floating pointer table in ROM, trying last 1KB of base memory...";
 
@@ -98,7 +98,7 @@ InterruptController::MP::FloatingPointer* InterruptController::MP::find_floating
                                    mp_floating_pointer_signature);
 
     if (address)
-        return MemoryManager::physical_address_as_kernel(address).as_pointer<MP::FloatingPointer>();
+        return MemoryManager::physical_to_virtual(address).as_pointer<MP::FloatingPointer>();
 
     warning()
         << "InterruptController: Couldn't find the floating pointer table, reverting to single core configuration.";
@@ -129,7 +129,7 @@ void InterruptController::MP::parse_configuration_table(FloatingPointer* fp_tabl
     }
 
     auto configuration_table_linear
-        = MemoryManager::physical_address_as_kernel(fp_table->configuration_table_pointer.raw());
+        = MemoryManager::physical_to_virtual(fp_table->configuration_table_pointer.raw());
 
     auto& configuration_table = *configuration_table_linear.as_pointer<MP::ConfigurationTable>();
 

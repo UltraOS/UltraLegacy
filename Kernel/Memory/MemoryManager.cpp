@@ -14,6 +14,8 @@ MemoryManager* MemoryManager::s_instance;
 
 MemoryManager::MemoryManager(const MemoryMap& memory_map)
 {
+    m_memory_map = &memory_map;
+
     u64 total_free_memory = 0;
 
     for (const auto& entry: memory_map) {

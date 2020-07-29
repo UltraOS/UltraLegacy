@@ -62,14 +62,14 @@ public:
 #ifdef ULTRA_32
     void set_quickmap_range(const VirtualAllocator::Range& range);
 
-    static constexpr Address physical_address_as_kernel(Address physical_address)
+    static constexpr Address physical_to_virtual(Address physical_address)
     {
         ASSERT(physical_address < kernel_reserved_size);
 
         return physical_address + kernel_reserved_base;
     }
 
-    static constexpr Address kernel_address_as_physical(Address virtual_address)
+    static constexpr Address virtual_to_physical(Address virtual_address)
     {
         ASSERT(virtual_address > kernel_reserved_base && virtual_address < kernel_end_address);
 
@@ -81,12 +81,7 @@ public:
         return physical_memory_base + physical_address;
     }
 
-    static constexpr Address physical_address_as_kernel(Address physical_address)
-    {
-        return physical_to_virtual(physical_address);
-    }
-
-    static constexpr Address kernel_address_as_physical(Address virtual_address)
+    static constexpr Address virtual_to_physical(Address virtual_address)
     {
         ASSERT(virtual_address > physical_memory_base);
 
@@ -96,6 +91,13 @@ public:
             return virtual_address - physical_memory_base;
     }
 #endif
+
+    const MemoryMap& memory_map() const
+    {
+        ASSERT(m_memory_map != nullptr);
+
+        return *m_memory_map;
+    }
 
 private:
     MemoryManager(const MemoryMap& memory_map);
@@ -128,6 +130,8 @@ private:
     static MemoryManager* s_instance;
 
     DynamicArray<PhysicalRegion> m_physical_regions;
+
+    const MemoryMap* m_memory_map;
 
 #ifdef ULTRA_32
     VirtualAllocator::Range m_quickmap_range;
