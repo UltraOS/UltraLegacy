@@ -17,7 +17,12 @@ public:
         WRITE_THROUGH = SET_BIT(3),
         DO_NOT_CACHE  = SET_BIT(4),
         PAGE_4KB      = 0,
+#ifdef ULTRA_32
         PAGE_4MB      = SET_BIT(7),
+#elif defined (ULTRA_64)
+        PAGE_2MB      = SET_BIT(7),
+        PAGE_1GB      = SET_BIT(7),
+#endif
         GLOBAL        = SET_BIT(8)
     };
 
@@ -48,6 +53,14 @@ public:
     void set_executable(bool setting) { m_no_execute = setting; }
 
     bool is_executable() { return !m_no_execute; }
+
+    void set_huge(bool setting)
+    {
+        if (setting)
+            set_attributes(attributes() | PAGE_2MB);
+        else
+            set_attributes(attributes() & ~PAGE_2MB);
+    }
 
 #endif
 

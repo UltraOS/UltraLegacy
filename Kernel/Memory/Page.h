@@ -7,6 +7,9 @@ namespace kernel {
 
 class Page {
 public:
+#ifdef ULTRA_64
+    static constexpr size_t  huge_size      = 2 * MB;
+#endif
     static constexpr size_t  size           = 4096;
     static constexpr Address alignment_mask = 0xFFFFF000;
 
@@ -15,6 +18,9 @@ public:
     Address address() const;
 
     static constexpr bool is_aligned(Address address) { return (address % size) == 0; }
+#ifdef ULTRA_64
+    static constexpr bool is_huge_aligned(Address address) { return (address % (2 * MB)) == 0; }
+#endif
 
     ~Page();
 
@@ -23,4 +29,8 @@ private:
 };
 
 #define ASSERT_PAGE_ALIGNED(address) ASSERT(Page::is_aligned(address));
+
+#ifdef ULTRA_64
+#define ASSERT_HUGE_PAGE_ALIGNED(address) ASSERT(Page::is_huge_aligned(address));
+#endif
 }
