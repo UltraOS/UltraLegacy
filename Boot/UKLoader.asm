@@ -137,6 +137,7 @@ jump_to_kernel:
 PAGE_SIZE:      equ 4096
 DWORDS_IN_PAGE: equ PAGE_SIZE / 4
 PT_ENTRY_SIZE:  equ 8
+PDT_ENTRY_SIZE: equ 8
 ENTRY_COUNT:    equ 512
 PAE_BIT:        equ 1 << 5
 EFER_NUMBER:    equ 0xC0000080
@@ -144,48 +145,42 @@ LONG_MODE_BIT:  equ 1 << 8
 PAGING_BIT:     equ 1 << 31
 PRESENT:        equ 1 << 0
 READWRITE:      equ 1 << 1
+HUGEPAGE:       equ 1 << 7
+HUGEPAGE_SIZE:  equ 0x200000
 
 switch_to_long_mode:
     mov edi, PML4
     mov cr3, edi
 
     xor eax, eax
-    mov ecx, DWORDS_IN_PAGE * 10 ; zero 10 pages
+    mov ecx, DWORDS_IN_PAGE * 7 ; zero 7 pages
     rep stosd
 
     mov edi, cr3
 
-    mov [edi], dword PDPT_0 | PRESENT | READWRITE
-    add  edi,  PAGE_SIZE
-    mov [edi], dword PDT | PRESENT | READWRITE
-    add  edi,  PAGE_SIZE * 3
-    mov [edi     ], dword PT_0 | PRESENT | READWRITE
-    mov [edi + 8 ], dword PT_1 | PRESENT | READWRITE
-    mov [edi + 16], dword PT_2 | PRESENT | READWRITE
-    mov [edi + 24], dword PT_3 | PRESENT | READWRITE
-    mov [edi + 32], dword PT_4 | PRESENT | READWRITE
-    add  edi,  PAGE_SIZE
+    mov [edi],           dword PDPT_0 | PRESENT | READWRITE
+    mov [edi + 256 * 8], dword PDPT_0 | PRESENT | READWRITE
+    mov [edi + 511 * 8], dword PDPT_1 | PRESENT | READWRITE
 
-    mov ebx, 0x00000000   | PRESENT | READWRITE
-    mov ecx, ENTRY_COUNT * 5 ; 5 page tables
+    mov edi, dword PDT_GB0
+    mov ebx, 0x00000000 | PRESENT | READWRITE | HUGEPAGE
+    mov ecx, ENTRY_COUNT * 4 ; 4 tables
 
     set_one:
         mov [edi], ebx
-        add  ebx, PAGE_SIZE
-        add  edi, PT_ENTRY_SIZE
+        add  ebx, HUGEPAGE_SIZE
+        add  edi, PDT_ENTRY_SIZE
         loop set_one
 
-    mov  edi,  PDPT_2
-    mov [edi], dword PDT | PRESENT | READWRITE
+    mov  edi,  dword PDPT_0
+    mov [edi + 8 * 0], dword PDT_GB0 | PRESENT | READWRITE
+    mov [edi + 8 * 1], dword PDT_GB1 | PRESENT | READWRITE
+    mov [edi + 8 * 2], dword PDT_GB2 | PRESENT | READWRITE
+    mov [edi + 8 * 3], dword PDT_GB3 | PRESENT | READWRITE
 
-    mov edi, PML4 + 256 * 8
-    mov [edi], dword PDPT_2 | PRESENT | READWRITE
-
-    mov  edi, PDPT_1 + 510 * 8
-    mov [edi], dword PDT | PRESENT | READWRITE
-
-    mov edi, PML4 + 511 * 8
-    mov [edi], dword PDPT_1 | PRESENT | READWRITE
+    mov  edi,  dword PDPT_1
+    mov [edi + 8 * 510], dword PDT_GB0 | PRESENT | READWRITE
+    mov [edi + 8 * 511], dword PDT_GB1 | PRESENT | READWRITE
 
     mov eax, cr4
     or  eax, PAE_BIT
@@ -248,18 +243,14 @@ no_file_error: db "Couldn't find the kernel file!", CR, LF, 0
 %ifdef ULTRA_64
 no_long_mode_message: db "This CPU doesn't support x86_64", CR, LF, 0
 
-PML4:   equ 0x10000
-PDPT_0: equ 0x11000
-PDPT_1: equ 0x12000
-PDPT_2: equ 0x13000
-PDT:    equ 0x14000
+PML4:    equ 0x10000
+PDPT_0:  equ 0x11000 ; identity 4 GB
+PDPT_1:  equ 0x12000 ; kernel 2 GB
 
-; 10 MB
-PT_0: equ 0x15000
-PT_1: equ 0x16000
-PT_2: equ 0x17000
-PT_3: equ 0x18000
-PT_4: equ 0x19000
+PDT_GB0: equ 0x13000
+PDT_GB1: equ 0x14000
+PDT_GB2: equ 0x15000
+PDT_GB3: equ 0x16000
 
 %endif
 
