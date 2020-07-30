@@ -68,7 +68,7 @@ Scheduler& Scheduler::the()
 void Scheduler::yield()
 {
     Interrupts::ScopedDisabler d;
-    pick_next();
+    save_state_and_schedule();
 }
 
 void Scheduler::wake_up_ready_threads()
@@ -121,11 +121,17 @@ void Scheduler::pick_next()
     current_thread->deactivate();
     next_thread->activate();
 
-    switch_task(current_thread->control_block(), next_thread->control_block());
+    switch_task(next_thread->control_block());
 }
 
-void Scheduler::on_tick(const RegisterState&)
+void Scheduler::schedule(const RegisterState* registers)
 {
+    Thread::current()->control_block()->current_kernel_stack_top = registers;
     pick_next();
+}
+
+void Scheduler::on_tick(const RegisterState& registers)
+{
+    schedule(&registers);
 }
 }

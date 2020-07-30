@@ -27,7 +27,7 @@ RefPtr<Process> Process::create_supervisor(Address entrypoint)
     return process;
 }
 
-// defined in Core/crt0.asm
+// defined in Architecture/X/Entrypoint.asm
 extern "C" Address kernel_stack_begin;
 
 void Process::inititalize()

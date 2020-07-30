@@ -1,42 +1,45 @@
-%define switch_task _ZN6kernel9Scheduler11switch_taskEPNS_6Thread12ControlBlockES3_
-%define user_data_selector 0x20
-%define rpl_ring_3         0x3
-%define current_task_ptr   esp + (4 * 5)
-%define new_task_ptr       esp + (4 * 6)
+%define switch_task _ZN6kernel9Scheduler11switch_taskEPNS_6Thread12ControlBlockE
+%define save_state  _ZN6kernel9Scheduler23save_state_and_scheduleEv
+
+%define schedule    _ZN6kernel9Scheduler8scheduleEPKNS_13RegisterStateE
+extern  schedule
 
 section .text
-; void Scheduler::switch_task(Thread::ControlBlock* current_task, Thread::ControlBlock* new_task)
+; void Scheduler::switch_task(Thread::ControlBlock* new_task)
 global switch_task
 switch_task:
-    push ebx
-    push esi
-    push edi
-    push ebp
-
-    ; save the current esp
-    mov esi, [current_task_ptr]
-    mov [esi], esp ; current_task->current_kernel_stack_top = esp
-
+    xchg bx, bx
     ; load the new task esp
-    mov esi, [new_task_ptr]
-    mov esp, [esi] ; esp = new_task->current_kernel_stack_top
+    mov esi, [esp + 4]
+    mov esp, [esi]
 
-    pop ebp
-    pop edi
-    pop esi
-    pop ebx
-
-    ret
-
-global user_thread_entrypoint
-user_thread_entrypoint:
-    mov     ax, user_data_selector | rpl_ring_3
-    mov     ds, ax
-    mov     es, ax
-    mov     fs, ax
-    mov     gs, ax
+    add esp, 4 ; skip ss
+    pop gs
+    pop fs
+    pop es
+    pop ds
+    popa
+    add esp, 0x8 ; skip error code and interrupt number
     iret
 
-global supervisor_thread_entrypoint
-supervisor_thread_entrypoint:
-    iret
+global save_state
+save_state:
+    pushf
+    push cs
+    push dword [esp + 8] ; eip
+
+    push dword 0
+    push dword 0
+    pusha
+    push ds
+    push es
+    push fs
+    push gs
+    push ss
+    push esp
+    mov ax, 0x10
+    mov ds, ax
+    mov es, ax
+    cld
+    call schedule
+    ud2

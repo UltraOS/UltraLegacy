@@ -12,13 +12,17 @@ public:
     static void       inititalize();
     static Scheduler& the();
 
+    static void schedule(const RegisterState* registers);
+
     static void on_tick(const RegisterState&);
 
     static void yield();
 
     static void pick_next();
 
-    static void switch_task(Thread::ControlBlock* current_task, Thread::ControlBlock* new_task);
+    static void switch_task(Thread::ControlBlock* new_task);
+
+    static void save_state_and_schedule();
 
     static void enqueue_thread(Thread& thread);
     static void dequeue_thread(Thread& thread);

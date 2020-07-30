@@ -31,7 +31,8 @@ private:
     Process(Address entrypoint, bool is_supervisor = false);
     Process() = default;
 
-private:
+    // Make private once we have a working userspace loader
+public:
     u32                          m_process_id { 0 };
     RefPtr<AddressSpace>         m_page_directory;
     bool                         m_is_supervisor { false };
