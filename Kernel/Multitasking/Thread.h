@@ -75,38 +75,6 @@ public:
     bool should_be_woken_up() { return m_wake_up_time <= Timer::nanoseconds_since_boot(); }
 
 private:
-    struct supervisor_iret_frame {
-        Address    instruction_pointer;
-        u32        code_selector;
-        CPU::FLAGS eflags;
-    };
-
-    struct user_iret_stack_frame {
-        Address    instruction_pointer;
-        u32        code_selector;
-        CPU::FLAGS eflags;
-        Address    stack_pointer;
-        u32        data_selector;
-    };
-
-    struct task_switcher_stack_frame {
-        u32     ebp;
-        u32     edi;
-        u32     esi;
-        u32     ebx;
-        Address instruction_pointer;
-    };
-
-    struct supervisor_thread_stack_frame {
-        task_switcher_stack_frame switcher_frame;
-        supervisor_iret_frame     iret_frame;
-    };
-
-    struct user_thread_stack_frame {
-        task_switcher_stack_frame switcher_frame;
-        user_iret_stack_frame     iret_frame;
-    };
-
     Thread(AddressSpace& page_dir, Address kernel_stack);
 
 private:

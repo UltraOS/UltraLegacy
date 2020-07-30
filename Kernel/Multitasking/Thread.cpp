@@ -1,4 +1,5 @@
 #include "Thread.h"
+#include "Interrupts/Common.h"
 
 namespace kernel {
 
@@ -13,25 +14,36 @@ void Thread::initialize()
 
 RefPtr<Thread> Thread::create_supervisor_thread(Address kernel_stack, Address entrypoint)
 {
-    Address adjusted_stack = kernel_stack - sizeof(supervisor_thread_stack_frame);
+    Address adjusted_stack = kernel_stack - sizeof(RegisterState)
+#ifdef ULTRA_32
+                             + sizeof(u32) * 2; // esp and ss are not popped
+#else
+        ;
+#endif
 
     auto thread                        = new Thread(AddressSpace::of_kernel(), adjusted_stack);
     thread->m_is_supervisor            = true;
     thread->m_initial_kernel_stack_top = kernel_stack;
 
-    auto* frame          = new (adjusted_stack.as_pointer<void>()) supervisor_thread_stack_frame;
-    auto& switcher_frame = frame->switcher_frame;
-    auto& iret_frame     = frame->iret_frame;
+    auto& frame = *new (adjusted_stack.as_pointer<void>()) RegisterState;
 
-    iret_frame.eflags              = CPU::FLAGS::INTERRUPTS;
-    iret_frame.code_selector       = GDT::kernel_code_selector();
-    iret_frame.instruction_pointer = entrypoint;
+#ifdef ULTRA_32
+    frame.ss = GDT::kernel_data_selector();
+    frame.gs = GDT::kernel_data_selector();
+    frame.fs = GDT::kernel_data_selector();
+    frame.es = GDT::kernel_data_selector();
+    frame.ds = GDT::kernel_data_selector();
 
-    switcher_frame.instruction_pointer = &supervisor_thread_entrypoint;
-    switcher_frame.ebx                 = 0xDEADC0DE;
-    switcher_frame.esi                 = 0xDEADBEEF;
-    switcher_frame.edi                 = 0xC0DEBEEF;
-    switcher_frame.ebp                 = 0x00000000;
+    frame.eip    = entrypoint;
+    frame.cs     = GDT::kernel_code_selector();
+    frame.eflags = static_cast<size_t>(CPU::FLAGS::INTERRUPTS);
+#elif defined(ULTRA_64)
+    frame.cs     = GDT::kernel_code_selector();
+    frame.ss     = GDT::kernel_data_selector();
+    frame.rflags = static_cast<size_t>(CPU::FLAGS::INTERRUPTS);
+    frame.rsp    = kernel_stack;
+    frame.rip    = entrypoint;
+#endif
 
     return thread;
 }
@@ -39,28 +51,38 @@ RefPtr<Thread> Thread::create_supervisor_thread(Address kernel_stack, Address en
 RefPtr<Thread>
 Thread::create_user_thread(AddressSpace& page_dir, Address user_stack, Address kernel_stack, Address entrypoint)
 {
-    Address adjusted_stack = kernel_stack - sizeof(user_thread_stack_frame);
+    Address adjusted_stack = kernel_stack - sizeof(RegisterState);
 
     auto thread                        = new Thread(page_dir, adjusted_stack);
+    thread->m_is_supervisor            = false;
     thread->m_initial_kernel_stack_top = kernel_stack;
 
-    auto* frame          = new (adjusted_stack.as_pointer<void>()) user_thread_stack_frame;
-    auto& iret_frame     = frame->iret_frame;
-    auto& switcher_frame = frame->switcher_frame;
+    auto& frame = *new (adjusted_stack.as_pointer<void>()) RegisterState;
 
     static constexpr auto rpl_ring_3 = 0x3;
 
-    iret_frame.data_selector       = GDT::userland_data_selector() | rpl_ring_3;
-    iret_frame.stack_pointer       = user_stack;
-    iret_frame.eflags              = CPU::FLAGS::INTERRUPTS;
-    iret_frame.code_selector       = GDT::userland_code_selector() | rpl_ring_3;
-    iret_frame.instruction_pointer = entrypoint;
+#ifdef ULTRA_32
+    frame.gs           = GDT::userland_data_selector() | rpl_ring_3;
+    frame.fs           = GDT::userland_data_selector() | rpl_ring_3;
+    frame.es           = GDT::userland_data_selector() | rpl_ring_3;
+    frame.ds           = GDT::userland_data_selector() | rpl_ring_3;
+    frame.cs           = GDT::userland_code_selector() | rpl_ring_3;
+    frame.userspace_ss = GDT::userland_data_selector() | rpl_ring_3;
 
-    switcher_frame.instruction_pointer = &user_thread_entrypoint;
-    switcher_frame.ebx                 = 0xDEADC0DE;
-    switcher_frame.esi                 = 0xDEADBEEF;
-    switcher_frame.edi                 = 0xC0DEBEEF;
-    switcher_frame.ebp                 = 0x00000000;
+    log() << "user_stack=" << user_stack;
+
+    frame.userspace_esp = user_stack;
+
+    frame.eip = entrypoint;
+
+    frame.eflags = static_cast<size_t>(CPU::FLAGS::INTERRUPTS);
+#elif defined(ULTRA_64)
+    frame.cs     = GDT::userland_code_selector() | rpl_ring_3;
+    frame.ss     = GDT::userland_data_selector() | rpl_ring_3;
+    frame.rflags = static_cast<size_t>(CPU::FLAGS::INTERRUPTS);
+    frame.rsp    = user_stack;
+    frame.rip    = entrypoint;
+#endif
 
     return thread;
 }
