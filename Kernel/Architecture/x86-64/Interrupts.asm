@@ -59,7 +59,7 @@ syscall_handler:
 
 common_irq_handler:
     pushaq
-    mov  rdi, rsp
+    mov rdi, rsp
     cld
     call KERNEL_IRQ_HANDLER
     popaq
@@ -68,7 +68,7 @@ common_irq_handler:
 
 common_exception_handler:
     pushaq
-    mov  rdi, rsp
+    mov rdi, rsp
     cld
     call KERNEL_EXCEPTION_HANDLER
     popaq

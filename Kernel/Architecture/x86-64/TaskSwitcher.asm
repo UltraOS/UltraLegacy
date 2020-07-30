@@ -1,41 +1,74 @@
-%define switch_task _ZN6kernel9Scheduler11switch_taskEPNS_6Thread12ControlBlockES3_
-%define user_data_selector 0x20
-%define rpl_ring_3         0x3
+%define switch_task _ZN6kernel9Scheduler11switch_taskEPNS_6Thread12ControlBlockE
+%define save_state  _ZN6kernel9Scheduler23save_state_and_scheduleEv
+
+%define schedule    _ZN6kernel9Scheduler8scheduleEPKNS_13RegisterStateE
+extern  schedule
+
+%macro pushaq 0
+push rax
+push rbx
+push rcx
+push rdx
+push rsi
+push rdi
+push rbp
+push r8
+push r9
+push r10
+push r11
+push r12
+push r13
+push r14
+push r15
+%endmacro
+
+%macro popaq 0
+pop r15
+pop r14
+pop r13
+pop r12
+pop r11
+pop r10
+pop r9
+pop r8
+pop rbp
+pop rdi
+pop rsi
+pop rdx
+pop rcx
+pop rbx
+pop rax
+%endmacro
 
 section .text
-; void Scheduler::switch_task(Thread::ControlBlock* current_task, Thread::ControlBlock* new_task)
+; void Scheduler::switch_task(Thread::ControlBlock* new_task)
 global switch_task
 switch_task:
-ud2
-    ;push rbx
-    ;push rsi
-    ;push rdi
-    ;push rbp
-;
-    ;; save the current esp
-    ;mov rsi, [rdi]
-    ;mov [esi], esp ; current_task->current_kernel_stack_top = esp
-;
-    ;; load the new task esp
-    ;mov esi, [new_task_ptr]
-    ;mov esp, [esi] ; esp = new_task->current_kernel_stack_top
-;
-    ;pop ebp
-    ;pop edi
-    ;pop esi
-    ;pop ebx
+    ; load the new task esp
+    mov rsp, [rdi]
 
-    ret
+    popaq
+    add rsp, 0x10
+    iretq
 
-global user_thread_entrypoint
-user_thread_entrypoint:
- ;   mov     ax, user_data_selector | rpl_ring_3
- ;   mov     ds, ax
- ;   mov     es, ax
- ;   mov     fs, ax
- ;   mov     gs, ax
- ;   iret
+global save_state
+save_state:
+    mov rax, ss
+    push rax
 
-global supervisor_thread_entrypoint
-supervisor_thread_entrypoint:
-;    iret
+    push rsp
+    pushf
+
+    mov rax, cs
+    push rax
+
+    push qword [rsp + 8 * 4] ; eip
+
+    push qword 0
+    push qword 0
+
+    pushaq
+    mov rdi, rsp
+    cld
+    call schedule
+    ud2

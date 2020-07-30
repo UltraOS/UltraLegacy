@@ -83,7 +83,7 @@ void run(MemoryMap* memory_map)
 
     Interrupts::enable();
 
-    // ---> TESTING AREA
+    // ---> SCHEDULER TESTING AREA
     // ----------------------------------------- //
     Process::create_supervisor(dummy_kernel_process);
 
@@ -92,7 +92,20 @@ void run(MemoryMap* memory_map)
 
     // yes we're literally copying a function :D
     copy_memory(reinterpret_cast<void*>(userland_process), reinterpret_cast<void*>(0x0000F000), 1024);
+
+// x86 PM cannot modify non-active paging structures directly, whereas x86-64 can
+// so for x86-64 we map it right here, whereas for 32 bit mode we map it in the AddressSpace::initialize
+// as a hack to make ring 3 work without a proper loder, purely for testing purposes.
+// (we also disable interrupts here so that this thread doesn't get interrupted before mapping the page)
+#ifdef ULTRA_64
+    {
+        Interrupts::ScopedDisabler d;
+        Process::create(0x0000F000)->m_page_directory->map_user_page(0x0000F000, page->address());
+    }
+#else
     Process::create(0x0000F000);
+#endif
+
     // ----------------------------------------- //
 
     static auto           cycles = 0;
