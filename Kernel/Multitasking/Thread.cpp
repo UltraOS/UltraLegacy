@@ -15,11 +15,11 @@ void Thread::initialize()
 RefPtr<Thread> Thread::create_supervisor_thread(Address kernel_stack, Address entrypoint)
 {
     Address adjusted_stack = kernel_stack - sizeof(RegisterState)
-#ifdef ULTRA_32
-                             + sizeof(u32) * 2; // esp and ss are not popped
-#else
+#ifdef ULTRA_32 // clang-format off
+        + sizeof(u32) * 2; // esp and ss are not popped
+#elif defined(ULTRA_64)
         ;
-#endif
+#endif // clang-format on
 
     auto thread                        = new Thread(AddressSpace::of_kernel(), adjusted_stack);
     thread->m_is_supervisor            = true;

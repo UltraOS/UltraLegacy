@@ -122,15 +122,17 @@ Pair<size_t, size_t> AddressSpace::virtual_address_as_paging_indices(Address vir
                      static_cast<size_t>((virtual_address >> 12) & (Table::entry_count - 1)));
 }
 #elif defined(ULTRA_64)
+// clang-format off
 Quad<size_t, size_t, size_t, size_t> AddressSpace::virtual_address_as_paging_indices(Address virtual_address)
 {
     size_t pml4_index = (virtual_address >> 39) & (Table::entry_count - 1);
     size_t pdpt_index = (virtual_address >> 30) & (Table::entry_count - 1);
-    size_t pdt_index = (virtual_address >> 21) & (Table::entry_count - 1);
-    size_t pt_index = (virtual_address >> 12) & (Table::entry_count - 1);
+    size_t pdt_index  = (virtual_address >> 21) & (Table::entry_count - 1);
+    size_t pt_index   = (virtual_address >> 12) & (Table::entry_count - 1);
 
     return make_quad(pml4_index, pdpt_index, pdt_index, pt_index);
 }
+// clang-format on
 #endif
 
 #ifdef ULTRA_32
@@ -237,8 +239,8 @@ void AddressSpace::map_page(Address virtual_address, Address physical_address, b
 
 void AddressSpace::map_huge_page(Address virtual_address, Address physical_address, bool is_supervisor)
 {
-    ASSERT((virtual_address % (2 * MB)) == 0);
-    ASSERT((physical_address % (2 * MB)) == 0);
+    ASSERT_HUGE_PAGE_ALIGNED(virtual_address);
+    ASSERT_HUGE_PAGE_ALIGNED(physical_address);
 
 // this is very loud
 #ifdef ADDRESS_SPACE_SUPER_DEBUG

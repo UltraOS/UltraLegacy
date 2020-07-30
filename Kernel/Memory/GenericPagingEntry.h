@@ -7,6 +7,7 @@ namespace kernel {
 
 class GenericPagingEntry {
 public:
+    // clang-format off
     enum Attributes : u16 {
         NOT_PRESENT   = 0,
         PRESENT       = SET_BIT(0),
@@ -18,13 +19,14 @@ public:
         DO_NOT_CACHE  = SET_BIT(4),
         PAGE_4KB      = 0,
 #ifdef ULTRA_32
-        PAGE_4MB = SET_BIT(7),
+        PAGE_4MB      = SET_BIT(7),
 #elif defined(ULTRA_64)
-        PAGE_2MB = SET_BIT(7),
-        PAGE_1GB = SET_BIT(7),
+        PAGE_2MB      = SET_BIT(7),
+        PAGE_1GB      = SET_BIT(7),
 #endif
-        GLOBAL = SET_BIT(8)
+        GLOBAL        = SET_BIT(8)
     };
+    // clang-format on
 
     friend Attributes operator|(Attributes l, Attributes r)
     {
@@ -95,8 +97,8 @@ private:
     ptr_t m_physical_address : 20;
 #elif defined(ULTRA_64)
     ptr_t m_physical_address : 40;
-    u16 m_unused : 11;
-    bool m_no_execute : 1;
+    u16   m_unused : 11;
+    bool  m_no_execute : 1;
 #endif
 };
 

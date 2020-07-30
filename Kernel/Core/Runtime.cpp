@@ -15,13 +15,22 @@ constexpr size_t  magic_length = 13;
 extern const char magic_string[magic_length];
 
 namespace kernel::runtime {
-
+// clang-format off
 void ensure_loaded_correctly()
 {
-    if (magic_string[0] == 'M' && magic_string[1] == 'A' && magic_string[2] == 'G' && magic_string[3] == 'I'
-        && magic_string[4] == 'C' && magic_string[5] == '_' && magic_string[6] == 'P' && magic_string[7] == 'R'
-        && magic_string[8] == 'E' && magic_string[9] == 'S' && magic_string[10] == 'E' && magic_string[11] == 'N'
-        && magic_string[12] == 'T')
+    if (magic_string[0]  == 'M' &&
+        magic_string[1]  == 'A' &&
+        magic_string[2]  == 'G' &&
+        magic_string[3]  == 'I' &&
+        magic_string[4]  == 'C' &&
+        magic_string[5]  == '_' &&
+        magic_string[6]  == 'P' &&
+        magic_string[7]  == 'R' &&
+        magic_string[8]  == 'E' &&
+        magic_string[9]  == 'S' &&
+        magic_string[10] == 'E' &&
+        magic_string[11] == 'N' &&
+        magic_string[12] == 'T')
         log() << "Runtime: Magic test passed!";
     else {
         error() << "Runtime: Magic test failed! magic_string=" << format::as_address << magic_string;
@@ -35,12 +44,15 @@ void init_global_objects()
         (*ctor)();
 }
 
+
 void on_assertion_failed(const char* message, const char* file, const char* function, u32 line)
 {
     error() << "Assertion failed!"
-            << "\n------> Expression : " << message << "\n------> Function   : " << function
-            << "\n------> File       : " << file << ":" << line;
+  << "\n------> Expression : " << message
+  << "\n------> Function   : " << function
+  << "\n------> File       : " << file << ":" << line;
 
     hang();
 }
+// clang-format on
 }

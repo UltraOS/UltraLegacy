@@ -44,11 +44,13 @@ public:
     static AddressSpace& of_kernel();
     static AddressSpace& current();
 
+// clang-format off
 #ifdef ULTRA_32
-    PT& pt_at(size_t index);
+    PT&   pt_at(size_t index);
 #elif defined(ULTRA_64)
-    PDPT&                                pdpt_at(size_t index);
+    PDPT& pdpt_at(size_t index);
 #endif
+// clang-format on
 
     Entry& entry_at(size_t index);
 
