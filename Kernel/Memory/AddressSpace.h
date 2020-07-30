@@ -47,7 +47,7 @@ public:
 #ifdef ULTRA_32
     PT& pt_at(size_t index);
 #elif defined(ULTRA_64)
-    PDPT& pdpt_at(size_t index);
+    PDPT&                                pdpt_at(size_t index);
 #endif
 
     Entry& entry_at(size_t index);

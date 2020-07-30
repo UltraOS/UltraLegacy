@@ -100,8 +100,7 @@ void LAPIC::start_processor(u8 id)
 
         Address var_address = entrypoint_base.as_pointer<volatile u8>() + offset;
 
-        return MemoryManager::physical_to_virtual(var_address)
-            .as_pointer<volatile remove_pointer_t<decltype(addr)>>();
+        return MemoryManager::physical_to_virtual(var_address).as_pointer<volatile remove_pointer_t<decltype(addr)>>();
     };
 
     auto* is_ap_alive        = address_of_var(&alive);

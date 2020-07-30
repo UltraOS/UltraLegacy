@@ -8,7 +8,7 @@ namespace kernel {
 class Page {
 public:
 #ifdef ULTRA_64
-    static constexpr size_t  huge_size      = 2 * MB;
+    static constexpr size_t huge_size = 2 * MB;
 #endif
     static constexpr size_t  size           = 4096;
     static constexpr Address alignment_mask = 0xFFFFF000;

@@ -232,8 +232,12 @@ void MemoryManager::inititalize(AddressSpace& directory)
         .set_physical_address(directory.physical_address())
         .make_supervisor_present();
 #elif defined(ULTRA_64)
-    (void)directory;
-    ASSERT(false && "implement me");
+    static constexpr size_t kernel_pdpts[] = { 256, 511 };
+
+    for (auto pdpt_index: kernel_pdpts) {
+        auto& entry = AddressSpace::of_kernel().entry_at(pdpt_index);
+        directory.entry_at(pdpt_index) = entry;
+    }
 #endif
 }
 

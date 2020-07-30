@@ -128,8 +128,7 @@ void InterruptController::MP::parse_configuration_table(FloatingPointer* fp_tabl
         return;
     }
 
-    auto configuration_table_linear
-        = MemoryManager::physical_to_virtual(fp_table->configuration_table_pointer.raw());
+    auto configuration_table_linear = MemoryManager::physical_to_virtual(fp_table->configuration_table_pointer.raw());
 
     auto& configuration_table = *configuration_table_linear.as_pointer<MP::ConfigurationTable>();
 
