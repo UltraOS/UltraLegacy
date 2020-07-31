@@ -8,7 +8,7 @@ enable_language(ASM_NASM)
 enable_language(CXX)
 
 if (ARCH MATCHES "64")
-    set(CMAKE_ASM_NASM_FLAGS "-felf64 -DULTRA_64")
+    set(CMAKE_ASM_NASM_FLAGS "-felf64 -DULTRA_64 -I${PROJECT_SOURCE_DIR}/Architecture/x86-64/")
     add_definitions(-DULTRA_64)
     set(ARCH_FOLDER "x86-64")
 else ()

@@ -6,6 +6,7 @@ extern KERNEL_IRQ_HANDLER
 extern KERNEL_EXCEPTION_HANDLER
 extern KERNEL_SYSCALL_HANDLER
 
+section .text
 global syscall_handler
 syscall_handler:
     push dword 0 ; error_code
