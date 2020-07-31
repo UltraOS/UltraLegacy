@@ -41,7 +41,7 @@ application_processor_entrypoint:
     ; reset the state for other APs
     mov [ALIVE],        FALSE
     mov [ACKNOWLEDGED], FALSE
-    xchg bx, bx
+
     ; Identity map bottom
     mov eax, [PML4]
     mov cr3, eax

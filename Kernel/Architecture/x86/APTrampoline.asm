@@ -44,7 +44,7 @@ application_processor_entrypoint:
         or  eax, 1
         mov cr0, eax
 
-        jmp 0x08:ADDR_OF(protected)
+        jmp gdt_ptr.code:ADDR_OF(protected)
 
 BITS 32
 
@@ -53,7 +53,7 @@ extern kernel_page_table
 extern ap_entrypoint
 
     protected:
-        mov ax, 0x10
+        mov ax, gdt_ptr.data
         mov ds, ax
         mov es, ax
         mov fs, ax
@@ -102,8 +102,10 @@ gdt_entry:
 
 gdt_ptr:
     ; NULL
+    .null: equ $ - gdt_ptr
     dq 0x00000000
 
+    .code: equ $ - gdt_ptr
     ; 32 bit code segment descriptor
     dw 0xFFFF ; limit
     dw 0x0000 ; base
@@ -112,6 +114,7 @@ gdt_ptr:
     db 0xCF   ; granularity
     db 0x00   ; base
 
+    .data: equ $ - gdt_ptr
     ; 32 bit data segment descriptor
     dw 0xFFFF ; limit
     dw 0x0000 ; base
