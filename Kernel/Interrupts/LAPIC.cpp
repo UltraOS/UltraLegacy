@@ -83,33 +83,37 @@ void LAPIC::send_startup_to(u8 id)
     write_register(Register::INTERRUPT_COMMAND_REGISTER_LOWER, *icr_pointer);
 }
 
-extern "C" bool alive;
-extern "C" bool allowed_to_boot;
-
 void LAPIC::start_processor(u8 id)
 {
     log() << "LAPIC: Starting application processor " << id << "...";
 
-    static bool              entrypoint_relocated   = false;
     static constexpr Address entrypoint_base        = 0x1000;
     static constexpr Address entrypoint_base_linear = MemoryManager::physical_to_virtual(entrypoint_base);
 
-    auto address_of_var = [](auto addr) {
-        size_t offset = Address(addr).as_pointer<volatile u8>()
-                        - reinterpret_cast<volatile u8*>(&application_processor_entrypoint);
+    static bool entrypoint_relocated = false;
 
-        Address var_address = entrypoint_base.as_pointer<volatile u8>() + offset;
+    static constexpr ptr_t address_of_alive        = 0x500;
+    static constexpr ptr_t address_of_acknowldeged = 0x510;
 
-        return MemoryManager::physical_to_virtual(var_address).as_pointer<volatile remove_pointer_t<decltype(addr)>>();
-    };
+#ifdef ULTRA_64
+    static constexpr ptr_t address_of_pml4 = 0x520;
+    static constexpr Address pml4_linear = MemoryManager::physical_to_virtual(address_of_pml4);
 
-    auto* is_ap_alive        = address_of_var(&alive);
-    auto* is_allowed_to_boot = address_of_var(&allowed_to_boot);
+    // Identity map the first pdpt for the AP
+    AddressSpace::of_kernel().entry_at(0) = AddressSpace::of_kernel().entry_at(256);
+#endif
+
+    auto* is_ap_alive     = MemoryManager::physical_to_virtual(address_of_alive).as_pointer<bool>();
+    auto* ap_acknowledegd = MemoryManager::physical_to_virtual(address_of_acknowldeged).as_pointer<bool>();
 
     if (!entrypoint_relocated) {
         copy_memory(reinterpret_cast<void*>(&application_processor_entrypoint),
                     entrypoint_base_linear.as_pointer<void>(),
                     Page::size);
+
+#ifdef ULTRA_64
+        *pml4_linear.as_pointer<ptr_t>() = AddressSpace::of_kernel().physical_address();
+#endif
         entrypoint_relocated = true;
     }
 
@@ -125,7 +129,7 @@ void LAPIC::start_processor(u8 id)
         log() << "LAPIC: Application processor " << id << " started successfully";
 
         // allow the ap to boot further
-        *is_allowed_to_boot = true;
+        *ap_acknowledegd = true;
 
         return;
     }
@@ -142,7 +146,7 @@ void LAPIC::start_processor(u8 id)
         log() << "LAPIC: Application processor " << id << " started successfully after second SIPI";
 
         // allow the ap to boot further
-        *is_allowed_to_boot = true;
+        *ap_acknowledegd = true;
 
     } else
         error() << "LAPIC: Application processor " << id << " failed to start after 2 SIPIs";
@@ -150,7 +154,6 @@ void LAPIC::start_processor(u8 id)
 
 extern "C" void ap_entrypoint()
 {
-
     static size_t row = 7;
 
     auto offset = vga_log("Hello from core ", row, 0, 0xF);
