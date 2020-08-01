@@ -4,7 +4,7 @@ An operating system that doesn't try to be UNIX. Made completely from scratch wi
 ## Current Features
 - Fully modern C++17 kernel
 - Absolutely no third party code
-- Support for both x86 and x86-64, the latter is in progress atm
+- Support for both x86 and x86-64
 - Own bootloader for both x86 and x86-64
 - Basic RR preemptive scheduler
 - Basic SMP (multicore) support
