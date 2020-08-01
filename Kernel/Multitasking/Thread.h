@@ -9,10 +9,6 @@ namespace kernel {
 
 using entrypoint_t = void (*)();
 
-// defined in Core/crt0.asm
-extern "C" entrypoint_t user_thread_entrypoint;
-extern "C" entrypoint_t supervisor_thread_entrypoint;
-
 class Thread {
 public:
     friend class Process;

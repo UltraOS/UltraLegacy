@@ -76,9 +76,9 @@ void AddressSpace::inititalize()
         }
     }
 
-    static constexpr size_t kernel_address_space = 2 * GB;
+    static constexpr size_t kernel_reserved_address_space = 8 * MB;
 
-    for (size_t i = 0; i < kernel_address_space / Page::huge_size; ++i) {
+    for (size_t i = 0; i < kernel_reserved_address_space / Page::huge_size; ++i) {
         auto physical_address = Page::huge_size * i;
         s_of_kernel->map_huge_supervisor_page(MemoryManager::kernel_reserved_base + physical_address, physical_address);
     }

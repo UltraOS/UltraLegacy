@@ -14,6 +14,7 @@ class PageFault;
 
 class MemoryManager {
 public:
+    // TODO: redo most of these constants, they're completely incorrect for x86-64
     static constexpr size_t page_directory_entry_count = 1024;
     static constexpr size_t page_table_entry_count     = 1024;
     static constexpr size_t page_table_address_space   = page_table_entry_count * Page::size;

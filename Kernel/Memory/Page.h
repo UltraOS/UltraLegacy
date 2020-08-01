@@ -10,8 +10,13 @@ public:
 #ifdef ULTRA_64
     static constexpr size_t huge_size = 2 * MB;
 #endif
-    static constexpr size_t  size           = 4096;
+    static constexpr size_t size = 4096;
+
+#ifdef ULTRA_32
     static constexpr Address alignment_mask = 0xFFFFF000;
+#elif defined(ULTRA_64)
+    static constexpr Address alignment_mask = 0xFFFFFFFFFFFFF000;
+#endif
 
     Page(Address physical_address);
 
