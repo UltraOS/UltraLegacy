@@ -1,5 +1,8 @@
 BITS 16
 
+%define ap_entrypoint _ZN6kernel3CPU13ap_entrypointEv
+extern  ap_entrypoint
+
 section .text
 
 VIRTUAL_ORIGIN:  equ 0xFFFFFFFF80000000
@@ -18,7 +21,8 @@ PROTECTED_BIT:   equ 1 << 0
 
 ALIVE:        equ 0x500 ; 1 byte bool
 ACKNOWLEDGED: equ 0x510 ; 1 byte bool
-PML4:         equ 0x520 ; 4 byte address
+STACK:        equ 0x520 ; 8 byte address
+PML4:         equ 0x530 ; 4 byte address
 
 %define ADDR_OF(label) ORIGIN + label - application_processor_entrypoint
 %define TO_PHYSICAL(virtual) (virtual - VIRTUAL_ORIGIN)
@@ -72,11 +76,11 @@ extern ap_entrypoint
         jmp rax
 
     higher_half:
+        mov rsp, [STACK]
+
         mov rax, cr3
         mov  qword [rax], 0x0000000000000000
         mov cr3, rax
-
-        mov rsp, TO_VIRTUAL(TEMPO_STACK)
 
         mov  rax, ap_entrypoint
         call rax

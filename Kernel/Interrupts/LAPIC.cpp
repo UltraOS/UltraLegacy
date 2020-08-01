@@ -1,5 +1,6 @@
 #include "LAPIC.h"
 #include "Memory/MemoryManager.h"
+#include "Multitasking/Process.h"
 #include "Timer.h"
 
 namespace kernel {
@@ -94,10 +95,11 @@ void LAPIC::start_processor(u8 id)
 
     static constexpr ptr_t address_of_alive        = 0x500;
     static constexpr ptr_t address_of_acknowldeged = 0x510;
+    static constexpr ptr_t address_of_stack        = 0x520;
 
 #ifdef ULTRA_64
-    static constexpr ptr_t address_of_pml4 = 0x520;
-    static constexpr Address pml4_linear = MemoryManager::physical_to_virtual(address_of_pml4);
+    static constexpr ptr_t   address_of_pml4 = 0x530;
+    static constexpr Address pml4_linear     = MemoryManager::physical_to_virtual(address_of_pml4);
 
     // Identity map the first pdpt for the AP
     AddressSpace::of_kernel().entry_at(0) = AddressSpace::of_kernel().entry_at(256);
@@ -105,6 +107,14 @@ void LAPIC::start_processor(u8 id)
 
     auto* is_ap_alive     = MemoryManager::physical_to_virtual(address_of_alive).as_pointer<bool>();
     auto* ap_acknowledegd = MemoryManager::physical_to_virtual(address_of_acknowldeged).as_pointer<bool>();
+
+    // TODO: add a literal allocate_stack() function
+    // allocate the initial AP stack
+    auto ap_stack = AddressSpace::of_kernel().allocator().allocate_range(Process::default_kerenl_stack_size);
+    *MemoryManager::physical_to_virtual(address_of_stack).as_pointer<ptr_t>() = ap_stack.end();
+
+    // Force a page fault to actually back this with a physical page as the AP doesn't have the IDT set up yet
+    *Address(ap_stack.end() - 1).as_pointer<u8>() = 0xFF;
 
     if (!entrypoint_relocated) {
         copy_memory(reinterpret_cast<void*>(&application_processor_entrypoint),
@@ -150,19 +160,5 @@ void LAPIC::start_processor(u8 id)
 
     } else
         error() << "LAPIC: Application processor " << id << " failed to start after 2 SIPIs";
-}
-
-extern "C" void ap_entrypoint()
-{
-    static size_t row = 7;
-
-    auto offset = vga_log("Hello from core ", row, 0, 0xF);
-
-    char buf[4];
-    to_string(LAPIC::my_id(), buf, 4);
-
-    vga_log(buf, row++, offset, 0xf);
-
-    hang();
 }
 }
