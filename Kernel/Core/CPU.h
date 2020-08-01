@@ -27,5 +27,8 @@ public:
     static bool supports_smp();
 
     static void start_all_processors();
+
+private:
+    static void ap_entrypoint() USED;
 };
 }
