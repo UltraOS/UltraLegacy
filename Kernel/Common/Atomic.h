@@ -30,6 +30,12 @@ public:
         return __atomic_load_n(&m_value, static_cast<order_t>(order));
     }
 
+    bool compare_and_exchange(T* expected, T value) volatile
+    {
+        return __atomic_compare_exchange_n(&m_value, expected, value, false, static_cast<order_t>(MemoryOrder::ACQ_REL),
+                                                                             static_cast<order_t>(MemoryOrder::ACQUIRE));
+    }
+
     operator T() const volatile
     {
         return load();
@@ -42,6 +48,6 @@ public:
     }
 
 private:
-    T m_value;
+    T m_value { 0 };
 };
 }
