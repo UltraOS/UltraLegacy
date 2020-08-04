@@ -1,8 +1,10 @@
 #pragma once
 
-#include "Conversions.h"
 #include "Core/IO.h"
 #include "Core/Runtime.h"
+
+#include "Conversions.h"
+#include "Lock.h"
 #include "String.h"
 #include "Traits.h"
 #include "Types.h"
@@ -39,14 +41,20 @@ public:
 private:
     Logger& m_logger;
     format  m_format { format::as_dec };
-    bool    should_terminate;
+    bool    m_should_terminate { true };
 };
 
 class Logger {
 public:
     virtual Logger& write(StringView text) = 0;
 
+    void lock() { m_lock.lock(); }
+    void unlock() { m_lock.unlock(); }
+
     virtual ~Logger() = default;
+
+private:
+    SpinLock m_lock;
 };
 
 // Uses port 0xE9 to log
@@ -71,11 +79,14 @@ private:
 
 inline E9Logger E9Logger::s_instance;
 
-inline AutoLogger::AutoLogger(Logger& logger) : m_logger(logger), should_terminate(true) { }
-
-inline AutoLogger::AutoLogger(AutoLogger&& other) : m_logger(other.m_logger), should_terminate(true)
+inline AutoLogger::AutoLogger(Logger& logger) : m_logger(logger)
 {
-    other.should_terminate = false;
+    m_logger.lock();
+}
+
+inline AutoLogger::AutoLogger(AutoLogger&& other) : m_logger(other.m_logger)
+{
+    other.m_should_terminate = false;
 }
 
 inline AutoLogger& AutoLogger::operator<<(const char* string)
@@ -150,34 +161,37 @@ enable_if_t<is_pointer_v<T>, AutoLogger&> AutoLogger::operator<<(T pointer)
 
 inline AutoLogger::~AutoLogger()
 {
-    m_logger.write("\n");
+    if (m_should_terminate) {
+        m_logger.write("\n");
+        m_logger.unlock();
+    }
 }
 
 inline AutoLogger info()
 {
-    auto& logger = E9Logger::get();
+    AutoLogger logger(E9Logger::get());
 
-    logger.write("[\33[34mINFO\033[0m] ");
+    logger << "[\33[34mINFO\033[0m] ";
 
-    return AutoLogger(logger);
+    return logger;
 }
 
 inline AutoLogger warning()
 {
-    auto& logger = E9Logger::get();
+    AutoLogger logger(E9Logger::get());
 
-    logger.write("[\33[33mWARNING\033[0m] ");
+    logger << "[\33[33mWARNING\033[0m] ";
 
-    return AutoLogger(logger);
+    return logger;
 }
 
 inline AutoLogger error()
 {
-    auto& logger = E9Logger::get();
+    AutoLogger logger(E9Logger::get());
 
-    logger.write("[\033[91mERROR\033[0m] ");
+    logger << "[\033[91mERROR\033[0m] ";
 
-    return AutoLogger(logger);
+    return logger;
 }
 
 inline AutoLogger log()

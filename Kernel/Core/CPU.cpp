@@ -64,8 +64,6 @@ void CPU::ap_entrypoint()
             offset = vga_log(number, my_row, offset, color);
 
         vga_log("]", my_row, offset, color);
-
-        log() << "core " << my_id << "writing...";
     }
 }
 }
