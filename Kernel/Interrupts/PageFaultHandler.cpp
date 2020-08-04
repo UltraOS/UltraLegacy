@@ -1,5 +1,9 @@
-#include "ExceptionHandler.h"
+#include "Core/Registers.h"
+
 #include "Memory/MemoryManager.h"
+
+#include "ExceptionHandler.h"
+#include "PageFault.h"
 
 namespace kernel {
 
@@ -11,7 +15,7 @@ public:
 
     void handle(const RegisterState& state) override
     {
-        ++m_occurances;
+        ++m_occurrences;
 
         static constexpr u32 type_mask = 0b011;
         static constexpr u32 user_mask = 0b100;
@@ -33,10 +37,10 @@ public:
         log() << "PageFaultHandler: page fault resolved, continuing...";
     }
 
-    size_t occurances() const { return m_occurances; }
+    size_t occurances() const { return m_occurrences; }
 
 private:
-    size_t                  m_occurances { 0 };
+    size_t                  m_occurrences { 0 };
     static PageFaultHandler s_instance;
 };
 

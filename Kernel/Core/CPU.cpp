@@ -1,10 +1,12 @@
-#include "CPU.h"
 #include "GDT.h"
-#include "Interrupts/Common.h"
+
 #include "Interrupts/IDT.h"
 #include "Interrupts/InterruptController.h"
 #include "Interrupts/LAPIC.h"
+
 #include "Memory/MemoryManager.h"
+
+#include "CPU.h"
 
 namespace kernel {
 
@@ -62,6 +64,8 @@ void CPU::ap_entrypoint()
             offset = vga_log(number, my_row, offset, color);
 
         vga_log("]", my_row, offset, color);
+
+        log() << "core " << my_id << "writing...";
     }
 }
 }

@@ -1,7 +1,9 @@
 #pragma once
 
 #include "Common/Types.h"
-#include "Interrupts/Common.h"
+
+#include "Core/Registers.h"
+
 #include "Process.h"
 #include "Thread.h"
 

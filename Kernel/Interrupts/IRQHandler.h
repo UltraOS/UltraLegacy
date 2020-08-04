@@ -2,7 +2,8 @@
 
 #include "Common/Types.h"
 
-#include "Common.h"
+#include "Core/Registers.h"
+
 #include "IRQManager.h"
 #include "InterruptController.h"
 

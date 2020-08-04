@@ -1,7 +1,9 @@
 #pragma once
 
-#include "Common.h"
+#include "Utilities.h"
+
 #include "Common/Types.h"
+
 #include "ExceptionDispatcher.h"
 
 namespace kernel {

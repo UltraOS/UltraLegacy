@@ -1,6 +1,8 @@
 #pragma once
 
-#include "Interrupts/Common.h"
+#include "Common/Types.h"
+
+#include "Core/Registers.h"
 
 namespace kernel {
 

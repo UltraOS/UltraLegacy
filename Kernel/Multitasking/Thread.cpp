@@ -1,5 +1,6 @@
+#include "Core/Registers.h"
+
 #include "Thread.h"
-#include "Interrupts/Common.h"
 
 namespace kernel {
 

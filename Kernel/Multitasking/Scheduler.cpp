@@ -1,5 +1,7 @@
 #include "Core/Runtime.h"
 
+#include "Interrupts/Utilities.h"
+
 #include "Scheduler.h"
 
 namespace kernel {

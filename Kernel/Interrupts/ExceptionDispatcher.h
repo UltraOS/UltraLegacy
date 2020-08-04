@@ -1,9 +1,10 @@
 #pragma once
 
 #include "Common/Macros.h"
+#include "Common/String.h"
 #include "Common/Types.h"
 
-#include "Common.h"
+#include "Core/Registers.h"
 
 #define EXCEPTION_HANDLER_SYMBOL(index) extern "C" void exception##index##_handler()
 

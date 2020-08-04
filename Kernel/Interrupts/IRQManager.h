@@ -1,7 +1,8 @@
 #pragma once
 
-#include "Common.h"
 #include "Common/Types.h"
+
+#include "Core/Registers.h"
 
 #define IRQ_HANDLER_SYMBOL(index) extern "C" void irq##index##_handler()
 

@@ -1,8 +1,10 @@
 #pragma once
 
 #include "Common/Types.h"
-#include "Interrupts/Common.h"
+
 #include "Interrupts/Timer.h"
+#include "Interrupts/Utilities.h"
+
 #include "Scheduler.h"
 #include "Thread.h"
 

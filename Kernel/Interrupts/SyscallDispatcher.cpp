@@ -1,6 +1,9 @@
-#include "SyscallDispatcher.h"
+#include "Common/Logger.h"
+
 #include "Core/Syscall.h"
+
 #include "IDT.h"
+#include "SyscallDispatcher.h"
 
 namespace kernel {
 

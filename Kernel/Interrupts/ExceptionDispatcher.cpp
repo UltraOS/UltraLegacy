@@ -2,7 +2,8 @@
 #include "Common/Macros.h"
 #include "Common/Types.h"
 
-#include "Common.h"
+#include "Core/Registers.h"
+
 #include "ExceptionDispatcher.h"
 #include "ExceptionHandler.h"
 #include "IDT.h"

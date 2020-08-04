@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Atomic.h"
-#include "Interrupts/Common.h"
+#include "Interrupts/Utilities.h"
 
 namespace kernel {
 
@@ -22,19 +22,15 @@ public:
         }
     }
 
-    void unlock()
-    {
-        m_lock.store(unlocked, MemoryOrder::RELEASE);
-    }
+    void unlock() { m_lock.store(unlocked, MemoryOrder::RELEASE); }
 
 private:
     Atomic<size_t> m_lock;
 };
 
-
 class InterruptSafeLock {
 public:
-    InterruptSafeLock(SpinLock& lock) : m_lock(lock) {}
+    InterruptSafeLock(SpinLock& lock) : m_lock(lock) { }
 
     void lock()
     {
@@ -44,7 +40,8 @@ public:
         m_lock.lock();
     }
 
-    void unlock() {
+    void unlock()
+    {
         m_lock.unlock();
 
         if (m_should_enable_interrupts)
@@ -70,7 +67,8 @@ private:
         m_lock.lock();
     }
 
-    void unlock() {
+    void unlock()
+    {
         m_lock.unlock();
 
         if (m_should_enable_interrupts)

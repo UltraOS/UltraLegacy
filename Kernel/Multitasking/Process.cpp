@@ -1,6 +1,10 @@
-#include "Process.h"
+#include "Interrupts/Utilities.h"
+
 #include "Memory/MemoryManager.h"
+
 #include "Scheduler.h"
+
+#include "Process.h"
 
 namespace kernel {
 

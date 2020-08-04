@@ -2,8 +2,7 @@
 
 namespace kernel {
 
-enum class MemoryOrder : decltype(__ATOMIC_RELAXED)
-{
+enum class MemoryOrder : decltype(__ATOMIC_RELAXED) {
     RELAXED = __ATOMIC_RELAXED,
     CONSUME = __ATOMIC_CONSUME,
     ACQUIRE = __ATOMIC_ACQUIRE,
@@ -18,7 +17,7 @@ public:
     using order_t = decltype(__ATOMIC_RELAXED);
 
     Atomic() = default;
-    Atomic(T value) : m_value(value) {}
+    Atomic(T value) : m_value(value) { }
 
     void store(T value, MemoryOrder order = MemoryOrder::SEQ_CST) volatile
     {
@@ -32,14 +31,15 @@ public:
 
     bool compare_and_exchange(T* expected, T value) volatile
     {
-        return __atomic_compare_exchange_n(&m_value, expected, value, false, static_cast<order_t>(MemoryOrder::ACQ_REL),
-                                                                             static_cast<order_t>(MemoryOrder::ACQUIRE));
+        return __atomic_compare_exchange_n(&m_value,
+                                           expected,
+                                           value,
+                                           false,
+                                           static_cast<order_t>(MemoryOrder::ACQ_REL),
+                                           static_cast<order_t>(MemoryOrder::ACQUIRE));
     }
 
-    operator T() const volatile
-    {
-        return load();
-    }
+    operator T() const volatile { return load(); }
 
     T operator=(T value) volatile
     {

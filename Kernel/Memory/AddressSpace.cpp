@@ -1,7 +1,8 @@
 #include "Common/Math.h"
 
+#include "Interrupts/Utilities.h"
+
 #include "AddressSpace.h"
-#include "Interrupts/Common.h"
 #include "MemoryManager.h"
 #include "VirtualAllocator.h"
 

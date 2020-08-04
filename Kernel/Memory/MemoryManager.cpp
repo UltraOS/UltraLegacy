@@ -1,8 +1,12 @@
-#include "MemoryManager.h"
-#include "AddressSpace.h"
 #include "Common/Logger.h"
-#include "Interrupts/Common.h"
+
+#include "Interrupts/PageFault.h"
+#include "Interrupts/Utilities.h"
+
 #include "Multitasking/Scheduler.h"
+
+#include "AddressSpace.h"
+#include "MemoryManager.h"
 #include "Page.h"
 #include "PhysicalRegion.h"
 

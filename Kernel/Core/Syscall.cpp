@@ -1,6 +1,10 @@
-#include "Syscall.h"
 #include "Common/Logger.h"
+
+#include "Interrupts/Utilities.h"
+
 #include "Multitasking/Scheduler.h"
+
+#include "Syscall.h"
 
 namespace kernel {
 
