@@ -1,6 +1,6 @@
 #!/bin/bash
 
-arch="64"
+arch=64
 
 if [ "$1" ]
   then
@@ -14,8 +14,9 @@ if [ "$1" ]
 fi
 
 /bin/bash Scripts/build_ultra.sh $arch || exit 1
-qemu-system-x86_64 -drive file="Images/Ultra$arcHDD.vmdk",index=0,media=disk \
-                   -debugcon stdio                                           \
-                   -smp 4                                                    \
-                   -m 128                                                    \
-                   -no-reboot                                                \
+qemu-system-x86_64 -drive file="Images/Ultra${arch}HDD.vmdk",index=0,media=disk \
+                   -debugcon stdio                                              \
+                   -smp 4                                                       \
+                   -m 128                                                       \
+                   -no-reboot                                                   \
+                   --enable-kvm                                                 \
