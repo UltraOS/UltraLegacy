@@ -66,7 +66,7 @@ InterruptController::MP::FloatingPointer* InterruptController::MP::find_floating
         = find_string_in_range(ebda_base_linear, ebda_end_linear, table_alignment, mp_floating_pointer_signature);
 
     if (address)
-        return MemoryManager::physical_to_virtual(address).as_pointer<MP::FloatingPointer>();
+        return address.as_pointer<MP::FloatingPointer>();
 
     static constexpr Address bios_rom_base        = 0xF0000;
     static constexpr Address bios_rom_end         = 0xFFFFF;
@@ -98,7 +98,7 @@ InterruptController::MP::FloatingPointer* InterruptController::MP::find_floating
                                    mp_floating_pointer_signature);
 
     if (address)
-        return MemoryManager::physical_to_virtual(address).as_pointer<MP::FloatingPointer>();
+        return address.as_pointer<MP::FloatingPointer>();
 
     warning()
         << "InterruptController: Couldn't find the floating pointer table, reverting to single core configuration.";
