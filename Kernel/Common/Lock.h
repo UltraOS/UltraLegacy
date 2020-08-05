@@ -28,29 +28,28 @@ private:
     Atomic<size_t> m_lock;
 };
 
-class InterruptSafeLock {
+class InterruptSafeSpinLock : SpinLock {
 public:
-    InterruptSafeLock(SpinLock& lock) : m_lock(lock) { }
+    InterruptSafeSpinLock() {}
 
     void lock()
     {
         m_should_enable_interrupts = Interrupts::are_enabled();
         Interrupts::disable();
 
-        m_lock.lock();
+        SpinLock::lock();
     }
 
     void unlock()
     {
-        m_lock.unlock();
+        SpinLock::unlock();
 
         if (m_should_enable_interrupts)
             Interrupts::enable();
     }
 
 private:
-    bool      m_should_enable_interrupts { false };
-    SpinLock& m_lock;
+    bool m_should_enable_interrupts { false };
 };
 
 class ScopedInterruptSafeLock {
