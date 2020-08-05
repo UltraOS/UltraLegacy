@@ -21,11 +21,17 @@ IF "%~1" == "32" (
 
 :arch_picked
 
-call Scripts\build_ultra.bat %arch% || goto error
-qemu-system-x86_64 -drive file="Images/Ultra%arch%HDD.vmdk",index=0,media=disk -debugcon stdio -smp 4 -m 128 -no-reboot -no-shutdown -vga std
+call build_ultra.bat %arch% || goto error
+
+pushd %~dp0\..\
+set image_file=%CD%\Images\Ultra%arch%HDD-flat.vmdk
+echo %image_file%
+del ".\Images\Ultra%arch%HDD-flat.vmdk.lock" 2>NUL
+bochs.exe -f %CD%\Scripts\bochsrc.bxrc
+del bx_enh_dbg.ini 2>NUL
+popd
 exit 0
 
 :error
 popd
 exit 1
-
