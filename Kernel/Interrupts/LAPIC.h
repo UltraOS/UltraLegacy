@@ -7,7 +7,8 @@ namespace kernel {
 
 class LAPIC {
 public:
-    static constexpr u32 spurious_irq_index = 0xFF;
+    static constexpr u32 spurious_irq_index  = 0xFF;
+    static constexpr u32 invalid_destination = -1;
 
     enum class Register {
         ID                                  = 0x20,
@@ -51,6 +52,22 @@ public:
 
     static u32 my_id();
 
+    enum class DestinationType : u8 { SPECIFIC, SELF, ALL_INCLUDING_SELF, ALL_EXCLUDING_SELF };
+
+    template <DestinationType dt>
+    static enable_if_t<dt == DestinationType::SPECIFIC> send_ipi(u32 destination_id)
+    {
+        send_ipi(dt, destination_id);
+    }
+
+    template <DestinationType dt>
+    static enable_if_t<dt == DestinationType::SELF || dt == DestinationType::ALL_INCLUDING_SELF
+                       || dt == DestinationType::ALL_EXCLUDING_SELF>
+    send_ipi()
+    {
+        send_ipi(dt);
+    }
+
 private:
     enum class DeliveryMode : u8 { NORMAL = 0, LOWEST_PRIORITY = 1, SMI = 2, NMI = 4, INIT = 5, SIPI = 6 };
 
@@ -59,8 +76,6 @@ private:
     enum class Level : u8 { DE_ASSERT, ASSERT };
 
     enum class TriggerMode : u8 { EDGE, LEVEL };
-
-    enum class DestinationType : u8 { DEFAULT, SELF, ALL_INCLUDING_SELF, ALL_EXCLUDING_SELF };
 
     struct ICR {
         // ICR LOWER
@@ -87,6 +102,7 @@ private:
 
     static_assert(sizeof(ICR) == icr_size);
 
+    static void send_ipi(DestinationType, u32 = invalid_destination);
     static void send_init_to(u8);
     static void send_startup_to(u8);
 

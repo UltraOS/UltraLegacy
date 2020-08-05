@@ -1,7 +1,11 @@
-#include "LAPIC.h"
 #include "Memory/MemoryManager.h"
+
 #include "Multitasking/Process.h"
+
+#include "IPICommunicator.h"
 #include "Timer.h"
+
+#include "LAPIC.h"
 
 namespace kernel {
 
@@ -47,7 +51,28 @@ u32 LAPIC::my_id()
     return (read_register(Register::ID) >> 24) & 0xFF;
 }
 
-extern "C" void application_processor_entrypoint();
+void LAPIC::send_ipi(DestinationType destination_type, u32 destination)
+{
+    if (destination_type == DestinationType::SPECIFIC && destination == invalid_destination) {
+        error() << "LAPIC: invalid destination with destination type == DEFAULT";
+        hang();
+    }
+
+    ICR icr {};
+
+    icr.vector_number    = IPICommunicator::vector_number;
+    icr.delivery_mode    = DeliveryMode::NORMAL;
+    icr.destination_mode = DestinationMode::PHYSICAL;
+    icr.level            = Level::ASSERT;
+    icr.trigger_mode     = TriggerMode::EDGE;
+    icr.destination_type = destination_type;
+    icr.destination_id   = destination;
+
+    volatile auto* icr_pointer = Address(&icr).as_pointer<volatile u32>();
+
+    write_register(Register::INTERRUPT_COMMAND_REGISTER_HIGHER, *(icr_pointer + 1));
+    write_register(Register::INTERRUPT_COMMAND_REGISTER_LOWER, *icr_pointer);
+}
 
 void LAPIC::send_init_to(u8 id)
 {
@@ -57,7 +82,7 @@ void LAPIC::send_init_to(u8 id)
     icr.destination_mode = DestinationMode::PHYSICAL;
     icr.level            = Level::ASSERT;
     icr.trigger_mode     = TriggerMode::EDGE;
-    icr.destination_type = DestinationType::DEFAULT;
+    icr.destination_type = DestinationType::SPECIFIC;
     icr.destination_id   = id;
 
     volatile auto* icr_pointer = Address(&icr).as_pointer<volatile u32>();
@@ -68,14 +93,16 @@ void LAPIC::send_init_to(u8 id)
 
 void LAPIC::send_startup_to(u8 id)
 {
+    static constexpr u8 entrypoint_page_number = 1;
+
     ICR icr {};
 
-    icr.entrypoint_page  = 1;
+    icr.entrypoint_page  = entrypoint_page_number;
     icr.delivery_mode    = DeliveryMode::SIPI;
     icr.destination_mode = DestinationMode::PHYSICAL;
     icr.level            = Level::ASSERT;
     icr.trigger_mode     = TriggerMode::EDGE;
-    icr.destination_type = DestinationType::DEFAULT;
+    icr.destination_type = DestinationType::SPECIFIC;
     icr.destination_id   = id;
 
     volatile auto* icr_pointer = Address(&icr).as_pointer<volatile u32>();
@@ -83,6 +110,9 @@ void LAPIC::send_startup_to(u8 id)
     write_register(Register::INTERRUPT_COMMAND_REGISTER_HIGHER, *(icr_pointer + 1));
     write_register(Register::INTERRUPT_COMMAND_REGISTER_LOWER, *icr_pointer);
 }
+
+// defined in Architecture/X/APTrampoline.asm
+extern "C" void application_processor_entrypoint();
 
 void LAPIC::start_processor(u8 id)
 {

@@ -1,10 +1,12 @@
 %define KERNEL_IRQ_HANDLER       _ZN6kernel10IRQManager11irq_handlerEPNS_13RegisterStateE
 %define KERNEL_EXCEPTION_HANDLER _ZN6kernel19ExceptionDispatcher17exception_handlerEPNS_13RegisterStateE
 %define KERNEL_SYSCALL_HANDLER   _ZN6kernel17SyscallDispatcher8dispatchEPNS_13RegisterStateE
+%define KERNEL_IPI_HANDLER       _ZN6kernel15IPICommunicator6on_ipiEPNS_13RegisterStateE
 
 extern KERNEL_IRQ_HANDLER
 extern KERNEL_EXCEPTION_HANDLER
 extern KERNEL_SYSCALL_HANDLER
+extern KERNEL_IPI_HANDLER
 
 section .text
 global syscall_handler
@@ -23,6 +25,31 @@ syscall_handler:
     mov es, ax
     cld
     call KERNEL_SYSCALL_HANDLER
+    add esp, 0x8
+    pop gs
+    pop fs
+    pop es
+    pop ds
+    popa
+    add esp, 0x8
+    iret
+
+global ipi_handler
+ipi_handler:
+    push dword 0 ; error_code
+    push dword 254 ; interrupt number
+    pusha
+    push ds
+    push es
+    push fs
+    push gs
+    push ss
+    push esp
+    mov ax, 0x10
+    mov ds, ax
+    mov es, ax
+    cld
+    call KERNEL_IPI_HANDLER
     add esp, 0x8
     pop gs
     pop fs
