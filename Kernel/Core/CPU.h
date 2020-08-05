@@ -22,13 +22,32 @@ public:
 
     friend bool operator&(FLAGS l, FLAGS r) { return static_cast<size_t>(l) & static_cast<size_t>(r); }
 
+    static void initialize();
+
     static FLAGS flags();
 
     static bool supports_smp();
 
     static void start_all_processors();
 
+    class LocalData {
+    public:
+        LocalData(u32 id) : m_id(id) { }
+
+        u32 id() const { return m_id; }
+
+    private:
+        u32 m_id;
+        // some other stuff
+    };
+
+    static LocalData& current();
+
 private:
     static void ap_entrypoint() USED;
+
+private:
+    // replace with a hash map <id, processor>
+    static DynamicArray<LocalData> s_processors;
 };
 }

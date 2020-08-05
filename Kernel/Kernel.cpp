@@ -6,6 +6,7 @@
 #include "Core/Runtime.h"
 #include "Interrupts/ExceptionDispatcher.h"
 #include "Interrupts/IDT.h"
+#include "Interrupts/IPICommunicator.h"
 #include "Interrupts/IRQManager.h"
 #include "Interrupts/InterruptController.h"
 #include "Interrupts/SyscallDispatcher.h"
@@ -73,12 +74,15 @@ void run(MemoryMap* memory_map)
 
     SyscallDispatcher::initialize();
 
+    IPICommunicator::initialize();
+
     Scheduler::inititalize();
 
     Timer::discover_and_setup();
 
     IDT::the().install();
 
+    CPU::initialize();
     CPU::start_all_processors();
 
     Interrupts::enable();

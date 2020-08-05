@@ -10,6 +10,14 @@
 
 namespace kernel {
 
+DynamicArray<CPU::LocalData> CPU::s_processors;
+
+void CPU::initialize()
+{
+    // emplace the bsp ID
+    s_processors.emplace(LAPIC::my_id());
+}
+
 CPU::FLAGS CPU::flags()
 {
     FLAGS flags;
@@ -34,17 +42,32 @@ void CPU::start_all_processors()
         LAPIC::start_processor(processor_id);
 }
 
+CPU::LocalData& CPU::current()
+{
+    auto this_cpu = LAPIC::my_id();
+
+    for (auto& processor: s_processors) {
+        if (processor.id() == this_cpu)
+            return processor;
+    }
+
+    error() << "CPU: Couldn't find the local data for cpu " << this_cpu;
+    hang();
+}
+
 void CPU::ap_entrypoint()
 {
     GDT::the().install();
     IDT::the().install();
     LAPIC::initialize_for_this_processor();
+    Interrupts::enable();
 
-    static size_t row = 7;
+    auto my_id = LAPIC::my_id();
+    s_processors.emplace(my_id);
 
-    auto   my_id  = LAPIC::my_id();
-    auto   my_row = row++;
-    size_t cycles = 0;
+    static size_t row    = 7;
+    auto          my_row = row++;
+    size_t        cycles = 0;
 
     char buf[4];
     to_string(my_id, buf, 4);
