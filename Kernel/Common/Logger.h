@@ -21,7 +21,7 @@ enum class format {
 
 class AutoLogger {
 public:
-    AutoLogger(Logger& logger);
+    AutoLogger(Logger& logger, bool should_lock = true);
     AutoLogger(AutoLogger&& logger);
 
     AutoLogger& operator<<(const char* string);
@@ -42,6 +42,7 @@ private:
     Logger& m_logger;
     format  m_format { format::as_dec };
     bool    m_should_terminate { true };
+    bool    m_should_unlock;
 };
 
 class Logger {
@@ -79,12 +80,15 @@ private:
 
 inline E9Logger E9Logger::s_instance;
 
-inline AutoLogger::AutoLogger(Logger& logger) : m_logger(logger)
+inline AutoLogger::AutoLogger(Logger& logger, bool should_lock)
+    : m_logger(logger), m_should_unlock(should_lock)
 {
-    m_logger.lock();
+    if (should_lock)
+        m_logger.lock();
 }
 
-inline AutoLogger::AutoLogger(AutoLogger&& other) : m_logger(other.m_logger)
+inline AutoLogger::AutoLogger(AutoLogger&& other)
+    : m_logger(other.m_logger), m_should_unlock(other.m_should_unlock)
 {
     other.m_should_terminate = false;
 }
@@ -163,7 +167,9 @@ inline AutoLogger::~AutoLogger()
 {
     if (m_should_terminate) {
         m_logger.write("\n");
-        m_logger.unlock();
+
+        if (m_should_unlock)
+            m_logger.unlock();
     }
 }
 
@@ -181,15 +187,6 @@ inline AutoLogger warning()
     AutoLogger logger(E9Logger::get());
 
     logger << "[\33[33mWARNING\033[0m] ";
-
-    return logger;
-}
-
-inline AutoLogger error()
-{
-    AutoLogger logger(E9Logger::get());
-
-    logger << "[\033[91mERROR\033[0m] ";
 
     return logger;
 }
@@ -223,4 +220,14 @@ inline Address vga_log(StringView string, size_t row, size_t column, u8 color)
 
     return reinterpret_cast<ptr_t>(memory) - initial_memory;
 };
+
+inline AutoLogger error()
+{
+    AutoLogger logger(E9Logger::get(), false);
+
+    logger << "[\033[91mERROR\033[0m] ";
+
+    return logger;
+}
+
 }
