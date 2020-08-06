@@ -68,7 +68,7 @@ public:
 
     bool is_dead() { return m_state == State::DEAD; }
 
-    bool should_be_woken_up() { return m_wake_up_time <= Timer::nanoseconds_since_boot(); }
+    bool should_be_woken_up() { return m_wake_up_time <= Timer::the().nanoseconds_since_boot(); }
 
 private:
     Thread(AddressSpace& page_dir, Address kernel_stack);

@@ -36,9 +36,17 @@ void PIT::set_frequency(u32 ticks_per_second)
     IO::out8<timer_data>((divisor & 0x0000FF00) >> 8);
 }
 
+u64 PIT::nanoseconds_since_boot()
+{
+    return m_nanoseconds_since_boot;
+}
+
 void PIT::handle_irq(const RegisterState& registers)
 {
-    increment();
+    if (CPU::current().id() != 0)
+        return;
+
+    m_nanoseconds_since_boot += nanoseconds_in_second / current_frequency();
 
     auto offset = vga_log("Uptime: ", 0, 0, 0x9);
 
@@ -64,6 +72,7 @@ void PIT::nano_delay(u32 ns)
 {
     IO::out8<timer_command>(write_word);
 
+    // TODO: Remove this, we don't want to use floats in the kernel
     u32 ticks = max_frequency() * (ns / static_cast<float>(Timer::nanoseconds_in_second));
 
     if (ticks > 0xFFFF) {

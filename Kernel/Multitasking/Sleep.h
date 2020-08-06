@@ -14,7 +14,7 @@ inline void until(u64 time)
 {
     Interrupts::ScopedDisabler d;
 
-    if (time <= Timer::nanoseconds_since_boot())
+    if (time <= Timer::the().nanoseconds_since_boot())
         return;
 
     Thread::current()->sleep(time);
@@ -23,11 +23,11 @@ inline void until(u64 time)
 
 inline void for_nanoseconds(u64 time)
 {
-    until(Timer::nanoseconds_since_boot() + time);
+    until(Timer::the().nanoseconds_since_boot() + time);
 }
 
 inline void for_seconds(u64 time)
 {
-    until(Timer::nanoseconds_since_boot() + (time * Timer::nanoseconds_in_second));
+    until(Timer::the().nanoseconds_since_boot() + (time * Timer::nanoseconds_in_second));
 }
 }

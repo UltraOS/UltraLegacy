@@ -16,6 +16,7 @@ void CPU::initialize()
 {
     // emplace the bsp ID
     s_processors.emplace(LAPIC::my_id());
+    LAPIC::initialize_timer_for_this_processor();
 }
 
 CPU::FLAGS CPU::flags()
@@ -60,6 +61,7 @@ void CPU::ap_entrypoint()
     GDT::the().install();
     IDT::the().install();
     LAPIC::initialize_for_this_processor();
+    LAPIC::initialize_timer_for_this_processor();
     Interrupts::enable();
 
     auto my_id = LAPIC::my_id();

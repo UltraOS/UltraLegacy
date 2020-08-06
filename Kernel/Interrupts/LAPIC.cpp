@@ -4,6 +4,7 @@
 
 #include "IPICommunicator.h"
 #include "Timer.h"
+#include "IRQManager.h"
 
 #include "LAPIC.h"
 
@@ -29,6 +30,39 @@ void LAPIC::initialize_for_this_processor()
     static constexpr u32 enable_bit = 0b100000000;
 
     write_register(Register::SPURIOUS_INTERRUPT_VECTOR, current_value | enable_bit | spurious_irq_index);
+}
+
+void LAPIC::initialize_timer_for_this_processor()
+{
+    static InterruptSafeSpinLock* startup_lock;
+
+    if (!startup_lock)
+        startup_lock = new InterruptSafeSpinLock();
+
+    // We can't use PIT simulatneously from multiple processors
+    startup_lock->lock();
+
+    static constexpr u32 divider_16      = 0b11;
+    // TODO: replace with numeric_limits<u32>::max()
+    static constexpr u32 initial_counter = 0xFFFFFFFF;
+
+    static constexpr u32 milliseconds_in_second = 1000;
+    static constexpr u32 sleep_delay = milliseconds_in_second / ticks_per_second;
+
+    write_register(Register::DIVIDE_CONFIGURATION, divider_16);
+    write_register(Register::INITIAL_COUNT, initial_counter);
+
+    Timer::the().mili_delay(sleep_delay);
+
+    static constexpr u32 lapic_timer_irq = 0;
+    static constexpr u32 periodic_mode   = (1 << 17);
+
+    auto total_ticks = initial_counter - read_register(Register::CURRENT_COUNT);
+
+    write_register(Register::LVT_TIMER, (lapic_timer_irq + IRQManager::irq_base_index) | periodic_mode);
+    write_register(Register::INITIAL_COUNT, total_ticks);
+
+    startup_lock->unlock();
 }
 
 void LAPIC::write_register(Register reg, u32 value)

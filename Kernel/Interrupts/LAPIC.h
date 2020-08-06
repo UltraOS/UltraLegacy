@@ -9,6 +9,7 @@ class LAPIC {
 public:
     static constexpr u32 spurious_irq_index  = 0xFF;
     static constexpr u32 invalid_destination = -1;
+    static constexpr u32 ticks_per_second    = 100;
 
     enum class Register {
         ID                                  = 0x20,
@@ -42,6 +43,8 @@ public:
     static void set_base_address(Address physical_address);
 
     static void initialize_for_this_processor();
+
+    static void initialize_timer_for_this_processor();
 
     static void write_register(Register, u32 value);
     static u32  read_register(Register);

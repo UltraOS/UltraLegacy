@@ -30,6 +30,8 @@ public:
 
     StringView model() const override { return "PIT (8254)"_sv; };
 
+    u64 nanoseconds_since_boot() override;
+
     void enable() override { enable_irq(); }
     void disable() override { disable_irq(); }
 
@@ -43,6 +45,7 @@ public:
     ~PIT() { disable_irq(); }
 
 private:
+    u64 m_nanoseconds_since_boot { 0 };
     u32 m_frequency { 0 };
 };
 }

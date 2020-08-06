@@ -16,7 +16,7 @@ public:
 
     static Timer& the();
 
-    static u64 nanoseconds_since_boot();
+    virtual u64 nanoseconds_since_boot() = 0;
 
     virtual void set_frequency(u32 ticks_per_second) = 0;
 
@@ -35,11 +35,7 @@ public:
 
     virtual ~Timer() = default;
 
-protected:
-    void increment();
-
 private:
-    static u64    s_nanoseconds_since_boot;
     static Timer* s_timer;
 };
 }
