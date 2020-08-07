@@ -99,7 +99,7 @@ void run(MemoryMap* memory_map)
 
 // x86 PM cannot modify non-active paging structures directly, whereas x86-64 can
 // so for x86-64 we map it right here, whereas for 32 bit mode we map it in the AddressSpace::initialize
-// as a hack to make ring 3 work without a proper loder, purely for testing purposes.
+// as a hack to make ring 3 work without a proper loader, purely for testing purposes.
 // (we also disable interrupts here so that this thread doesn't get interrupted before mapping the page)
 #ifdef ULTRA_64
     {

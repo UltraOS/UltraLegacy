@@ -36,6 +36,9 @@ public:
 
         u32 id() const { return m_id; }
 
+        // bsp always the first processor
+        bool is_bsp() { return this == &s_processors[0];}
+
     private:
         u32 m_id;
         // some other stuff

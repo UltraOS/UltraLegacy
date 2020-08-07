@@ -22,6 +22,7 @@ IRQ_HANDLER_SYMBOL(12);
 IRQ_HANDLER_SYMBOL(13);
 IRQ_HANDLER_SYMBOL(14);
 IRQ_HANDLER_SYMBOL(15);
+IRQ_HANDLER_SYMBOL(253); // LAPIC timer per core
 IRQ_HANDLER_SYMBOL(255); // APIC spurious vector
 
 namespace kernel {
@@ -47,6 +48,7 @@ void IRQManager::install()
         .register_interrupt_handler(irq_base_index + 13, irq13_handler)
         .register_interrupt_handler(irq_base_index + 14, irq14_handler)
         .register_interrupt_handler(irq_base_index + 15, irq15_handler)
+        .register_interrupt_handler(LAPIC::Timer::irq_number, irq253_handler)
         .register_interrupt_handler(LAPIC::spurious_irq_index, irq255_handler);
 }
 

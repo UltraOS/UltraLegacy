@@ -2,6 +2,8 @@
 
 #include "Common/Types.h"
 #include "Memory/AddressSpace.h"
+#include "IRQHandler.h"
+
 
 namespace kernel {
 
@@ -9,7 +11,31 @@ class LAPIC {
 public:
     static constexpr u32 spurious_irq_index  = 0xFF;
     static constexpr u32 invalid_destination = -1;
-    static constexpr u32 ticks_per_second    = 100;
+
+    class Timer : IRQHandler {
+    public:
+        static constexpr u32 irq_number       = 253;
+        static constexpr u32 masked_bit       = 1 << 16;
+        static constexpr u32 periodic_mode    = 1 << 17;
+        static constexpr u32 ticks_per_second = 100;
+
+        Timer() : IRQHandler(irq_number) { }
+
+        void initialize_for_this_processor();
+
+        void handle_irq(const RegisterState& registers) override;
+        void finalize_irq() override {}
+
+        void enable_irq()  override;
+        void disable_irq() override;
+    };
+
+    static Timer& timer()
+    {
+        ASSERT(s_timer != nullptr);
+
+        return *s_timer;
+    }
 
     enum class Register {
         ID                                  = 0x20,
@@ -43,8 +69,6 @@ public:
     static void set_base_address(Address physical_address);
 
     static void initialize_for_this_processor();
-
-    static void initialize_timer_for_this_processor();
 
     static void write_register(Register, u32 value);
     static u32  read_register(Register);
@@ -111,5 +135,6 @@ private:
 
 private:
     static Address s_base;
+    static Timer*  s_timer;
 };
 }

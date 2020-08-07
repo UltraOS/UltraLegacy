@@ -14,9 +14,13 @@ DynamicArray<CPU::LocalData> CPU::s_processors;
 
 void CPU::initialize()
 {
-    // emplace the bsp ID
-    s_processors.emplace(LAPIC::my_id());
-    LAPIC::initialize_timer_for_this_processor();
+    if (supports_smp()) {
+        // emplace the bsp ID
+        s_processors.emplace(LAPIC::my_id());
+        LAPIC::timer().initialize_for_this_processor();
+    }
+    else
+        s_processors.emplace(0);
 }
 
 CPU::FLAGS CPU::flags()
@@ -40,6 +44,9 @@ void CPU::start_all_processors()
         return;
 
     for (auto processor_id: InterruptController::smp_data().application_processor_apic_ids)
+        s_processors.emplace(processor_id);
+
+    for (auto processor_id: InterruptController::smp_data().application_processor_apic_ids)
         LAPIC::start_processor(processor_id);
 }
 
@@ -61,18 +68,15 @@ void CPU::ap_entrypoint()
     GDT::the().install();
     IDT::the().install();
     LAPIC::initialize_for_this_processor();
-    LAPIC::initialize_timer_for_this_processor();
+    LAPIC::timer().initialize_for_this_processor();
     Interrupts::enable();
-
-    auto my_id = LAPIC::my_id();
-    s_processors.emplace(my_id);
 
     static size_t row    = 7;
     auto          my_row = row++;
     size_t        cycles = 0;
 
     char buf[4];
-    to_string(my_id, buf, 4);
+    to_string(LAPIC::my_id(), buf, 4);
 
     static constexpr u8 color = 0x3;
 

@@ -12,7 +12,7 @@ class IRQHandler;
 
 class IRQManager {
 public:
-    static constexpr u16 entry_count    = 16;
+    static constexpr u16 entry_count    = 256;
     static constexpr u16 irq_base_index = 32;
 
     static void install();
