@@ -43,9 +43,6 @@ u64 PIT::nanoseconds_since_boot()
 
 void PIT::handle_irq(const RegisterState& registers)
 {
-    if (CPU::current().id() != 0)
-        return;
-
     m_nanoseconds_since_boot += nanoseconds_in_second / current_frequency();
 
     auto offset = vga_log("Uptime: ", 0, 0, 0x9);

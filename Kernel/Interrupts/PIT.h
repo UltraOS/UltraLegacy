@@ -29,8 +29,10 @@ public:
     u32 current_frequency() const override { return m_frequency; }
 
     StringView model() const override { return "PIT (8254)"_sv; };
+    bool has_internal_counter() override { return false; }
 
     u64 nanoseconds_since_boot() override;
+    void increment_time_since_boot(u64 nanoseconds) override { m_nanoseconds_since_boot += nanoseconds; }
 
     void enable() override { enable_irq(); }
     void disable() override { disable_irq(); }
