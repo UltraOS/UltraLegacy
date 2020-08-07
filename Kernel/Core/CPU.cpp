@@ -18,8 +18,7 @@ void CPU::initialize()
         // emplace the bsp ID
         s_processors.emplace(LAPIC::my_id());
         LAPIC::timer().initialize_for_this_processor();
-    }
-    else
+    } else
         s_processors.emplace(0);
 }
 

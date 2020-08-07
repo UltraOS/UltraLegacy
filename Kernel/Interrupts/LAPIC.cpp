@@ -4,8 +4,8 @@
 #include "Multitasking/Scheduler.h"
 
 #include "IPICommunicator.h"
-#include "Timer.h"
 #include "IRQManager.h"
+#include "Timer.h"
 
 #include "LAPIC.h"
 
@@ -43,7 +43,7 @@ void LAPIC::Timer::initialize_for_this_processor()
     bool interrupt_state;
     ::kernel::Timer::the().lock(interrupt_state);
 
-    static constexpr u32 divider_16      = 0b11;
+    static constexpr u32 divider_16 = 0b11;
     // TODO: replace with numeric_limits<u32>::max()
     static constexpr u32 initial_counter = 0xFFFFFFFF;
 

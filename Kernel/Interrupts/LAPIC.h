@@ -1,9 +1,8 @@
 #pragma once
 
 #include "Common/Types.h"
-#include "Memory/AddressSpace.h"
 #include "IRQHandler.h"
-
+#include "Memory/AddressSpace.h"
 
 namespace kernel {
 
@@ -24,9 +23,9 @@ public:
         void initialize_for_this_processor();
 
         void handle_irq(const RegisterState& registers) override;
-        void finalize_irq() override {}
+        void finalize_irq() override { }
 
-        void enable_irq()  override;
+        void enable_irq() override;
         void disable_irq() override;
     };
 

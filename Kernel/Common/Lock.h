@@ -30,7 +30,7 @@ private:
 
 class InterruptSafeSpinLock : SpinLock {
 public:
-    InterruptSafeSpinLock() {}
+    InterruptSafeSpinLock() { }
 
     void lock(bool& interrupt_state)
     {

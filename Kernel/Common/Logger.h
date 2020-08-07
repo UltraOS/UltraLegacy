@@ -42,7 +42,7 @@ private:
     Logger& m_logger;
     format  m_format { format::as_dec };
     bool    m_should_terminate { true };
-    bool    m_interrupt_state  { false };
+    bool    m_interrupt_state { false };
     bool    m_should_unlock;
 };
 
@@ -85,17 +85,14 @@ private:
 
 inline E9Logger E9Logger::s_instance;
 
-inline AutoLogger::AutoLogger(Logger& logger, bool should_lock)
-    : m_logger(logger), m_should_unlock(should_lock)
+inline AutoLogger::AutoLogger(Logger& logger, bool should_lock) : m_logger(logger), m_should_unlock(should_lock)
 {
     if (should_lock)
         m_logger.lock(m_interrupt_state);
 }
 
 inline AutoLogger::AutoLogger(AutoLogger&& other)
-    : m_logger(other.m_logger),
-      m_interrupt_state(other.m_interrupt_state),
-      m_should_unlock(other.m_should_unlock)
+    : m_logger(other.m_logger), m_interrupt_state(other.m_interrupt_state), m_should_unlock(other.m_should_unlock)
 {
     other.m_should_terminate = false;
 }
