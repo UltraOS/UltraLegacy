@@ -42,20 +42,25 @@ private:
     Logger& m_logger;
     format  m_format { format::as_dec };
     bool    m_should_terminate { true };
+    bool    m_interrupt_state  { false };
     bool    m_should_unlock;
 };
 
 class Logger {
 public:
+    static constexpr StringView info_prefix  = "[\33[34mINFO\033[0m] "_sv;
+    static constexpr StringView warn_prefix  = "[\33[33mWARNING\033[0m] "_sv;
+    static constexpr StringView error_prefix = "[\033[91mERROR\033[0m] "_sv;
+
     virtual Logger& write(StringView text) = 0;
 
-    void lock() { m_lock.lock(); }
-    void unlock() { m_lock.unlock(); }
+    void lock(bool& interrupt_state) { m_lock.lock(interrupt_state); }
+    void unlock(bool interrupt_state) { m_lock.unlock(interrupt_state); }
 
     virtual ~Logger() = default;
 
 private:
-    SpinLock m_lock;
+    InterruptSafeSpinLock m_lock;
 };
 
 // Uses port 0xE9 to log
@@ -84,11 +89,13 @@ inline AutoLogger::AutoLogger(Logger& logger, bool should_lock)
     : m_logger(logger), m_should_unlock(should_lock)
 {
     if (should_lock)
-        m_logger.lock();
+        m_logger.lock(m_interrupt_state);
 }
 
 inline AutoLogger::AutoLogger(AutoLogger&& other)
-    : m_logger(other.m_logger), m_should_unlock(other.m_should_unlock)
+    : m_logger(other.m_logger),
+      m_interrupt_state(other.m_interrupt_state),
+      m_should_unlock(other.m_should_unlock)
 {
     other.m_should_terminate = false;
 }
@@ -169,7 +176,7 @@ inline AutoLogger::~AutoLogger()
         m_logger.write("\n");
 
         if (m_should_unlock)
-            m_logger.unlock();
+            m_logger.unlock(m_interrupt_state);
     }
 }
 
@@ -177,7 +184,7 @@ inline AutoLogger info()
 {
     AutoLogger logger(E9Logger::get());
 
-    logger << "[\33[34mINFO\033[0m] ";
+    logger << Logger::info_prefix;
 
     return logger;
 }
@@ -186,7 +193,7 @@ inline AutoLogger warning()
 {
     AutoLogger logger(E9Logger::get());
 
-    logger << "[\33[33mWARNING\033[0m] ";
+    logger << Logger::warn_prefix;
 
     return logger;
 }
@@ -225,7 +232,7 @@ inline AutoLogger error()
 {
     AutoLogger logger(E9Logger::get(), false);
 
-    logger << "[\033[91mERROR\033[0m] ";
+    logger << Logger::error_prefix;
 
     return logger;
 }

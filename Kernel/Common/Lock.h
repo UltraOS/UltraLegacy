@@ -32,24 +32,21 @@ class InterruptSafeSpinLock : SpinLock {
 public:
     InterruptSafeSpinLock() {}
 
-    void lock()
+    void lock(bool& interrupt_state)
     {
-        m_should_enable_interrupts = Interrupts::are_enabled();
+        interrupt_state = Interrupts::are_enabled();
         Interrupts::disable();
 
         SpinLock::lock();
     }
 
-    void unlock()
+    void unlock(bool interrupt_state)
     {
         SpinLock::unlock();
 
-        if (m_should_enable_interrupts)
+        if (interrupt_state)
             Interrupts::enable();
     }
-
-private:
-    bool m_should_enable_interrupts { false };
 };
 
 class ScopedInterruptSafeLock {
