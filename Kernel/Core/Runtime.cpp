@@ -18,6 +18,12 @@ namespace kernel::runtime {
 // clang-format off
 void ensure_loaded_correctly()
 {
+    // Global constructors are not yet called so we cannot use log()
+    // instead, just create a temporary logger here
+    // Also... TODO: fix this
+    E9Logger logger;
+    AutoLogger pre_init_logger(logger, false);
+
     if (magic_string[0]  == 'M' &&
         magic_string[1]  == 'A' &&
         magic_string[2]  == 'G' &&
@@ -31,9 +37,11 @@ void ensure_loaded_correctly()
         magic_string[10] == 'E' &&
         magic_string[11] == 'N' &&
         magic_string[12] == 'T')
-        log() << "Runtime: Magic test passed!";
+        pre_init_logger << Logger::info_prefix << "Runtime: Magic test passed!";
     else {
-        error() << "Runtime: Magic test failed! magic_string=" << format::as_address << magic_string;
+        pre_init_logger << Logger::error_prefix
+                        << "Runtime: Magic test failed! magic_string="
+                        << format::as_address << magic_string;
         hang();
     }
 }
