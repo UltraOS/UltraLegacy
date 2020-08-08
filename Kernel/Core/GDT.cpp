@@ -58,33 +58,63 @@ void GDT::create_basic_descriptors()
 
 void GDT::create_tss_descriptor(TSS* tss)
 {
-#ifdef ULTRA_32
-    create_descriptor(reinterpret_cast<ptr_t>(tss), TSS::size, EXECUTABLE | IS_TSS | RING_3 | PRESENT, NULL_FLAG);
+    static InterruptSafeSpinLock* s_lock;
 
-    u16 this_selector = (m_active_entries - 1) * entry_size;
+    if (!s_lock)
+        s_lock = new InterruptSafeSpinLock;
+
+    bool interrupt_state;
+    s_lock->lock(interrupt_state);
+
+    static u16 cached_selector;
+
+#ifdef ULTRA_32
+    static entry* cached_entry;
+
+    if (!cached_entry) {
+        cached_entry    = &new_entry();
+        cached_selector = (m_active_entries - 1) * entry_size;
+    }
+
+    auto base = reinterpret_cast<ptr_t>(tss);
+
+    cached_entry->base_lower  = base & 0x0000FFFF;
+    cached_entry->base_middle = (base & 0x00FF0000) >> 16;
+    cached_entry->base_upper  = (base & 0xFF000000) >> 24;
+
+    cached_entry->access = EXECUTABLE | IS_TSS | RING_3 | PRESENT;
+    cached_entry->flags  = NULL_FLAG;
+
+    cached_entry->limit_lower = TSS::size & 0x0000FFFF;
+    cached_entry->limit_upper = (TSS::size & 0x000F0000) >> 16;
 
 #elif defined(ULTRA_64)
-    auto& this_entry = new_tss_entry();
+    static tss_entry* cached_entry;
+
+    if (!cached_entry) {
+        cached_entry    = &new_tss_entry();
+        cached_selector = (m_active_entries - 2) * entry_size;
+    }
 
     ptr_t base = reinterpret_cast<ptr_t>(tss);
 
-    this_entry.base_lower   = base & 0x0000FFFF;
-    this_entry.base_middle  = (base & 0x00FF0000) >> 16;
-    this_entry.base_upper   = (base & 0xFF000000) >> 24;
-    this_entry.base_upper_2 = (base & 0xFFFFFFFF00000000ull) >> 32;
+    cached_entry->base_lower   = base & 0x0000FFFF;
+    cached_entry->base_middle  = (base & 0x00FF0000) >> 16;
+    cached_entry->base_upper   = (base & 0xFF000000) >> 24;
+    cached_entry->base_upper_2 = (base & 0xFFFFFFFF00000000ull) >> 32;
 
-    this_entry.access = EXECUTABLE | IS_TSS | RING_3 | PRESENT;
-    this_entry.flags  = NULL_FLAG;
+    cached_entry->access = EXECUTABLE | IS_TSS | RING_3 | PRESENT;
+    cached_entry->flags  = NULL_FLAG;
 
-    this_entry.limit_lower = TSS::size & 0x0000FFFF;
-    this_entry.limit_upper = (TSS::size & 0x000F0000) >> 16;
-
-    u16 this_selector = (m_active_entries - 2) * entry_size;
+    cached_entry->limit_lower = TSS::size & 0x0000FFFF;
+    cached_entry->limit_upper = (TSS::size & 0x000F0000) >> 16;
 #endif
 
     install();
 
-    asm("ltr %0" ::"a"(this_selector));
+    asm("ltr %0" ::"a"(cached_selector));
+
+    s_lock->unlock(interrupt_state);
 }
 
 GDT::entry& GDT::new_entry()
