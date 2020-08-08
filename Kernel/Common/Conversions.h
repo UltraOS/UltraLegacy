@@ -139,4 +139,48 @@ enable_if_t<is_arithmetic_v<T>, float> bytes_to_megabytes_precise(T bytes)
 {
     return bytes / static_cast<float>(MB);
 }
+
+
+// clang-format off
+template <typename T>
+constexpr enable_if_t<is_integral_v<T>, T> bcd_to_binary(T bcd_value)
+{
+    if constexpr (sizeof(T) == 1)
+            return  ((bcd_value & 0xF0) >> 4) * 10
+                   + (bcd_value & 0x0F);
+    else if constexpr (sizeof(T) == 2)
+            return   ((bcd_value & 0xF000) >> 12) * 1000
+                   + ((bcd_value & 0x0F00) >> 8 ) * 100
+                   + ((bcd_value & 0x00F0) >> 4 ) * 10
+                   +  (bcd_value & 0x000F);
+    else if constexpr (sizeof(T) == 4)
+            return   ((bcd_value & 0xF0000000) >> 28 ) * 10000000
+                   + ((bcd_value & 0x0F000000) >> 24 ) * 1000000
+                   + ((bcd_value & 0x00F00000) >> 20 ) * 100000
+                   + ((bcd_value & 0x000F0000) >> 16 ) * 10000
+                   + ((bcd_value & 0x0000F000) >> 12 ) * 1000
+                   + ((bcd_value & 0x00000F00) >> 8 )  * 100
+                   + ((bcd_value & 0x000000F0) >> 4 )  * 10
+                   +  (bcd_value & 0x0000000F);
+    else if constexpr (sizeof(T) == 8)
+            return   ((bcd_value & 0xF000000000000000) >> 60 ) * 1000000000000000
+                   + ((bcd_value & 0x0F00000000000000) >> 56 ) * 100000000000000
+                   + ((bcd_value & 0x00F0000000000000) >> 52 ) * 10000000000000
+                   + ((bcd_value & 0x000F000000000000) >> 48 ) * 1000000000000
+                   + ((bcd_value & 0x0000F00000000000) >> 44 ) * 100000000000
+                   + ((bcd_value & 0x00000F0000000000) >> 42 ) * 10000000000
+                   + ((bcd_value & 0x000000F000000000) >> 40 ) * 1000000000
+                   + ((bcd_value & 0x0000000F00000000) >> 36 ) * 100000000
+                   + ((bcd_value & 0x00000000F0000000) >> 32 ) * 10000000
+                   + ((bcd_value & 0x000000000F000000) >> 28 ) * 1000000
+                   + ((bcd_value & 0x0000000000F00000) >> 24 ) * 100000
+                   + ((bcd_value & 0x00000000000F0000) >> 20 ) * 10000
+                   + ((bcd_value & 0x000000000000F000) >> 16 ) * 1000
+                   + ((bcd_value & 0x0000000000000F00) >> 12 ) * 100
+                   + ((bcd_value & 0x00000000000000F0) >> 8 )  * 10
+                   +  (bcd_value & 0x000000000000000F);
+    else
+        return 0;
+}
+// clang-format on
 }
