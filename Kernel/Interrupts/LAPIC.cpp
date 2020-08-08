@@ -193,8 +193,11 @@ void LAPIC::start_processor(u8 id)
     AddressSpace::of_kernel().entry_at(0) = AddressSpace::of_kernel().entry_at(256);
 #endif
 
-    auto* is_ap_alive     = MemoryManager::physical_to_virtual(address_of_alive).as_pointer<bool>();
-    auto* ap_acknowledegd = MemoryManager::physical_to_virtual(address_of_acknowldeged).as_pointer<bool>();
+    volatile auto* is_ap_alive     = MemoryManager::physical_to_virtual(address_of_alive).as_pointer<bool>();
+    volatile auto* ap_acknowledegd = MemoryManager::physical_to_virtual(address_of_acknowldeged).as_pointer<bool>();
+
+    *is_ap_alive     = false;
+    *ap_acknowledegd = false;
 
     // TODO: add a literal allocate_stack() function
     // allocate the initial AP stack

@@ -12,6 +12,8 @@ PRESENT:         equ 0b01
 READWRITE:       equ 0b10
 WRITE_PROTECT:   equ (0b1 << 16)
 PAGING:          equ (0b1 << 31)
+EM_BIT:          equ (1 << 2)
+TS_BIT:          equ (1 << 3)
 
 %define TRUE  byte 1
 %define FALSE byte 0
@@ -36,10 +38,6 @@ application_processor_entrypoint:
     wait_for_bsp:
         cmp [ACKNOWLEDGED], TRUE
         jne wait_for_bsp
-
-    ; reset the state for other APs
-    mov [ALIVE],        FALSE
-    mov [ACKNOWLEDGED], FALSE
 
     go_protected:
         lgdt [ADDR_OF(gdt_entry)]
@@ -88,6 +86,11 @@ extern kernel_page_table
         mov ecx, cr3
         mov cr3, ecx
         invlpg [0x00100000]
+
+        mov edx, cr0
+        and edx, ~(EM_BIT | TS_BIT)
+        mov cr0, edx
+        fninit ; initialize the FPU
 
         ; Jump into kernel main
         mov eax, ap_entrypoint

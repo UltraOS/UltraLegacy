@@ -15,6 +15,8 @@ EFER_NUMBER:     equ 0xC0000080
 LONG_MODE_BIT:   equ 1 << 8
 PAGING_BIT:      equ 1 << 31
 PROTECTED_BIT:   equ 1 << 0
+EM_BIT:          equ (1 << 2)
+TS_BIT:          equ (1 << 3)
 
 %define TRUE  byte 1
 %define FALSE byte 0
@@ -41,10 +43,6 @@ application_processor_entrypoint:
     wait_for_bsp:
         cmp [ACKNOWLEDGED], TRUE
         jne wait_for_bsp
-
-    ; reset the state for other APs
-    mov [ALIVE],        FALSE
-    mov [ACKNOWLEDGED], FALSE
 
     ; Identity map bottom
     mov eax, [PML4]
@@ -81,6 +79,11 @@ extern ap_entrypoint
         mov rax, cr3
         mov  qword [rax], 0x0000000000000000
         mov cr3, rax
+
+        mov rdx, cr0
+        and rdx, ~(EM_BIT | TS_BIT)
+        mov cr0, rdx
+        fninit ; initialize the FPU
 
         mov  rax, ap_entrypoint
         call rax
