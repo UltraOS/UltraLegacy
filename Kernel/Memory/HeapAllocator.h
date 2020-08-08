@@ -5,6 +5,8 @@
 
 namespace kernel {
 
+class InterruptSafeSpinLock;
+
 class HeapAllocator {
 public:
     static void initialize();
@@ -29,6 +31,8 @@ private:
         size_t free_bytes() { return free_chunks * chunk_size; }
         bool   contains(void* ptr) { return ptr <= end() && ptr >= begin(); }
 
-    } static* m_heap_block;
+    } static* s_heap_block;
+
+    static InterruptSafeSpinLock s_lock;
 };
 }

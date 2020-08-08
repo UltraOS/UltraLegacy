@@ -1,3 +1,4 @@
+#include "Common/Lock.h"
 #include "Common/Logger.h"
 #include "Common/Memory.h"
 
@@ -9,23 +10,30 @@
 
 namespace kernel {
 
-HeapAllocator::HeapBlockHeader* HeapAllocator::m_heap_block;
+HeapAllocator::HeapBlockHeader* HeapAllocator::s_heap_block;
+InterruptSafeSpinLock           HeapAllocator::s_lock;
 
 void HeapAllocator::initialize()
 {
-    // feed the preallocated kernel heap page table
+    // call the ctor manually because we haven't initialized global objects yet
+    new (&s_lock) InterruptSafeSpinLock;
+
+    // feed the preallocated kernel heap page
     feed_block(MemoryManager::kernel_heap_begin.as_pointer<void>(), MemoryManager::kernel_heap_initial_size);
 }
 
 void HeapAllocator::feed_block(void* ptr, size_t size, size_t chunk_size_in_bytes)
 {
+    bool interrupt_state;
+    s_lock.lock(interrupt_state);
+
     auto& new_heap = *reinterpret_cast<HeapBlockHeader*>(ptr);
 
-    if (m_heap_block) {
-        new_heap.next      = m_heap_block->next;
-        m_heap_block->next = &new_heap;
+    if (s_heap_block) {
+        new_heap.next      = s_heap_block->next;
+        s_heap_block->next = &new_heap;
     } else {
-        m_heap_block  = &new_heap;
+        s_heap_block  = &new_heap;
         new_heap.next = nullptr;
     }
 
@@ -64,6 +72,8 @@ void HeapAllocator::feed_block(void* ptr, size_t size, size_t chunk_size_in_byte
 #endif
 
     zero_memory(new_heap.bitmap(), bitmap_bytes);
+
+    s_lock.unlock(interrupt_state);
 }
 
 void* HeapAllocator::allocate(size_t bytes)
@@ -73,7 +83,10 @@ void* HeapAllocator::allocate(size_t bytes)
         return nullptr;
     }
 
-    for (auto* heap = m_heap_block; heap; heap = heap->next) {
+    bool interrupt_state;
+    s_lock.lock(interrupt_state);
+
+    for (auto* heap = s_heap_block; heap; heap = heap->next) {
         if (heap->free_bytes() < bytes)
             continue;
 
@@ -167,6 +180,7 @@ void* HeapAllocator::allocate(size_t bytes)
                   << bytes_to_megabytes_precise(total_free_bytes) << " MB) ";
 
 #endif
+            s_lock.unlock(interrupt_state);
 
             return data;
         }
@@ -203,18 +217,19 @@ void HeapAllocator::free(void* ptr)
         log() << "HeapAllocator: "
               << "tried to free a nullptr, skipped.";
 #endif
-
         return;
     }
 
+    bool interrupt_state;
+    s_lock.lock(interrupt_state);
+
 #ifdef HEAP_ALLOCATOR_DEBUG
-
-    size_t           total_freed_chunks = 0;
-    HeapBlockHeader* freed_heap         = nullptr;
-
+    size_t total_freed_chunks = 0;
 #endif
 
-    for (auto heap = m_heap_block; heap; heap = heap->next) {
+    HeapBlockHeader* freed_heap = nullptr;
+
+    for (auto heap = s_heap_block; heap; heap = heap->next) {
         if (!heap->contains(ptr))
             continue;
 
@@ -222,9 +237,7 @@ void HeapAllocator::free(void* ptr)
 
         u8 allocation_id = 0;
 
-#ifdef HEAP_ALLOCATOR_DEBUG
         freed_heap = heap;
-#endif
 
         // mark as free
         for (size_t i = at_bit;; i += 2) {
@@ -256,16 +269,17 @@ void HeapAllocator::free(void* ptr)
         break;
     }
 
-#ifdef HEAP_ALLOCATOR_DEBUG
-
     if (!freed_heap) {
         error() << "HeapAllocator: Couldn't find a heap block to free from. ptr: " << ptr;
         hang();
     }
 
+#ifdef HEAP_ALLOCATOR_DEBUG
     log() << "HeapAllocator: freeing " << total_freed_chunks << " chunk(s) ("
           << total_freed_chunks * freed_heap->chunk_size << " bytes) at address:" << ptr;
 
 #endif
+
+    s_lock.unlock(interrupt_state);
 }
 }
