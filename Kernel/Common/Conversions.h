@@ -140,7 +140,6 @@ enable_if_t<is_arithmetic_v<T>, float> bytes_to_megabytes_precise(T bytes)
     return bytes / static_cast<float>(MB);
 }
 
-
 // clang-format off
 template <typename T>
 constexpr enable_if_t<is_integral_v<T>, T> bcd_to_binary(T bcd_value)

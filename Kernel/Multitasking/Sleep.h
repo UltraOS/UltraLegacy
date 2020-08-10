@@ -28,6 +28,6 @@ inline void for_nanoseconds(u64 time)
 
 inline void for_seconds(u64 time)
 {
-    until(Timer::the().nanoseconds_since_boot() + (time * Timer::nanoseconds_in_second));
+    until(Timer::the().nanoseconds_since_boot() + (time * Time::nanoseconds_in_second));
 }
 }

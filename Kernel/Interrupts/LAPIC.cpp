@@ -47,7 +47,7 @@ void LAPIC::Timer::initialize_for_this_processor()
     // TODO: replace with numeric_limits<u32>::max()
     static constexpr u32 initial_counter = 0xFFFFFFFF;
 
-    static constexpr u32 sleep_delay = ::kernel::Timer::milliseconds_in_second / ticks_per_second;
+    static constexpr u32 sleep_delay = Time::milliseconds_in_second / ticks_per_second;
 
     write_register(Register::DIVIDE_CONFIGURATION, divider_16);
     write_register(Register::INITIAL_COUNT, initial_counter);
@@ -69,8 +69,9 @@ void LAPIC::Timer::handle_irq(const RegisterState& registers)
     if (CPU::current().is_bsp()) {
         // If the timer doesn't have an internal counter than we have to manually increment it
         if (!::kernel::Timer::the().has_internal_counter())
-            ::kernel::Timer::the().increment_time_since_boot(::kernel::Timer::nanoseconds_in_second / ticks_per_second);
+            ::kernel::Timer::the().increment_time_since_boot(Time::nanoseconds_in_second / ticks_per_second);
 
+        Time::increment_by(Time::nanoseconds_in_second / ticks_per_second);
     } else
         return; // don't go into the scheduler for non-bsp cores YET
 

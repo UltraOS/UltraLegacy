@@ -4,15 +4,13 @@
 #include "Common/String.h"
 #include "Common/Types.h"
 
+#include "Time/Time.h"
+
 namespace kernel {
 
 class Timer {
 public:
-    static constexpr u32 default_ticks_per_second   = 100;
-    static constexpr u32 nanoseconds_in_microsecond = 1000;
-    static constexpr u32 nanoseconds_in_millisecond = 1000000;
-    static constexpr u32 nanoseconds_in_second      = 1000000000;
-    static constexpr u32 milliseconds_in_second     = 1000;
+    static constexpr u32 default_ticks_per_second = 100;
 
     static void discover_and_setup();
 
@@ -27,8 +25,8 @@ public:
     void unlock(bool interrupt_state) { m_lock.unlock(interrupt_state); }
 
     virtual void nano_delay(u32) = 0;
-    virtual void micro_delay(u32 us) { nano_delay(us * nanoseconds_in_microsecond); }
-    virtual void mili_delay(u32 ms) { nano_delay(ms * nanoseconds_in_millisecond); }
+    virtual void micro_delay(u32 us) { nano_delay(us * Time::nanoseconds_in_microsecond); }
+    virtual void mili_delay(u32 ms) { nano_delay(ms * Time::nanoseconds_in_millisecond); }
 
     virtual u32 max_frequency() const = 0;
 

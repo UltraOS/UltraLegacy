@@ -29,7 +29,8 @@ FILE(GLOB CPP_FILES "${PROJECT_SOURCE_DIR}/*cpp"              "${PROJECT_SOURCE_
                     "${PROJECT_SOURCE_DIR}/Common/*cpp"       "${PROJECT_SOURCE_DIR}/Common/*h"
                     "${PROJECT_SOURCE_DIR}/Interrupts/*cpp"   "${PROJECT_SOURCE_DIR}/Interrupts/*h"
                     "${PROJECT_SOURCE_DIR}/Memory/*cpp"       "${PROJECT_SOURCE_DIR}/Memory/*h"
-                    "${PROJECT_SOURCE_DIR}/Multitasking/*cpp" "${PROJECT_SOURCE_DIR}/Multitasking/*h")
+                    "${PROJECT_SOURCE_DIR}/Multitasking/*cpp" "${PROJECT_SOURCE_DIR}/Multitasking/*h"
+                    "${PROJECT_SOURCE_DIR}/Time/*cpp"         "${PROJECT_SOURCE_DIR}/Time/*h")
 
 FILE(GLOB ASM_FILES "${PROJECT_SOURCE_DIR}/Architecture/${ARCH_FOLDER}/*asm")
 

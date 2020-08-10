@@ -43,18 +43,12 @@ u64 PIT::nanoseconds_since_boot()
 
 void PIT::handle_irq(const RegisterState& registers)
 {
-    m_nanoseconds_since_boot += nanoseconds_in_second / current_frequency();
+    // TODO: it's really annoying to have to increment a bunch of clocks in every timer.
+    //       find a way to make it better.
+    auto time_elapsed = Time::nanoseconds_in_second / current_frequency();
 
-    auto offset = vga_log("Uptime: ", 0, 0, 0x9);
-
-    char number[16];
-
-    float precise_seconds = static_cast<float>(nanoseconds_since_boot()) / Timer::nanoseconds_in_second;
-
-    if (to_string(precise_seconds, number, 11))
-        offset = vga_log(number, 0, offset, 0x9);
-
-    vga_log(" seconds", 0, offset, 0x9);
+    m_nanoseconds_since_boot += time_elapsed;
+    Time::increment_by(time_elapsed);
 
     // do this here manually since Scheduler::on_tick is very likely to switch the task
     InterruptController::the().end_of_interrupt(irq_index());
@@ -67,10 +61,13 @@ void PIT::handle_irq(const RegisterState& registers)
 
 void PIT::nano_delay(u32 ns)
 {
+    // TODO: this delay is actually longer than 'ns' because of the sleep preparation
+    //       find out the amount of ticks we want to subtract to make it more accurate
+
     IO::out8<timer_command>(write_word);
 
     // TODO: Remove this, we don't want to use floats in the kernel
-    u32 ticks = max_frequency() * (ns / static_cast<float>(Timer::nanoseconds_in_second));
+    u32 ticks = max_frequency() * (ns / static_cast<float>(Time::nanoseconds_in_second));
 
     if (ticks > 0xFFFF) {
         error() << "PIT: cannot sleep for more than 0xFFFF ticks (got " << format::as_hex << ticks << ")";
