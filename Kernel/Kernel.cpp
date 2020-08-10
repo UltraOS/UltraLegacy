@@ -17,6 +17,7 @@
 #include "Memory/PhysicalMemory.h"
 #include "Multitasking/Scheduler.h"
 #include "Multitasking/Sleep.h"
+#include "Time/RTC.h"
 
 namespace kernel {
 
@@ -84,6 +85,8 @@ void run(MemoryMap* memory_map)
 
     CPU::initialize();
     CPU::start_all_processors();
+
+    RTC::synchronize_system_clock();
 
     Interrupts::enable();
 
