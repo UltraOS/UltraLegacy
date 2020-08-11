@@ -41,6 +41,8 @@ private:
 private:
     DynamicArray<RefPtr<Process>> m_processes;
 
+    static RecursiveInterruptSafeSpinLock s_lock;
+
     static Thread*    s_sleeping_threads;
     static Scheduler* s_instance;
 };

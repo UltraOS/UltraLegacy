@@ -6,8 +6,10 @@
 
 namespace kernel {
 
-Scheduler* Scheduler::s_instance;
+RecursiveInterruptSafeSpinLock Scheduler::s_lock;
+
 Thread*    Scheduler::s_sleeping_threads;
+Scheduler* Scheduler::s_instance;
 
 void Scheduler::inititalize()
 {
@@ -18,6 +20,9 @@ void Scheduler::inititalize()
 
 void Scheduler::enqueue_thread(Thread& thread)
 {
+    bool interrupt_state;
+    s_lock.lock(interrupt_state);
+
     ASSERT(Thread::current() != nullptr);
     ASSERT(Thread::current()->has_next());
     ASSERT(Thread::current()->has_previous());
@@ -28,19 +33,29 @@ void Scheduler::enqueue_thread(Thread& thread)
 
     thread.set_next(Thread::current());
     thread.set_previous(last_to_run);
+
+    s_lock.unlock(interrupt_state);
 }
 
 void Scheduler::dequeue_thread(Thread& thread)
 {
+    bool interrupt_state;
+    s_lock.lock(interrupt_state);
+
     ASSERT(thread.has_previous());
     ASSERT(thread.has_next());
 
     thread.previous()->set_next(thread.next());
     thread.next()->set_previous(thread.previous());
+
+    s_lock.unlock(interrupt_state);
 }
 
 void Scheduler::enqueue_sleeping_thread(Thread& thread)
 {
+    bool interrupt_state;
+    s_lock.lock(interrupt_state);
+
     ASSERT(&thread != s_sleeping_threads);
 
     if (!s_sleeping_threads) {
@@ -50,14 +65,21 @@ void Scheduler::enqueue_sleeping_thread(Thread& thread)
         thread.set_next(s_sleeping_threads);
         s_sleeping_threads = &thread;
     }
+
+    s_lock.unlock(interrupt_state);
 }
 
 void Scheduler::register_process(RefPtr<Process> process)
 {
+    bool interrupt_state;
+    s_lock.lock(interrupt_state);
+
     m_processes.emplace(process);
 
     for (auto& thread: process->threads())
         enqueue_thread(*thread);
+
+    s_lock.unlock(interrupt_state);
 }
 
 Scheduler& Scheduler::the()

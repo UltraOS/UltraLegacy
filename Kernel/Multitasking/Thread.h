@@ -44,7 +44,7 @@ public:
 
     State state() const { return m_state; }
 
-    static Thread* current() { return s_current; }
+    static Thread* current() { return CPU::current().current_thread(); }
 
     ControlBlock* control_block() { return &m_control_block; }
 
@@ -85,8 +85,7 @@ private:
     Thread*       m_previous { nullptr };
     Thread*       m_next { nullptr };
 
-    static Thread* s_current;
-    static u32     s_next_thread_id;
-    static TSS*    s_tss;
+    // TODO: this should be atomic
+    static u32 s_next_thread_id;
 };
 }

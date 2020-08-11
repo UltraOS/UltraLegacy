@@ -77,13 +77,14 @@ void run(MemoryMap* memory_map)
 
     IPICommunicator::initialize();
 
-    Scheduler::inititalize();
-
     Timer::discover_and_setup();
+
+    CPU::initialize();
+
+    Scheduler::inititalize();
 
     IDT::the().install();
 
-    CPU::initialize();
     CPU::start_all_processors();
 
     RTC::synchronize_system_clock();

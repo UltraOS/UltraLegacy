@@ -6,6 +6,9 @@
 
 namespace kernel {
 
+class Thread;
+class TSS;
+
 class CPU {
 public:
     enum class FLAGS : size_t {
@@ -36,11 +39,19 @@ public:
 
         u32 id() const { return m_id; }
 
+        Thread* current_thread() const { return m_current_thread; }
+        void set_current_thread(Thread* thread) { m_current_thread = thread; }
+
+        TSS* tss() { return m_tss; }
+        void set_tss(TSS* tss) { m_tss = tss; }
+
         // bsp always the first processor
         bool is_bsp() { return this == &s_processors[0]; }
 
     private:
         u32 m_id;
+        Thread* m_current_thread { nullptr };
+        TSS*    m_tss            { nullptr };
         // some other stuff
     };
 

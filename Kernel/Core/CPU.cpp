@@ -67,7 +67,7 @@ CPU::LocalData& CPU::current()
 void CPU::ap_entrypoint()
 {
     GDT::the().install();
-    new TSS;
+    CPU::current().set_tss(new TSS);
     IDT::the().install();
     LAPIC::initialize_for_this_processor();
     LAPIC::timer().initialize_for_this_processor();

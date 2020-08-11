@@ -4,13 +4,11 @@
 
 namespace kernel {
 
-Thread* Thread::s_current;
-u32     Thread::s_next_thread_id;
-TSS*    Thread::s_tss;
+u32 Thread::s_next_thread_id;
 
 void Thread::initialize()
 {
-    s_tss = new TSS;
+    CPU::current().set_tss(new TSS);
 }
 
 RefPtr<Thread> Thread::create_supervisor_thread(Address kernel_stack, Address entrypoint)
@@ -70,8 +68,6 @@ Thread::create_user_thread(AddressSpace& page_dir, Address user_stack, Address k
     frame.cs           = GDT::userland_code_selector() | rpl_ring_3;
     frame.userspace_ss = GDT::userland_data_selector() | rpl_ring_3;
 
-    log() << "user_stack=" << user_stack;
-
     frame.userspace_esp = user_stack;
 
     frame.eip = entrypoint;
@@ -98,11 +94,11 @@ void Thread::activate()
     m_state = State::RUNNING;
 
     if (is_user())
-        s_tss->set_kernel_stack_pointer(m_initial_kernel_stack_top);
+        CPU::current().tss()->set_kernel_stack_pointer(m_initial_kernel_stack_top);
 
     m_page_directory.make_active();
 
-    s_current = this;
+    CPU::current().set_current_thread(this);
 }
 
 void Thread::deactivate()
