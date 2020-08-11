@@ -49,6 +49,67 @@ public:
     }
 };
 
+class RecursiveSpinLock {
+public:
+    using lock_t = size_t;
+
+    static constexpr lock_t unlocked = -1;
+
+    void lock()
+    {
+        auto this_cpu = CPU::current().id();
+
+        lock_t expected = unlocked;
+
+        while (!m_lock.compare_and_exchange(&expected, this_cpu)) {
+            if (expected == this_cpu) {
+                ++m_depth;
+                return; // we already own the lock
+            }
+
+            expected = unlocked;
+            asm("pause");
+        }
+
+        ++m_depth;
+    }
+
+    void unlock()
+    {
+        ASSERT(m_depth > 0);
+
+        if (--m_depth == 0)
+            m_lock.store(unlocked, MemoryOrder::RELEASE);
+    }
+
+    size_t depth() const { return m_depth; }
+
+private:
+    size_t         m_depth { 0 };
+    Atomic<size_t> m_lock  { unlocked };
+};
+
+class RecursiveInterruptSafeSpinLock : public RecursiveSpinLock {
+public:
+    RecursiveInterruptSafeSpinLock() { }
+
+    void lock(bool& interrupt_state)
+    {
+        interrupt_state = Interrupts::are_enabled();
+        Interrupts::disable();
+
+        RecursiveSpinLock::lock();
+    }
+
+    void unlock(bool interrupt_state)
+    {
+        RecursiveSpinLock::unlock();
+
+        if (interrupt_state)
+            Interrupts::enable();
+    }
+};
+
 class ScopedInterruptSafeLock {
 public:
     ScopedInterruptSafeLock(SpinLock& lock) : m_lock(lock) { this->lock(); }
