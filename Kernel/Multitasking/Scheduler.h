@@ -33,6 +33,9 @@ public:
 
     static void wake_up_ready_threads();
 
+    static Thread* last_picked() { return s_last_picked; }
+    static void    set_last_picked(Thread* thread) { s_last_picked = thread; }
+
     void register_process(RefPtr<Process> process);
 
 private:
@@ -43,6 +46,8 @@ private:
 
     static RecursiveInterruptSafeSpinLock s_lock;
 
+    static size_t     s_thread_count;
+    static Thread*    s_last_picked;
     static Thread*    s_sleeping_threads;
     static Scheduler* s_instance;
 };

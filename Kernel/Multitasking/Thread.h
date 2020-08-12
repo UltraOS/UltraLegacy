@@ -51,6 +51,8 @@ public:
     bool is_supervisor() const { return m_is_supervisor; }
     bool is_user() const { return !is_supervisor(); }
 
+    AddressSpace& address_space() { return m_address_space; }
+
     void sleep(u64 until)
     {
         m_state        = State::BLOCKED;
@@ -63,19 +65,21 @@ public:
         m_exit_code = code;
     }
 
-    bool is_sleeping() { return m_state == State::BLOCKED; }
+    bool is_sleeping() const { return m_state == State::BLOCKED; }
     void wake_up() { m_state = State::READY; }
 
-    bool is_dead() { return m_state == State::DEAD; }
+    bool is_dead() const { return m_state == State::DEAD; }
+    bool is_running() const { return m_state == State::RUNNING; }
+    bool is_ready() const { return m_state == State::READY; }
 
-    bool should_be_woken_up() { return m_wake_up_time <= Timer::the().nanoseconds_since_boot(); }
+    bool should_be_woken_up() const { return m_wake_up_time <= Timer::the().nanoseconds_since_boot(); }
 
 private:
     Thread(AddressSpace& page_dir, Address kernel_stack);
 
 private:
     u32           m_thread_id;
-    AddressSpace& m_page_directory;
+    AddressSpace& m_address_space;
     ControlBlock  m_control_block { nullptr };
     Address       m_initial_kernel_stack_top { nullptr };
     State         m_state { State::READY };

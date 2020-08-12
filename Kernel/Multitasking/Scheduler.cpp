@@ -8,6 +8,10 @@ namespace kernel {
 
 RecursiveInterruptSafeSpinLock Scheduler::s_lock;
 
+// 1 because the first process doesn't register itself
+// TODO: fix that
+size_t     Scheduler::s_thread_count = 1;
+Thread*    Scheduler::s_last_picked;
 Thread*    Scheduler::s_sleeping_threads;
 Scheduler* Scheduler::s_instance;
 
@@ -15,7 +19,7 @@ void Scheduler::inititalize()
 {
     Thread::initialize();
     s_instance = new Scheduler();
-    Process::inititalize();
+    Process::inititalize_for_this_processor();
 }
 
 void Scheduler::enqueue_thread(Thread& thread)
@@ -23,15 +27,17 @@ void Scheduler::enqueue_thread(Thread& thread)
     bool interrupt_state;
     s_lock.lock(interrupt_state);
 
-    ASSERT(Thread::current() != nullptr);
-    ASSERT(Thread::current()->has_next());
-    ASSERT(Thread::current()->has_previous());
+    ++s_thread_count;
 
-    auto* last_to_run = Thread::current()->previous();
+    ASSERT(s_last_picked != nullptr);
+    ASSERT(s_last_picked->has_next());
+    ASSERT(s_last_picked->has_previous());
+
+    auto* last_to_run = s_last_picked->previous();
     last_to_run->set_next(&thread);
-    Thread::current()->set_previous(&thread);
+    s_last_picked->set_previous(&thread);
 
-    thread.set_next(Thread::current());
+    thread.set_next(s_last_picked);
     thread.set_previous(last_to_run);
 
     s_lock.unlock(interrupt_state);
@@ -41,6 +47,8 @@ void Scheduler::dequeue_thread(Thread& thread)
 {
     bool interrupt_state;
     s_lock.lock(interrupt_state);
+
+    --s_thread_count;
 
     ASSERT(thread.has_previous());
     ASSERT(thread.has_next());
@@ -114,21 +122,29 @@ void Scheduler::wake_up_ready_threads()
     }
 }
 
+// Yes, the algorithm here is terrible
+// TODO: replace it with something more "appropriate"
 void Scheduler::pick_next()
 {
+    bool interrupt_state;
+    s_lock.lock(interrupt_state);
+
     wake_up_ready_threads();
 
     auto* current_thread = Thread::current();
-    auto* next_thread    = current_thread->next();
 
-    ASSERT(current_thread->has_previous());
-    ASSERT(current_thread->has_next());
+    auto* next_thread = s_last_picked->next();
 
-    ASSERT(next_thread->has_previous());
-    ASSERT(next_thread->has_next());
+    for (size_t i = 0; i < s_thread_count; ++i) {
+        if (next_thread->is_ready())
+            break;
+
+        next_thread = next_thread->next();
+    }
 
     if (current_thread->is_sleeping()) {
         ASSERT(current_thread != next_thread);
+        ASSERT(!next_thread->is_running());
 
         dequeue_thread(*current_thread);
 
@@ -136,14 +152,20 @@ void Scheduler::pick_next()
 
     } else if (current_thread->is_dead()) {
         ASSERT(current_thread != next_thread);
+        ASSERT(!next_thread->is_running());
 
         dequeue_thread(*current_thread);
 
-    } else if (current_thread == next_thread)
+    } else if (current_thread == next_thread || next_thread->is_running()) {
+        s_lock.unlock(interrupt_state);
         return;
+    }
 
     current_thread->deactivate();
     next_thread->activate();
+    s_last_picked = next_thread;
+
+    s_lock.unlock(interrupt_state);
 
     switch_task(next_thread->control_block());
 }

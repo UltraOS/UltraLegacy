@@ -2,6 +2,8 @@
 
 #include "Interrupts/Utilities.h"
 
+#include "Multitasking/Thread.h"
+
 #include "AddressSpace.h"
 #include "MemoryManager.h"
 #include "VirtualAllocator.h"
@@ -16,7 +18,6 @@ extern "C" u8 kernel_page_directory[AddressSpace::Table::entry_count];
 #endif
 
 AddressSpace* AddressSpace::s_of_kernel;
-AddressSpace* AddressSpace::s_active;
 
 AddressSpace::AddressSpace() { }
 
@@ -86,9 +87,6 @@ void AddressSpace::inititalize()
 #endif
 
     s_of_kernel->flush_all();
-
-    s_active = s_of_kernel;
-
     s_of_kernel->allocator().set_range(MemoryManager::kernel_usable_base, MemoryManager::kernel_usable_length);
 
 #ifdef ULTRA_32
@@ -422,7 +420,6 @@ void AddressSpace::make_active()
         return;
 
     flush_all();
-    s_active = this;
 }
 
 void AddressSpace::flush_all()
@@ -441,9 +438,7 @@ void AddressSpace::flush_at(Address virtual_address)
 
 AddressSpace& AddressSpace::current()
 {
-    ASSERT(s_active != nullptr);
-
-    return *s_active;
+    return CPU::current().current_thread()->address_space();
 }
 
 Address AddressSpace::physical_address()

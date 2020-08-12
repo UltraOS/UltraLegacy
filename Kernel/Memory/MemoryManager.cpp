@@ -145,7 +145,8 @@ void MemoryManager::unquickmap_page()
 
 RefPtr<Page> MemoryManager::allocate_page()
 {
-    Interrupts::ScopedDisabler d;
+    bool interrupt_state;
+    m_lock.lock(interrupt_state);
 
     for (auto& region: m_physical_regions) {
         if (!region.has_free_pages())
@@ -167,7 +168,7 @@ RefPtr<Page> MemoryManager::allocate_page()
 #elif defined(ULTRA_64)
         zero_memory(physical_to_virtual(page->address()).as_pointer<void>(), Page::size);
 #endif
-
+        m_lock.unlock(interrupt_state);
         return page;
     }
 
@@ -177,9 +178,13 @@ RefPtr<Page> MemoryManager::allocate_page()
 
 void MemoryManager::free_page(Page& page)
 {
+    bool interrupt_state;
+    m_lock.lock(interrupt_state);
+
     for (auto& region: m_physical_regions) {
         if (region.contains(page)) {
             region.free_page(page);
+            m_lock.unlock(interrupt_state);
             return;
         }
     }
@@ -192,7 +197,7 @@ void MemoryManager::handle_page_fault(const PageFault& fault)
 {
     if (AddressSpace::current().allocator().is_allocated(fault.address())) {
 #ifdef MEMORY_MANAGER_DEBUG
-        log() << "MemoryManager: expected page fault: " << fault;
+        log() << "MemoryManager: expected page fault on core " << CPU::current().id() << fault;
 #endif
         auto rounded_address = fault.address() & Page::alignment_mask;
 
@@ -200,14 +205,15 @@ void MemoryManager::handle_page_fault(const PageFault& fault)
         AddressSpace::current().store_physical_page(page);
         AddressSpace::current().map_page(rounded_address, page->address(), Thread::current()->is_supervisor());
     } else {
-        error() << "MemoryManager: unexpected page fault: " << fault;
+        error() << "MemoryManager: unexpected page on core " << CPU::current().id() << fault;
         hang();
     }
 }
 
 void MemoryManager::inititalize(AddressSpace& directory)
 {
-    Interrupts::ScopedDisabler d;
+    bool interrupt_state;
+    m_lock.lock(interrupt_state);
 #ifdef ULTRA_32
     // map the directory's physical page somewhere temporarily
     ScopedPageMapping mapping(directory.physical_address());
@@ -243,6 +249,7 @@ void MemoryManager::inititalize(AddressSpace& directory)
         directory.entry_at(pdpt_index) = entry;
     }
 #endif
+    m_lock.unlock(interrupt_state);
 }
 
 #ifdef ULTRA_32

@@ -36,7 +36,10 @@ void dummy_kernel_process()
         if (to_string(++cycles, number, number_length))
             offset = vga_log(number, column, offset, color);
 
-        vga_log("]", 4, offset, color);
+        offset = vga_log("] on core ", 4, offset, color);
+
+        to_string(CPU::current().id(), number, number_length);
+        vga_log(number, 4, offset, color);
 
         sleep::for_seconds(1);
     }
@@ -104,12 +107,10 @@ void run(MemoryMap* memory_map)
 // x86 PM cannot modify non-active paging structures directly, whereas x86-64 can
 // so for x86-64 we map it right here, whereas for 32 bit mode we map it in the AddressSpace::initialize
 // as a hack to make ring 3 work without a proper loader, purely for testing purposes.
-// (we also disable interrupts here so that this thread doesn't get interrupted before mapping the page)
 #ifdef ULTRA_64
-    {
-        Interrupts::ScopedDisabler d;
-        Process::create(0x0000F000)->m_page_directory->map_user_page(0x0000F000, page->address());
-    }
+    auto process = Process::create(0x0000F000, false);
+    process->address_space().map_user_page(0x0000F000, page->address());
+    process->commit();
 #else
     Process::create(0x0000F000);
 #endif
@@ -129,7 +130,10 @@ void run(MemoryMap* memory_map)
         if (to_string(++cycles, number, number_length))
             offset = vga_log(number, row, offset, color);
 
-        vga_log("]", row, offset, color);
+        offset = vga_log("] on core ", row, offset, color);
+
+        to_string(CPU::current().id(), number, number_length);
+        vga_log(number, row, offset, color);
     }
 }
 }

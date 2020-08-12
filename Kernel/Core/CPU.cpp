@@ -6,6 +6,7 @@
 
 #include "Memory/MemoryManager.h"
 
+#include "Multitasking/Process.h"
 #include "Multitasking/TSS.h"
 
 #include "CPU.h"
@@ -71,6 +72,7 @@ void CPU::ap_entrypoint()
     IDT::the().install();
     LAPIC::initialize_for_this_processor();
     LAPIC::timer().initialize_for_this_processor();
+    Process::inititalize_for_this_processor();
     Interrupts::enable();
 
     static size_t row    = 7;
@@ -94,7 +96,10 @@ void CPU::ap_entrypoint()
         if (to_string(++cycles, number, number_length))
             offset = vga_log(number, my_row, offset, color);
 
-        vga_log("]", my_row, offset, color);
+        offset = vga_log("] on core ", my_row, offset, color);
+
+        to_string(CPU::current().id(), number, number_length);
+        vga_log(number, my_row, offset, color);
     }
 }
 }

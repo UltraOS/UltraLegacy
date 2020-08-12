@@ -8,15 +8,17 @@
 
 namespace kernel {
 
-u32             Process::s_next_process_id;
-RefPtr<Process> Process::s_kernel_process;
+u32 Process::s_next_process_id;
 
-RefPtr<Process> Process::create(Address entrypoint)
+RefPtr<Process> Process::create(Address entrypoint, bool autoregister)
 {
     Interrupts::ScopedDisabler d;
 
     RefPtr<Process> process = new Process(entrypoint);
-    Scheduler::the().register_process(process);
+
+    if (autoregister)
+        Scheduler::the().register_process(process);
+
     return process;
 }
 
@@ -31,37 +33,50 @@ RefPtr<Process> Process::create_supervisor(Address entrypoint)
     return process;
 }
 
-// defined in Architecture/X/Entrypoint.asm
-extern "C" Address kernel_stack_begin;
-
-void Process::inititalize()
+void Process::inititalize_for_this_processor()
 {
-    s_kernel_process                  = new Process();
-    s_kernel_process->m_is_supervisor = true;
+    // Create the initial idle proccess for this core
+    RefPtr<Process> idle_process = new Process();
+
+    idle_process->m_is_supervisor = true;
 
     // TODO: I don't like that we're turning a raw pointer into a RefPtr here
     //       Figure out a way to make it nicer.
-    s_kernel_process->m_page_directory = &AddressSpace::of_kernel();
+    idle_process->m_address_space = &AddressSpace::of_kernel();
 
-    auto main_kernel_thread             = new Thread(AddressSpace::of_kernel(), &kernel_stack_begin);
-    main_kernel_thread->m_is_supervisor = true;
-    main_kernel_thread->activate();
-    main_kernel_thread->set_next(main_kernel_thread);
-    main_kernel_thread->set_previous(main_kernel_thread);
+    auto idle_thread             = new Thread(AddressSpace::of_kernel(), nullptr);
+    idle_thread->m_is_supervisor = true;
+    idle_thread->activate();
 
-    Scheduler::the().register_process(s_kernel_process);
+    auto* last_picked = Scheduler::last_picked();
 
-    s_kernel_process->m_threads.emplace(main_kernel_thread);
+    if (!last_picked) {
+        idle_thread->set_next(idle_thread);
+        idle_thread->set_previous(idle_thread);
+        Scheduler::set_last_picked(idle_thread);
+    }
+
+    Scheduler::the().register_process(idle_process);
+    idle_process->m_threads.emplace(idle_thread);
+
+    // enqueue if needed
+    if (last_picked)
+        Scheduler::enqueue_thread(*idle_thread);
+}
+
+void Process::commit()
+{
+    Scheduler::the().register_process(this);
 }
 
 Process::Process(Address entrypoint, bool is_supervisor)
-    : m_process_id(s_next_process_id++), m_page_directory(), m_is_supervisor(is_supervisor)
+    : m_process_id(s_next_process_id++), m_address_space(), m_is_supervisor(is_supervisor)
 {
     if (is_user()) {
-        m_page_directory       = RefPtr<AddressSpace>::create(MemoryManager::the().allocate_page());
-        auto& user_allocator   = m_page_directory->allocator();
+        m_address_space        = RefPtr<AddressSpace>::create(MemoryManager::the().allocate_page());
+        auto& user_allocator   = m_address_space->allocator();
         auto& kernel_allocator = AddressSpace::of_kernel().allocator();
-        auto  main_thread      = Thread::create_user_thread(*m_page_directory,
+        auto  main_thread      = Thread::create_user_thread(*m_address_space,
                                                       user_allocator.allocate_range(default_userland_stack_size).end(),
                                                       kernel_allocator.allocate_range(default_kerenl_stack_size).end(),
                                                       entrypoint);

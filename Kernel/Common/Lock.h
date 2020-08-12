@@ -86,7 +86,7 @@ public:
 
 private:
     size_t         m_depth { 0 };
-    Atomic<size_t> m_lock  { unlocked };
+    Atomic<size_t> m_lock { unlocked };
 };
 
 class RecursiveInterruptSafeSpinLock : public RecursiveSpinLock {

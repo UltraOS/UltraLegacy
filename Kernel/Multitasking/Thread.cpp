@@ -84,8 +84,8 @@ Thread::create_user_thread(AddressSpace& page_dir, Address user_stack, Address k
     return thread;
 }
 
-Thread::Thread(AddressSpace& page_dir, Address kernel_stack)
-    : m_thread_id(s_next_thread_id++), m_page_directory(page_dir), m_control_block { kernel_stack }
+Thread::Thread(AddressSpace& address_space, Address kernel_stack)
+    : m_thread_id(s_next_thread_id++), m_address_space(address_space), m_control_block { kernel_stack }
 {
 }
 
@@ -96,7 +96,7 @@ void Thread::activate()
     if (is_user())
         CPU::current().tss()->set_kernel_stack_pointer(m_initial_kernel_stack_top);
 
-    m_page_directory.make_active();
+    m_address_space.make_active();
 
     CPU::current().set_current_thread(this);
 }

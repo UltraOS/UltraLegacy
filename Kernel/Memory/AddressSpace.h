@@ -50,7 +50,7 @@ public:
 #elif defined(ULTRA_64)
     PDPT& pdpt_at(size_t index);
 #endif
-// clang-format on
+    // clang-format on
 
     Entry& entry_at(size_t index);
 
@@ -108,6 +108,5 @@ private:
     VirtualAllocator           m_allocator;
 
     static AddressSpace* s_of_kernel;
-    static AddressSpace* s_active;
 };
 }

@@ -33,6 +33,11 @@ void Syscall::debug_log(const char* string)
 
     offset = vga_log("]", row, offset, color);
     offset = vga_log(" and says: ", row, offset, color);
-    vga_log(string, row, offset, color);
+    offset = vga_log(string, row, offset, color);
+
+    offset = vga_log(" on core ", row, offset, color);
+
+    to_string(CPU::current().id(), number, number_length);
+    vga_log(number, row, offset, color);
 }
 }

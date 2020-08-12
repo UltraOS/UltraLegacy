@@ -72,8 +72,7 @@ void LAPIC::Timer::handle_irq(const RegisterState& registers)
             ::kernel::Timer::the().increment_time_since_boot(Time::nanoseconds_in_second / ticks_per_second);
 
         Time::increment_by(Time::nanoseconds_in_second / ticks_per_second);
-    } else
-        return; // don't go into the scheduler for non-bsp cores YET
+    }
 
     Scheduler::on_tick(registers);
 }

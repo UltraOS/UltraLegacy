@@ -130,6 +130,8 @@ private:
 private:
     static MemoryManager* s_instance;
 
+    InterruptSafeSpinLock m_lock;
+
     DynamicArray<PhysicalRegion> m_physical_regions;
 
     const MemoryMap* m_memory_map;
