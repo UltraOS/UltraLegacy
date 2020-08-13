@@ -78,6 +78,9 @@ start:
     mov es, ax
     retrieve_memory_map memory_map, memory_map_entry_count
 
+    ; NOT YET
+    ;set_video_mode 1024, 768
+
     %ifdef ULTRA_64
 
     GET_HIGHEST_EXTENDED_FUNCTION: equ 0x80000000
@@ -309,6 +312,64 @@ gdt_ptr:
 
     %endif
 gdt_end:
+
+vbe_info:
+    .signature:     db "VBE2"
+    .version:       dw 0
+    .oem:           dd 0
+    .capabilities:  dd 0
+    .modes_offset:  dw 0
+    .modes_segment: dw 0
+    .video_memory:  dw 0
+    .software_rev:  dw 0
+    .vendor:        dd 0
+    .product_name:  dd 0
+    .product_rev:   dd 0
+    .unused: times 222 + 256 db 0
+
+vbe_mode_info:
+    .attributes:   dw 0
+    .window_a:     db 0
+    .window_b:     db 0
+    .granularity:  dw 0
+    .window_size:  dw 0
+    .segment_a:    dw 0
+    .segment_b:    dw 0
+    .win_func_ptr: dd 0
+    .pitch:        dw 0
+    .width:        dw 0
+    .height:       dw 0
+
+    .w_char:       db 0
+    .y_char:       db 0
+    .planes:       db 0
+    .bpp:          db 0
+    .banks:        db 0
+    .memory_model: db 0
+    .bank_size:    db 0
+    .image_pages:  db 0
+    .reserved_0:   db 0
+
+    .red_mask:                db 0
+    .red_position:            db 0
+    .green_mask:              db 0
+    .green_position:          db 0
+    .blue_mask:               db 0
+    .blue_positon:            db 0
+    .reserved_mask:           db 0
+    .reserved_position:       db 0
+    .direct_color_attributes: db 0
+
+    .framebuffer:          dd 0
+    .off_screen_mem_off:   dd 0
+    .off_screen_mem_size:  dw 0
+    .reserved_1: times 206 db 0
+
+video_mode:
+    .width:  dd 0
+    .height: dd 0
+    .pitch:  dd 0
+    .bpp:    dd 0
 
 memory_map_entry_count: dw 0x0000
 memory_map:

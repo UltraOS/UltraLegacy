@@ -32,6 +32,14 @@ FULL_ENTRY_SIZE:           equ ENTRY_SIZE + ACPI_ATTIRBUTES_SIZE
 LENGTH_LOWER_OFFSET:       equ 8
 LENGTH_HIGHER_OFFSET:      equ 12
 
+GET_VESA_INFO:             equ 0x4F00
+GET_VBE_MODE_INFO:         equ 0x4F01
+SET_VBE_MODE:              equ 0x4F02
+LINEAR_FRAMEBUFFER_BIT:    equ (1 << 14)
+ATTRIBUTE_LINEAR_FB:       equ (1 << 7)
+VESA_SUCCESS:              equ 0x004F
+END_OF_MODE_LIST:          equ 0xFFFF
+
 REAL_MODE_CODE:            equ 0x18
 REAL_MODE_DATA:            equ 0x20
 
@@ -349,6 +357,79 @@ REAL_MODE_DATA:            equ 0x20
         call reboot
 
     %%.done:
+%endmacro
+
+; void retrieve_memory_map(desired_width, desired_height)
+%macro set_video_mode 2
+%%set_video_mode:
+    push es
+    mov  ax, GET_VESA_INFO
+    mov  di, vbe_info
+    int 0x10
+    pop es
+
+    cmp ax, VESA_SUCCESS
+    jne %%.error
+
+    mov ax, [vbe_info.modes_segment]
+    mov fs, ax
+    mov si, [vbe_info.modes_offset]
+
+%%.check_next_mode:
+    mov cx, [fs:si]
+    add si, 2
+
+    cmp cx, END_OF_MODE_LIST
+    je %%.error
+
+    push es
+    mov ax, GET_VBE_MODE_INFO
+    mov di, vbe_mode_info
+    int 0x10
+    pop es
+
+    cmp ax, VESA_SUCCESS
+    jne %%.error
+
+    mov ax, [vbe_mode_info.width]
+    cmp ax, %1
+    jne %%.check_next_mode
+
+    mov ax, [vbe_mode_info.height]
+    cmp ax, %2
+    jne %%.check_next_mode
+
+    mov ax, [vbe_mode_info.attributes]
+    and ax, ATTRIBUTE_LINEAR_FB
+    jz %%.check_next_mode
+
+    ; TODO: write mode info into video_mode
+    ;       fallback resolutions
+    ;       pick best bpp
+    mov al, [vbe_mode_info.bpp]
+    cmp al, 32
+    jne %%.check_next_mode
+
+    push es
+    mov ax, SET_VBE_MODE
+    mov bx, cx
+    or  bx, LINEAR_FRAMEBUFFER_BIT
+    mov di, 0
+    int 0x10
+    pop es
+
+    cmp ax, VESA_SUCCESS
+    je %%.done
+
+%%.error:
+    mov si, vesa_failure_msg
+    call write_string
+    call reboot
+
+%%.done:
+    cli
+    hlt
+
 %endmacro
 
 %endif ; _COMMON_MACROS_INC_
