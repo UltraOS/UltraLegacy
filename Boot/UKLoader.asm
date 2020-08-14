@@ -8,10 +8,17 @@ main:
 %include "BPB.inc"
 %include "CommonMacros.inc"
 
-SIZEOF_IDT:        equ 2048
-SIZEOF_GDT:        equ 40
 LOAD_KERNEL_AT:    equ 0x00100000
-KERNEL_ENTRYPOINT: equ 0xFFFFFFFF80000000 + LOAD_KERNEL_AT
+
+%ifdef ULTRA_32
+KERNEL_ORIGIN:     equ 0xC0000000
+KERNEL_ENTRYPOINT: equ LOAD_KERNEL_AT
+%elifdef ULTRA_64
+KERNEL_ORIGIN:     equ 0xFFFFFFFF80000000
+PHYS_MEMORY:       equ 0xFFFF800000000000
+KERNEL_ENTRYPOINT: equ KERNEL_ORIGIN + LOAD_KERNEL_AT
+%endif
+
 
 start:
     ; copy the boot context from VBR
@@ -76,10 +83,10 @@ start:
 
     xor ax, ax
     mov es, ax
-    retrieve_memory_map memory_map, memory_map_entry_count
+    retrieve_memory_map memory_map_ptr, memory_map.entry_count
 
     ; NOT YET
-    ;set_video_mode 1024, 768
+    ; set_video_mode 1024, 768, 24
 
     %ifdef ULTRA_64
 
@@ -113,27 +120,18 @@ start:
         int 0x15
     %endif
 
-    ; enable color 80x25 text mode
-    ; for future use in protected/long mode
-    mov ax, 0x0003
-    int 0x10
-
-    ; disable cursor
-    mov ax, 0x0100
-    mov cx, 0x3F00
-    int 0x10
-
     switch_to_protected
 
 %ifdef ULTRA_32
 
 jump_to_kernel:
-    ; pass kernel the memory map
-    mov   eax, memory_map
-    movzx ebx, word [memory_map_entry_count]
+    ; move the pointers into higher half
+    add [memory_map.pointer], dword KERNEL_ORIGIN
+    mov eax, context
+    add eax, KERNEL_ORIGIN
 
     ; jump to the kernel
-    jmp LOAD_KERNEL_AT
+    jmp KERNEL_ENTRYPOINT
 
 %elifdef ULTRA_64
 
@@ -211,8 +209,17 @@ jump_to_kernel:
     mov fs, ax
     mov gs, ax
 
-    mov   rax, memory_map
-    movzx rbx, word [memory_map_entry_count]
+    ; move the pointers into higher half
+    mov rax,  PHYS_MEMORY
+    add rax,  [video_mode.framebuffer]
+    mov qword [video_mode.framebuffer], rax
+
+    mov rax,  PHYS_MEMORY
+    add rax,  [memory_map.pointer]
+    mov qword [memory_map.pointer], rax
+
+    mov r8, PHYS_MEMORY
+    add r8, context
 
     jmp KERNEL_ENTRYPOINT
 
@@ -313,6 +320,21 @@ gdt_ptr:
     %endif
 gdt_end:
 
+best_mode:     dw 0
+native_width:  dw 1024
+native_height: dw 768
+
+edid:
+    times 0x38 db 0 ; unused
+    .horizontal_active_lower:  db 0
+    db 0 ; unused
+    .horizontal_active_higher: db 0
+    .vertical_active_lower:    db 0
+    db 0 ; unused
+    .vertical_active_higher: db 0
+
+    times 128 - ($ - edid) db 0 ; unused
+
 vbe_info:
     .signature:     db "VBE2"
     .version:       dw 0
@@ -365,11 +387,24 @@ vbe_mode_info:
     .off_screen_mem_size:  dw 0
     .reserved_1: times 206 db 0
 
-video_mode:
-    .width:  dd 0
-    .height: dd 0
-    .pitch:  dd 0
-    .bpp:    dd 0
+context:
+    video_mode:
+        .width:  dd 0
+        .height: dd 0
+        .pitch:  dd 0
+        .bpp:    dd 0
 
-memory_map_entry_count: dw 0x0000
-memory_map:
+        %ifdef ULTRA_32
+        .framebuffer: dd 0
+        %elifdef ULTRA_64
+        .framebuffer: dq 0
+        %endif
+    memory_map:
+        %ifdef ULTRA_32
+        .pointer: dd memory_map_ptr
+        %elifdef ULTRA_64
+        .pointer: dq memory_map_ptr
+        %endif
+        .entry_count: dd 0
+
+memory_map_ptr:

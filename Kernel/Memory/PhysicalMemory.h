@@ -41,7 +41,7 @@ struct PACKED PhysicalRange {
 
 struct PACKED MemoryMap {
     PhysicalRange* entries;
-    size_t         entry_count;
+    u32            entry_count;
 
     PhysicalRange* begin() { return entries; }
     PhysicalRange* end() { return entries + entry_count; }

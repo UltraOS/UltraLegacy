@@ -1,4 +1,4 @@
-%define KERNEL_ENTRYPOINT _ZN6kernel3runEPNS_9MemoryMapE
+%define KERNEL_ENTRYPOINT _ZN6kernel3runEPNS_7ContextE
 
 extern KERNEL_ENTRYPOINT
 
@@ -13,19 +13,12 @@ VIRTUAL_ORIGIN: equ 0xFFFFFFFF80000000
 
 global start
 start:
-    mov r8, cr3
-    mov qword [r8], 0x0000000000000000
-    mov cr3, r8
+    mov rax, cr3
+    mov qword [rax], 0x0000000000000000
+    mov cr3, rax
 
     ; Set up the kernel stack
     mov rsp, kernel_stack_begin
-
-    ; entry count
-    mov r8, rbx
-
-    ; memory map pointer
-    mov r9, rax
-    add r9, VIRTUAL_ORIGIN
 
     ; zero section bss
     mov rcx, section_bss_end
@@ -43,9 +36,8 @@ start:
     mov cr0, rdx
     fninit ; initialize the FPU
 
-    push r8
-    push r9
-    mov rdi, rsp
+    ; boot context
+    mov rdi, r8
 
     ; Jump into kernel main
     call KERNEL_ENTRYPOINT

@@ -1,4 +1,4 @@
-%define KERNEL_ENTRYPOINT _ZN6kernel3runEPNS_9MemoryMapE
+%define KERNEL_ENTRYPOINT _ZN6kernel3runEPNS_7ContextE
 
 extern KERNEL_ENTRYPOINT
 
@@ -156,14 +156,8 @@ start:
         ; Set up the kernel stack
         mov esp, kernel_stack_begin
 
-        ; entry count
-        push ebx
-
-        ; memory map pointer
-        add eax, VIRTUAL_ORIGIN
+        ; boot context pointer
         push eax
-
-        push esp
 
     ; Jump into kernel main
     call KERNEL_ENTRYPOINT

@@ -4,6 +4,7 @@
 #include "Core/CPU.h"
 #include "Core/GDT.h"
 #include "Core/Runtime.h"
+#include "Core/Boot.h"
 #include "Interrupts/ExceptionDispatcher.h"
 #include "Interrupts/IDT.h"
 #include "Interrupts/IPICommunicator.h"
@@ -55,7 +56,7 @@ void userland_process()
     }
 }
 
-void run(MemoryMap* memory_map)
+void run(Context* context)
 {
     runtime::ensure_loaded_correctly();
 
@@ -63,7 +64,7 @@ void run(MemoryMap* memory_map)
 
     runtime::init_global_objects();
 
-    MemoryManager::inititalize(*memory_map);
+    MemoryManager::inititalize(context->memory_map);
 
     AddressSpace::inititalize();
 
