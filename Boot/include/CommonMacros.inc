@@ -35,6 +35,7 @@ LENGTH_HIGHER_OFFSET:      equ 12
 GET_VESA_INFO:             equ 0x4F00
 GET_VBE_MODE_INFO:         equ 0x4F01
 SET_VBE_MODE:              equ 0x4F02
+GET_EDID:                  equ 0x4f15
 LINEAR_FRAMEBUFFER_BIT:    equ (1 << 14)
 ATTRIBUTE_LINEAR_FB:       equ (1 << 7)
 VESA_SUCCESS:              equ 0x004F
@@ -359,8 +360,9 @@ REAL_MODE_DATA:            equ 0x20
     %%.done:
 %endmacro
 
-; void retrieve_memory_map(desired_width, desired_height)
-%macro set_video_mode 2
+; void set_video_mode(desired_width, desired_height, desired_bpp)
+; sets the video mode to [native >= mode >= desired]
+%macro set_video_mode 3
 %%set_video_mode:
     push es
     mov  ax, GET_VESA_INFO
@@ -375,12 +377,50 @@ REAL_MODE_DATA:            equ 0x20
     mov fs, ax
     mov si, [vbe_info.modes_offset]
 
+    push es
+    mov  ax, GET_EDID
+    mov  bl, 0x01
+    xor  cx, cx
+    xor  dx, dx
+    mov  di, edid
+    int 0x10
+    pop es
+
+    cmp ax, VESA_SUCCESS
+    jne %%.sanity_check ; Get EDID fucntion is unsupported, so we assume 1024x768 is native
+
+    movzx ax, byte [edid.horizontal_active_lower]
+    mov [native_width], ax
+    movzx bx, byte [edid.horizontal_active_higher]
+    and   bl, 0xF0
+    shl   bx, 4
+    add [native_width], bx
+
+    movzx ax, byte [edid.vertical_active_lower]
+    mov [native_height], ax
+    movzx bx, byte [edid.vertical_active_higher]
+    and   bl, 0xF0
+    shl   bx, 4
+    add [native_height], bx
+
+%%.sanity_check:
+    ; compare if requested resolution is <= native
+    mov ax, %1
+    mov bx, [native_width]
+    cmp ax, bx
+    jg %%.error
+
+    mov ax, %2
+    mov bx, [native_height]
+    cmp ax, bx
+    jg %%.error
+
 %%.check_next_mode:
     mov cx, [fs:si]
     add si, 2
 
     cmp cx, END_OF_MODE_LIST
-    je %%.error
+    je %%.set_best_mode
 
     push es
     mov ax, GET_VBE_MODE_INFO
@@ -393,26 +433,66 @@ REAL_MODE_DATA:            equ 0x20
 
     mov ax, [vbe_mode_info.width]
     cmp ax, %1
-    jne %%.check_next_mode
+    jl %%.check_next_mode
+    cmp ax, [native_width]
+    jg %%.check_next_mode ; too big
 
     mov ax, [vbe_mode_info.height]
     cmp ax, %2
-    jne %%.check_next_mode
+    jl %%.check_next_mode
+    cmp ax, [native_height]
+    jg %%.check_next_mode ; too big
+
+    mov al, [vbe_mode_info.bpp]
+    cmp al, %3
+    jl %%.check_next_mode
 
     mov ax, [vbe_mode_info.attributes]
     and ax, ATTRIBUTE_LINEAR_FB
     jz %%.check_next_mode
 
-    ; TODO: write mode info into video_mode
-    ;       fallback resolutions
-    ;       pick best bpp
+    ; found a potentially good mode, compare to the best
+    mov ax, [vbe_mode_info.width]
+    cmp ax, [video_mode.width]
+    jl %%.check_next_mode
+
+    mov ax, [vbe_mode_info.height]
+    cmp ax, [video_mode.height]
+    jl %%.check_next_mode
+
     mov al, [vbe_mode_info.bpp]
-    cmp al, 32
-    jne %%.check_next_mode
+    cmp al, [video_mode.bpp]
+    jl %%.check_next_mode
+
+    ; this is the best one so far, record it
+    mov ax, [vbe_mode_info.width]
+    mov [video_mode.width], ax
+
+    mov ax, [vbe_mode_info.height]
+    mov [video_mode.height], ax
+
+    mov al, [vbe_mode_info.bpp]
+    mov [video_mode.bpp], al
+
+    mov eax, [vbe_mode_info.framebuffer]
+    mov [video_mode.framebuffer], eax
+
+    mov ax, [vbe_mode_info.pitch]
+    mov [video_mode.pitch], ax
+
+    mov [best_mode], cx
+
+    ; uncommemnt this later, because this tends to set the native resolution
+    ; therefore making it very difficult to work with on emulators
+    jmp %%.check_next_mode
+
+%%.set_best_mode:
+    mov  bx, [best_mode]
+    test bx, bx
+    jz %%.error
 
     push es
     mov ax, SET_VBE_MODE
-    mov bx, cx
     or  bx, LINEAR_FRAMEBUFFER_BIT
     mov di, 0
     int 0x10
@@ -427,8 +507,6 @@ REAL_MODE_DATA:            equ 0x20
     call reboot
 
 %%.done:
-    cli
-    hlt
 
 %endmacro
 
