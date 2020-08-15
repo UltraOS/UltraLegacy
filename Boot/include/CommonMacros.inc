@@ -360,8 +360,8 @@ REAL_MODE_DATA:            equ 0x20
     %%.done:
 %endmacro
 
-; void set_video_mode(desired_width, desired_height, desired_bpp)
-; sets the video mode to [native >= mode >= desired]
+; void set_video_mode(width_at_least, height_at_least, bpp_at_least)
+; sets the video mode to [native >= mode >= requested]
 %macro set_video_mode 3
 %%set_video_mode:
     push es
@@ -404,15 +404,13 @@ REAL_MODE_DATA:            equ 0x20
     add [native_height], bx
 
 %%.sanity_check:
-    ; compare if requested resolution is <= native
+    ; make sure that requested resolution is <= native
     mov ax, %1
-    mov bx, [native_width]
-    cmp ax, bx
+    cmp ax, [native_width]
     jg %%.error
 
     mov ax, %2
-    mov bx, [native_height]
-    cmp ax, bx
+    cmp ax, [native_height]
     jg %%.error
 
 %%.check_next_mode:
@@ -482,8 +480,6 @@ REAL_MODE_DATA:            equ 0x20
 
     mov [best_mode], cx
 
-    ; uncommemnt this later, because this tends to set the native resolution
-    ; therefore making it very difficult to work with on emulators
     jmp %%.check_next_mode
 
 %%.set_best_mode:
