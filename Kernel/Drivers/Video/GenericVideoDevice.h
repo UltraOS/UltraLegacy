@@ -6,13 +6,17 @@
 namespace kernel {
 
 // Generic software rendering video device that operates on a liner framebuffer
+// IMPORTANT: Works with BGR (RGB little endian)
 class GenericVideoDevice : public VideoDevice {
 public:
     GenericVideoDevice(const VideoMode&);
 
     StringView name() const override { return "Generic Video Device"; }
 
-    void draw_bitmap(u8 *bitmap, size_t size, size_t x, size_t y) override;
+    void draw_at(size_t x, size_t y, RGBA pixel) override;
+
+    size_t width()  const override { return m_mode.width; }
+    size_t height() const override { return m_mode.height; }
 
 private:
     VideoMode m_mode;
