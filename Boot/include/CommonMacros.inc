@@ -429,6 +429,48 @@ REAL_MODE_DATA:            equ 0x20
     cmp ax, VESA_SUCCESS
     jne %%.error
 
+    DIRECT_COLOR: equ 0x6
+
+    cmp [vbe_mode_info.memory_model], byte DIRECT_COLOR
+    jne %%.check_next_mode ; weird mode
+
+    cmp [vbe_mode_info.red_mask], byte 8
+    jne %%.check_next_mode ; weird mask
+
+    cmp [vbe_mode_info.red_position], byte 16
+    jne %%.check_next_mode ; weird position
+
+    cmp [vbe_mode_info.green_mask], byte 8
+    jne %%.check_next_mode ; weird mask
+
+    cmp [vbe_mode_info.green_position], byte 8
+    jne %%.check_next_mode ; weird position
+
+    cmp [vbe_mode_info.blue_mask], byte 8
+    jne %%.check_next_mode ; weird mask
+
+    cmp [vbe_mode_info.blue_position], byte 0
+    jne %%.check_next_mode ; weird position
+
+    ; all 24 bpp checks passed at this point
+    cmp [vbe_mode_info.bpp], byte 32
+    jne mode_ok
+
+    cmp [vbe_mode_info.reserved_mask], byte 8
+    jne %%.check_next_mode ; weird mask
+
+    cmp [vbe_mode_info.reserved_position], byte 24
+    jne %%.check_next_mode ; weird position
+
+    ; This code fails on VMware...
+    ; Are they generating bad mode information or is it me misunderstanding how this bit works?
+    ; RESERVED_FIELD_USABLE: equ (1 << 1)
+    ; mov al, [vbe_mode_info.direct_color_attributes]
+    ; and al, RESERVED_FIELD_USABLE
+    ; jz %%.check_next_mode ; it's a 32 bpp mode but you can't write to the 4th channel?
+
+    mode_ok:
+
     mov ax, [vbe_mode_info.width]
     cmp ax, %1
     jl %%.check_next_mode
