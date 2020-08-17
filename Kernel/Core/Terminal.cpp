@@ -9,6 +9,8 @@ Terminal* Terminal::s_instance;
 void Terminal::initialize()
 {
     s_instance = new Terminal;
+    the().m_scrollback_buffer.reserve(the().rows());
+    the().m_scrollback_buffer.emplace();
 }
 
 size_t Terminal::columns() const
@@ -31,6 +33,40 @@ size_t Terminal::column_as_offset(size_t column)
     return font_width * column;
 }
 
+void Terminal::scroll(ScrollDirection direction)
+{
+    if (direction == ScrollDirection::UP) {
+        if (m_viewing_row + rows() > m_scrollback_buffer.size())
+            return;
+
+        ++m_viewing_row;
+
+        size_t rows_written = 0;
+        size_t rows_visible = rows();
+
+        for (size_t i = m_viewing_row; i < m_scrollback_buffer.size() && (i - m_viewing_row) < rows_visible; ++i) {
+            size_t column = 0;
+
+            for (char c : m_scrollback_buffer[i])
+                write_at(column++, i - m_viewing_row, c);
+
+            for (size_t j = 0; j < columns() - m_scrollback_buffer[i].size(); ++j)
+                write_at(column++, i - m_viewing_row, ' ');
+
+            ++rows_written;
+        }
+
+        for (size_t i = rows_written; i < rows_visible - rows_written + rows_written ; ++i) {
+            for (size_t j = 0; j < columns(); ++j)
+                write_at(j, i, ' ');
+        }
+
+    } else if (direction == ScrollDirection::DOWN) {
+        // TODO: Implement me
+    } else
+        ASSERT(false && "Unknown scroll direction");
+}
+
 void Terminal::write(StringView text, RGBA color)
 {
     // TODO: implement ANSI espace sequence parser
@@ -48,17 +84,32 @@ void Terminal::write(StringView text, RGBA color)
         switch (c) {
         case '\n':
             m_current_row++;
-            if (m_current_row == rows())
-                m_current_row = 0;
+            if (m_current_row == rows()) {
+                --m_current_row;
+                scroll(ScrollDirection::UP);
+            }
 
             m_current_column = 0;
+            m_scrollback_buffer.emplace();
             continue;
         case '\t':
             m_current_column += 4;
+            m_scrollback_buffer.last().append("    ");
             continue;
         default:
             write_at(m_current_column, m_current_row, c, color);
-            m_current_column++;
+            m_scrollback_buffer.last().append(c);
+
+            if (++m_current_column == columns()) {
+                m_scrollback_buffer.emplace();
+                m_current_column = 0;
+
+                m_current_row++;
+                if (m_current_row == rows()) {
+                    --m_current_row;
+                    scroll(ScrollDirection::UP);
+                }
+            }
         }
     }
 }

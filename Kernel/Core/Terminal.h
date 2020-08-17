@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Common/DynamicArray.h"
 #include "Common/String.h"
 #include "Drivers/Video/Utilities.h"
 
@@ -25,6 +26,13 @@ public:
     size_t columns() const;
     size_t rows() const;
 
+    enum class ScrollDirection {
+        UP,
+        DOWN
+    };
+
+    void scroll(ScrollDirection);
+
 private:
     static size_t row_as_offset(size_t row);
     static size_t column_as_offset(size_t column);
@@ -34,6 +42,10 @@ private:
 
     size_t m_current_row    { 0 };
     size_t m_current_column { 0 };
+
+    size_t m_viewing_row { 0 };
+
+    DynamicArray<String> m_scrollback_buffer;
 
     static constexpr size_t font_height = 16;
     static constexpr size_t font_width  = 8;
