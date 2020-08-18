@@ -1,8 +1,12 @@
 Images/
 Toolchain/CrossCompiler/
 Build*/
+build*/
+bin/
 Project/
 Scripts/vhc
+Tests/Environment/Memory/HeapAllocator.*
+Tests/Environment/Common/Types.h
 *.o
 *.bin
 *.cxxflags
