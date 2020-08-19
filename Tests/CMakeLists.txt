@@ -29,7 +29,6 @@ function(KERNEL_FILE)
     COMMAND ${CMAKE_COMMAND} -E copy
             ${KERNEL_ROOT_DIR}/${ARG_PATH}/${ARG_FILE}
             ${CMAKE_CURRENT_SOURCE_DIR}/Environment/${ARG_PATH})
-
 endfunction(KERNEL_FILE)
 
 KERNEL_FILE(PATH "Memory" FILE "HeapAllocator.cpp")
@@ -45,12 +44,12 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG   "${OUTPUT_DIRECTORY}")
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE "${OUTPUT_DIRECTORY}")
 
 get_property(EXTERNAL_KERNEL_FILES_LOCAL GLOBAL PROPERTY EXTERNAL_KERNEL_FILES)
-
 FILE(GLOB_RECURSE SORUCE_FILES "${SOURCE_DIR}/*cpp" "${SOURCE_DIR}/*h")
 
-add_executable(RunTests
-        ${SORUCE_FILES}
-        ${EXTERNAL_KERNEL_FILES_LOCAL})
+add_custom_target(ExternalFiles DEPENDS ${EXTERNAL_KERNEL_FILES_LOCAL})
+
+add_executable(RunTests ${SORUCE_FILES})
+add_dependencies(RunTests ExternalFiles)
 
 target_compile_features(RunTests PRIVATE cxx_std_17)
 

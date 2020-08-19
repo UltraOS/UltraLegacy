@@ -1,1 +1,1 @@
-// keep this
+#define ASSERT(x)
