@@ -24,7 +24,7 @@ void HeapAllocator::initialize()
 
 void HeapAllocator::feed_block(void* ptr, size_t size, size_t chunk_size_in_bytes)
 {
-    bool interrupt_state;
+    bool interrupt_state = false;
     s_lock.lock(interrupt_state);
 
     auto& new_heap = *reinterpret_cast<HeapBlockHeader*>(ptr);
@@ -83,7 +83,7 @@ void* HeapAllocator::allocate(size_t bytes)
         return nullptr;
     }
 
-    bool interrupt_state;
+    bool interrupt_state = false;
     s_lock.lock(interrupt_state);
 
     for (auto* heap = s_heap_block; heap; heap = heap->next) {
@@ -220,7 +220,7 @@ void HeapAllocator::free(void* ptr)
         return;
     }
 
-    bool interrupt_state;
+    bool interrupt_state = false;
     s_lock.lock(interrupt_state);
 
 #ifdef HEAP_ALLOCATOR_DEBUG
@@ -252,8 +252,10 @@ void HeapAllocator::free(void* ptr)
                 allocation_id      = control_byte & allocation_mask;
                 scaled_id          = allocation_id;
                 allocation_id >>= bit_index;
+
+                ASSERT(allocation_id != 0);
             } else {
-                if (!(control_byte & scaled_id))
+                if ((control_byte & (0b11 << bit_index)) != scaled_id)
                     break;
             }
 
