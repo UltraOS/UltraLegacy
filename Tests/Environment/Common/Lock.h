@@ -1,9 +1,5 @@
 #pragma once
 
-#include <iostream>
-#include <cstring>
-
-
 namespace kernel {
 
 class InterruptSafeSpinLock

@@ -7,6 +7,10 @@ Project/
 Scripts/vhc
 Tests/Environment/Memory/HeapAllocator.*
 Tests/Environment/Common/Types.h
+Tests/Environment/Common/DynamicArray.h
+Tests/Environment/Common/Memory.h
+Tests/Environment/Common/Traits.h
+Tests/Environment/Common/Utilities.h
 *.o
 *.bin
 *.cxxflags
