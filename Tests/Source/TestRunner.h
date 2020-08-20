@@ -13,7 +13,7 @@ class Test
 public:
     virtual std::string_view name() const = 0;
 
-    virtual bool run() = 0;
+    virtual void run() = 0;
 
 protected:
     Test();
@@ -28,9 +28,9 @@ protected:
         std::string_view name() const override {                     \
             return TO_STRING(case_name);                             \
         }                                                            \
-        bool run() override;                                         \
+        void run() override;                                         \
     } static test_##case_name;                                       \
-    bool Test##case_name::run()
+    void Test##case_name::run()
 
 class TestRunner {
     friend class Test;
@@ -45,20 +45,19 @@ public:
         for (auto test : s_tests) {
             std::cout << "Running test \"" << test->name() << "\"... ";
 
-            bool result = false;
-            std::string reason = "unknown";
+            std::string failure_reason;
 
             try {
-                result = test->run();
+                test->run();
             } catch (const std::exception& ex) {
-                reason = ex.what();
+                failure_reason = ex.what();
             }
 
-            if (result) {
+            if (failure_reason.empty()) {
                  std::cout << "\u001b[32mPASSED!\u001b[0m" << std::endl;
                  ++pass_count;
             } else {
-                std::cout << "\u001b[31mFAILED!\u001b[0m" << " (Reason: " << reason << ")" << std::endl;
+                std::cout << "\u001b[31mFAILED!\u001b[0m" << " (Reason: " << failure_reason << ")" << std::endl;
                 ++fail_count;
             }
         }

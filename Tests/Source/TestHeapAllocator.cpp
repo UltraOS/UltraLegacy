@@ -25,8 +25,6 @@ TEST(BigAllocations) {
         HeapAllocator::free(allocation);
         Assert::that(HeapAllocator::s_heap_block->free_bytes()).is_equal(initial_available_bytes);
     }
-
-    return true;
 }
 
 
@@ -61,8 +59,6 @@ TEST(SmallAllocations) {
 
         Assert::that(HeapAllocator::s_heap_block->free_bytes()).is_equal(initial_available_bytes);
     }
-
-    return true;
 }
 
 #define TEST_ALLOCATION_OF(chunks)                                                                                     \
@@ -116,8 +112,6 @@ TEST(VariableAllocations) {
     TEST_ALLOCATION_OF(50);
     TEST_ALLOCATION_OF(100);
     TEST_ALLOCATION_OF(1000);
-
-    return true;
 }
 
 TEST(MemoryReuse) {
@@ -129,8 +123,6 @@ TEST(MemoryReuse) {
 
     Assert::that(allocation1).is_not_null();
     Assert::that(allocation1).is_equal(allocation2);
-
-    return true;
 }
 
 TEST(OutOfOrderFreeing) {
@@ -179,8 +171,6 @@ TEST(OutOfOrderFreeing) {
     HeapAllocator::free(allocation8);
 
     Assert::that(HeapAllocator::s_heap_block->free_bytes()).is_equal(initial_available_bytes);
-
-    return true;
 }
 
 TEST(AllocationIdAwareness) {
@@ -206,6 +196,4 @@ TEST(AllocationIdAwareness) {
 
     // This would fail pre 75c2046
     Assert::that(HeapAllocator::s_heap_block->free_bytes()).is_equal(bytes_after_allocation5 + 1024);
-
-    return true;
 }
