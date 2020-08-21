@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/Runtime.h"
+#include "Macros.h"
 #include "Memory.h"
 #include "Utilities.h"
 
@@ -10,13 +11,22 @@ class StringView;
 
 class String {
 public:
-    static constexpr size_t max_small_string_size = 7;
+    static constexpr size_t max_small_string_size = sizeof(ptr_t) * 2 - 1;
 
     String() = default;
     String(const char* string) { construct_from(string, length_of(string)); }
     String(StringView string);
     String(const String& other) { construct_from(other.data(), other.size()); }
     String(String&& other) { become(forward<String>(other)); }
+
+    String& operator=(StringView string);
+
+    String& operator=(const char* string)
+    {
+        construct_from(string, length_of(string));
+
+        return *this;
+    }
 
     String& operator=(const String& string)
     {
@@ -47,6 +57,8 @@ public:
     char*       data() { return is_small() ? m_small_string : m_big_string.data; }
     const char* data() const { return is_small() ? m_small_string : m_big_string.data; }
 
+    const char* c_string() const { return data(); }
+
     size_t size() const { return m_size; }
 
     const char& at(size_t index) const { return data()[index]; }
@@ -60,6 +72,7 @@ public:
 
     String& append(const String& string) { return append(string.data(), string.size()); }
     String& append(const char* string) { return append(string, length_of(string)); }
+    String& append(char c) { return append(&c, 1); }
     String& append(const char* string, size_t length)
     {
         auto required_size = size() + length;
@@ -160,8 +173,11 @@ private:
 
     void become(String&& other)
     {
-        if (other.is_small())
+        if (other.is_small()) {
             construct_from(other.data(), other.size());
+            other.at(0) = '\0';
+            other.m_size = 0;
+        }
         else {
             if (is_small())
                 m_big_string = {};
@@ -176,6 +192,10 @@ private:
 
     void grow_to_fit(size_t size)
     {
+        // force a reallocation of at least x2
+        if (m_size && ((size / m_size) < 2))
+            size = m_size * 2;
+
         if (is_small()) {
             BigString new_buffer = { new char[size], size };
             copy_memory(m_small_string, new_buffer.data, m_size);
@@ -271,6 +291,13 @@ inline constexpr StringView operator""_sv(const char* string, size_t size)
 inline String::String(StringView view)
 {
     construct_from(view.data(), view.size());
+}
+
+inline String& String::operator=(StringView view)
+{
+    construct_from(view.data(), view.size());
+
+    return *this;
 }
 
 inline StringView String::to_view() const
