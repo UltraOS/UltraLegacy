@@ -28,7 +28,7 @@ public:
 
     DynamicArray& operator=(DynamicArray&& other)
     {
-        become(other);
+        become(forward<DynamicArray>(other));
 
         return *this;
     }
@@ -43,7 +43,7 @@ public:
         if (is_trivially_constructible_v<T>)
             zero_memory(address_of(m_size, m_data), (m_capacity - m_size) * sizeof(T));
         else {
-            for (size_t i = m_size - 1; i < m_capacity; ++i)
+            for (size_t i = m_size + !m_size - 1; i < m_capacity; ++i)
                 new (address_of(i, m_data)) T();
         }
 
@@ -72,14 +72,14 @@ public:
 
     [[nodiscard]] T& last()
     {
-        ASSERT(m_size);
+        ASSERT(m_size != 0);
 
         return at(m_size - 1);
     }
 
     [[nodiscard]] const T& last() const
     {
-        ASSERT(m_size);
+        ASSERT(m_size != 0);
 
         return at(m_size - 1);
     }
@@ -192,7 +192,7 @@ private:
         swap(m_capacity, other.m_capacity);
     }
 
-    void copy_external_elements(void* from, void* to, size_t count)
+    void copy_external_elements(u8* from, u8* to, size_t count)
     {
         if constexpr (is_trivially_copyable_v<T>)
             copy_memory(from, to, count * sizeof(T));
