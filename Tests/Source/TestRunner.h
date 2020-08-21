@@ -1,5 +1,14 @@
 #pragma once
 
+// Koenig lookup workaround
+#ifdef move
+#undef move
+#endif
+
+#ifdef forward
+#undef forward
+#endif
+
 #include <iostream>
 #include <iomanip>
 #include <sstream>
@@ -96,15 +105,46 @@ inline std::enable_if_t<std::is_integral_v<T>, std::string> to_hex_string(T valu
 }
 
 template <typename T>
-inline std::enable_if_t<std::is_pointer_v<T>, std::string> to_hex_string(T ptr)
+inline std::enable_if_t<std::is_pointer_v<T> || std::is_null_pointer_v<T>, std::string> to_hex_string(T ptr)
 {
     return to_hex_string<size_t>(reinterpret_cast<size_t>(ptr));
 }
 
 class Assert {
 public:
-    template<typename T>
+    template<typename T, typename V = void>
     class Asserter {
+    public:
+        Asserter(T value) : m_value(value) { }
+
+        void is_equal(const T& other) {
+            if (m_value != other)
+                throw std::runtime_error(std::to_string(m_value) + " != " + std::to_string(other));
+        }
+
+        void is_not_equal(const T& other) {
+            if (m_value == other)
+                throw std::runtime_error(std::to_string(m_value) + " == " + std::to_string(other));
+        }
+
+        void is_less_than(const T& other) {
+            if (m_value > other)
+                throw std::runtime_error(m_value + " > " + other);
+        }
+
+        void is_greater_than(const T& other) {
+            if (m_value < other)
+                throw std::runtime_error(m_value + " < " + other);
+        }
+
+    private:
+        T m_value;
+    };
+
+    template <typename T>
+    class Asserter<T, typename std::enable_if<(std::is_pointer_v<T> ||
+                                               std::is_null_pointer_v<T>) &&
+                                              !std::is_same_v<T, const char*>>::type> {
     public:
         Asserter(T value) : m_value(value) { }
 
@@ -128,18 +168,29 @@ public:
                 throw std::runtime_error(to_hex_string(m_value) + " == nullptr");
         }
 
-        void is_less_than(const T& other) {
-            if (m_value > other)
-                throw std::runtime_error(to_hex_string(m_value) + " > " + to_hex_string(other));
+    private:
+        T m_value;
+    };
+
+    template <typename T>
+    class Asserter<T, typename std::enable_if<std::is_same_v<T, std::string> ||
+                                              std::is_same_v<T, const char*>>::type>
+    {
+    public:
+        Asserter(std::string_view value) : m_value(value.data(), value.size()) { }
+
+        void is_equal(const std::string& other) {
+            if (m_value != other)
+                throw std::runtime_error(m_value + " != " + other);
         }
 
-        void is_greater_than(const T& other) {
-            if (m_value < other)
-                throw std::runtime_error(to_hex_string(m_value) + " < " + to_hex_string(other));
+        void is_not_equal(const std::string& other) {
+            if (m_value == other)
+                throw std::runtime_error(m_value + " == " + other);
         }
 
     private:
-        T m_value;
+        std::string m_value;
     };
 
     template <typename T>
