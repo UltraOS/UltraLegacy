@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.6)
 
 project (UltraOSTests)
 
+set(CMAKE_BUILD_TYPE Debug)
+
 set(KERNEL_ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../Kernel")
 set(OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/bin")
 set(SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Source")
@@ -35,6 +37,7 @@ KERNEL_FILE(PATH "Memory" FILE "HeapAllocator.cpp")
 KERNEL_FILE(PATH "Memory" FILE "HeapAllocator.h")
 KERNEL_FILE(PATH "Common" FILE "Types.h")
 KERNEL_FILE(PATH "Common" FILE "DynamicArray.h")
+KERNEL_FILE(PATH "Common" FILE "String.h")
 KERNEL_FILE(PATH "Common" FILE "Memory.h")
 KERNEL_FILE(PATH "Common" FILE "Traits.h")
 KERNEL_FILE(PATH "Common" FILE "Utilities.h")
