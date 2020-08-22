@@ -51,26 +51,13 @@ public:
         return __atomic_fetch_sub(&m_value, value, static_cast<order_t>(order));
     }
 
-    T operator++()
-    {
-        return fetch_add(1) + 1;
-    }
+    T operator++() { return fetch_add(1) + 1; }
 
-    T operator++(int)
-    {
-        return fetch_add(1);
-    }
+    T operator++(int) { return fetch_add(1); }
 
+    T operator--() { return fetch_subtract(1) + 1; }
 
-    T operator--()
-    {
-        return fetch_subtract(1) + 1;
-    }
-
-    T operator--(int)
-    {
-        return fetch_subtract(1);
-    }
+    T operator--(int) { return fetch_subtract(1); }
 
     operator T() const volatile { return load(); }
 

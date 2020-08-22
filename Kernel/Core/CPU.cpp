@@ -13,6 +13,7 @@
 
 namespace kernel {
 
+Atomic<size_t>               CPU::s_alive_counter;
 DynamicArray<CPU::LocalData> CPU::s_processors;
 
 void CPU::initialize()
@@ -23,6 +24,8 @@ void CPU::initialize()
         LAPIC::timer().initialize_for_this_processor();
     } else
         s_processors.emplace(0);
+
+    ++s_alive_counter;
 }
 
 CPU::FLAGS CPU::flags()
@@ -75,31 +78,9 @@ void CPU::ap_entrypoint()
     Process::inititalize_for_this_processor();
     Interrupts::enable();
 
-    static size_t row    = 7;
-    auto          my_row = row++;
-    size_t        cycles = 0;
+    ++s_alive_counter;
 
-    char buf[4];
-    to_string(LAPIC::my_id(), buf, 4);
-
-    static constexpr u8 color = 0x3;
-
-    for (;;) {
-        auto offset = vga_log("Core ", my_row, 0, color);
-
-        offset = vga_log(buf, my_row, offset, color);
-        offset = vga_log(": working... [", my_row, offset, color);
-
-        static constexpr size_t number_length = 21;
-        char                    number[number_length];
-
-        if (to_string(++cycles, number, number_length))
-            offset = vga_log(number, my_row, offset, color);
-
-        offset = vga_log("] on core ", my_row, offset, color);
-
-        to_string(CPU::current().id(), number, number_length);
-        vga_log(number, my_row, offset, color);
-    }
+    for (;;)
+        hlt();
 }
 }

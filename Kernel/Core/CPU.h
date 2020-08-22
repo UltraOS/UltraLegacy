@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Common/Atomic.h"
 #include "Common/DynamicArray.h"
 #include "Common/String.h"
 #include "Common/Types.h"
@@ -33,6 +34,8 @@ public:
 
     static void start_all_processors();
 
+    static bool are_all_processors_alive() { return s_alive_counter == s_processors.size(); }
+
     class LocalData {
     public:
         LocalData(u32 id) : m_id(id) { }
@@ -61,6 +64,7 @@ private:
     static void ap_entrypoint() USED;
 
 private:
+    static Atomic<size_t> s_alive_counter;
     // replace with a hash map <id, processor>
     static DynamicArray<LocalData> s_processors;
 };
