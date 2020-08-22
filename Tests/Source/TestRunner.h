@@ -68,7 +68,7 @@ public:
     FailedAssertion(std::string_view message, std::string_view file, size_t line)
         : m_message(message), m_file(file), m_line(line) { }
 
-    const char* what() const override { return m_message.data(); }
+    const char* what() const noexcept override { return m_message.data(); }
     const std::string& file()    const { return m_file; }
     size_t line()                const { return m_line; }
 
