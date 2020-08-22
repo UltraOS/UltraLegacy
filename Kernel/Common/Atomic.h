@@ -41,6 +41,37 @@ public:
                                            static_cast<order_t>(MemoryOrder::ACQUIRE));
     }
 
+    T fetch_add(T value, MemoryOrder order = MemoryOrder::SEQ_CST) volatile
+    {
+        return __atomic_fetch_add(&m_value, value, static_cast<order_t>(order));
+    }
+
+    T fetch_subtract(T value, MemoryOrder order = MemoryOrder::SEQ_CST) volatile
+    {
+        return __atomic_fetch_sub(&m_value, value, static_cast<order_t>(order));
+    }
+
+    T operator++()
+    {
+        return fetch_add(1) + 1;
+    }
+
+    T operator++(int)
+    {
+        return fetch_add(1);
+    }
+
+
+    T operator--()
+    {
+        return fetch_subtract(1) + 1;
+    }
+
+    T operator--(int)
+    {
+        return fetch_subtract(1);
+    }
+
     operator T() const volatile { return load(); }
 
     T operator=(T value) volatile
