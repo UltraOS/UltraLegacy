@@ -6,13 +6,17 @@
 #include "Memory/HeapAllocator.h"
 #include "Memory/HeapAllocator.cpp"
 
-TEST(BigAllocations) {
+FIXTURE(InitializeHeapAllocator) {
     using namespace kernel;
 
     // 1 MB of heap size
     static constexpr size_t test_size = 1024 * 1024;
     void* memory = malloc(test_size);
     HeapAllocator::feed_block(memory, test_size);
+}
+
+TEST(BigAllocations) {
+    using namespace kernel;
 
     auto initial_available_bytes = HeapAllocator::s_heap_block->free_bytes();
     Assert::that(initial_available_bytes).is_not_equal(0);
