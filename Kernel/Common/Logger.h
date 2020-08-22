@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Core/DebugTerminal.h"
 #include "Core/IO.h"
 #include "Core/Runtime.h"
 
@@ -11,39 +12,36 @@
 
 namespace kernel {
 
-class Logger;
+class LogSink {
+public:
+    virtual void write(StringView string) = 0;
+    virtual ~LogSink()                    = default;
+};
+
+class E9LogSink : public LogSink {
+public:
+    static bool is_supported() { return IO::in8<0xE9>() == 0xE9; }
+
+    void write(StringView string) override
+    {
+        for (char c: string)
+            IO::out8<0xE9>(c);
+    }
+};
+
+class TerminalSink : public LogSink {
+public:
+    void write(StringView string) override
+    {
+        if (DebugTerminal::is_initialized())
+            DebugTerminal::the().write(string);
+    }
+};
 
 enum class format {
     as_dec,
     as_hex,
     as_address, // force format char* as address
-};
-
-class AutoLogger {
-public:
-    AutoLogger(Logger& logger, bool should_lock = true);
-    AutoLogger(AutoLogger&& logger);
-
-    AutoLogger& operator<<(const char* string);
-    AutoLogger& operator<<(StringView string);
-    AutoLogger& operator<<(bool value);
-    AutoLogger& operator<<(format option);
-    AutoLogger& operator<<(Address addr);
-
-    template <typename T>
-    enable_if_t<is_arithmetic_v<T>, AutoLogger&> operator<<(T number);
-
-    template <typename T>
-    enable_if_t<is_pointer_v<T>, AutoLogger&> operator<<(T pointer);
-
-    ~AutoLogger();
-
-private:
-    Logger& m_logger;
-    format  m_format { format::as_dec };
-    bool    m_should_terminate { true };
-    bool    m_interrupt_state { false };
-    bool    m_should_unlock;
 };
 
 class Logger {
@@ -52,186 +50,165 @@ public:
     static constexpr StringView warn_prefix  = "[\33[33mWARNING\033[0m] "_sv;
     static constexpr StringView error_prefix = "[\033[91mERROR\033[0m] "_sv;
 
-    virtual Logger& write(StringView text) = 0;
-
-    void lock(bool& interrupt_state) { m_lock.lock(interrupt_state); }
-    void unlock(bool interrupt_state) { m_lock.unlock(interrupt_state); }
-
-    virtual ~Logger() = default;
-
-private:
-    InterruptSafeSpinLock m_lock;
-};
-
-// Uses port 0xE9 to log
-class E9Logger final : public Logger {
-private:
-    constexpr static u8 log_port = 0xE9;
-
-public:
-    Logger& write(StringView string) override
+    static void initialize()
     {
-        for (char c: string)
-            IO::out8<log_port>(c);
+        ASSERT(s_sinks == nullptr);
+        ASSERT(s_write_lock == nullptr);
 
-        return s_instance;
+        s_sinks = new DynamicArray<LogSink*>(2);
+
+        if (E9LogSink::is_supported())
+            s_sinks->emplace(new E9LogSink());
+
+        s_sinks->emplace(new TerminalSink());
+
+        s_write_lock = new InterruptSafeSpinLock;
     }
 
-    static Logger& get() { return s_instance; }
+    static DynamicArray<LogSink*>& sinks()
+    {
+        ASSERT(s_sinks != nullptr);
+
+        return *s_sinks;
+    }
+
+    static InterruptSafeSpinLock& write_lock()
+    {
+        ASSERT(s_write_lock != nullptr);
+
+        return *s_write_lock;
+    }
+
+    void write(StringView string)
+    {
+        for (auto& sink: sinks())
+            sink->write(string);
+    }
+
+    Logger(bool should_lock = true) : m_should_unlock(should_lock)
+    {
+        if (should_lock)
+            write_lock().lock(m_interrupt_state);
+    }
+
+    Logger(Logger&& other) : m_interrupt_state(other.m_interrupt_state), m_should_unlock(other.m_should_unlock)
+    {
+        other.m_should_terminate = false;
+    }
+
+    Logger& operator<<(const char* string) { return this->operator<<(StringView(string)); }
+
+    Logger& operator<<(StringView string)
+    {
+        if (m_format == format::as_address)
+            return this->operator<<(reinterpret_cast<const void*>(string.data()));
+
+        write(string);
+
+        return *this;
+    }
+
+    Logger& operator<<(format option)
+    {
+        m_format = option;
+
+        return *this;
+    }
+
+    Logger& operator<<(bool value)
+    {
+        if (value)
+            write("true");
+        else
+            write("false");
+
+        return *this;
+    }
+
+    inline Logger& operator<<(Address addr) { return *this << addr.as_pointer<void>(); }
+
+    template <typename T>
+    enable_if_t<is_arithmetic_v<T>, Logger&> operator<<(T number)
+    {
+        constexpr size_t max_number_size = 21;
+
+        char number_as_string[max_number_size];
+
+        if (m_format == format::as_hex && to_hex_string(number, number_as_string, max_number_size))
+            write(number_as_string);
+        else if (to_string(number, number_as_string, max_number_size))
+            write(number_as_string);
+        else
+            write("<INVALID NUMBER>");
+
+        return *this;
+    }
+
+    template <typename T>
+    enable_if_t<is_pointer_v<T>, Logger&> operator<<(T pointer)
+    {
+        constexpr size_t max_number_size = 21;
+
+        char number_as_string[max_number_size];
+
+        // pointers should always be hex
+        if (to_hex_string(reinterpret_cast<ptr_t>(pointer), number_as_string, max_number_size))
+            write(number_as_string);
+        else
+            write("<INVALID NUMBER>");
+
+        return *this;
+    }
+
+    ~Logger()
+    {
+        if (m_should_terminate) {
+            write("\n");
+
+            if (m_should_unlock)
+                write_lock().unlock(m_interrupt_state);
+        }
+    }
 
 private:
-    static E9Logger s_instance;
+    format m_format { format::as_dec };
+    bool   m_should_terminate { true };
+    bool   m_interrupt_state { false };
+    bool   m_should_unlock;
+
+    static inline DynamicArray<LogSink*>* s_sinks;
+    static inline InterruptSafeSpinLock*  s_write_lock;
 };
 
-inline E9Logger E9Logger::s_instance;
-
-inline AutoLogger::AutoLogger(Logger& logger, bool should_lock) : m_logger(logger), m_should_unlock(should_lock)
+inline Logger info()
 {
-    if (should_lock)
-        m_logger.lock(m_interrupt_state);
-}
+    Logger logger;
 
-inline AutoLogger::AutoLogger(AutoLogger&& other)
-    : m_logger(other.m_logger), m_interrupt_state(other.m_interrupt_state), m_should_unlock(other.m_should_unlock)
-{
-    other.m_should_terminate = false;
-}
-
-inline AutoLogger& AutoLogger::operator<<(const char* string)
-{
-    return this->operator<<(StringView(string));
-}
-
-inline AutoLogger& AutoLogger::operator<<(StringView string)
-{
-    if (m_format == format::as_address)
-        return this->operator<<(reinterpret_cast<const void*>(string.data()));
-
-    m_logger.write(string);
-
-    return *this;
-}
-
-inline AutoLogger& AutoLogger::operator<<(format option)
-{
-    m_format = option;
-
-    return *this;
-}
-
-inline AutoLogger& AutoLogger::operator<<(bool value)
-{
-    if (value)
-        m_logger.write("true");
-    else
-        m_logger.write("false");
-
-    return *this;
-}
-
-inline AutoLogger& AutoLogger::operator<<(Address addr)
-{
-    return *this << addr.as_pointer<void>();
-}
-
-template <typename T>
-enable_if_t<is_arithmetic_v<T>, AutoLogger&> AutoLogger::operator<<(T number)
-{
-    constexpr size_t max_number_size = 21;
-
-    char number_as_string[max_number_size];
-
-    if (m_format == format::as_hex && to_hex_string(number, number_as_string, max_number_size))
-        m_logger.write(number_as_string);
-    else if (to_string(number, number_as_string, max_number_size))
-        m_logger.write(number_as_string);
-    else
-        m_logger.write("<INVALID NUMBER>");
-
-    return *this;
-}
-
-template <typename T>
-enable_if_t<is_pointer_v<T>, AutoLogger&> AutoLogger::operator<<(T pointer)
-{
-    constexpr size_t max_number_size = 21;
-
-    char number_as_string[max_number_size];
-
-    // pointers should always be hex
-    if (to_hex_string(reinterpret_cast<ptr_t>(pointer), number_as_string, max_number_size))
-        m_logger.write(number_as_string);
-    else
-        m_logger.write("<INVALID NUMBER>");
-
-    return *this;
-}
-
-inline AutoLogger::~AutoLogger()
-{
-    if (m_should_terminate) {
-        m_logger.write("\n");
-
-        if (m_should_unlock)
-            m_logger.unlock(m_interrupt_state);
-    }
-}
-
-inline AutoLogger info()
-{
-    AutoLogger logger(E9Logger::get());
-
-    logger << Logger::info_prefix;
+    logger.write(Logger::info_prefix);
 
     return logger;
 }
 
-inline AutoLogger warning()
+inline Logger warning()
 {
-    AutoLogger logger(E9Logger::get());
+    Logger logger;
 
-    logger << Logger::warn_prefix;
+    logger.write(Logger::warn_prefix);
 
     return logger;
 }
 
-inline AutoLogger log()
+inline Logger error()
+{
+    Logger logger(false);
+
+    logger.write(Logger::error_prefix);
+
+    return logger;
+}
+
+inline Logger log()
 {
     return info();
 }
-
-inline Address vga_log(StringView string, size_t row, size_t column, u8 color)
-{
-    static constexpr size_t vga_columns        = 80;
-    static constexpr size_t vga_bytes_per_char = 2;
-    static constexpr ptr_t  vga_address        = 0xB8000;
-#ifdef ULTRA_32
-    static constexpr ptr_t linear_vga_address = 3 * GB + vga_address;
-#elif defined(ULTRA_64)
-    static constexpr ptr_t linear_vga_address = 0xFFFF800000000000 + vga_address;
-#endif
-
-    ptr_t initial_memory = linear_vga_address + vga_columns * vga_bytes_per_char * row;
-
-    u16* memory = reinterpret_cast<u16*>(linear_vga_address + vga_columns * vga_bytes_per_char * row + column);
-
-    for (char c: string) {
-        u16 colored_char = c;
-        colored_char |= color << 8;
-
-        *(memory++) = colored_char;
-    }
-
-    return reinterpret_cast<ptr_t>(memory) - initial_memory;
-};
-
-inline AutoLogger error()
-{
-    AutoLogger logger(E9Logger::get(), false);
-
-    logger << Logger::error_prefix;
-
-    return logger;
-}
-
 }

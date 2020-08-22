@@ -8,7 +8,6 @@ section .text
 ; void Scheduler::switch_task(Thread::ControlBlock* new_task)
 global switch_task
 switch_task:
-    xchg bx, bx
     ; load the new task esp
     mov esi, [esp + 4]
     mov esp, [esi]

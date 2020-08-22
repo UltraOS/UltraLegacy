@@ -20,9 +20,7 @@ void ensure_loaded_correctly()
 {
     // Global constructors are not yet called so we cannot use log()
     // instead, just create a temporary logger here
-    // Also... TODO: fix this
-    E9Logger logger;
-    AutoLogger pre_init_logger(logger, false);
+    E9LogSink e9s;
 
     if (magic_string[0]  == 'M' &&
         magic_string[1]  == 'A' &&
@@ -36,12 +34,16 @@ void ensure_loaded_correctly()
         magic_string[9]  == 'S' &&
         magic_string[10] == 'E' &&
         magic_string[11] == 'N' &&
-        magic_string[12] == 'T')
-        pre_init_logger << Logger::info_prefix << "Runtime: Magic test passed!";
-    else {
-        pre_init_logger << Logger::error_prefix
-                        << "Runtime: Magic test failed! magic_string="
-                        << format::as_address << magic_string;
+        magic_string[12] == 'T') {
+        if (e9s.is_supported())  {
+            e9s.write(Logger::info_prefix);
+            e9s.write("Runtime: Magic test passed!\n");
+        }
+    } else {
+        if (e9s.is_supported())  {
+            e9s.write(Logger::error_prefix);
+            e9s.write("Runtime: Magic test failed!\n");
+        }
         hang();
     }
 }

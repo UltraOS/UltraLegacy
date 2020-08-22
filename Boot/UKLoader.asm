@@ -85,8 +85,7 @@ start:
     mov es, ax
     retrieve_memory_map memory_map_ptr, memory_map.entry_count
 
-    ; NOT YET
-    ; set_video_mode 1024, 768, 24
+    set_video_mode 1024, 768, 24
 
     %ifdef ULTRA_64
 
@@ -377,7 +376,7 @@ vbe_mode_info:
     .green_mask:              db 0
     .green_position:          db 0
     .blue_mask:               db 0
-    .blue_positon:            db 0
+    .blue_position:           db 0
     .reserved_mask:           db 0
     .reserved_position:       db 0
     .direct_color_attributes: db 0
