@@ -90,18 +90,12 @@ public:
 
     using time_t = u64;
 
-    static void vga_write_time();
-
     static bool is_leap_year(u16 year);
     static u32  days_in_years_since_epoch_before(u16 current_year);
     static u32  days_in_months_since_start_of(u16 year, Month current);
     static u8   days_in_month(Month, u16 of_year);
 
-    static void set(u64 now)
-    {
-        s_now = now;
-        vga_write_time();
-    }
+    static void set(u64 now) { s_now = now; }
 
     static void increment_by(u64 ns)
     {

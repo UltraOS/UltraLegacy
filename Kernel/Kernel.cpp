@@ -1,10 +1,12 @@
 #include "Common/Conversions.h"
 #include "Common/Logger.h"
 #include "Common/Types.h"
+#include "Core/Boot.h"
 #include "Core/CPU.h"
+#include "Core/DebugTerminal.h"
 #include "Core/GDT.h"
 #include "Core/Runtime.h"
-#include "Core/Boot.h"
+#include "Drivers/Video/VideoDevice.h"
 #include "Interrupts/ExceptionDispatcher.h"
 #include "Interrupts/IDT.h"
 #include "Interrupts/IPICommunicator.h"
@@ -22,39 +24,8 @@
 
 namespace kernel {
 
-void dummy_kernel_process()
-{
-    static auto           cycles = 0;
-    static constexpr u8   color  = 0xE;
-    static constexpr auto column = 4;
-
-    for (;;) {
-        auto offset = vga_log("Second process: working... [", column, 0, color);
-
-        static constexpr size_t number_length = 21;
-        char                    number[number_length];
-
-        if (to_string(++cycles, number, number_length))
-            offset = vga_log(number, column, offset, color);
-
-        offset = vga_log("] on core ", 4, offset, color);
-
-        to_string(CPU::current().id(), number, number_length);
-        vga_log(number, 4, offset, color);
-
-        sleep::for_seconds(1);
-    }
-}
-
-void userland_process()
-{
-    char user_string[] = { "syscall test" };
-
-    while (true) {
-        asm("int $0x80" : : "a"(1), "b"(user_string) : "memory");
-        asm("int $0x80" : : "a"(0), "b"(99) : "memory");
-    }
-}
+void dummy_kernel_process();
+void userland_process();
 
 void run(Context* context)
 {
@@ -62,7 +33,15 @@ void run(Context* context)
 
     HeapAllocator::initialize();
 
+    Logger::initialize();
+
     runtime::init_global_objects();
+
+#ifdef ULTRA_64
+    VideoDevice::discover_and_setup(context->video_mode);
+
+    DebugTerminal::initialize();
+#endif
 
     MemoryManager::inititalize(context->memory_map);
 
@@ -87,9 +66,20 @@ void run(Context* context)
 
     Scheduler::inititalize();
 
+#ifdef ULTRA_32 // x86 kernel requires memory manager & CPU to be alive before initializing the framebuffer
+    VideoDevice::discover_and_setup(context->video_mode);
+
+    DebugTerminal::initialize();
+#endif
+
     IDT::the().install();
 
+    Process::create_supervisor(dummy_kernel_process);
+
     CPU::start_all_processors();
+
+    while (!CPU::are_all_processors_alive())
+        ;
 
     RTC::synchronize_system_clock();
 
@@ -115,26 +105,26 @@ void run(Context* context)
 #else
     Process::create(0x0000F000);
 #endif
-
     // ----------------------------------------- //
 
-    static auto           cycles = 0;
-    static constexpr u8   color  = 0x4;
-    static constexpr auto row    = 3;
+    for (;;)
+        hlt();
+}
 
+void dummy_kernel_process()
+{
     for (;;) {
-        auto offset = vga_log("Main process: working... [", row, 0, color);
+        sleep::for_seconds(1);
+    }
+}
 
-        static constexpr size_t number_length = 21;
-        char                    number[number_length];
+void userland_process()
+{
+    char user_string[] = { "syscall test" };
 
-        if (to_string(++cycles, number, number_length))
-            offset = vga_log(number, row, offset, color);
-
-        offset = vga_log("] on core ", row, offset, color);
-
-        to_string(CPU::current().id(), number, number_length);
-        vga_log(number, row, offset, color);
+    while (true) {
+        asm("int $0x80" : : "a"(1), "b"(user_string) : "memory");
+        asm("int $0x80" : : "a"(0), "b"(99) : "memory");
     }
 }
 }
