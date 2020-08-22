@@ -18,8 +18,11 @@ public:
 
     virtual void draw_at(size_t x, size_t y, RGBA pixel) = 0;
 
-    virtual size_t width()  const = 0;
-    virtual size_t height() const = 0;
+    virtual Address framebuffer()  = 0;
+    virtual size_t  width() const  = 0;
+    virtual size_t  height() const = 0;
+    virtual size_t  bpp() const    = 0;
+    virtual size_t  pitch() const  = 0;
 
     static void discover_and_setup(const VideoMode&);
 

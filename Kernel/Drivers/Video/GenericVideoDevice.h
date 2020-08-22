@@ -15,8 +15,11 @@ public:
 
     void draw_at(size_t x, size_t y, RGBA pixel) override;
 
-    size_t width()  const override { return m_mode.width; }
-    size_t height() const override { return m_mode.height; }
+    Address framebuffer() { return m_mode.framebuffer; }
+    size_t  bpp() const override { return m_mode.pitch; }
+    size_t  pitch() const override { return m_mode.pitch; }
+    size_t  width() const override { return m_mode.width; }
+    size_t  height() const override { return m_mode.height; }
 
 private:
     VideoMode m_mode;

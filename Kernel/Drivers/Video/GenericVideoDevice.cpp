@@ -1,16 +1,15 @@
+#include "GenericVideoDevice.h"
 #include "Common/Logger.h"
 #include "Common/Math.h"
-#include "GenericVideoDevice.h"
 #include "Memory/AddressSpace.h"
 
 namespace kernel {
 
-GenericVideoDevice::GenericVideoDevice(const VideoMode& video_mode)
-    : m_mode(video_mode)
+GenericVideoDevice::GenericVideoDevice(const VideoMode& video_mode) : m_mode(video_mode)
 {
-    #ifdef ULTRA_32
+#ifdef ULTRA_32
     auto bytes_to_allocate = m_mode.pitch * m_mode.height;
-    auto pages = ceiling_divide(bytes_to_allocate, Page::size);
+    auto pages             = ceiling_divide(bytes_to_allocate, Page::size);
 
     log() << "GenericVideoDevice: allocating " << pages * Page::size << " bytes for the framebuffer...";
 
@@ -22,10 +21,9 @@ GenericVideoDevice::GenericVideoDevice(const VideoMode& video_mode)
     }
 
     m_mode.framebuffer = range.begin();
-    #endif
+#endif
 
-    log() << "Initialized \"" << name() << "\": " << width()
-          << "x" << height() << " @ " << m_mode.bpp << " bpp";
+    log() << "Initialized \"" << name() << "\": " << width() << "x" << height() << " @ " << m_mode.bpp << " bpp";
 }
 
 void GenericVideoDevice::draw_at(size_t x, size_t y, RGBA pixel)
