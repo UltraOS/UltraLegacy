@@ -1,6 +1,6 @@
 #include "VirtualAllocator.h"
 
-#define VIRTUAL_ALLOCATOR_DEBUG
+// #define VIRTUAL_ALLOCATOR_DEBUG
 
 namespace kernel {
 

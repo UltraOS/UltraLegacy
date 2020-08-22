@@ -175,10 +175,9 @@ private:
     {
         if (other.is_small()) {
             construct_from(other.data(), other.size());
-            other.at(0) = '\0';
+            other.at(0)  = '\0';
             other.m_size = 0;
-        }
-        else {
+        } else {
             if (is_small())
                 m_big_string = {};
 

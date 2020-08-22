@@ -253,8 +253,10 @@ void LAPIC::start_processor(u8 id)
         // allow the ap to boot further
         *ap_acknowledegd = true;
 
-    } else
+    } else {
         error() << "LAPIC: Application processor " << id << " failed to start after 2 SIPIs";
+        hang();
+    }
 
     ::kernel::Timer::the().unlock(interrupt_state);
 }

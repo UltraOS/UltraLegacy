@@ -2,7 +2,7 @@
 #include "MemoryManager.h"
 #include "Page.h"
 
-#define PHYSICAL_REGION_DEBUG
+// #define PHYSICAL_REGION_DEBUG
 
 namespace kernel {
 

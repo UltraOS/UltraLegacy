@@ -8,7 +8,7 @@
 #include "MemoryManager.h"
 #include "VirtualAllocator.h"
 
-#define ADDRESS_SPACE_DEBUG
+// #define ADDRESS_SPACE_DEBUG
 
 namespace kernel {
 
