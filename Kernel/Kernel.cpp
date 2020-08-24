@@ -3,10 +3,10 @@
 #include "Common/Types.h"
 #include "Core/Boot.h"
 #include "Core/CPU.h"
-#include "Core/DebugTerminal.h"
 #include "Core/GDT.h"
 #include "Core/Runtime.h"
 #include "Drivers/Video/VideoDevice.h"
+#include "GUI/Compositor.h"
 #include "Interrupts/ExceptionDispatcher.h"
 #include "Interrupts/IDT.h"
 #include "Interrupts/IPICommunicator.h"
@@ -37,12 +37,6 @@ void run(Context* context)
 
     runtime::init_global_objects();
 
-#ifdef ULTRA_64
-    VideoDevice::discover_and_setup(context->video_mode);
-
-    DebugTerminal::initialize();
-#endif
-
     MemoryManager::inititalize(context->memory_map);
 
     AddressSpace::inititalize();
@@ -66,15 +60,9 @@ void run(Context* context)
 
     Scheduler::inititalize();
 
-#ifdef ULTRA_32 // x86 kernel requires memory manager & CPU to be alive before initializing the framebuffer
-    VideoDevice::discover_and_setup(context->video_mode);
-
-    DebugTerminal::initialize();
-#endif
-
     IDT::the().install();
 
-    Process::create_supervisor(dummy_kernel_process);
+    VideoDevice::discover_and_setup(context->video_mode);
 
     CPU::start_all_processors();
 
@@ -84,6 +72,8 @@ void run(Context* context)
     RTC::synchronize_system_clock();
 
     Interrupts::enable();
+
+    Process::create_supervisor(&Compositor::run);
 
     // ---> SCHEDULER TESTING AREA
     // ----------------------------------------- //

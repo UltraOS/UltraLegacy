@@ -32,7 +32,8 @@ FILE(GLOB CPP_FILES "${PROJECT_SOURCE_DIR}/*cpp"               "${PROJECT_SOURCE
                     "${PROJECT_SOURCE_DIR}/Multitasking/*cpp"  "${PROJECT_SOURCE_DIR}/Multitasking/*h"
                     "${PROJECT_SOURCE_DIR}/Time/*cpp"          "${PROJECT_SOURCE_DIR}/Time/*h"
                     "${PROJECT_SOURCE_DIR}/Drivers/*cpp"       "${PROJECT_SOURCE_DIR}/Drivers/*h"
-                    "${PROJECT_SOURCE_DIR}/Drivers/Video/*cpp" "${PROJECT_SOURCE_DIR}/Drivers/Video/*h")
+                    "${PROJECT_SOURCE_DIR}/Drivers/Video/*cpp" "${PROJECT_SOURCE_DIR}/Drivers/Video/*h"
+                    "${PROJECT_SOURCE_DIR}/GUI/*cpp"           "${PROJECT_SOURCE_DIR}/GUI/*h")
 
 
 FILE(GLOB ASM_FILES "${PROJECT_SOURCE_DIR}/Architecture/${ARCH_FOLDER}/*asm")
