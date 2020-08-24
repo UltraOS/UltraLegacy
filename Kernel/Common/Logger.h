@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Core/DebugTerminal.h"
 #include "Core/IO.h"
 #include "Core/Runtime.h"
 
@@ -29,15 +28,6 @@ public:
     }
 };
 
-class TerminalSink : public LogSink {
-public:
-    void write(StringView string) override
-    {
-        if (DebugTerminal::is_initialized())
-            DebugTerminal::the().write(string);
-    }
-};
-
 enum class format {
     as_dec,
     as_hex,
@@ -55,12 +45,10 @@ public:
         ASSERT(s_sinks == nullptr);
         ASSERT(s_write_lock == nullptr);
 
-        s_sinks = new DynamicArray<LogSink*>(2);
+        s_sinks = new DynamicArray<LogSink*>(1);
 
         if (E9LogSink::is_supported())
             s_sinks->emplace(new E9LogSink());
-
-        s_sinks->emplace(new TerminalSink());
 
         s_write_lock = new InterruptSafeSpinLock;
     }
