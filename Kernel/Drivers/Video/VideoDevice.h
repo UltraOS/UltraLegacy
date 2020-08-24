@@ -12,11 +12,12 @@ class VideoDevice : public Device {
 public:
     Type type() const override { return Type::VIDEO; }
 
-    // void fill_rect();
     // void blit();
     // draw_bitmap()
 
-    virtual void draw_at(size_t x, size_t y, RGBA pixel) = 0;
+    virtual void fill_rect(const Rect&, Color color)                                                = 0;
+    virtual void draw_at(size_t x, size_t y, Color pixel)                                           = 0;
+    virtual void draw_char(Pair<size_t, size_t> top_left, char, Color char_color, Color fill_color) = 0;
 
     virtual Address framebuffer()  = 0;
     virtual size_t  width() const  = 0;
