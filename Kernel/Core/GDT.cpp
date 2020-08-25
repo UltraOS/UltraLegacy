@@ -125,7 +125,7 @@ GDT::entry& GDT::new_entry()
     }
 
     m_active_entries++;
-    m_pointer.size += sizeof(entry);
+    m_pointer.size = sizeof(entry) * m_active_entries - 1;
 
     return m_entries[m_active_entries - 1];
 }
@@ -139,7 +139,7 @@ GDT::tss_entry& GDT::new_tss_entry()
     }
 
     m_active_entries += 2;
-    m_pointer.size += sizeof(tss_entry);
+    m_pointer.size = sizeof(entry) * m_active_entries - 1;
 
     return *reinterpret_cast<tss_entry*>(&m_entries[m_active_entries - 2]);
 }
@@ -162,8 +162,6 @@ void GDT::create_descriptor(u32 base, u32 size, access_attributes access, flag_a
 
 void GDT::install()
 {
-    m_pointer.size -= 1;
-
     asm volatile("lgdt %0\n"
 
 #ifdef ULTRA_32
@@ -197,7 +195,5 @@ void GDT::install()
                    "r"(static_cast<ptr_t>(kernel_data_selector())),
                    "r"(static_cast<ptr_t>(kernel_code_selector()))
                  : "memory");
-
-    m_pointer.size += 1;
 }
 }
