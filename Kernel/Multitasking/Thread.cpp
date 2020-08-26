@@ -4,7 +4,7 @@
 
 namespace kernel {
 
-u32 Thread::s_next_thread_id;
+Atomic<u32> Thread::s_next_thread_id;
 
 void Thread::initialize()
 {

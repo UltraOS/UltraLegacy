@@ -89,7 +89,6 @@ private:
     Thread*       m_previous { nullptr };
     Thread*       m_next { nullptr };
 
-    // TODO: this should be atomic
-    static u32 s_next_thread_id;
+    static Atomic<u32> s_next_thread_id;
 };
 }
