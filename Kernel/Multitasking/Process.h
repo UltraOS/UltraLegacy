@@ -34,6 +34,7 @@ private:
     bool                         m_is_supervisor { false };
     DynamicArray<RefPtr<Thread>> m_threads;
 
-    static u32 s_next_process_id;
+    static Atomic<u32>           s_next_process_id;
+    static InterruptSafeSpinLock s_lock;
 };
 }

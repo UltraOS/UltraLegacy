@@ -8,16 +8,20 @@
 
 namespace kernel {
 
-u32 Process::s_next_process_id;
+Atomic<u32>           Process::s_next_process_id;
+InterruptSafeSpinLock Process::s_lock;
 
 RefPtr<Process> Process::create(Address entrypoint, bool autoregister)
 {
-    Interrupts::ScopedDisabler d;
+    bool interrupt_state = false;
+    s_lock.lock(interrupt_state);
 
     RefPtr<Process> process = new Process(entrypoint);
 
     if (autoregister)
         Scheduler::the().register_process(process);
+
+    s_lock.unlock(interrupt_state);
 
     return process;
 }
@@ -26,15 +30,24 @@ RefPtr<Process> Process::create(Address entrypoint, bool autoregister)
 //       e.g Process::create_supervious and Thread::create_supervisor_thread
 RefPtr<Process> Process::create_supervisor(Address entrypoint)
 {
+    bool interrupt_state = false;
+    s_lock.lock(interrupt_state);
+
     Interrupts::ScopedDisabler d;
 
     RefPtr<Process> process = new Process(entrypoint, true);
     Scheduler::the().register_process(process);
+
+    s_lock.unlock(interrupt_state);
+
     return process;
 }
 
 void Process::inititalize_for_this_processor()
 {
+    bool interrupt_state = false;
+    s_lock.lock(interrupt_state);
+
     // Create the initial idle proccess for this core
     RefPtr<Process> idle_process = new Process();
 
@@ -62,6 +75,8 @@ void Process::inititalize_for_this_processor()
     // enqueue if needed
     if (last_picked)
         Scheduler::enqueue_thread(*idle_thread);
+
+    s_lock.unlock(interrupt_state);
 }
 
 void Process::commit()
