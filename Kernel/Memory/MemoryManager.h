@@ -130,7 +130,7 @@ private:
 private:
     static MemoryManager* s_instance;
 
-    InterruptSafeSpinLock m_lock;
+    RecursiveInterruptSafeSpinLock m_lock;
 
     DynamicArray<PhysicalRegion> m_physical_regions;
 

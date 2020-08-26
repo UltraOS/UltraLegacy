@@ -107,6 +107,8 @@ private:
     RefPtr<Page>               m_main_page;
     VirtualAllocator           m_allocator;
 
+    RecursiveInterruptSafeSpinLock m_lock;
+
     static AddressSpace* s_of_kernel;
 };
 }

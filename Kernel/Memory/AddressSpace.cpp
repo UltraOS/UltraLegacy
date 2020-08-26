@@ -141,7 +141,8 @@ void AddressSpace::map_page(Address virtual_address, Address physical_address, b
     ASSERT_PAGE_ALIGNED(virtual_address);
     ASSERT_PAGE_ALIGNED(physical_address);
 
-    Interrupts::ScopedDisabler d;
+    bool interrupt_state = false;
+    m_lock.lock(interrupt_state);
 
     auto  indices          = virtual_address_as_paging_indices(virtual_address);
     auto& page_table_index = indices.left();
@@ -151,7 +152,6 @@ void AddressSpace::map_page(Address virtual_address, Address physical_address, b
 #ifdef ADDRESS_SPACE_DEBUG
         log() << "AddressSpace: tried to access a non-present table " << page_table_index << ", allocating...";
 #endif
-
         auto page = m_physical_pages.emplace(MemoryManager::the().allocate_page());
         map_page_directory_entry(page_table_index, page->address(), is_supervisor);
     }
@@ -161,7 +161,6 @@ void AddressSpace::map_page(Address virtual_address, Address physical_address, b
           << " at table:" << page_table_index << " entry:" << page_entry_index << " is_supervisor:" << is_supervisor;
     ;
 #endif
-
     auto& entry = pt_at(page_table_index).entry_at(page_entry_index).set_physical_address(physical_address);
 
     if (is_supervisor)
@@ -170,10 +169,15 @@ void AddressSpace::map_page(Address virtual_address, Address physical_address, b
         entry.make_user_present();
 
     flush_at(virtual_address);
+
+    m_lock.unlock(interrupt_state);
 }
 #elif defined(ULTRA_64)
 void AddressSpace::map_page(Address virtual_address, Address physical_address, bool is_supervisor)
 {
+    bool interrupt_state = false;
+    m_lock.lock(interrupt_state);
+
     ASSERT_PAGE_ALIGNED(virtual_address);
     ASSERT_PAGE_ALIGNED(physical_address);
 
@@ -234,6 +238,8 @@ void AddressSpace::map_page(Address virtual_address, Address physical_address, b
         page_entry.make_supervisor_present();
     else
         page_entry.make_user_present();
+
+    m_lock.unlock(interrupt_state);
 }
 
 void AddressSpace::map_huge_page(Address virtual_address, Address physical_address, bool is_supervisor)
@@ -350,7 +356,12 @@ void AddressSpace::map_supervisor_page(Address virtual_address, const Page& phys
 
 void AddressSpace::store_physical_page(RefPtr<Page> page)
 {
+    bool interrupt_state = false;
+    m_lock.lock(interrupt_state);
+
     m_physical_pages.append(page);
+
+    m_lock.unlock(interrupt_state);
 }
 
 #ifdef ULTRA_32
@@ -358,6 +369,9 @@ void AddressSpace::unmap_page(Address virtual_address)
 {
     ASSERT(is_active());
     ASSERT_PAGE_ALIGNED(virtual_address);
+
+    bool interrupt_state = false;
+    m_lock.lock(interrupt_state);
 
     const auto indices          = virtual_address_as_paging_indices(virtual_address);
     auto&      page_table_index = indices.left();
@@ -369,11 +383,16 @@ void AddressSpace::unmap_page(Address virtual_address)
 
     pt_at(page_table_index).entry_at(page_entry_index).set_present(false);
     flush_at(virtual_address);
+
+    m_lock.unlock(interrupt_state);
 }
 #elif defined(ULTRA_64)
 void AddressSpace::unmap_page(Address virtual_address)
 {
     ASSERT_PAGE_ALIGNED(virtual_address);
+
+    bool interrupt_state = false;
+    m_lock.lock(interrupt_state);
 
     const auto indices = virtual_address_as_paging_indices(virtual_address);
 
@@ -388,6 +407,8 @@ void AddressSpace::unmap_page(Address virtual_address)
         .set_present(false);
 
     flush_at(virtual_address);
+
+    m_lock.unlock(interrupt_state);
 }
 #endif
 
