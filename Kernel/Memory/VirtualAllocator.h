@@ -64,5 +64,7 @@ private:
 
     DynamicArray<Range> m_free_ranges;
     DynamicArray<Range> m_allocated_ranges;
+
+    InterruptSafeSpinLock m_lock;
 };
 }
