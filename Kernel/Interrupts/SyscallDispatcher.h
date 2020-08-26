@@ -13,7 +13,7 @@ public:
     static constexpr u32 exit      = 0;
     static constexpr u32 debug_log = 1;
 
-    static void initialize();
+    static void install();
     static void dispatch(RegisterState*) USED;
 };
 }

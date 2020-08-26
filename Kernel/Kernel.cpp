@@ -37,37 +37,29 @@ void run(Context* context)
 
     runtime::init_global_objects();
 
-    MemoryManager::inititalize(context->memory_map);
-
-    AddressSpace::inititalize();
-
-    InterruptController::discover_and_setup();
-
     GDT::the().create_basic_descriptors();
     GDT::the().install();
 
+    // IDT-related stuff
     ExceptionDispatcher::install();
-
     IRQManager::install();
+    SyscallDispatcher::install();
+    IPICommunicator::install();
+    IDT::the().install();
 
-    SyscallDispatcher::initialize();
+    // Memory-related stuff
+    MemoryManager::inititalize(context->memory_map);
+    AddressSpace::inititalize();
 
-    IPICommunicator::initialize();
-
+    InterruptController::discover_and_setup();
     Timer::discover_and_setup();
-
     CPU::initialize();
 
     Scheduler::inititalize();
 
-    IDT::the().install();
-
     VideoDevice::discover_and_setup(context->video_mode);
 
     CPU::start_all_processors();
-
-    while (!CPU::are_all_processors_alive())
-        ;
 
     RTC::synchronize_system_clock();
 
@@ -85,7 +77,7 @@ void run(Context* context)
     // yes we're literally copying a function :D
     copy_memory(reinterpret_cast<void*>(userland_process), reinterpret_cast<void*>(0x0000F000), 1024);
 
-// x86 PM cannot modify non-active paging structures directly, whereas x86-64 can
+// The x86 kernel cannot modify non-active paging structures directly, whereas x86-64 can
 // so for x86-64 we map it right here, whereas for 32 bit mode we map it in the AddressSpace::initialize
 // as a hack to make ring 3 work without a proper loader, purely for testing purposes.
 #ifdef ULTRA_64

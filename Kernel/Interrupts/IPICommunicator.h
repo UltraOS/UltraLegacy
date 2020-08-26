@@ -11,7 +11,7 @@ class IPICommunicator {
 public:
     static constexpr u16 vector_number = 254;
 
-    static void initialize();
+    static void install();
 
     static void send_ipi(u8 dest);
 

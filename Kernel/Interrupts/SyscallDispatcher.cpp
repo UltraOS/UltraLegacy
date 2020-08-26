@@ -9,7 +9,7 @@ namespace kernel {
 
 extern "C" void syscall_handler();
 
-void SyscallDispatcher::initialize()
+void SyscallDispatcher::install()
 {
     IDT::the().register_user_interrupt_handler(syscall_index, &syscall_handler);
 }

@@ -51,8 +51,11 @@ void CPU::start_all_processors()
     for (auto processor_id: InterruptController::smp_data().application_processor_apic_ids)
         s_processors.emplace(processor_id);
 
-    for (auto processor_id: InterruptController::smp_data().application_processor_apic_ids)
+    for (auto processor_id: InterruptController::smp_data().application_processor_apic_ids) {
+        size_t old_alive_counter = s_alive_counter;
         LAPIC::start_processor(processor_id);
+        while (old_alive_counter == s_alive_counter);
+    }
 }
 
 CPU::LocalData& CPU::current()
@@ -76,9 +79,10 @@ void CPU::ap_entrypoint()
     LAPIC::initialize_for_this_processor();
     LAPIC::timer().initialize_for_this_processor();
     Process::inititalize_for_this_processor();
-    Interrupts::enable();
 
     ++s_alive_counter;
+
+    Interrupts::enable();
 
     for (;;)
         hlt();

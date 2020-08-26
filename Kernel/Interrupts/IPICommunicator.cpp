@@ -10,7 +10,7 @@ extern "C" void ipi_handler();
 
 namespace kernel {
 
-void IPICommunicator::initialize()
+void IPICommunicator::install()
 {
     IDT::the().register_interrupt_handler(vector_number, &ipi_handler);
 }
