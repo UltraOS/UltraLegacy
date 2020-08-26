@@ -34,7 +34,7 @@ public:
 
     static void start_all_processors();
 
-    static bool are_all_processors_alive() { return s_alive_counter == s_processors.size(); }
+    static bool is_initialized() { return s_processors.size() > 0; }
 
     class LocalData {
     public:

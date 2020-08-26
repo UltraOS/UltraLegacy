@@ -57,7 +57,13 @@ public:
 
     void lock()
     {
-        auto this_cpu = CPU::current().id();
+        u32 this_cpu;
+
+        // a hack to make recursive spinlock work before initializing the APIC
+        if (CPU::is_initialized())
+            this_cpu = CPU::current().id();
+        else
+            this_cpu = 0;
 
         lock_t expected = unlocked;
 
