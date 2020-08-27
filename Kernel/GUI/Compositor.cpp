@@ -11,20 +11,36 @@ namespace kernel {
 void Compositor::run()
 {
     auto desktop_height = VideoDevice::the().height() * 97 / 100;
-    auto bar_height     = VideoDevice::the().height() - desktop_height;
+    auto taskbar_height = VideoDevice::the().height() - desktop_height;
 
-    Color color { 0x8d, 0x26, 0x64 };
-    VideoDevice::the().fill_rect(Rect(0, 0, VideoDevice::the().width(), desktop_height), { 0x2d, 0x2d, 0x2d });
-    VideoDevice::the().fill_rect(Rect(0, desktop_height, VideoDevice::the().width(), bar_height), color);
+    s_desktop_rect.set_width(VideoDevice::the().width());
+    s_desktop_rect.set_height(desktop_height);
+    s_desktop_rect.set_top_left_x(0);
+    s_desktop_rect.set_top_left_y(0);
+
+    s_taskbar_rect.set_width(VideoDevice::the().width());
+    s_taskbar_rect.set_height(taskbar_height);
+    s_taskbar_rect.set_top_left_x(0);
+    s_taskbar_rect.set_top_left_y(desktop_height);
+
+    draw_desktop();
 
     for (;;) {
-        redraw_clock_widget();
+        draw_clock_widget();
         sleep::for_milliseconds(1000 / 60);
     }
 }
 
-void Compositor::redraw_clock_widget()
+void Compositor::draw_desktop()
 {
+    VideoDevice::the().fill_rect(s_desktop_rect, desktop_color);
+    VideoDevice::the().fill_rect(s_taskbar_rect, taskbar_color);
+}
+
+void Compositor::draw_clock_widget()
+{
+    static constexpr Color digit_color = Color::white();
+
     static Time::time_t last_drawn_second = 0;
 
     if (Time::now() == last_drawn_second)
@@ -32,14 +48,8 @@ void Compositor::redraw_clock_widget()
 
     last_drawn_second = Time::now();
 
-    Color color { 0x8d, 0x26, 0x64 };
-
-    Color other_color = Color::white();
-
     auto time  = Time::now_readable();
     bool is_pm = false;
-
-    char digit[8];
 
     if (time.hour >= 12) {
         is_pm = true;
@@ -48,36 +58,55 @@ void Compositor::redraw_clock_widget()
             time.hour -= 12;
     }
 
-    to_string(time.hour, digit, 8);
+    // hardcoded for now
+    static constexpr size_t clock_y    = 747;
+    static constexpr size_t clock_x    = 925;
+    static constexpr size_t font_width = 8;
+
+    size_t current_x_offset = clock_x;
+
+    auto draw_digits = [&current_x_offset](char* digits, size_t count) {
+        for (size_t i = 0; i < count; ++i) {
+            VideoDevice::the().draw_char({ current_x_offset, clock_y }, digits[i], digit_color, taskbar_color);
+            current_x_offset += font_width;
+        }
+    };
+
+    char digits[8];
+
+    to_string(time.hour, digits, 8);
     if (time.hour < 10) {
-        digit[1] = digit[0];
-        digit[0] = '0';
+        digits[1] = digits[0];
+        digits[0] = '0';
     }
 
-    VideoDevice::the().draw_char({ 900 + 25, 747 }, digit[0], other_color, color);
-    VideoDevice::the().draw_char({ 908 + 25, 747 }, digit[1], other_color, color);
-    VideoDevice::the().draw_char({ 916 + 25, 747 }, ':', other_color, color);
+    digits[2] = ':';
 
-    to_string(time.minute, digit, 8);
+    draw_digits(digits, 3);
+
+    to_string(time.minute, digits, 8);
     if (time.minute < 10) {
-        digit[1] = digit[0];
-        digit[0] = '0';
+        digits[1] = digits[0];
+        digits[0] = '0';
     }
+    digits[2] = ':';
 
-    VideoDevice::the().draw_char({ 924 + 25, 747 }, digit[0], other_color, color);
-    VideoDevice::the().draw_char({ 932 + 25, 747 }, digit[1], other_color, color);
-    VideoDevice::the().draw_char({ 940 + 25, 747 }, ':', other_color, color);
+    draw_digits(digits, 3);
 
-    to_string(time.second, digit, 8);
+    to_string(time.second, digits, 8);
     if (time.second < 10) {
-        digit[1] = digit[0];
-        digit[0] = '0';
+        digits[1] = digits[0];
+        digits[0] = '0';
     }
+    digits[2] = ' ';
 
-    VideoDevice::the().draw_char({ 948 + 25, 747 }, digit[0], other_color, color);
-    VideoDevice::the().draw_char({ 956 + 25, 747 }, digit[1], other_color, color);
+    draw_digits(digits, 3);
 
-    VideoDevice::the().draw_char({ 972 + 25, 747 }, is_pm ? 'P' : 'A', other_color, color);
-    VideoDevice::the().draw_char({ 980 + 25, 747 }, 'M', other_color, color);
+    digits[0] = is_pm ? 'P' : 'A';
+    digits[1] = 'M';
+
+    draw_digits(digits, 2);
+
+    current_x_offset = clock_x;
 }
 }
