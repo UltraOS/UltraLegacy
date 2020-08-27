@@ -110,7 +110,6 @@ VirtualAllocator::Range VirtualAllocator::allocate_range(size_t length)
     else
         initial_range.set(allocated_range.end(), initial_range.length() - length);
 
-
     m_lock.unlock(interrupt_state);
     return allocated_range;
 }

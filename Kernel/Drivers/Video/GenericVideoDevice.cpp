@@ -99,7 +99,8 @@ const u8 GenericVideoDevice::s_font[256][16] = {
 
     // clang-format off
     { 0 }, // Space (32)
-    { 0b00000000,
+    {
+      0b00000000,
       0b00000000,
       0b00000000,
       0b00000000,

@@ -54,7 +54,8 @@ void CPU::start_all_processors()
     for (auto processor_id: InterruptController::smp_data().application_processor_apic_ids) {
         size_t old_alive_counter = s_alive_counter;
         LAPIC::start_processor(processor_id);
-        while (old_alive_counter == s_alive_counter);
+        while (old_alive_counter == s_alive_counter)
+            ;
     }
 }
 

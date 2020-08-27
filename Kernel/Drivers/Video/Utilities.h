@@ -33,10 +33,18 @@ private:
 
 class Rect {
 public:
+    Rect() = default;
+
     Rect(size_t top_left_x, size_t top_left_y, size_t width, size_t height)
         : m_x(top_left_x), m_y(top_left_y), m_width(width), m_height(height)
     {
     }
+
+    void set_top_left_x(size_t x) { m_x = x; }
+    void set_top_left_y(size_t y) { m_y = y; }
+
+    void set_width(size_t width) { m_width = width; }
+    void set_height(size_t height) { m_height = height; }
 
     Pair<size_t, size_t> top_left() const { return { m_x, m_y }; }
     Pair<size_t, size_t> bottom_right() const { return { m_x + m_width, m_y + m_height }; }
@@ -45,9 +53,9 @@ public:
     size_t height() const { return m_height; }
 
 private:
-    size_t m_x;
-    size_t m_y;
-    size_t m_width;
-    size_t m_height;
+    size_t m_x { 0 };
+    size_t m_y { 0 };
+    size_t m_width { 0 };
+    size_t m_height { 0 };
 };
 }
