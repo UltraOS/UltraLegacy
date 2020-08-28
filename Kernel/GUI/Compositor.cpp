@@ -59,7 +59,8 @@ void Compositor::draw_clock_widget()
 
         if (time.hour != 12)
             time.hour -= 12;
-    }
+    } else if (time.hour == 0)
+        time.hour = 12;
 
     // hardcoded for now
     static constexpr size_t font_width = 8;
