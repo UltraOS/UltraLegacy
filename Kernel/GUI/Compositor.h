@@ -16,6 +16,8 @@ private:
     static inline Rect s_desktop_rect;
     static inline Rect s_taskbar_rect;
 
+    static inline Pair<size_t, size_t> s_clock_top_left;
+
     static constexpr Color desktop_color = { 0x2d, 0x2d, 0x2d };
     static constexpr Color taskbar_color = { 0x8d, 0x26, 0x64 };
 };

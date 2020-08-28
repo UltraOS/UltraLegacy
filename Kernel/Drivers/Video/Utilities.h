@@ -52,6 +52,8 @@ public:
     size_t width() const { return m_width; }
     size_t height() const { return m_height; }
 
+    Pair<size_t, size_t> center() const { return { m_x + m_width / 2, m_y + m_height / 2 }; }
+
 private:
     size_t m_x { 0 };
     size_t m_y { 0 };

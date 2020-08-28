@@ -7,6 +7,8 @@ namespace kernel {
 template <typename Left, typename Right>
 class Pair {
 public:
+    Pair() = default;
+
     template <typename LeftT, typename RightT>
     Pair(LeftT&& left, RightT&& right) : m_left(forward<LeftT>(left)), m_right(forward<RightT>(right))
     {
@@ -17,6 +19,9 @@ public:
 
     Right&       right() { return m_right; }
     const Right& right() const { return m_right; }
+
+    void set_left(const Left& left) { m_left = left; }
+    void set_right(const Right& right) { m_right = right; }
 
 private:
     Left  m_left;

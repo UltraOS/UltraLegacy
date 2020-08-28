@@ -23,6 +23,9 @@ void Compositor::run()
     s_taskbar_rect.set_top_left_x(0);
     s_taskbar_rect.set_top_left_y(desktop_height);
 
+    s_clock_top_left.set_left(VideoDevice::the().width() - 100);
+    s_clock_top_left.set_right(s_taskbar_rect.center().right() - 8);
+
     draw_desktop();
 
     for (;;) {
@@ -59,15 +62,13 @@ void Compositor::draw_clock_widget()
     }
 
     // hardcoded for now
-    static constexpr size_t clock_y    = 747;
-    static constexpr size_t clock_x    = 925;
     static constexpr size_t font_width = 8;
 
-    size_t current_x_offset = clock_x;
+    size_t current_x_offset = s_clock_top_left.left();
 
     auto draw_digits = [&current_x_offset](char* digits, size_t count) {
         for (size_t i = 0; i < count; ++i) {
-            VideoDevice::the().draw_char({ current_x_offset, clock_y }, digits[i], digit_color, taskbar_color);
+            VideoDevice::the().draw_char({ current_x_offset, s_clock_top_left.right() }, digits[i], digit_color, taskbar_color);
             current_x_offset += font_width;
         }
     };
@@ -106,7 +107,5 @@ void Compositor::draw_clock_widget()
     digits[1] = 'M';
 
     draw_digits(digits, 2);
-
-    current_x_offset = clock_x;
 }
 }
