@@ -28,8 +28,8 @@ GenericVideoDevice::GenericVideoDevice(const VideoMode& video_mode) : m_mode(vid
 
 void GenericVideoDevice::fill_rect(const Rect& rect, Color color)
 {
-    for (size_t y = rect.top_left().right(); y < rect.bottom_right().right(); ++y) {
-        for (size_t x = rect.top_left().left(); x < rect.bottom_right().left(); ++x) {
+    for (size_t y = rect.top_left().y(); y < rect.bottom_right().y(); ++y) {
+        for (size_t x = rect.top_left().x(); x < rect.bottom_right().x(); ++x) {
             draw_at(x, y, color);
         }
     }
@@ -49,13 +49,13 @@ void GenericVideoDevice::draw_at(size_t x, size_t y, Color pixel)
     }
 }
 
-void GenericVideoDevice::draw_char(Pair<size_t, size_t> top_left, char c, Color char_color, Color fill_color)
+void GenericVideoDevice::draw_char(Point top_left, char c, Color char_color, Color fill_color)
 {
     for (size_t y = 0; y < font_height; ++y) {
         for (size_t x = 0; x < font_width; ++x) {
             bool present = s_font[static_cast<size_t>(c)][y] & SET_BIT(font_width - 1 - x);
 
-            VideoDevice::the().draw_at(top_left.left() + x, top_left.right() + y, present ? char_color : fill_color);
+            VideoDevice::the().draw_at(top_left.x() + x, top_left.y() + y, present ? char_color : fill_color);
         }
     }
 }

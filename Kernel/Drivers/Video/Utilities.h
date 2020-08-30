@@ -5,6 +5,15 @@
 
 namespace kernel {
 
+class Point : public Pair<size_t, size_t> {
+public:
+    Point() = default;
+    Point(size_t x, size_t y) : Pair(x, y) { }
+
+    size_t x() const { return left(); }
+    size_t y() const { return right(); }
+};
+
 // represents an RGBA value in little endian layout (BGRA)
 class Color {
 public:
@@ -46,13 +55,13 @@ public:
     void set_width(size_t width) { m_width = width; }
     void set_height(size_t height) { m_height = height; }
 
-    Pair<size_t, size_t> top_left() const { return { m_x, m_y }; }
-    Pair<size_t, size_t> bottom_right() const { return { m_x + m_width, m_y + m_height }; }
+    Point top_left() const { return { m_x, m_y }; }
+    Point bottom_right() const { return { m_x + m_width, m_y + m_height }; }
 
     size_t width() const { return m_width; }
     size_t height() const { return m_height; }
 
-    Pair<size_t, size_t> center() const { return { m_x + m_width / 2, m_y + m_height / 2 }; }
+    Point center() const { return { m_x + m_width / 2, m_y + m_height / 2 }; }
 
 private:
     size_t m_x { 0 };

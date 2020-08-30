@@ -15,7 +15,7 @@ public:
 
     void fill_rect(const Rect&, Color color) override;
     void draw_at(size_t x, size_t y, Color pixel) override;
-    void draw_char(Pair<size_t, size_t> top_left, char, Color char_color, Color fill_color) override;
+    void draw_char(Point top_left, char, Color char_color, Color fill_color) override;
 
     Address framebuffer() override { return m_mode.framebuffer; }
     size_t  bpp() const override { return m_mode.pitch; }

@@ -65,11 +65,14 @@ void Compositor::draw_clock_widget()
     // hardcoded for now
     static constexpr size_t font_width = 8;
 
-    size_t current_x_offset = s_clock_top_left.left();
+    size_t current_x_offset = s_clock_top_left.x();
 
     auto draw_digits = [&current_x_offset](char* digits, size_t count) {
         for (size_t i = 0; i < count; ++i) {
-            VideoDevice::the().draw_char({ current_x_offset, s_clock_top_left.right() }, digits[i], digit_color, taskbar_color);
+            VideoDevice::the().draw_char({ current_x_offset, s_clock_top_left.y() },
+                                         digits[i],
+                                         digit_color,
+                                         taskbar_color);
             current_x_offset += font_width;
         }
     };
