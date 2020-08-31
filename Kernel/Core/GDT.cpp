@@ -63,7 +63,7 @@ void GDT::create_tss_descriptor(TSS* tss)
     if (!s_lock)
         s_lock = new InterruptSafeSpinLock;
 
-    bool interrupt_state;
+    bool interrupt_state = false;
     s_lock->lock(interrupt_state);
 
     static u16 cached_selector;

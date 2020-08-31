@@ -40,7 +40,7 @@ void LAPIC::initialize_for_this_processor()
 void LAPIC::Timer::initialize_for_this_processor()
 {
     // We can't use PIT simulatneously from multiple processors
-    bool interrupt_state;
+    bool interrupt_state = false;
     ::kernel::Timer::the().lock(interrupt_state);
 
     static constexpr u32 divider_16 = 0b11;
@@ -218,7 +218,7 @@ void LAPIC::start_processor(u8 id)
         entrypoint_relocated = true;
     }
 
-    bool interrupt_state;
+    bool interrupt_state = false;
     ::kernel::Timer::the().lock(interrupt_state);
 
     send_init_to(id);

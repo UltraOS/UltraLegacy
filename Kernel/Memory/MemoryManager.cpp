@@ -145,7 +145,7 @@ void MemoryManager::unquickmap_page()
 
 RefPtr<Page> MemoryManager::allocate_page()
 {
-    bool interrupt_state;
+    bool interrupt_state = false;
     m_lock.lock(interrupt_state);
 
     for (auto& region: m_physical_regions) {
@@ -178,7 +178,7 @@ RefPtr<Page> MemoryManager::allocate_page()
 
 void MemoryManager::free_page(Page& page)
 {
-    bool interrupt_state;
+    bool interrupt_state = false;
     m_lock.lock(interrupt_state);
 
     for (auto& region: m_physical_regions) {
@@ -212,7 +212,7 @@ void MemoryManager::handle_page_fault(const PageFault& fault)
 
 void MemoryManager::inititalize(AddressSpace& directory)
 {
-    bool interrupt_state;
+    bool interrupt_state = false;
     m_lock.lock(interrupt_state);
 #ifdef ULTRA_32
     // map the directory's physical page somewhere temporarily

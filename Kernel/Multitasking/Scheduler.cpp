@@ -24,7 +24,7 @@ void Scheduler::inititalize()
 
 void Scheduler::enqueue_thread(Thread& thread)
 {
-    bool interrupt_state;
+    bool interrupt_state = false;
     s_lock.lock(interrupt_state);
 
     ++s_thread_count;
@@ -45,7 +45,7 @@ void Scheduler::enqueue_thread(Thread& thread)
 
 void Scheduler::dequeue_thread(Thread& thread)
 {
-    bool interrupt_state;
+    bool interrupt_state = false;
     s_lock.lock(interrupt_state);
 
     --s_thread_count;
@@ -61,7 +61,7 @@ void Scheduler::dequeue_thread(Thread& thread)
 
 void Scheduler::enqueue_sleeping_thread(Thread& thread)
 {
-    bool interrupt_state;
+    bool interrupt_state = false;
     s_lock.lock(interrupt_state);
 
     ASSERT(&thread != s_sleeping_threads);
@@ -79,7 +79,7 @@ void Scheduler::enqueue_sleeping_thread(Thread& thread)
 
 void Scheduler::register_process(RefPtr<Process> process)
 {
-    bool interrupt_state;
+    bool interrupt_state = false;
     s_lock.lock(interrupt_state);
 
     m_processes.emplace(process);
@@ -126,7 +126,7 @@ void Scheduler::wake_up_ready_threads()
 // TODO: replace it with something more "appropriate"
 void Scheduler::pick_next()
 {
-    bool interrupt_state;
+    bool interrupt_state = false;
     s_lock.lock(interrupt_state);
 
     wake_up_ready_threads();
