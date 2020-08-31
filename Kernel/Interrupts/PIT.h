@@ -10,7 +10,7 @@ public:
     static constexpr u32 frequency = 1193180;
     // TODO: replace with numeric_limits<u16>::max();
     static constexpr u16 max_divisor = 0xFFFF;
-    static constexpr u8  timer_irq   = 0;
+    static constexpr u8  irq_number  = 0;
 
     // ---- I/O Ports ----
     static constexpr u8 timer_data    = 0x40;

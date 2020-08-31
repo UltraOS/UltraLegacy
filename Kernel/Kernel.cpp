@@ -5,6 +5,7 @@
 #include "Core/CPU.h"
 #include "Core/GDT.h"
 #include "Core/Runtime.h"
+#include "Drivers/Keyboard/Keyboard.h"
 #include "Drivers/Video/VideoDevice.h"
 #include "GUI/Compositor.h"
 #include "Interrupts/ExceptionDispatcher.h"
@@ -58,6 +59,7 @@ void run(Context* context)
     Scheduler::inititalize();
 
     VideoDevice::discover_and_setup(context->video_mode);
+    Keyboard::discover_and_setup();
 
     CPU::start_all_processors();
 

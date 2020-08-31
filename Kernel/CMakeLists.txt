@@ -33,6 +33,7 @@ FILE(GLOB CPP_FILES "${PROJECT_SOURCE_DIR}/*cpp"               "${PROJECT_SOURCE
                     "${PROJECT_SOURCE_DIR}/Time/*cpp"          "${PROJECT_SOURCE_DIR}/Time/*h"
                     "${PROJECT_SOURCE_DIR}/Drivers/*cpp"       "${PROJECT_SOURCE_DIR}/Drivers/*h"
                     "${PROJECT_SOURCE_DIR}/Drivers/Video/*cpp" "${PROJECT_SOURCE_DIR}/Drivers/Video/*h"
+                    "${PROJECT_SOURCE_DIR}/Drivers/Keyboard/*cpp" "${PROJECT_SOURCE_DIR}/Drivers/Keyboard/*h"
                     "${PROJECT_SOURCE_DIR}/GUI/*cpp"           "${PROJECT_SOURCE_DIR}/GUI/*h")
 
 
