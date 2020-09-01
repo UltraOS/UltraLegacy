@@ -12,6 +12,7 @@ public:
         DISK,
         NETWORK,
         AUDIO,
+        CONTROLLER,
     };
 
     virtual Type       type() const = 0;

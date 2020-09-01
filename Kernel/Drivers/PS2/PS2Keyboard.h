@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Interrupts/IRQHandler.h"
-#include "Keyboard.h"
+#include "Drivers/Keyboard.h"
 
 namespace kernel {
 
