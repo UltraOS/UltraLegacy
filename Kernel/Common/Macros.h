@@ -20,6 +20,8 @@
         hlt();                                                                                                         \
     }
 
+#define pause __builtin_ia32_pause
+
 #define KB (1024ull)
 #define MB (1024ull * KB)
 #define GB (1024ull * MB)
@@ -30,6 +32,7 @@
 #define cli()
 #define sti()
 #define hang()
+#define pause()
 #define asm()
 #define USED
 #define PACKED

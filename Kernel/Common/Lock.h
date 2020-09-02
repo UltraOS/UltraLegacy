@@ -18,7 +18,7 @@ public:
 
         while (!m_lock.compare_and_exchange(&expected, locked)) {
             expected = unlocked;
-            asm("pause");
+            pause();
         }
     }
 
