@@ -1,17 +1,15 @@
 #pragma once
 
-#include "Interrupts/IRQHandler.h"
 #include "Drivers/Keyboard.h"
+#include "PS2Device.h"
 
 namespace kernel {
 
-class PS2Keyboard : public Keyboard, public IRQHandler {
+class PS2Keyboard : public PS2Device, public Keyboard {
 public:
-    static constexpr u16 irq_number = 1;
+    PS2Keyboard(PS2Controller::Channel channel);
 
-    PS2Keyboard();
-
-    void handle_irq(const RegisterState& registers) override;
+    void handle_action() override;
 
     StringView name() const override { return "PS2 Keyboard"; }
 };
