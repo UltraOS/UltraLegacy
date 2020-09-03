@@ -23,9 +23,9 @@ void PS2Controller::discover_all_devices()
     flush();
 
     // disable both irqs and translation
-    auto config = read_configuration();
-    config.port_1_irq_enabled = false;
-    config.port_2_irq_enabled = false;
+    auto config                       = read_configuration();
+    config.port_1_irq_enabled         = false;
+    config.port_2_irq_enabled         = false;
     config.port_1_translation_enabled = false;
 
     // potentially
@@ -33,13 +33,15 @@ void PS2Controller::discover_all_devices()
 
     write_configuration(config);
 
+    static constexpr u8 controller_test_passed = 0x55;
+
     // perform controller tests
     send_command(Command::TEST_CONTROLLER);
-    static constexpr u8 controller_test_passed = 0x55;
     auto controller_test_result = read_data();
 
     if (controller_test_result != controller_test_passed) {
-        error() << "PS2Controller: self test failed, expected: 0x55 received: " << format::as_hex << controller_test_result;
+        error() << "PS2Controller: self test failed, expected: 0x55 received: " << format::as_hex
+                << controller_test_result;
         hang();
     }
 
@@ -49,7 +51,7 @@ void PS2Controller::discover_all_devices()
     // check if it's actually a dual channel
     if (is_dual_channel) {
         send_command(Command::ENABLE_PORT_2);
-        auto config = read_configuration();
+        auto config     = read_configuration();
         is_dual_channel = !config.port_2_clock_disabled;
 
         if (is_dual_channel)
@@ -61,15 +63,15 @@ void PS2Controller::discover_all_devices()
 
     send_command(Command::TEST_PORT_1);
     auto port1_test_result = read_data();
-    bool port1_passed = port1_test_result == port_test_passed;
+    bool port1_passed      = port1_test_result == port_test_passed;
 
-    u8 port2_test_result = 0xFF;
-    bool port2_passed = false;
+    u8   port2_test_result = 0xFF;
+    bool port2_passed      = false;
 
     if (is_dual_channel) {
         send_command(Command::TEST_PORT_2);
         port2_test_result = read_data();
-        port2_passed = port2_test_result == port_test_passed;
+        port2_passed      = port2_test_result == port_test_passed;
     }
 
     // Initialize all available devices
@@ -82,7 +84,8 @@ void PS2Controller::discover_all_devices()
 
         discover_device(Channel::ONE);
     } else
-        warning() << "PS2Controller: port 1 failed self test, expected: 0x00 received: " << format::as_hex << port1_test_result;
+        warning() << "PS2Controller: port 1 failed self test, expected: 0x00 received: " << format::as_hex
+                  << port1_test_result;
 
     if (port2_passed) {
         send_command(Command::ENABLE_PORT_1);
@@ -93,7 +96,8 @@ void PS2Controller::discover_all_devices()
 
         discover_device(Channel::TWO);
     } else if (is_dual_channel && !port2_passed)
-        warning() << "PS2Controller: port 2 failed self test, expected: 0x00 received: " << format::as_hex << port2_test_result;
+        warning() << "PS2Controller: port 2 failed self test, expected: 0x00 received: " << format::as_hex
+                  << port2_test_result;
 
     if (!port1_passed && !port2_passed) {
         error() << "PS2Controller: All ports failed self test!";
@@ -110,14 +114,14 @@ bool PS2Controller::reset_device(Channel channel)
     device_response[1] = read_data(true);
     device_response[2] = read_data(true);
 
-    if ((device_response[0] == command_ack && device_response[1] == self_test_passed) ||
-        (device_response[0] == self_test_passed && device_response[1] == command_ack)) {
+    if ((device_response[0] == command_ack && device_response[1] == self_test_passed)
+        || (device_response[0] == self_test_passed && device_response[1] == command_ack)) {
         return true;
     } else {
         if (!did_last_read_timeout()) {
             error() << "PS2Controller: Device " << static_cast<u8>(channel)
-                    << " is present but responded with unknown sequence -> "
-                    << format::as_hex << device_response[0] << "-" << device_response[1];
+                    << " is present but responded with unknown sequence -> " << format::as_hex << device_response[0]
+                    << "-" << device_response[1];
             hang();
         }
 
@@ -140,8 +144,7 @@ void PS2Controller::discover_device(Channel channel)
     read_data(true);
     response_byte_count += !!did_last_read_timeout();
 
-    switch (response_byte_count)
-    {
+    switch (response_byte_count) {
     case 0:
     case 2:
         log() << "Detected a keyboard on channel " << static_cast<u8>(channel);
@@ -176,8 +179,8 @@ bool PS2Controller::should_resend()
     if (data == resend_command)
         return true;
 
-     error() << "PS2Controller: unexpected data instead of ACK/resend -> " << format::as_hex << data;
-     hang();
+    error() << "PS2Controller: unexpected data instead of ACK/resend -> " << format::as_hex << data;
+    hang();
 }
 
 void PS2Controller::send_command_to_device(Channel channel, DeviceCommand command, bool should_expect_ack)
@@ -191,15 +194,9 @@ void PS2Controller::send_command_to_device(Channel channel, u8 command, bool sho
 
     do {
         switch (channel) {
-        case Channel::TWO:
-            send_command(Command::WRITE_PORT_2);
-            [[fallthrough]];
-        case Channel::ONE:
-            write<data_port>(command);
-            break;
-        default:
-            error() << "PS2Controller: Unknown channel " << static_cast<u8>(channel);
-            hang();
+        case Channel::TWO: send_command(Command::WRITE_PORT_2); [[fallthrough]];
+        case Channel::ONE: write<data_port>(command); break;
+        default: error() << "PS2Controller: Unknown channel " << static_cast<u8>(channel); hang();
         }
     } while (should_expect_ack && --resend_counter && should_resend());
 

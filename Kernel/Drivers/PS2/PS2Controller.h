@@ -1,10 +1,11 @@
 #pragma once
 
-#include "Core/IO.h"
+#include "Common/DynamicArray.h"
 #include "Common/Logger.h"
 
+#include "Core/IO.h"
+
 #include "Drivers/Device.h"
-#include "Common/DynamicArray.h"
 
 namespace kernel {
 
@@ -39,31 +40,31 @@ public:
     };
 
     struct Configuration {
-        bool port_1_irq_enabled         : 1;
-        bool port_2_irq_enabled         : 1;
-        bool system_flag                : 1;
-        bool unused_1                   : 1;
-        bool port_1_clock_disabled      : 1;
-        bool port_2_clock_disabled      : 1;
+        bool port_1_irq_enabled : 1;
+        bool port_2_irq_enabled : 1;
+        bool system_flag : 1;
+        bool unused_1 : 1;
+        bool port_1_clock_disabled : 1;
+        bool port_2_clock_disabled : 1;
         bool port_1_translation_enabled : 1;
-        bool unused_2                   : 1;
+        bool unused_2 : 1;
     };
 
     struct Status {
-         bool output_full     : 1;
-         bool input_full      : 1;
-         bool system_flag     : 1;
-         bool controller_data : 1;
-         bool unknown_1       : 1;
-         bool unknown_2       : 1;
-         bool timeout_error   : 1;
-         bool parity_error    : 1;
+        bool output_full : 1;
+        bool input_full : 1;
+        bool system_flag : 1;
+        bool controller_data : 1;
+        bool unknown_1 : 1;
+        bool unknown_2 : 1;
+        bool timeout_error : 1;
+        bool parity_error : 1;
     };
 
     static_assert(sizeof(Configuration) == 1);
-    static_assert(sizeof(Status)        == 1);
+    static_assert(sizeof(Status) == 1);
 
-    Type type() const override { return Type::CONTROLLER; }
+    Type       type() const override { return Type::CONTROLLER; }
     StringView name() const override { return "8042 PS/2 Controller"; }
 
     static void initialize();
@@ -79,7 +80,7 @@ public:
     void flush();
 
     Configuration read_configuration();
-    void write_configuration(Configuration);
+    void          write_configuration(Configuration);
 
     Status status();
 
@@ -90,7 +91,7 @@ public:
 
     bool should_resend();
 
-    template<u8 port>
+    template <u8 port>
     void write(u8 data)
     {
         size_t timeout_counter = 100000;
@@ -142,7 +143,7 @@ private:
 
 private:
     DynamicArray<Device*> m_devices;
-    bool m_last_read_timeout;
+    bool                  m_last_read_timeout;
 
     static PS2Controller* s_instance;
 };
