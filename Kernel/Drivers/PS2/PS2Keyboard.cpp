@@ -10,6 +10,8 @@ PS2Keyboard::PS2Keyboard(PS2Controller::Channel channel) : PS2Device(channel)
 
 void PS2Keyboard::handle_action()
 {
-    log() << "Keyboard: Got a key press";
+    while (PS2Controller::the().status().output_full) {
+        log() << "Key pressed: " << format::as_hex << read_data();
+    }
 }
 }

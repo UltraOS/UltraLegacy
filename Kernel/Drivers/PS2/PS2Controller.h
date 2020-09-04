@@ -9,6 +9,8 @@
 
 namespace kernel {
 
+class PS2Device;
+
 class PS2Controller : public Device {
 public:
     static constexpr u8 data_port    = 0x60;
@@ -132,18 +134,28 @@ public:
 
     bool did_last_read_timeout() { return m_last_read_timeout; }
 
+    struct DeviceIdentification {
+        u8 id_bytes;
+        u8 id[2];
+
+        bool is_keyboard() { return id_bytes == 0 || id_bytes == 2; }
+        bool is_mouse() { return id_bytes == 1; }
+    };
+
+    DeviceIdentification identify_device(Channel);
+
+    bool test_port(Channel);
+
 private:
     void discover_all_devices();
 
-    void discover_device(Channel);
     bool reset_device(Channel);
 
-    void initialize_mouse(Channel);
-    void initialzie_keyboard(Channel);
+    bool initialize_device_if_present(Channel);
 
 private:
-    DynamicArray<Device*> m_devices;
-    bool                  m_last_read_timeout;
+    DynamicArray<PS2Device*> m_devices;
+    bool                     m_last_read_timeout;
 
     static PS2Controller* s_instance;
 };

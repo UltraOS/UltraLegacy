@@ -1,5 +1,6 @@
 #include "PS2Controller.h"
 #include "PS2Keyboard.h"
+#include "PS2Mouse.h"
 
 namespace kernel {
 
@@ -59,50 +60,88 @@ void PS2Controller::discover_all_devices()
     }
 
     // perform channel tests
-    static constexpr u8 port_test_passed = 0x00;
+    bool port1_passed = test_port(Channel::ONE);
+    bool port2_passed = false;
 
-    send_command(Command::TEST_PORT_1);
-    auto port1_test_result = read_data();
-    bool port1_passed      = port1_test_result == port_test_passed;
+    if (is_dual_channel)
+        port2_passed = test_port(Channel::TWO);
 
-    u8   port2_test_result = 0xFF;
-    bool port2_passed      = false;
-
-    if (is_dual_channel) {
-        send_command(Command::TEST_PORT_2);
-        port2_test_result = read_data();
-        port2_passed      = port2_test_result == port_test_passed;
-    }
+    bool device_1_present = false;
+    bool device_2_present = false;
 
     // Initialize all available devices
-    if (port1_passed) {
-        send_command(Command::ENABLE_PORT_1);
+    if (port1_passed)
+        device_1_present = initialize_device_if_present(Channel::ONE);
 
-        if (!reset_device(Channel::ONE)) {
-            log() << "PS2Controller: Port 1 doesn't have a device attached";
-        }
-
-        discover_device(Channel::ONE);
-    } else
-        warning() << "PS2Controller: port 1 failed self test, expected: 0x00 received: " << format::as_hex
-                  << port1_test_result;
-
-    if (port2_passed) {
-        send_command(Command::ENABLE_PORT_1);
-
-        if (!reset_device(Channel::TWO)) {
-            log() << "PS2Controller: Port 2 doesn't have a device attached";
-        }
-
-        discover_device(Channel::TWO);
-    } else if (is_dual_channel && !port2_passed)
-        warning() << "PS2Controller: port 2 failed self test, expected: 0x00 received: " << format::as_hex
-                  << port2_test_result;
+    if (port2_passed)
+        device_2_present = initialize_device_if_present(Channel::TWO);
 
     if (!port1_passed && !port2_passed) {
         error() << "PS2Controller: All ports failed self test!";
         hang();
     }
+
+    // This has to be done here and not in the device constructors
+    // becase some firmware might send an IRQ for commands requesting data
+    // and we don't want that to happen.
+    if (device_1_present)
+        send_command_to_device(Channel::ONE, DeviceCommand::ENABLE_SCANNING);
+    if (device_2_present)
+        send_command_to_device(Channel::TWO, DeviceCommand::ENABLE_SCANNING);
+
+    // TODO: if for whatever reason keyboard ends up on port 2
+    // we have to set scancode set 1 for it manually, or just support set 2
+    // because we cannot have auto translation for port 2
+    // TODO: disable translation if keyboard ends up on port 2
+    config.port_1_irq_enabled         = device_1_present;
+    config.port_1_translation_enabled = device_1_present;
+    config.port_1_clock_disabled      = !device_1_present;
+
+    config.port_2_irq_enabled    = device_2_present;
+    config.port_2_clock_disabled = !device_2_present;
+
+    write_configuration(config);
+}
+
+bool PS2Controller::test_port(Channel on_channel)
+{
+    static constexpr u8 port_test_passed = 0x00;
+
+    auto test_command = on_channel == Channel::ONE ? Command::TEST_PORT_1 : Command::TEST_PORT_2;
+
+    send_command(test_command);
+    u8 result = read_data();
+
+    if (result != port_test_passed) {
+        warning() << "PS2Controller: port " << static_cast<u8>(on_channel)
+                  << " failed self test, expected: 0x00 received: " << format::as_hex << result;
+    }
+
+    return result == port_test_passed;
+}
+
+bool PS2Controller::initialize_device_if_present(Channel channel)
+{
+    auto enable_port = channel == Channel::ONE ? Command::ENABLE_PORT_1 : Command::ENABLE_PORT_2;
+
+    send_command(enable_port);
+
+    if (!reset_device(channel)) {
+        log() << "PS2Controller: Port " << static_cast<u8>(channel) << "doesn't have a device attached";
+        return false;
+    }
+
+    auto device = identify_device(channel);
+
+    if (device.is_keyboard()) {
+        log() << "Detected a keyboard on channel " << static_cast<u8>(channel);
+        m_devices.emplace(new PS2Keyboard(channel));
+    } else if (device.is_mouse()) {
+        log() << "Detected a mouse on channel " << static_cast<u8>(channel);
+        m_devices.emplace(new PS2Mouse(channel));
+    }
+
+    return true;
 }
 
 bool PS2Controller::reset_device(Channel channel)
@@ -130,43 +169,20 @@ bool PS2Controller::reset_device(Channel channel)
     }
 }
 
-void PS2Controller::discover_device(Channel channel)
+PS2Controller::DeviceIdentification PS2Controller::identify_device(Channel channel)
 {
     // identify device
     send_command_to_device(channel, DeviceCommand::DISABLE_SCANNING);
     send_command_to_device(channel, DeviceCommand::IDENTIFY);
 
-    u8 response_byte_count = 0;
+    DeviceIdentification ident {};
 
-    read_data(true);
-    response_byte_count += !!did_last_read_timeout();
-
-    read_data(true);
-    response_byte_count += !!did_last_read_timeout();
-
-    switch (response_byte_count) {
-    case 0:
-    case 2:
-        log() << "Detected a keyboard on channel " << static_cast<u8>(channel);
-        initialzie_keyboard(channel);
-        return;
-    case 1:
-        log() << "Detected a mouse on channel " << static_cast<u8>(channel);
-        initialize_mouse(channel);
-        return;
+    for (auto i = 0; i < 2; ++i) {
+        ident.id[i] = read_data(true);
+        ident.id_bytes += !!did_last_read_timeout();
     }
-}
 
-void PS2Controller::initialize_mouse(Channel channel)
-{
-    // detect the actual mouse type and initialize
-    (void)channel;
-}
-
-void PS2Controller::initialzie_keyboard(Channel channel)
-{
-    // detect the actual keyboard type and initialize
-    m_devices.emplace(new PS2Keyboard(channel));
+    return ident;
 }
 
 bool PS2Controller::should_resend()
