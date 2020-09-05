@@ -57,7 +57,7 @@ u8 PS2Mouse::bytes_in_packet() const
 
 void PS2Mouse::append_packet_data(u8 data)
 {
-    u8 always_1_bit = SET_BIT(3);
+    static constexpr u8 always_1_bit = SET_BIT(3);
 
     if (m_packet_bytes == 0 && !(data & always_1_bit)) {
         warning() << "PS2Mouse: packet out of sync, resetting stream...";
