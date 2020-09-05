@@ -26,7 +26,15 @@ public:
 private:
     void detect_subtype();
 
+    u8 bytes_in_packet() const;
+
+    void append_packet_data(u8 data);
+    void parse_packet();
+
 private:
+    u8 m_packet[4];
+    u8 m_packet_bytes;
+
     SubType m_sub_type { SubType::STANDARD_MOUSE };
 };
 }
