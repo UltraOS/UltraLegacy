@@ -16,6 +16,8 @@ public:
     {
     }
 
+    PS2Controller::Channel channel() const { return m_channel; }
+
     template <typename CommandT>
     void send_command(CommandT command)
     {
