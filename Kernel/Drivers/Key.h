@@ -101,7 +101,7 @@
     VIRTUAL_KEY(LEFT_ALT, "Left Alt")                                                                                  \
     VIRTUAL_KEY(SPACE, "Space")                                                                                        \
     VIRTUAL_KEY(RIGHT_ALT, "Right Alt")                                                                                \
-    VIRTUAL_KEY(RIGHT_GUI, "Right Logo")                                                                               \
+    VIRTUAL_KEY(RIGHT_LOGO, "Right Logo")                                                                              \
     VIRTUAL_KEY(CONTEXT_MENU, "Context Menu")                                                                          \
     VIRTUAL_KEY(RIGHT_CTRL, "Right Ctrl")                                                                              \
     VIRTUAL_KEY(ARROW_LEFT, "Arrow Left")                                                                              \
@@ -117,7 +117,19 @@
     VIRTUAL_KEY(MM_STOP, "Stop")                                                                                       \
     VIRTUAL_KEY(MM_VOLUME_DOWN, "Volume Down")                                                                         \
     VIRTUAL_KEY(MM_VOLUME_UP, "Volume Up")                                                                             \
-    VIRTUAL_KEY(MM_WWW_HOME, "WWW Home")
+    VIRTUAL_KEY(MM_BROWSER_HOME, "Browser Home")                                                                       \
+    VIRTUAL_KEY(POWER, "Power")                                                                                        \
+    VIRTUAL_KEY(SLEEP, "Sleep")                                                                                        \
+    VIRTUAL_KEY(WAKE, "Wake")                                                                                          \
+    VIRTUAL_KEY(MM_BROWSER_SEARCH, "Browser Search")                                                                   \
+    VIRTUAL_KEY(MM_BROWSER_FAVORITES, "Browser Favorites")                                                             \
+    VIRTUAL_KEY(MM_BROWSER_REFRESH, "Browser Refresh")                                                                 \
+    VIRTUAL_KEY(MM_BROWSER_STOP, "Browser Stop")                                                                       \
+    VIRTUAL_KEY(MM_BROWSER_FORWARD, "Browser Forward")                                                                 \
+    VIRTUAL_KEY(MM_BROWSER_BACK, "Browser Back")                                                                       \
+    VIRTUAL_KEY(MM_MY_COMPUTER, "My Computer")                                                                         \
+    VIRTUAL_KEY(MM_EMAIL, "Email")                                                                                     \
+    VIRTUAL_KEY(MM_MEDIA_SELECT, "Media Select")
 
 enum class Key : unsigned char {
 #define VIRTUAL_KEY(key, representation) key,
@@ -130,7 +142,8 @@ namespace kernel {
 StringView to_string(Key k)
 {
     switch (k) {
-#define VIRTUAL_KEY(key, representation) case Key::key: return representation##_sv;
+#define VIRTUAL_KEY(key, representation)                                                                               \
+    case Key::key: return representation##_sv;
         ENUMERATE_VIRTUAL_KEYS
 #undef VIRTUAL_KEY
     default: return "Unknown"_sv;
