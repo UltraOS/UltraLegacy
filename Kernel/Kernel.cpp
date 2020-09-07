@@ -7,7 +7,6 @@
 #include "Core/Runtime.h"
 #include "Drivers/PS2/PS2Controller.h"
 #include "Drivers/Video/VideoDevice.h"
-#include "GUI/Compositor.h"
 #include "Interrupts/ExceptionDispatcher.h"
 #include "Interrupts/IDT.h"
 #include "Interrupts/IPICommunicator.h"
@@ -22,6 +21,7 @@
 #include "Multitasking/Scheduler.h"
 #include "Multitasking/Sleep.h"
 #include "Time/RTC.h"
+#include "WindowManager/Compositor.h"
 
 namespace kernel {
 

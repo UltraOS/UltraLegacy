@@ -129,9 +129,14 @@
     VIRTUAL_KEY(MM_BROWSER_BACK, "Browser Back")                                                                       \
     VIRTUAL_KEY(MM_MY_COMPUTER, "My Computer")                                                                         \
     VIRTUAL_KEY(MM_EMAIL, "Email")                                                                                     \
-    VIRTUAL_KEY(MM_MEDIA_SELECT, "Media Select")
+    VIRTUAL_KEY(MM_MEDIA_SELECT, "Media Select")                                                                       \
+    VIRTUAL_KEY(MOUSE_LEFT_BUTTON, "Left Mouse Button")                                                                \
+    VIRTUAL_KEY(MOUSE_RIGHT_BUTTON, "Right Mouse Button")                                                              \
+    VIRTUAL_KEY(MOUSE_MIDDLE_BUTTON, "Middle Mouse Button")                                                            \
+    VIRTUAL_KEY(MOUSE_BUTTON_4, "Mouse Button 4")                                                                      \
+    VIRTUAL_KEY(MOUSE_BUTTON_5, "Mouse Button 5")
 
-enum class Key : unsigned char {
+enum class VK : unsigned char {
 #define VIRTUAL_KEY(key, representation) key,
     ENUMERATE_VIRTUAL_KEYS
 #undef VIRTUAL_KEY
@@ -139,11 +144,11 @@ enum class Key : unsigned char {
 
 namespace kernel {
 
-StringView to_string(Key k)
+inline StringView to_string(VK k)
 {
     switch (k) {
 #define VIRTUAL_KEY(key, representation)                                                                               \
-    case Key::key: return representation##_sv;
+    case VK::key: return representation##_sv;
         ENUMERATE_VIRTUAL_KEYS
 #undef VIRTUAL_KEY
     default: return "Unknown"_sv;
