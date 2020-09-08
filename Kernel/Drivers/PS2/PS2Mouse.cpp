@@ -1,5 +1,6 @@
 #include "PS2Mouse.h"
 #include "Common/Logger.h"
+#include "WindowManager/EventManager.h"
 
 namespace kernel {
 
@@ -51,7 +52,7 @@ u8 PS2Mouse::bytes_in_packet() const
     case SubType::STANDARD_MOUSE: return 3;
     case SubType::SCROLL_WHEEL:
     case SubType::FIVE_BUTTONS: return 4;
-    default: error() << "Unknown sub type " << static_cast<u8>(sub_type()); return 0;
+    default: error() << "Unknown sub type " << static_cast<u8>(sub_type()); hang(); return 0;
     }
 }
 
@@ -81,55 +82,60 @@ void PS2Mouse::parse_packet()
     static constexpr u8 rb_bit     = SET_BIT(1);
     static constexpr u8 lb_bit     = SET_BIT(0);
 
+    Packet p {};
+
     bool is_y_negative = m_packet[0] & y_sign_bit;
     bool is_x_negative = m_packet[0] & x_sign_bit;
 
-    bool is_middle_button_pressed = m_packet[0] & mb_bit;
-    bool is_right_button_pressed  = m_packet[0] & rb_bit;
-    bool is_left_button_pressed   = m_packet[0] & lb_bit;
+    p.middle_button_held = m_packet[0] & mb_bit;
+    p.right_button_held  = m_packet[0] & rb_bit;
+    p.left_button_held   = m_packet[0] & lb_bit;
 
-    i32 x_movement = is_x_negative ? static_cast<i32>(0xFFFFFF00 | m_packet[1]) : m_packet[1];
-    i32 y_movement = is_y_negative ? static_cast<i32>(0xFFFFFF00 | m_packet[2]) : m_packet[2];
-    i32 z_movement = 0;
+    p.x_delta = is_x_negative ? static_cast<i32>(0xFFFFFF00 | m_packet[1]) : m_packet[1];
+    p.y_delta = is_y_negative ? static_cast<i32>(0xFFFFFF00 | m_packet[2]) : m_packet[2];
 
     if (m_packet[0] & x_overflow_bit)
-        x_movement = 0;
+        p.x_delta = 0;
     if (m_packet[0] & y_overflow_bit)
-        y_movement = 0;
-
-    bool is_button_5_pressed = false;
-    bool is_button_4_pressed = false;
+        p.y_delta = 0;
 
     if (sub_type() == SubType::SCROLL_WHEEL) {
-        z_movement = m_packet[3];
+        i32 z_delta = m_packet[3];
 
         if (m_packet[3] & SET_BIT(7))
-            z_movement |= static_cast<i32>(0xFFFFFFF0);
+            z_delta |= static_cast<i32>(0xFFFFFFF0);
+
+        p.wheel_delta = static_cast<i8>(z_delta);
 
     } else if (sub_type() == SubType::FIVE_BUTTONS) {
-        static constexpr u8 button_5_bit    = SET_BIT(5);
-        static constexpr u8 button_4_bit    = SET_BIT(4);
-        static constexpr u8 z_movement_mask = 0xF;
+        static constexpr u8 button_5_bit = SET_BIT(5);
+        static constexpr u8 button_4_bit = SET_BIT(4);
+        static constexpr u8 z_delta_mask = 0xF;
 
-        switch (m_packet[3] & z_movement_mask) {
-        case 0x1: z_movement = 1; break;
-        case 0xF:
-            z_movement = -1;
+        switch (m_packet[3] & z_delta_mask) {
+        case 0x1:
+            p.wheel_delta      = 1;
+            p.scroll_direction = Packet::ScrollDirection::VERTICAL;
             break;
-            // case 0x2: scroll right
-            // case 0xE: scroll left
+        case 0xF:
+            p.wheel_delta      = -1;
+            p.scroll_direction = Packet::ScrollDirection::VERTICAL;
+            break;
+        case 0x2:
+            p.wheel_delta      = 1;
+            p.scroll_direction = Packet::ScrollDirection::HORIZONTAL;
+            break;
+        case 0xE:
+            p.wheel_delta      = -1;
+            p.scroll_direction = Packet::ScrollDirection::HORIZONTAL;
+            break;
         }
 
-        is_button_4_pressed = m_packet[3] & button_4_bit;
-        is_button_5_pressed = m_packet[3] & button_5_bit;
+        p.button_4_held = m_packet[3] & button_4_bit;
+        p.button_5_held = m_packet[3] & button_5_bit;
     }
 
-    log() << "MousePacket:"
-          << "\nx negative: " << is_x_negative << "\ny negative: " << is_y_negative
-          << "\nmb pressed: " << is_middle_button_pressed << "\nrb pressed: " << is_right_button_pressed
-          << "\nlb pressed: " << is_left_button_pressed << "\nx movement: " << x_movement
-          << "\ny movement: " << y_movement << "\nz movement: " << z_movement << "\nbutton 5:   " << is_button_5_pressed
-          << "\nbutton 4:   " << is_button_4_pressed;
+    EventManager::the().post_action(p);
 
     m_packet_bytes = 0;
 }
