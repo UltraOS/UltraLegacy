@@ -1,5 +1,6 @@
 #include "PS2Keyboard.h"
 #include "Common/Logger.h"
+#include "WindowManager/EventManager.h"
 #include "WindowManager/VirtualKey.h"
 
 namespace kernel {
@@ -241,9 +242,9 @@ void PS2Keyboard::handle_action()
             static constexpr u8 prt_sc_released_code = 0xAA;
 
             if (scancode == prt_sc_pressed_code)
-                log() << "PS2Keyboard: print screen pressed";
+                EventManager::the().post_action({ VK::PRT_SC, Packet::State::PRESS });
             else if (scancode == prt_sc_released_code) {
-                log() << "PS2Keyboard: print screen released";
+                EventManager::the().post_action({ VK::PRT_SC, Packet::State::RELEASE });
             } else
                 warning() << "PS2Keyboard: expected a prt sc scancode 0x37/0xAA, got " << format::as_hex << scancode;
 
@@ -276,8 +277,10 @@ void PS2Keyboard::handle_action()
             continue;
         case State::PAUSE_3:
             if (scancode == 0xC5) {
-                log() << "PS2Keyboard: pause pressed";
+                EventManager::the().post_action({ VK::PAUSE_BREAK, Packet::State::PRESS });
+                EventManager::the().post_action({ VK::PAUSE_BREAK, Packet::State::RELEASE });
             }
+
             m_state = State::NORMAL;
             continue;
         }
@@ -286,11 +289,13 @@ void PS2Keyboard::handle_action()
         auto raw_key  = scancode & raw_key_mask;
 
         if (m_state == State::NORMAL) {
-            log() << "PS2Keyboard: key " << to_string(single_byte_keys[raw_key])
-                  << (released ? " released" : " pressed");
+            EventManager::the().post_action(
+                { single_byte_keys[raw_key], released ? Packet::State::RELEASE : Packet::State::PRESS });
+        } else if (m_state == State::E0) {
+            EventManager::the().post_action(
+                { multi_byte_keys[raw_key], released ? Packet::State::RELEASE : Packet::State::PRESS });
         } else {
-            log() << "PS2Keyboard: key " << to_string(multi_byte_keys[raw_key])
-                  << (released ? " released" : " pressed");
+            warning() << "PS2Keyboard: unexpected state " << static_cast<u8>(m_state);
         }
 
         m_state = State::NORMAL;
