@@ -68,6 +68,10 @@ struct is_integral<char> : true_value {
 };
 
 template <>
+struct is_integral<signed char> : true_value {
+};
+
+template <>
 struct is_integral<unsigned char> : true_value {
 };
 
