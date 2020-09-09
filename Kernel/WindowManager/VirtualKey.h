@@ -134,12 +134,18 @@
     VIRTUAL_KEY(MOUSE_RIGHT_BUTTON, "Right Mouse Button")                                                              \
     VIRTUAL_KEY(MOUSE_MIDDLE_BUTTON, "Middle Mouse Button")                                                            \
     VIRTUAL_KEY(MOUSE_BUTTON_4, "Mouse Button 4")                                                                      \
-    VIRTUAL_KEY(MOUSE_BUTTON_5, "Mouse Button 5")
+    VIRTUAL_KEY(MOUSE_BUTTON_5, "Mouse Button 5")                                                                      \
+    VIRTUAL_KEY(LAST, "A VK with the highest possible value, no other VK can be bigger")
 
 enum class VK : unsigned char {
 #define VIRTUAL_KEY(key, representation) key,
     ENUMERATE_VIRTUAL_KEYS
 #undef VIRTUAL_KEY
+};
+
+enum class VKState : unsigned char {
+    RELEASED = 0,
+    PRESSED  = 1
 };
 
 namespace kernel {

@@ -11,8 +11,7 @@ public:
 
     struct Packet {
         VK key;
-
-        enum State : u8 { PRESS, RELEASE } state;
+        VKState state;
     };
 };
 }
