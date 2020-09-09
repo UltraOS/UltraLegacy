@@ -16,24 +16,24 @@ void EventManager::generate_button_state_event(VK key, VKState state)
 {
     // if (!Window::is_any_focused()) return;
 
-    Event e{};
-    e.type = Event::Type::BUTTON_STATE;
+    Event e {};
+    e.type     = Event::Type::BUTTON_STATE;
     e.vk_state = { key, state };
 
     // Window::focused().enqueue_event(e);
 }
 
 void EventManager::post_action(const Keyboard::Packet& packet)
-{    
+{
     update_state_of_key(packet.key, packet.state);
 
     // if (!Window::is_any_focused()) return;
 
-    Event e{};
-    e.type = Event::Type::KEY_STATE;
+    Event e {};
+    e.type     = Event::Type::KEY_STATE;
     e.vk_state = { packet.key, packet.state };
 
-   // Window::focused().enqueue_event(e);
+    // Window::focused().enqueue_event(e);
 
     log() << "KeyPress: " << to_string(packet.key) << " is_press: " << (packet.state == VKState::PRESSED);
 }
@@ -44,7 +44,7 @@ void EventManager::post_action(const Mouse::Packet& packet)
 
     // detect changes of state
     if (packet.x_delta || packet.y_delta) {
-        Event e{};
+        Event e {};
 
         e.type = Event::Type::MOUSE_MOVE;
 
@@ -57,9 +57,9 @@ void EventManager::post_action(const Mouse::Packet& packet)
     }
 
     if (packet.wheel_delta) {
-        Event e{};
+        Event e {};
 
-        e.type = Event::Type::MOUSE_MOVE;
+        e.type         = Event::Type::MOUSE_MOVE;
         e.mouse_scroll = { packet.scroll_direction, packet.wheel_delta };
 
         // Window::focused().enqueue_event(e);

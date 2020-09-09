@@ -1,7 +1,7 @@
 #pragma once
 
-#include "VirtualKey.h"
 #include "Event.h"
+#include "VirtualKey.h"
 
 #include "Drivers/Keyboard.h"
 #include "Drivers/Mouse.h"

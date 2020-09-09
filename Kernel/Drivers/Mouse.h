@@ -1,8 +1,8 @@
 #pragma once
 
 #include "Drivers/Device.h"
-#include "WindowManager/VirtualKey.h"
 #include "WindowManager/Event.h"
+#include "WindowManager/VirtualKey.h"
 
 namespace kernel {
 

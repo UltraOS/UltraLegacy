@@ -52,7 +52,10 @@ u8 PS2Mouse::bytes_in_packet() const
     case SubType::STANDARD_MOUSE: return 3;
     case SubType::SCROLL_WHEEL:
     case SubType::FIVE_BUTTONS: return 4;
-    default: error() << "Unknown sub type " << static_cast<u8>(sub_type()); hang(); return 0;
+    default:
+        error() << "Unknown sub type " << static_cast<u8>(sub_type());
+        hang();
+        return 0;
     }
 }
 
@@ -105,7 +108,7 @@ void PS2Mouse::parse_packet()
         if (m_packet[3] & SET_BIT(7))
             z_delta |= static_cast<i32>(0xFFFFFFF0);
 
-        p.wheel_delta = static_cast<i8>(z_delta);
+        p.wheel_delta      = static_cast<i8>(z_delta);
         p.scroll_direction = ScrollDirection::VERTICAL;
 
     } else if (sub_type() == SubType::FIVE_BUTTONS) {

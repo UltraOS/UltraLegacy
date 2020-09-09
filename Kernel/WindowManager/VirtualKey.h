@@ -143,10 +143,7 @@ enum class VK : unsigned char {
 #undef VIRTUAL_KEY
 };
 
-enum class VKState : unsigned char {
-    RELEASED = 0,
-    PRESSED  = 1
-};
+enum class VKState : unsigned char { RELEASED = 0, PRESSED = 1 };
 
 namespace kernel {
 

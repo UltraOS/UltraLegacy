@@ -2,10 +2,7 @@
 
 #include "VirtualKey.h"
 
-enum class ScrollDirection : unsigned char {
-    HORIZONTAL = 0,
-    VERTICAL   = 1
-};
+enum class ScrollDirection : unsigned char { HORIZONTAL = 0, VERTICAL = 1 };
 
 struct Event {
     union {
@@ -16,7 +13,7 @@ struct Event {
 
         struct {
             ScrollDirection direction;
-            signed char delta;
+            signed char     delta;
         } mouse_scroll;
 
         struct {

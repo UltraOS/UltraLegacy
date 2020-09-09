@@ -10,7 +10,7 @@ public:
     Type type() const override { return Type::KEYBOARD; }
 
     struct Packet {
-        VK key;
+        VK      key;
         VKState state;
     };
 };
