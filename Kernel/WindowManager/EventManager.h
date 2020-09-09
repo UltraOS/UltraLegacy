@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Common/RefPtr.h"
 #include "VirtualKey.h"
+#include "Event.h"
 
 #include "Drivers/Keyboard.h"
 #include "Drivers/Mouse.h"
@@ -16,7 +16,13 @@ public:
     void post_action(const Mouse::Packet&);
 
 private:
+    void update_state_of_key(VK, VKState);
+    void generate_button_state_event(VK, VKState);
+
+private:
     Mouse::Packet m_last_mouse_state;
+
+    VKState m_key_state[static_cast<u8>(VK::LAST)] { VKState::RELEASED };
 
     static EventManager s_instance;
 };
