@@ -242,9 +242,9 @@ void PS2Keyboard::handle_action()
             static constexpr u8 prt_sc_released_code = 0xAA;
 
             if (scancode == prt_sc_pressed_code)
-                EventManager::the().post_action({ VK::PRT_SC, Packet::State::PRESS });
+                EventManager::the().post_action({ VK::PRT_SC, VKState::PRESSED });
             else if (scancode == prt_sc_released_code) {
-                EventManager::the().post_action({ VK::PRT_SC, Packet::State::RELEASE });
+                EventManager::the().post_action({ VK::PRT_SC, VKState::RELEASED });
             } else
                 warning() << "PS2Keyboard: expected a prt sc scancode 0x37/0xAA, got " << format::as_hex << scancode;
 
@@ -277,8 +277,8 @@ void PS2Keyboard::handle_action()
             continue;
         case State::PAUSE_3:
             if (scancode == 0xC5) {
-                EventManager::the().post_action({ VK::PAUSE_BREAK, Packet::State::PRESS });
-                EventManager::the().post_action({ VK::PAUSE_BREAK, Packet::State::RELEASE });
+                EventManager::the().post_action({ VK::PAUSE_BREAK, VKState::PRESSED });
+                EventManager::the().post_action({ VK::PAUSE_BREAK, VKState::RELEASED });
             }
 
             m_state = State::NORMAL;
@@ -290,10 +290,10 @@ void PS2Keyboard::handle_action()
 
         if (m_state == State::NORMAL) {
             EventManager::the().post_action(
-                { single_byte_keys[raw_key], released ? Packet::State::RELEASE : Packet::State::PRESS });
+                { single_byte_keys[raw_key], released ? VKState::RELEASED : VKState::PRESSED });
         } else if (m_state == State::E0) {
             EventManager::the().post_action(
-                { multi_byte_keys[raw_key], released ? Packet::State::RELEASE : Packet::State::PRESS });
+                { multi_byte_keys[raw_key], released ? VKState::RELEASED : VKState::PRESSED });
         } else {
             warning() << "PS2Keyboard: unexpected state " << static_cast<u8>(m_state);
         }

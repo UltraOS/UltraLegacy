@@ -87,9 +87,9 @@ void PS2Mouse::parse_packet()
     bool is_y_negative = m_packet[0] & y_sign_bit;
     bool is_x_negative = m_packet[0] & x_sign_bit;
 
-    p.middle_button_held = m_packet[0] & mb_bit;
-    p.right_button_held  = m_packet[0] & rb_bit;
-    p.left_button_held   = m_packet[0] & lb_bit;
+    p.middle_button_state = m_packet[0] & mb_bit ? VKState::PRESSED : VKState::RELEASED;
+    p.right_button_state  = m_packet[0] & rb_bit ? VKState::PRESSED : VKState::RELEASED;
+    p.left_button_state   = m_packet[0] & lb_bit ? VKState::PRESSED : VKState::RELEASED;
 
     p.x_delta = is_x_negative ? static_cast<i32>(0xFFFFFF00 | m_packet[1]) : m_packet[1];
     p.y_delta = is_y_negative ? static_cast<i32>(0xFFFFFF00 | m_packet[2]) : m_packet[2];
@@ -106,6 +106,7 @@ void PS2Mouse::parse_packet()
             z_delta |= static_cast<i32>(0xFFFFFFF0);
 
         p.wheel_delta = static_cast<i8>(z_delta);
+        p.scroll_direction = ScrollDirection::VERTICAL;
 
     } else if (sub_type() == SubType::FIVE_BUTTONS) {
         static constexpr u8 button_5_bit = SET_BIT(5);
@@ -115,24 +116,24 @@ void PS2Mouse::parse_packet()
         switch (m_packet[3] & z_delta_mask) {
         case 0x1:
             p.wheel_delta      = 1;
-            p.scroll_direction = Packet::ScrollDirection::VERTICAL;
+            p.scroll_direction = ScrollDirection::VERTICAL;
             break;
         case 0xF:
             p.wheel_delta      = -1;
-            p.scroll_direction = Packet::ScrollDirection::VERTICAL;
+            p.scroll_direction = ScrollDirection::VERTICAL;
             break;
         case 0x2:
             p.wheel_delta      = 1;
-            p.scroll_direction = Packet::ScrollDirection::HORIZONTAL;
+            p.scroll_direction = ScrollDirection::HORIZONTAL;
             break;
         case 0xE:
             p.wheel_delta      = -1;
-            p.scroll_direction = Packet::ScrollDirection::HORIZONTAL;
+            p.scroll_direction = ScrollDirection::HORIZONTAL;
             break;
         }
 
-        p.button_4_held = m_packet[3] & button_4_bit;
-        p.button_5_held = m_packet[3] & button_5_bit;
+        p.button_4_state = m_packet[3] & button_4_bit ? VKState::PRESSED : VKState::RELEASED;
+        p.button_5_state = m_packet[3] & button_5_bit ? VKState::PRESSED : VKState::RELEASED;
     }
 
     EventManager::the().post_action(p);
