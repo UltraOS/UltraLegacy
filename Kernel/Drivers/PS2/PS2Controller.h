@@ -111,7 +111,7 @@ public:
 
     u8 read_data(bool allow_failure = false)
     {
-        size_t timeout_counter = 100000;
+        size_t timeout_counter = allow_failure ? 100 : 100000;
 
         while (!status().output_full && --timeout_counter)
             pause();
