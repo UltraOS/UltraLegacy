@@ -2,6 +2,7 @@
 
 #include "Core/IO.h"
 #include "Core/Runtime.h"
+#include "Core/Serial.h"
 
 #include "Conversions.h"
 #include "Lock.h"
@@ -28,6 +29,13 @@ public:
     }
 };
 
+class SerialSink : public LogSink {
+public:
+    SerialSink() { Serial::initialize<Serial::Port::COM1>(); }
+
+    void write(StringView string) override { Serial::write<Serial::Port::COM1>(string); }
+};
+
 enum class format {
     as_dec,
     as_hex,
@@ -45,10 +53,12 @@ public:
         ASSERT(s_sinks == nullptr);
         ASSERT(s_write_lock == nullptr);
 
-        s_sinks = new DynamicArray<LogSink*>(1);
+        s_sinks = new DynamicArray<LogSink*>(2);
 
         if (E9LogSink::is_supported())
             s_sinks->emplace(new E9LogSink());
+
+        s_sinks->emplace(new SerialSink());
 
         s_write_lock = new InterruptSafeSpinLock;
     }

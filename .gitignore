@@ -22,3 +22,4 @@ Tests/Environment/Common/Utilities.h
 *.includes
 *.creator.user
 *.creator.user.*
+*log*.txt

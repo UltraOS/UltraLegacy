@@ -22,7 +22,13 @@ IF "%~1" == "32" (
 :arch_picked
 
 call Scripts\build_ultra.bat %arch% || goto error
-qemu-system-x86_64 -drive file="Images/Ultra%arch%HDD.vmdk",index=0,media=disk -debugcon stdio -smp 4 -m 128 -no-reboot -no-shutdown -vga std
+qemu-system-x86_64 -drive file="Images/Ultra%arch%HDD.vmdk",index=0,media=disk ^
+                   -debugcon stdio ^
+                   -serial file:Ultra%arch%log.txt ^
+                   -smp 4 ^
+                   -m 128 ^
+                   -no-reboot -no-shutdown ^
+                   -vga std
 exit 0
 
 :error
