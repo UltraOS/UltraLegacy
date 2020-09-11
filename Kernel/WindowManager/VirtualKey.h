@@ -137,13 +137,13 @@
     VIRTUAL_KEY(MOUSE_BUTTON_5, "Mouse Button 5")                                                                      \
     VIRTUAL_KEY(LAST, "A VK with the highest possible value, no other VK can be bigger")
 
-enum class VK : unsigned char {
+enum class VK : uint8_t {
 #define VIRTUAL_KEY(key, representation) key,
     ENUMERATE_VIRTUAL_KEYS
 #undef VIRTUAL_KEY
 };
 
-enum class VKState : unsigned char { RELEASED = 0, PRESSED = 1 };
+enum class VKState : uint8_t { RELEASED = 0, PRESSED = 1 };
 
 namespace kernel {
 
