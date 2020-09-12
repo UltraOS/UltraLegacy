@@ -1,8 +1,9 @@
 #pragma once
 
-#include "Drivers/Video/Utilities.h"
 #include "Common/DynamicArray.h"
+#include "Event.h"
 #include "Multitasking/Thread.h"
+#include "Utilities.h"
 
 namespace kernel {
 
@@ -28,9 +29,9 @@ private:
     Window(Thread& owner, const Rect& window_rect);
 
 private:
-    Thread& m_owner;
-    Rect    m_rect;
-    u8*     m_front_bitmap;
+    Thread&             m_owner;
+    Rect                m_rect;
+    u8*                 m_front_bitmap;
     DynamicArray<Event> m_event_queue;
 
     // TODO: this should be a weak ptr

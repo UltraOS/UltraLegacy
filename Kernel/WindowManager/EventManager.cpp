@@ -1,6 +1,7 @@
 #include "EventManager.h"
-#include "Window.h"
 #include "Common/Logger.h"
+#include "Screen.h"
+#include "Window.h"
 
 namespace kernel {
 
@@ -49,8 +50,8 @@ void EventManager::post_action(const Mouse::Packet& packet)
     if (packet.x_delta || packet.y_delta) {
         log() << "MouseMove: x " << packet.x_delta << " y " << packet.y_delta;
 
-        if (!Window::is_any_focused())
-            return;
+        Screen::the().recalculate_cursor_position(packet.x_delta, packet.y_delta);
+        log() << "MouseLocation: " << Screen::the().cursor().location().x() << "x" << Screen::the().cursor().location().y();
 
         Event e {};
 
@@ -58,6 +59,9 @@ void EventManager::post_action(const Mouse::Packet& packet)
 
         // calculate location relative to window
         e.mouse_move = { 0, 0 };
+
+        if (!Window::is_any_focused())
+            return;
 
         Window::focused().enqueue_event(e);
     }

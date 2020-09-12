@@ -91,7 +91,7 @@ private:
     Thread*       m_previous { nullptr };
     Thread*       m_next { nullptr };
 
-    Window*       m_window;
+    Window* m_window;
 
     static Atomic<u32> s_next_thread_id;
 };

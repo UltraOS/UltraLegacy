@@ -21,7 +21,7 @@
 #include "Multitasking/Scheduler.h"
 #include "Multitasking/Sleep.h"
 #include "Time/RTC.h"
-#include "WindowManager/Compositor.h"
+#include "WindowManager/WindowManager.h"
 
 namespace kernel {
 
@@ -67,7 +67,7 @@ void run(Context* context)
 
     Interrupts::enable();
 
-    Process::create_supervisor(&Compositor::run);
+    WindowManager::initialize();
 
     // ---> SCHEDULER TESTING AREA
     // ----------------------------------------- //
