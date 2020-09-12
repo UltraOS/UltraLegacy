@@ -1,4 +1,5 @@
 #include "EventManager.h"
+#include "Window.h"
 #include "Common/Logger.h"
 
 namespace kernel {
@@ -14,36 +15,43 @@ void EventManager::update_state_of_key(VK key, VKState state)
 
 void EventManager::generate_button_state_event(VK key, VKState state)
 {
-    // if (!Window::is_any_focused()) return;
+    update_state_of_key(key, state);
+
+    if (!Window::is_any_focused())
+        return;
 
     Event e {};
     e.type     = Event::Type::BUTTON_STATE;
     e.vk_state = { key, state };
 
-    // Window::focused().enqueue_event(e);
+    Window::focused().enqueue_event(e);
 }
 
 void EventManager::post_action(const Keyboard::Packet& packet)
 {
+    log() << "KeyPress: " << to_string(packet.key) << " is_press: " << (packet.state == VKState::PRESSED);
+
     update_state_of_key(packet.key, packet.state);
 
-    // if (!Window::is_any_focused()) return;
+    if (!Window::is_any_focused())
+        return;
 
     Event e {};
     e.type     = Event::Type::KEY_STATE;
     e.vk_state = { packet.key, packet.state };
 
-    // Window::focused().enqueue_event(e);
-
-    log() << "KeyPress: " << to_string(packet.key) << " is_press: " << (packet.state == VKState::PRESSED);
+    Window::focused().enqueue_event(e);
 }
 
 void EventManager::post_action(const Mouse::Packet& packet)
 {
-    // if (!Window::is_any_focused()) return;
-
     // detect changes of state
     if (packet.x_delta || packet.y_delta) {
+        log() << "MouseMove: x " << packet.x_delta << " y " << packet.y_delta;
+
+        if (!Window::is_any_focused())
+            return;
+
         Event e {};
 
         e.type = Event::Type::MOUSE_MOVE;
@@ -51,21 +59,22 @@ void EventManager::post_action(const Mouse::Packet& packet)
         // calculate location relative to window
         e.mouse_move = { 0, 0 };
 
-        // Window::focused().enqueue_event(e);
-
-        log() << "MouseMove: x " << packet.x_delta << " y " << packet.y_delta;
+        Window::focused().enqueue_event(e);
     }
 
     if (packet.wheel_delta) {
+        log() << "MouseScroll: delta " << packet.wheel_delta << " direction "
+              << (packet.scroll_direction == ScrollDirection::VERTICAL ? "vertical" : "horizontal");
+
+        if (!Window::is_any_focused())
+            return;
+
         Event e {};
 
         e.type         = Event::Type::MOUSE_MOVE;
         e.mouse_scroll = { packet.scroll_direction, packet.wheel_delta };
 
-        // Window::focused().enqueue_event(e);
-
-        log() << "MouseScroll: delta " << packet.wheel_delta << " direction "
-              << (packet.scroll_direction == ScrollDirection::VERTICAL ? "vertical" : "horizontal");
+        Window::focused().enqueue_event(e);
     }
 
     if (packet.left_button_state != m_last_mouse_state.left_button_state) {

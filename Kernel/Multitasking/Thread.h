@@ -7,7 +7,7 @@
 
 namespace kernel {
 
-using entrypoint_t = void (*)();
+class Window;
 
 class Thread {
 public:
@@ -74,6 +74,8 @@ public:
 
     bool should_be_woken_up() const { return m_wake_up_time <= Timer::the().nanoseconds_since_boot(); }
 
+    void set_window(Window* window) { m_window = window; }
+
 private:
     Thread(AddressSpace& page_dir, Address kernel_stack);
 
@@ -88,6 +90,8 @@ private:
     u8            m_exit_code { 0 };
     Thread*       m_previous { nullptr };
     Thread*       m_next { nullptr };
+
+    Window*       m_window;
 
     static Atomic<u32> s_next_thread_id;
 };
