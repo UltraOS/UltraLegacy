@@ -1,6 +1,7 @@
 #include "Compositor.h"
 #include "Drivers/Video/VideoDevice.h"
 #include "Multitasking/Sleep.h"
+#include "Screen.h"
 
 #include "Core/CPU.h"
 
@@ -10,34 +11,55 @@ namespace kernel {
 
 void Compositor::run()
 {
-    auto desktop_height = VideoDevice::the().height() * 97 / 100;
-    auto taskbar_height = VideoDevice::the().height() - desktop_height;
+    s_painter = new Painter();
 
-    s_desktop_rect.set_width(VideoDevice::the().width());
+    auto desktop_height = Screen::the().height() * 97 / 100;
+    auto taskbar_height = Screen::the().height() - desktop_height;
+
+    s_desktop_rect.set_width(Screen::the().width());
     s_desktop_rect.set_height(desktop_height);
     s_desktop_rect.set_top_left_x(0);
     s_desktop_rect.set_top_left_y(0);
 
-    s_taskbar_rect.set_width(VideoDevice::the().width());
+    s_taskbar_rect.set_width(Screen::the().width());
     s_taskbar_rect.set_height(taskbar_height);
     s_taskbar_rect.set_top_left_x(0);
     s_taskbar_rect.set_top_left_y(desktop_height);
 
-    s_clock_top_left.set_left(VideoDevice::the().width() - 100);
+    s_clock_top_left.set_left(Screen::the().width() - 100);
     s_clock_top_left.set_right(s_taskbar_rect.center().right() - 8);
 
     draw_desktop();
 
+    s_painter->draw_bitmap(const_cast<u16*>(Screen::the().cursor().bitmap()),
+                           19,
+                           Screen::the().cursor().location(),
+                           Color::white(),
+                           desktop_color);
+
     for (;;) {
         draw_clock_widget();
+
+        if (Screen::the().cursor().location() != s_last_cursor_location) {
+            s_painter->fill_rect(Rect(s_last_cursor_location.x(), s_last_cursor_location.y(), 16, 19), desktop_color);
+
+            s_last_cursor_location = Screen::the().cursor().location();
+
+            s_painter->draw_bitmap(const_cast<u16*>(Screen::the().cursor().bitmap()),
+                                   19,
+                                   Screen::the().cursor().location(),
+                                   Color::white(),
+                                   desktop_color);
+        }
+
         sleep::for_milliseconds(1000 / 60);
     }
 }
 
 void Compositor::draw_desktop()
 {
-    VideoDevice::the().fill_rect(s_desktop_rect, desktop_color);
-    VideoDevice::the().fill_rect(s_taskbar_rect, taskbar_color);
+    s_painter->fill_rect(s_desktop_rect, desktop_color);
+    s_painter->fill_rect(s_taskbar_rect, taskbar_color);
 }
 
 void Compositor::draw_clock_widget()
@@ -69,10 +91,7 @@ void Compositor::draw_clock_widget()
 
     auto draw_digits = [&current_x_offset](char* digits, size_t count) {
         for (size_t i = 0; i < count; ++i) {
-            VideoDevice::the().draw_char({ current_x_offset, s_clock_top_left.y() },
-                                         digits[i],
-                                         digit_color,
-                                         taskbar_color);
+            s_painter->draw_char({ current_x_offset, s_clock_top_left.y() }, digits[i], digit_color, taskbar_color);
             current_x_offset += font_width;
         }
     };
