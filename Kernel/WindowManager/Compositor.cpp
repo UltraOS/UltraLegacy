@@ -31,7 +31,7 @@ void Compositor::run()
 
     draw_desktop();
 
-    s_painter->draw_bitmap(const_cast<u16*>(Screen::the().cursor().bitmap()),
+    s_painter->draw_bitmap(Screen::the().cursor().bitmap(),
                            19,
                            Screen::the().cursor().location(),
                            Color::white(),
@@ -45,7 +45,7 @@ void Compositor::run()
 
             s_last_cursor_location = Screen::the().cursor().location();
 
-            s_painter->draw_bitmap(const_cast<u16*>(Screen::the().cursor().bitmap()),
+            s_painter->draw_bitmap(Screen::the().cursor().bitmap(),
                                    19,
                                    Screen::the().cursor().location(),
                                    Color::white(),
