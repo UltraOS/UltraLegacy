@@ -10,6 +10,10 @@ public:
     Point() = default;
     Point(size_t x, size_t y) : Pair(x, y) { }
 
+    bool operator==(const Point& other) const { return (x() == other.x()) && (y() == other.y()); }
+
+    bool operator!=(const Point& other) const { return !(*this == other); }
+
     size_t x() const { return left(); }
     size_t y() const { return right(); }
 };
