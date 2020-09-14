@@ -24,6 +24,15 @@ public:
         PS2Controller::the().send_command_to_device(m_channel, static_cast<u8>(command));
     }
 
+    bool data_available()
+    {
+        auto status = PS2Controller::the().status();
+
+        auto channel = status.data_from_port_2 ? PS2Controller::Channel::TWO : PS2Controller::Channel::ONE;
+
+        return status.output_full && (channel == m_channel);
+    }
+
     u8 read_data() { return PS2Controller::the().read_data(); }
 
     void handle_irq(const RegisterState&) { handle_action(); }

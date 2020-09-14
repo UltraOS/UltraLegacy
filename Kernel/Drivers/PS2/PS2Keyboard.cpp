@@ -217,7 +217,7 @@ PS2Keyboard::PS2Keyboard(PS2Controller::Channel channel) : PS2Device(channel)
 
 void PS2Keyboard::handle_action()
 {
-    while (PS2Controller::the().status().output_full) {
+    while (data_available()) {
         static constexpr u8 key_released_bit = SET_BIT(7);
         static constexpr u8 raw_key_mask     = SET_BIT(7) - 1;
 

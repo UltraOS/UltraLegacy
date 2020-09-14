@@ -58,7 +58,7 @@ public:
         bool system_flag : 1;
         bool controller_data : 1;
         bool unknown_1 : 1;
-        bool unknown_2 : 1;
+        bool data_from_port_2 : 1;
         bool timeout_error : 1;
         bool parity_error : 1;
     };
@@ -109,28 +109,7 @@ public:
         IO::out8<port>(data);
     }
 
-    u8 read_data(bool allow_failure = false)
-    {
-        size_t timeout_counter = allow_failure ? 100 : 100000;
-
-        while (!status().output_full && --timeout_counter)
-            pause();
-
-        if (timeout_counter == 0) {
-            if (allow_failure) {
-                m_last_read_timeout = true;
-                return 0x00;
-            }
-
-            error() << "PS2Controller: unexpected read timeout!";
-            hang();
-        }
-
-        if (allow_failure)
-            m_last_read_timeout = false;
-
-        return IO::in8<data_port>();
-    }
+    u8 read_data(bool allow_failure = false, size_t max_attempts = 100000);
 
     bool did_last_read_timeout() { return m_last_read_timeout; }
 

@@ -146,7 +146,7 @@ void PS2Mouse::parse_packet()
 
 void PS2Mouse::handle_action()
 {
-    while (PS2Controller::the().status().output_full)
+    while (data_available())
         append_packet_data(read_data());
 }
 }

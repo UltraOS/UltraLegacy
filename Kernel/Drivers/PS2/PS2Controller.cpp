@@ -127,7 +127,7 @@ bool PS2Controller::initialize_device_if_present(Channel channel)
     send_command(enable_port);
 
     if (!reset_device(channel)) {
-        log() << "PS2Controller: Port " << static_cast<u8>(channel) << "doesn't have a device attached";
+        log() << "PS2Controller: Port " << static_cast<u8>(channel) << " doesn't have a device attached";
         return false;
     }
 
@@ -146,12 +146,14 @@ bool PS2Controller::initialize_device_if_present(Channel channel)
 
 bool PS2Controller::reset_device(Channel channel)
 {
+    // This command takes a ton of time on real hw (and apparanetly on VirtualBox too)
+    // therefore we cannot afford a smaller delay in read_data()
     send_command_to_device(channel, DeviceCommand::RESET, false);
 
     u8 device_response[3];
     device_response[0] = read_data(true);
     device_response[1] = read_data(true);
-    device_response[2] = read_data(true);
+    device_response[2] = read_data(true, 250); // unlikely to not timeout?
 
     if ((device_response[0] == command_ack && device_response[1] == self_test_passed)
         || (device_response[0] == self_test_passed && device_response[1] == command_ack)) {
@@ -160,7 +162,7 @@ bool PS2Controller::reset_device(Channel channel)
         if (!did_last_read_timeout()) {
             error() << "PS2Controller: Device " << static_cast<u8>(channel)
                     << " is present but responded with unknown sequence -> " << format::as_hex << device_response[0]
-                    << "-" << device_response[1];
+                    << "-" << device_response[1] << "-" << device_response[2];
             hang();
         }
 
@@ -178,7 +180,7 @@ PS2Controller::DeviceIdentification PS2Controller::identify_device(Channel chann
     DeviceIdentification ident {};
 
     for (auto i = 0; i < 2; ++i) {
-        ident.id[i] = read_data(true);
+        ident.id[i] = read_data(true, 250); // this delay is super sensitive and prone to breaking
         ident.id_bytes += !!did_last_read_timeout();
     }
 
@@ -220,6 +222,27 @@ void PS2Controller::send_command_to_device(Channel channel, u8 command, bool sho
         error() << "PS2Controller: failed to receive command ACK after 1000 attempts";
         hang();
     }
+}
+
+u8 PS2Controller::read_data(bool allow_failure, size_t max_attempts)
+{
+    while (!status().output_full && --max_attempts)
+        pause();
+
+    if (max_attempts == 0) {
+        if (allow_failure) {
+            m_last_read_timeout = true;
+            return 0x00;
+        }
+
+        error() << "PS2Controller: unexpected read timeout!";
+        hang();
+    }
+
+    if (allow_failure)
+        m_last_read_timeout = false;
+
+    return IO::in8<data_port>();
 }
 
 PS2Controller::Status PS2Controller::status()
