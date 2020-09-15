@@ -7,10 +7,18 @@ Painter::Painter() : m_mode(VideoDevice::the().mode()) { }
 
 void Painter::fill_rect(const Rect& rect, Color color)
 {
-    for (size_t y = rect.top_left().y(); y < rect.bottom_right().y(); ++y) {
-        for (size_t x = rect.top_left().x(); x < rect.bottom_right().x(); ++x) {
-            draw_at(x, y, color);
+    size_t bytes_per_pixel = m_mode.bpp / 8;
+    size_t y_offset = rect.top_left().y() * m_mode.pitch;
+    size_t x_offset = rect.top_left().x() * bytes_per_pixel;
+    Address pixels_begin = Address(m_mode.framebuffer + y_offset + x_offset);
+    size_t step = m_mode.pitch - (x_offset + (rect.width() * bytes_per_pixel)) + x_offset;
+
+    for (size_t y = 0; y < rect.height(); ++y) {
+        for (size_t x = 0; x < rect.width(); ++x) {
+            *Address(pixels_begin).as_pointer<u32>() = color.as_u32();
+            pixels_begin += bytes_per_pixel;
         }
+        pixels_begin += step;
     }
 }
 
@@ -30,23 +38,34 @@ void Painter::draw_at(size_t x, size_t y, Color pixel)
 
 void Painter::draw_bitmap(const u8* map, size_t height, Point top_left, Color char_color, Color fill_color)
 {
+    size_t bytes_per_pixel = m_mode.bpp / 8;
+    Address offset_to_pixel = top_left.y() * m_mode.pitch + top_left.x() * bytes_per_pixel;
+    Address pixels_begin = Address(m_mode.framebuffer + offset_to_pixel);
+
     for (size_t y = 0; y < height; ++y) {
         for (size_t x = 0; x < 8; ++x) {
             bool present = map[y] & SET_BIT(8 - 1 - x);
-
-            draw_at(top_left.x() + x, top_left.y() + y, present ? char_color : fill_color);
+            *Address(pixels_begin + (bytes_per_pixel * x)).as_pointer<u32>() = present ?  char_color.as_u32() : fill_color.as_u32();
         }
+        pixels_begin += m_mode.pitch;
     }
 }
 
 void Painter::draw_bitmap(const u16* map, size_t height, Point top_left, Color char_color, Color fill_color)
 {
+    size_t bytes_per_pixel = m_mode.bpp / 8;
+    size_t y_offset = top_left.y() * m_mode.pitch;
+    size_t x_offset = top_left.x() * bytes_per_pixel;
+    Address pixels_begin = Address(m_mode.framebuffer + y_offset + x_offset);
+    size_t step = m_mode.pitch - (x_offset + (16 * bytes_per_pixel)) + x_offset;
+
     for (size_t y = 0; y < height; ++y) {
         for (size_t x = 0; x < 16; ++x) {
             bool present = map[y] & SET_BIT(16 - 1 - x);
-
-            draw_at(top_left.x() + x, top_left.y() + y, present ? char_color : fill_color);
+            *Address(pixels_begin).as_pointer<u32>() = present ?  char_color.as_u32() : fill_color.as_u32();
+            pixels_begin += bytes_per_pixel;
         }
+        pixels_begin += step;
     }
 }
 
