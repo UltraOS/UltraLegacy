@@ -7,11 +7,11 @@ Painter::Painter() : m_mode(VideoDevice::the().mode()) { }
 
 void Painter::fill_rect(const Rect& rect, Color color)
 {
-    size_t bytes_per_pixel = m_mode.bpp / 8;
-    size_t y_offset = rect.top_left().y() * m_mode.pitch;
-    size_t x_offset = rect.top_left().x() * bytes_per_pixel;
-    Address pixels_begin = Address(m_mode.framebuffer + y_offset + x_offset);
-    size_t step = m_mode.pitch - (x_offset + (rect.width() * bytes_per_pixel)) + x_offset;
+    size_t  bytes_per_pixel = m_mode.bpp / 8;
+    size_t  y_offset        = rect.top_left().y() * m_mode.pitch;
+    size_t  x_offset        = rect.top_left().x() * bytes_per_pixel;
+    Address pixels_begin    = Address(m_mode.framebuffer + y_offset + x_offset);
+    size_t  step            = m_mode.pitch - (x_offset + (rect.width() * bytes_per_pixel)) + x_offset;
 
     for (size_t y = 0; y < rect.height(); ++y) {
         for (size_t x = 0; x < rect.width(); ++x) {
@@ -36,36 +36,34 @@ void Painter::draw_at(size_t x, size_t y, Color pixel)
     }
 }
 
-void Painter::draw_bitmap(const u8* map, size_t height, Point top_left, Color char_color, Color fill_color)
+void Painter::draw_bitmap(const Bitmap& bitmap, const Point& point)
 {
-    size_t bytes_per_pixel = m_mode.bpp / 8;
-    Address offset_to_pixel = top_left.y() * m_mode.pitch + top_left.x() * bytes_per_pixel;
-    Address pixels_begin = Address(m_mode.framebuffer + offset_to_pixel);
-
-    for (size_t y = 0; y < height; ++y) {
-        for (size_t x = 0; x < 8; ++x) {
-            bool present = map[y] & SET_BIT(8 - 1 - x);
-            *Address(pixels_begin + (bytes_per_pixel * x)).as_pointer<u32>() = present ?  char_color.as_u32() : fill_color.as_u32();
-        }
-        pixels_begin += m_mode.pitch;
+    switch (bitmap.format()) {
+    case Bitmap::Format::INDEXED_1_BPP: draw_1_bpp_bitmap(bitmap, point); break;
+    default: warning() << "Painter: cannot draw unknown format " << static_cast<u8>(bitmap.format());
     }
 }
 
-void Painter::draw_bitmap(const u16* map, size_t height, Point top_left, Color char_color, Color fill_color)
+void Painter::draw_1_bpp_bitmap(const Bitmap& bitmap, const Point& point)
 {
-    size_t bytes_per_pixel = m_mode.bpp / 8;
-    size_t y_offset = top_left.y() * m_mode.pitch;
-    size_t x_offset = top_left.x() * bytes_per_pixel;
-    Address pixels_begin = Address(m_mode.framebuffer + y_offset + x_offset);
-    size_t step = m_mode.pitch - (x_offset + (16 * bytes_per_pixel)) + x_offset;
+    size_t  bytes_per_pixel = m_mode.bpp / 8;
+    Address offset_to_pixel = point.y() * m_mode.pitch + point.x() * bytes_per_pixel;
+    Address pixels_begin    = Address(m_mode.framebuffer + offset_to_pixel);
 
-    for (size_t y = 0; y < height; ++y) {
-        for (size_t x = 0; x < 16; ++x) {
-            bool present = map[y] & SET_BIT(16 - 1 - x);
-            *Address(pixels_begin).as_pointer<u32>() = present ?  char_color.as_u32() : fill_color.as_u32();
-            pixels_begin += bytes_per_pixel;
+    for (size_t y = 0; y < bitmap.height(); ++y) {
+        auto* scanline = reinterpret_cast<const u8*>(bitmap.scanline_at(y));
+
+        for (size_t x = 0; x < bitmap.width(); ++x) {
+            size_t byte = x / 8;
+            size_t bit  = SET_BIT(x - byte * 8);
+
+            auto color = bitmap.color_at(!!(scanline[byte] & bit));
+            if (!color.a()) // fully trasnparent
+                continue;
+
+            *Address(pixels_begin + (bytes_per_pixel * x)).as_pointer<u32>() = color.as_u32();
         }
-        pixels_begin += step;
+        pixels_begin += m_mode.pitch;
     }
 }
 
