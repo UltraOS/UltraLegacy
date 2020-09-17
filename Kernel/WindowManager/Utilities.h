@@ -29,13 +29,14 @@ public:
     static constexpr Color red() { return { 0xFF, 0x00, 0x00 }; }
     static constexpr Color green() { return { 0x00, 0xFF, 0x00 }; }
     static constexpr Color blue() { return { 0x00, 0x00, 0xFF }; }
+    static constexpr Color transparent() { return { 0x00, 0x00, 0x00, 0x00 }; }
 
     constexpr u8 r() const { return m_r; }
     constexpr u8 g() const { return m_g; }
     constexpr u8 b() const { return m_b; }
     constexpr u8 a() const { return m_a; }
 
-    u32 as_u32() { return *reinterpret_cast<u32*>(this); }
+    u32 as_u32() const { return *reinterpret_cast<const u32*>(this); }
 
 private:
     u8 m_b;

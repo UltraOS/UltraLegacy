@@ -27,19 +27,19 @@ void Screen::recalculate_cursor_position(i16 delta_x, i16 delta_y)
         if (current_x > static_cast<decltype(current_x)>(delta_x))
             new_x = current_x - delta_x;
     } else {
-        if ((current_x + delta_x) < rect().width())
+        if ((current_x + delta_x + m_cursor.bitmap().width()) < rect().width())
             new_x = current_x + delta_x;
         else
-            new_x = rect().width();
+            new_x = rect().width() - m_cursor.bitmap().width();
     }
 
     if (down_movement) {
         delta_y *= -1;
 
-        if ((current_y + delta_y) < rect().height())
+        if ((current_y + delta_y + m_cursor.bitmap().height()) < rect().height())
             new_y = current_y + delta_y;
         else
-            new_y = rect().height();
+            new_y = rect().height() - m_cursor.bitmap().height();
     } else {
         if (current_y > static_cast<decltype(current_x)>(delta_y))
             new_y = current_y - delta_y;

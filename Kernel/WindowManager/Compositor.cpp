@@ -29,27 +29,27 @@ void Compositor::run()
     s_clock_top_left.set_left(Screen::the().width() - 100);
     s_clock_top_left.set_right(s_taskbar_rect.center().right() - 8);
 
+    const auto& cursor = Screen::the().cursor();
+
     draw_desktop();
 
-    s_painter->draw_bitmap(Screen::the().cursor().bitmap(),
-                           19,
-                           Screen::the().cursor().location(),
-                           Color::white(),
-                           desktop_color);
+    s_painter->draw_bitmap(cursor.bitmap(), cursor.location());
 
     for (;;) {
         draw_clock_widget();
 
-        if (Screen::the().cursor().location() != s_last_cursor_location) {
-            s_painter->fill_rect(Rect(s_last_cursor_location.x(), s_last_cursor_location.y(), 16, 19), desktop_color);
+        auto current_location = cursor.location();
 
-            s_last_cursor_location = Screen::the().cursor().location();
+        if (current_location != s_last_cursor_location) {
+            s_painter->fill_rect(Rect(s_last_cursor_location.x(),
+                                      s_last_cursor_location.y(),
+                                      cursor.bitmap().width(),
+                                      cursor.bitmap().height()),
+                                 desktop_color);
 
-            s_painter->draw_bitmap(Screen::the().cursor().bitmap(),
-                                   19,
-                                   Screen::the().cursor().location(),
-                                   Color::white(),
-                                   desktop_color);
+            s_last_cursor_location = current_location;
+
+            s_painter->draw_bitmap(cursor.bitmap(), s_last_cursor_location);
         }
 
         sleep::for_milliseconds(1000 / 60);
