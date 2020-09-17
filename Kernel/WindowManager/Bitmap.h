@@ -5,9 +5,9 @@
 
 namespace kernel {
 
-class BitmapBase {
+class Bitmap {
 public:
-    enum class Format {
+    enum class Format : u8 {
         INDEXED_1_BPP,
         INDEXED_2_BPP,
         INDEXED_4_BPP,
@@ -16,34 +16,41 @@ public:
         RGBA_32_BPP,
     };
 
-    BitmapBase(size_t width, size_t height, Format);
+    Bitmap(size_t width, size_t height, Format format);
 
     size_t bpp() const;
-    size_t pitch() const { return bpp() * m_width; }
+    size_t pitch() const { return m_pitch; }
     Format format() const { return m_format; }
+    size_t width() const { return m_width; }
+    size_t height() const { return m_height; }
+    bool   is_indexed() const;
 
     virtual const void*  scanline_at(size_t y) const  = 0;
     virtual const Color& color_at(size_t index) const = 0;
     virtual const Color* palette() const              = 0;
 
-    virtual ~BitmapBase() = 0;
+    virtual ~Bitmap() = default;
+
+private:
+    void calculate_pitch();
 
 private:
     size_t m_width { 0 };
     size_t m_height { 0 };
+    size_t m_pitch { 0 };
 
     Format m_format;
 };
 
-class Bitmap final : public BitmapBase {
+class MutableBitmap final : public Bitmap {
 public:
-    Bitmap(void*  data,
-           size_t width,
-           size_t height,
-           bool   owns_data,
-           Format,
-           Color* palette      = nullptr,
-           bool   owns_palette = false);
+    MutableBitmap(void*  data,
+                  size_t width,
+                  size_t height,
+                  bool   owns_data,
+                  Format,
+                  Color* palette      = nullptr,
+                  bool   owns_palette = false);
 
     void*       scanline_at(size_t y);
     const void* scanline_at(size_t y) const override;
@@ -54,7 +61,7 @@ public:
     Color*       palette() { return m_palette; }
     const Color* palette() const override { return m_palette; }
 
-    ~Bitmap();
+    ~MutableBitmap();
 
 private:
     u8*  m_data { nullptr };
@@ -64,7 +71,7 @@ private:
     bool   m_palette_ownership { false };
 };
 
-class BitmapView final : public BitmapBase {
+class BitmapView final : public Bitmap {
 public:
     BitmapView(const void* data, size_t width, size_t height, Format, const Color* palette = nullptr);
 
