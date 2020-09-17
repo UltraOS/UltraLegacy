@@ -1,7 +1,7 @@
 # UltraOS
 An operating system that doesn't try to be UNIX. Made completely from scratch with its own bootloader. 😊
 
-![alt-text](https://ibb.co/rmVNrpr)
+![alt-text](https://i.ibb.co/XbqMR5R/desktop.png)
 
 ## Current Features
 - Fully modern C++17 kernel
