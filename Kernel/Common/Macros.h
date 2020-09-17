@@ -5,7 +5,7 @@
 
 #define USED __attribute__((used))
 
-#define SET_BIT(x) (1 << (x))
+#define SET_BIT(x) (1u << (x))
 
 #define IS_BIT_SET(mask, x) ((mask)&SET_BIT(x))
 

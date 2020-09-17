@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Bitmap.h"
 #include "Utilities.h"
 
 namespace kernel {
@@ -12,13 +13,18 @@ public:
 
     const Point& location() const { return m_location; }
 
-    const u16* bitmap() const { return s_bitmap; }
+    const BitmapView& bitmap() const { return m_bitmap; }
 
 private:
-    static const u16 s_bitmap[19];
+    static constexpr size_t bitmap_height         = 19;
+    static constexpr size_t bitmap_width          = 12;
+    static constexpr size_t bitmap_width_in_bytes = 2;
 
-    Point m_location;
-    Rect  m_rect;
+    static const u8    s_bitmap_data[bitmap_height * bitmap_width_in_bytes];
+    static const Color s_palette[2];
+
+    BitmapView m_bitmap;
+    Point      m_location;
 };
 
 }
