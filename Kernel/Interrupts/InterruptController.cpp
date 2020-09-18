@@ -193,15 +193,6 @@ void InterruptController::MP::parse_configuration_table(FloatingPointer* fp_tabl
 
             auto& interrupt = *entry_address.as_pointer<InterruptEntry>();
 
-            // TODO: 1. handle lapic assignemnts separetely (LINT0/LINT1 stuff)
-            //       2. handle interrupt types other than the default vectored
-            //       3. handle interrupts that are coming from the PCI bus
-            if (type == EntryType::LOCAL_INTERRUPT_ASSIGNMENT || interrupt.interrupt_type != InterruptEntry::Type::INT
-                || interrupt.source_bus_id != isa_bus_id) {
-                entry_address += sizeof_entry(type);
-                continue;
-            }
-
             const char* str_type = type == EntryType::IO_INTERRUPT_ASSIGNMENT ? "I/O Interrupt Assignment"
                                                                               : "Local Interrupt Assignment";
 
@@ -215,6 +206,15 @@ void InterruptController::MP::parse_configuration_table(FloatingPointer* fp_tabl
                   << "\n----> Source bus IRQ: " << interrupt.source_bus_irq << "\n----> Destination " << str_apic
                   << " id: " << interrupt.destination_ioapic_id << "\n----> Destination " << str_apic
                   << " pin: " << interrupt.destination_ioapic_pin << "\n";
+
+            // TODO: 1. handle lapic assignemnts separetely (LINT0/LINT1 stuff)
+            //       2. handle interrupt types other than the default vectored
+            //       3. handle interrupts that are coming from the PCI bus
+            if (type == EntryType::LOCAL_INTERRUPT_ASSIGNMENT || interrupt.interrupt_type != InterruptEntry::Type::INT
+                || interrupt.source_bus_id != isa_bus_id) {
+                entry_address += sizeof_entry(type);
+                continue;
+            }
 
             // TODO: take care of the possibility of having multiple IOAPICs
             IRQInfo info {};
