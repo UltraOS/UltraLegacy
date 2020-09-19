@@ -16,7 +16,7 @@ public:
         RGBA_32_BPP,
     };
 
-    Bitmap(size_t width, size_t height, Format format);
+    Bitmap(size_t width, size_t height, Format format, size_t pitch = 0);
 
     size_t bpp() const;
     size_t pitch() const { return m_pitch; }
@@ -44,13 +44,7 @@ private:
 
 class MutableBitmap final : public Bitmap {
 public:
-    MutableBitmap(void*  data,
-                  size_t width,
-                  size_t height,
-                  bool   owns_data,
-                  Format,
-                  Color* palette      = nullptr,
-                  bool   owns_palette = false);
+    MutableBitmap(void* data, size_t width, size_t height, Format, Color* palette = nullptr, size_t pitch = 0);
 
     void*       scanline_at(size_t y);
     const void* scanline_at(size_t y) const override;
@@ -61,19 +55,16 @@ public:
     Color*       palette() { return m_palette; }
     const Color* palette() const override { return m_palette; }
 
-    ~MutableBitmap();
-
 private:
-    u8*  m_data { nullptr };
-    bool m_data_ownership { false };
-
+    u8*    m_data { nullptr };
     Color* m_palette { nullptr };
-    bool   m_palette_ownership { false };
 };
+
+using Surface = MutableBitmap;
 
 class BitmapView final : public Bitmap {
 public:
-    BitmapView(const void* data, size_t width, size_t height, Format, const Color* palette = nullptr);
+    BitmapView(const void* data, size_t width, size_t height, Format, const Color* palette = nullptr, size_t pitch = 0);
 
     const void*  scanline_at(size_t y) const override;
     const Color& color_at(size_t index) const override;

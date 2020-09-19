@@ -4,9 +4,11 @@
 
 namespace kernel {
 
-Bitmap::Bitmap(size_t width, size_t height, Format format) : m_width(width), m_height(height), m_format(format)
+Bitmap::Bitmap(size_t width, size_t height, Format format, size_t pitch)
+    : m_width(width), m_height(height), m_pitch(pitch), m_format(format)
 {
-    calculate_pitch();
+    if (m_pitch == 0)
+        calculate_pitch();
 }
 
 void Bitmap::calculate_pitch()
@@ -14,20 +16,13 @@ void Bitmap::calculate_pitch()
     m_pitch = ceiling_divide(m_width * bpp(), static_cast<decltype(m_width)>(8));
 }
 
-MutableBitmap::MutableBitmap(void*  data,
-                             size_t width,
-                             size_t height,
-                             bool   owns_data,
-                             Format format,
-                             Color* palette,
-                             bool   owns_palette)
-    : Bitmap(width, height, format), m_data(reinterpret_cast<u8*>(data)), m_data_ownership(owns_data),
-      m_palette(palette), m_palette_ownership(owns_palette)
+MutableBitmap::MutableBitmap(void* data, size_t width, size_t height, Format format, Color* palette, size_t pitch)
+    : Bitmap(width, height, format, pitch), m_data(reinterpret_cast<u8*>(data)), m_palette(palette)
 {
 }
 
-BitmapView::BitmapView(const void* data, size_t width, size_t height, Format format, const Color* palette)
-    : Bitmap(width, height, format), m_data(reinterpret_cast<const u8*>(data)), m_palette(palette)
+BitmapView::BitmapView(const void* data, size_t width, size_t height, Format format, const Color* palette, size_t pitch)
+    : Bitmap(width, height, format, pitch), m_data(reinterpret_cast<const u8*>(data)), m_palette(palette)
 {
 }
 
@@ -92,13 +87,5 @@ const Color& BitmapView::color_at(size_t index) const
     ASSERT(index < SET_BIT(bpp())); // 2^bpp == palette entry count
 
     return m_palette[index];
-}
-
-MutableBitmap::~MutableBitmap()
-{
-    if (m_data_ownership)
-        delete[] m_data;
-    if (m_palette_ownership)
-        delete[] m_palette;
 }
 }
