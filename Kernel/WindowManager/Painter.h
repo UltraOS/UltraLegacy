@@ -8,7 +8,7 @@ namespace kernel {
 
 class Painter {
 public:
-    Painter();
+    Painter(const Surface& surface);
 
     void draw_bitmap(const Bitmap&, const Point&);
     void fill_rect(const Rect&, Color color);
@@ -19,7 +19,7 @@ private:
     void draw_1_bpp_bitmap(const Bitmap&, const Point&);
 
 private:
-    VideoMode m_mode;
+    Surface m_surface;
 
     static constexpr size_t font_height = 16;
     static constexpr size_t font_width  = 8;

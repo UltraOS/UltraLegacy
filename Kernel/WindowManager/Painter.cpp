@@ -3,15 +3,17 @@
 
 namespace kernel {
 
-Painter::Painter() : m_mode(VideoDevice::the().mode()) { }
+Painter::Painter(const Surface& surface) : m_surface(surface)
+{
+    ASSERT(surface.bpp() == 32 && "Painter can only operate on 32bpp surfaces atm");
+}
 
 void Painter::fill_rect(const Rect& rect, Color color)
 {
-    size_t  bytes_per_pixel = m_mode.bpp / 8;
-    size_t  y_offset        = rect.top_left().y() * m_mode.pitch;
+    size_t  bytes_per_pixel = m_surface.bpp() / 8;
     size_t  x_offset        = rect.top_left().x() * bytes_per_pixel;
-    Address pixels_begin    = Address(m_mode.framebuffer + y_offset + x_offset);
-    size_t  step            = m_mode.pitch - (x_offset + (rect.width() * bytes_per_pixel)) + x_offset;
+    Address pixels_begin    = Address(m_surface.scanline_at(rect.top_left().y())) + x_offset;
+    size_t  step            = m_surface.pitch() - (x_offset + (rect.width() * bytes_per_pixel)) + x_offset;
 
     for (size_t y = 0; y < rect.height(); ++y) {
         for (size_t x = 0; x < rect.width(); ++x) {
@@ -24,15 +26,15 @@ void Painter::fill_rect(const Rect& rect, Color color)
 
 void Painter::draw_at(size_t x, size_t y, Color pixel)
 {
-    size_t offset = (m_mode.pitch * y) + (x * m_mode.bpp / 8);
+    size_t offset = (m_surface.pitch() * y) + (x * m_surface.bpp() / 8);
 
-    if (m_mode.bpp == 32)
-        *Address(m_mode.framebuffer + offset).as_pointer<u32>() = pixel.as_u32();
+    if (m_surface.bpp() == 32)
+        *Address(reinterpret_cast<u8*>(m_surface.scanline_at(0)) + offset).as_pointer<u32>() = pixel.as_u32();
     else {
-        ASSERT(m_mode.bpp == 24);
-        *Address(m_mode.framebuffer + offset + 0).as_pointer<u8>() = pixel.b();
-        *Address(m_mode.framebuffer + offset + 1).as_pointer<u8>() = pixel.g();
-        *Address(m_mode.framebuffer + offset + 2).as_pointer<u8>() = pixel.r();
+        ASSERT(m_surface.bpp() == 24);
+        *Address(reinterpret_cast<u8*>(m_surface.scanline_at(0)) + offset + 0).as_pointer<u8>() = pixel.b();
+        *Address(reinterpret_cast<u8*>(m_surface.scanline_at(0)) + offset + 1).as_pointer<u8>() = pixel.g();
+        *Address(reinterpret_cast<u8*>(m_surface.scanline_at(0)) + offset + 2).as_pointer<u8>() = pixel.r();
     }
 }
 
@@ -46,9 +48,8 @@ void Painter::draw_bitmap(const Bitmap& bitmap, const Point& point)
 
 void Painter::draw_1_bpp_bitmap(const Bitmap& bitmap, const Point& point)
 {
-    size_t  bytes_per_pixel = m_mode.bpp / 8;
-    Address offset_to_pixel = point.y() * m_mode.pitch + point.x() * bytes_per_pixel;
-    Address pixels_begin    = Address(m_mode.framebuffer + offset_to_pixel);
+    size_t  bytes_per_pixel = m_surface.bpp() / 8;
+    Address pixels_begin    = Address(m_surface.scanline_at(point.y())) + point.x() * bytes_per_pixel;
 
     for (size_t y = 0; y < bitmap.height(); ++y) {
         auto* scanline = reinterpret_cast<const u8*>(bitmap.scanline_at(y));
@@ -63,7 +64,7 @@ void Painter::draw_1_bpp_bitmap(const Bitmap& bitmap, const Point& point)
 
             *Address(pixels_begin + (bytes_per_pixel * x)).as_pointer<u32>() = color.as_u32();
         }
-        pixels_begin += m_mode.pitch;
+        pixels_begin += m_surface.pitch();
     }
 }
 
