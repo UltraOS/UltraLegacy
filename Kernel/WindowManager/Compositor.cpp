@@ -9,57 +9,75 @@
 
 namespace kernel {
 
-void Compositor::run()
-{
-    s_painter = new Painter();
+Compositor* Compositor::s_instance;
 
+Compositor::Compositor() : m_painter(new Painter(Screen::the().surface()))
+{
     auto desktop_height = Screen::the().height() * 97 / 100;
     auto taskbar_height = Screen::the().height() - desktop_height;
 
-    s_desktop_rect.set_width(Screen::the().width());
-    s_desktop_rect.set_height(desktop_height);
-    s_desktop_rect.set_top_left_x(0);
-    s_desktop_rect.set_top_left_y(0);
+    m_desktop_rect.set_width(Screen::the().width());
+    m_desktop_rect.set_height(desktop_height);
+    m_desktop_rect.set_top_left_x(0);
+    m_desktop_rect.set_top_left_y(0);
 
-    s_taskbar_rect.set_width(Screen::the().width());
-    s_taskbar_rect.set_height(taskbar_height);
-    s_taskbar_rect.set_top_left_x(0);
-    s_taskbar_rect.set_top_left_y(desktop_height);
+    m_taskbar_rect.set_width(Screen::the().width());
+    m_taskbar_rect.set_height(taskbar_height);
+    m_taskbar_rect.set_top_left_x(0);
+    m_taskbar_rect.set_top_left_y(desktop_height);
 
-    s_clock_top_left.set_left(Screen::the().width() - 100);
-    s_clock_top_left.set_right(s_taskbar_rect.center().right() - 8);
+    m_clock_top_left.set_left(Screen::the().width() - 100);
+    m_clock_top_left.set_right(m_taskbar_rect.center().right() - 8);
 
-    const auto& cursor = Screen::the().cursor();
+    const auto& cursor     = Screen::the().cursor();
+    m_last_cursor_location = cursor.location();
 
     draw_desktop();
+    m_painter->draw_bitmap(cursor.bitmap(), m_last_cursor_location);
+}
 
-    s_painter->draw_bitmap(cursor.bitmap(), cursor.location());
+void Compositor::compose()
+{
+    draw_clock_widget();
+    check_if_cursor_moved();
+
+    for (auto& rect: m_dirty_rects)
+        m_painter->fill_rect(rect, desktop_color);
+
+    m_dirty_rects.clear();
+
+    if (m_cursor_invalidated) {
+        m_cursor_invalidated = false;
+        m_painter->draw_bitmap(Screen::the().cursor().bitmap(), m_last_cursor_location);
+    }
+}
+
+void Compositor::run()
+{
+    s_instance = new Compositor();
 
     for (;;) {
-        draw_clock_widget();
+        Compositor::the().compose();
+        sleep::for_milliseconds(1000 / 100);
+    }
+}
 
-        auto current_location = cursor.location();
+void Compositor::check_if_cursor_moved()
+{
+    auto& cursor   = Screen::the().cursor();
+    auto  location = cursor.location();
 
-        if (current_location != s_last_cursor_location) {
-            s_painter->fill_rect(Rect(s_last_cursor_location.x(),
-                                      s_last_cursor_location.y(),
-                                      cursor.bitmap().width(),
-                                      cursor.bitmap().height()),
-                                 desktop_color);
-
-            s_last_cursor_location = current_location;
-
-            s_painter->draw_bitmap(cursor.bitmap(), s_last_cursor_location);
-        }
-
-        sleep::for_milliseconds(1000 / 60);
+    if (location != m_last_cursor_location) {
+        m_dirty_rects.emplace(m_last_cursor_location, cursor.bitmap().width(), cursor.bitmap().height());
+        m_cursor_invalidated   = true;
+        m_last_cursor_location = location;
     }
 }
 
 void Compositor::draw_desktop()
 {
-    s_painter->fill_rect(s_desktop_rect, desktop_color);
-    s_painter->fill_rect(s_taskbar_rect, taskbar_color);
+    m_painter->fill_rect(m_desktop_rect, desktop_color);
+    m_painter->fill_rect(m_taskbar_rect, taskbar_color);
 }
 
 void Compositor::draw_clock_widget()
@@ -87,11 +105,11 @@ void Compositor::draw_clock_widget()
     // hardcoded for now
     static constexpr size_t font_width = 8;
 
-    size_t current_x_offset = s_clock_top_left.x();
+    size_t current_x_offset = m_clock_top_left.x();
 
-    auto draw_digits = [&current_x_offset](char* digits, size_t count) {
+    auto draw_digits = [&](char* digits, size_t count) {
         for (size_t i = 0; i < count; ++i) {
-            s_painter->draw_char({ current_x_offset, s_clock_top_left.y() }, digits[i], digit_color, taskbar_color);
+            m_painter->draw_char({ current_x_offset, m_clock_top_left.y() }, digits[i], digit_color, taskbar_color);
             current_x_offset += font_width;
         }
     };

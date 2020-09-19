@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Common/DynamicArray.h"
 #include "Core/Runtime.h"
 #include "Painter.h"
 #include "Utilities.h"
@@ -10,20 +11,36 @@ class Compositor {
 public:
     static void run();
 
-    static void on_cursor_moved(i16 delta_x, i16 delta_y);
+    static Compositor& the()
+    {
+        ASSERT(s_instance != nullptr);
+        return *s_instance;
+    }
+
+    void compose();
 
 private:
-    static void draw_desktop();
-    static void draw_clock_widget();
+    Compositor();
 
-    static inline Painter* s_painter;
+    void draw_desktop();
+    void draw_clock_widget();
 
-    static inline Rect s_desktop_rect;
-    static inline Rect s_taskbar_rect;
+    void check_if_cursor_moved();
 
-    static inline Point s_clock_top_left;
+private:
+    Painter* m_painter;
 
-    static inline Point s_last_cursor_location;
+    Rect m_desktop_rect;
+    Rect m_taskbar_rect;
+
+    Point m_clock_top_left;
+
+    bool  m_cursor_invalidated { false };
+    Point m_last_cursor_location;
+
+    DynamicArray<Rect> m_dirty_rects;
+
+    static Compositor* s_instance;
 
     static constexpr Color desktop_color = { 0x2d, 0x2d, 0x2d };
     static constexpr Color taskbar_color = { 0x8d, 0x26, 0x64 };
