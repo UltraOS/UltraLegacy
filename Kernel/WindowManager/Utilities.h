@@ -54,6 +54,11 @@ public:
     {
     }
 
+    Rect(const Point& top_left, size_t width, size_t height)
+        : m_x(top_left.x()), m_y(top_left.y()), m_width(width), m_height(height)
+    {
+    }
+
     void set_top_left_x(size_t x) { m_x = x; }
     void set_top_left_y(size_t y) { m_y = y; }
 
