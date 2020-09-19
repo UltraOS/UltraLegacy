@@ -3,6 +3,7 @@
 #include "Core/Boot.h"
 
 #include "Drivers/Device.h"
+#include "WindowManager/Bitmap.h"
 
 namespace kernel {
 
@@ -13,6 +14,8 @@ public:
     virtual const VideoMode& mode() const = 0;
 
     static void discover_and_setup(const VideoMode&);
+
+    virtual Surface surface() const = 0;
 
     static VideoDevice& the()
     {
