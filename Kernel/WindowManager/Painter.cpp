@@ -26,16 +26,8 @@ void Painter::fill_rect(const Rect& rect, Color color)
 
 void Painter::draw_at(size_t x, size_t y, Color pixel)
 {
-    size_t offset = (m_surface.pitch() * y) + (x * m_surface.bpp() / 8);
-
-    if (m_surface.bpp() == 32)
-        *Address(reinterpret_cast<u8*>(m_surface.scanline_at(0)) + offset).as_pointer<u32>() = pixel.as_u32();
-    else {
-        ASSERT(m_surface.bpp() == 24);
-        *Address(reinterpret_cast<u8*>(m_surface.scanline_at(0)) + offset + 0).as_pointer<u8>() = pixel.b();
-        *Address(reinterpret_cast<u8*>(m_surface.scanline_at(0)) + offset + 1).as_pointer<u8>() = pixel.g();
-        *Address(reinterpret_cast<u8*>(m_surface.scanline_at(0)) + offset + 2).as_pointer<u8>() = pixel.r();
-    }
+    Address pixels_begin = Address(m_surface.scanline_at(y)) + (x * m_surface.bpp() / 8);
+    *pixels_begin.as_pointer<u32>() = pixel.as_u32();
 }
 
 void Painter::draw_bitmap(const Bitmap& bitmap, const Point& point)
