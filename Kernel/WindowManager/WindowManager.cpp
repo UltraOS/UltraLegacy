@@ -9,7 +9,7 @@ WindowManager WindowManager::s_instance;
 
 void WindowManager::initialize()
 {
-    Screen::initialize();
+    Screen::initialize(VideoDevice::the());
     Process::create_supervisor(&Compositor::run);
 }
 }

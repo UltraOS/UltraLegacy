@@ -2,15 +2,16 @@
 
 #include "Core/Runtime.h"
 #include "Cursor.h"
+#include "Drivers/Video/VideoDevice.h"
 #include "Utilities.h"
 
 namespace kernel {
 
 class Screen {
 public:
-    Screen();
+    Screen(VideoDevice& device);
 
-    static void initialize() { s_instance = new Screen(); }
+    static void initialize(VideoDevice& device) { s_instance = new Screen(device); }
 
     static Screen& the()
     {
@@ -25,12 +26,15 @@ public:
 
     const Cursor& cursor() const { return m_cursor; }
 
+    Surface surface() const { return m_device.surface(); }
+
     size_t width() const { return m_rect.width(); }
     size_t height() const { return m_rect.height(); }
 
 private:
-    Cursor m_cursor;
-    Rect   m_rect;
+    VideoDevice& m_device;
+    Cursor       m_cursor;
+    Rect         m_rect;
 
     static Screen* s_instance;
 };
