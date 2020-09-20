@@ -42,7 +42,22 @@ public:
         return *m_ptr;
     }
 
+    const T& operator*() const
+    {
+        ASSERT(m_ptr);
+
+        return *m_ptr;
+    }
+
     T* operator->()
+    {
+        ASSERT(m_ptr);
+
+        return m_ptr;
+    }
+
+
+    const T* operator->() const
     {
         ASSERT(m_ptr);
 
