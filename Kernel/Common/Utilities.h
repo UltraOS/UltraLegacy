@@ -30,6 +30,12 @@ constexpr const T& max(const T& l, const T& r)
 }
 
 template <typename T>
+constexpr const T& min(const T& l, const T& r)
+{
+    return l < r ? l : r;
+}
+
+template <typename T>
 void swap(T& l, T& r)
 {
     T tmp = move(l);
