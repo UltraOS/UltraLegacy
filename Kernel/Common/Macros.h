@@ -2,6 +2,7 @@
 
 #define PACKED   [[gnu::packed]]
 #define NOINLINE __attribute__((noinline))
+#define ALWAYS_INLINE __attribute__((always_inline))
 
 #define USED __attribute__((used))
 
@@ -36,4 +37,5 @@
 #define asm()
 #define USED
 #define PACKED
+#define ALWAYS_INLINE
 #endif

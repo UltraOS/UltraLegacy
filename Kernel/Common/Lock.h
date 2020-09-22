@@ -12,7 +12,7 @@ public:
     static constexpr lock_t unlocked = 0;
     static constexpr lock_t locked   = 1;
 
-    void lock()
+    void lock() ALWAYS_INLINE
     {
         lock_t expected = unlocked;
 
@@ -22,7 +22,7 @@ public:
         }
     }
 
-    void unlock() { m_lock.store(unlocked, MemoryOrder::RELEASE); }
+    void unlock() ALWAYS_INLINE { m_lock.store(unlocked, MemoryOrder::RELEASE); }
 
 private:
     Atomic<size_t> m_lock;
@@ -32,7 +32,7 @@ class InterruptSafeSpinLock : SpinLock {
 public:
     InterruptSafeSpinLock() { }
 
-    void lock(bool& interrupt_state)
+    void lock(bool& interrupt_state) ALWAYS_INLINE
     {
         interrupt_state = Interrupts::are_enabled();
         Interrupts::disable();
@@ -40,7 +40,7 @@ public:
         SpinLock::lock();
     }
 
-    void unlock(bool interrupt_state)
+    void unlock(bool interrupt_state) ALWAYS_INLINE
     {
         SpinLock::unlock();
 
@@ -55,7 +55,7 @@ public:
 
     static constexpr lock_t unlocked = -1;
 
-    void lock()
+    void lock() ALWAYS_INLINE
     {
         u32 this_cpu;
 
@@ -80,7 +80,7 @@ public:
         ++m_depth;
     }
 
-    void unlock()
+    void unlock() ALWAYS_INLINE
     {
         ASSERT(m_depth > 0);
 
@@ -99,7 +99,7 @@ class RecursiveInterruptSafeSpinLock : public RecursiveSpinLock {
 public:
     RecursiveInterruptSafeSpinLock() { }
 
-    void lock(bool& interrupt_state)
+    void lock(bool& interrupt_state) ALWAYS_INLINE
     {
         interrupt_state = Interrupts::are_enabled();
         Interrupts::disable();
@@ -107,7 +107,7 @@ public:
         RecursiveSpinLock::lock();
     }
 
-    void unlock(bool interrupt_state)
+    void unlock(bool interrupt_state) ALWAYS_INLINE
     {
         RecursiveSpinLock::unlock();
 
@@ -122,7 +122,7 @@ public:
     ~ScopedInterruptSafeLock() { unlock(); }
 
 private:
-    void lock()
+    void lock() ALWAYS_INLINE
     {
         m_should_enable_interrupts = Interrupts::are_enabled();
         Interrupts::disable();
@@ -130,7 +130,7 @@ private:
         m_lock.lock();
     }
 
-    void unlock()
+    void unlock() ALWAYS_INLINE
     {
         m_lock.unlock();
 
