@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Bitmap.h"
 #include "Common/DynamicArray.h"
 #include "Event.h"
 #include "Multitasking/Thread.h"
@@ -9,7 +10,7 @@ namespace kernel {
 
 class Window {
 public:
-    RefPtr<Window> create(Thread& owner, const Rect& window_rect) { return new Window(owner, window_rect); }
+    static RefPtr<Window> create(Thread& owner, const Rect& window_rect) { return new Window(owner, window_rect); }
 
     const Rect& rect() const { return m_rect; }
 
@@ -23,6 +24,21 @@ public:
         return *s_currently_focused;
     }
 
+    Surface& surface()
+    {
+        ASSERT(m_front_surface.get() != nullptr);
+        return *m_front_surface;
+    }
+
+    const Surface& surface() const
+    {
+        ASSERT(m_front_surface.get() != nullptr);
+        return *m_front_surface;
+    }
+
+    size_t width() const { return surface().width(); }
+    size_t height() const { return surface().height(); }
+
     void enqueue_event(const Event& event) { m_event_queue.append(event); }
 
 private:
@@ -31,7 +47,7 @@ private:
 private:
     Thread&             m_owner;
     Rect                m_rect;
-    u8*                 m_front_bitmap;
+    RefPtr<Surface>     m_front_surface;
     DynamicArray<Event> m_event_queue;
 
     // TODO: this should be a weak ptr
