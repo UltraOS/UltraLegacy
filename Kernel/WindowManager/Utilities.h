@@ -14,8 +14,14 @@ public:
 
     bool operator!=(const Point& other) const { return !(*this == other); }
 
-    size_t x() const { return left(); }
-    size_t y() const { return right(); }
+    void move_by(size_t x, size_t y)
+    {
+        first() += x;
+        second() += y;
+    }
+
+    size_t x() const { return first(); }
+    size_t y() const { return second(); }
 };
 
 // represents an RGBA value in little endian layout (BGRA)
@@ -68,10 +74,48 @@ public:
     Point top_left() const { return { m_x, m_y }; }
     Point bottom_right() const { return { m_x + m_width, m_y + m_height }; }
 
+    size_t left() const { return m_x; }
+    size_t right() const { return m_x + m_width - 1; }
+
+    size_t top() const { return m_y; }
+    size_t bottom() const { return m_y + m_height - 1; }
+
     size_t width() const { return m_width; }
     size_t height() const { return m_height; }
 
     Point center() const { return { m_x + m_width / 2, m_y + m_height / 2 }; }
+
+    Rect translated(size_t x, size_t y) { return { left() + x, top() + y, width(), height() }; }
+
+    Rect intersected(const Rect& other)
+    {
+        size_t new_left   = max(left(), other.left());
+        size_t new_right  = min(right(), other.right());
+        size_t new_top    = max(top(), other.top());
+        size_t new_bottom = min(bottom(), other.bottom());
+
+        if (new_left > new_right || new_top > new_bottom)
+            return {};
+
+        return { new_left, new_top, new_right - new_left + 1, new_bottom - new_top + 1 };
+    }
+
+    void intersect(const Rect& other)
+    {
+        size_t new_left   = max(left(), other.left());
+        size_t new_right  = min(right(), other.right());
+        size_t new_top    = max(top(), other.top());
+        size_t new_bottom = min(bottom(), other.bottom());
+
+        if (new_left > new_right || new_top > new_bottom)
+            m_x = m_y = m_width = m_height = 0;
+
+        m_x = new_left;
+        m_y = new_top;
+
+        m_width  = new_right - new_left + 1;
+        m_height = new_bottom - new_top + 1;
+    }
 
 private:
     size_t m_x { 0 };
