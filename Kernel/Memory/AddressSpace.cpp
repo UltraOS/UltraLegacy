@@ -145,8 +145,8 @@ void AddressSpace::map_page(Address virtual_address, Address physical_address, b
     m_lock.lock(interrupt_state);
 
     auto  indices          = virtual_address_as_paging_indices(virtual_address);
-    auto& page_table_index = indices.left();
-    auto& page_entry_index = indices.right();
+    auto& page_table_index = indices.first();
+    auto& page_entry_index = indices.second();
 
     if (!entry_at(page_table_index).is_present()) {
 #ifdef ADDRESS_SPACE_DEBUG
@@ -374,8 +374,8 @@ void AddressSpace::unmap_page(Address virtual_address)
     m_lock.lock(interrupt_state);
 
     const auto indices          = virtual_address_as_paging_indices(virtual_address);
-    auto&      page_table_index = indices.left();
-    auto&      page_entry_index = indices.right();
+    auto&      page_table_index = indices.first();
+    auto&      page_entry_index = indices.second();
 
 #ifdef ADDRESS_SPACE_DEBUG
     log() << "AddressSpace: unmapping the page at vaddr " << virtual_address;

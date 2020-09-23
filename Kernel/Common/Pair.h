@@ -4,28 +4,28 @@
 
 namespace kernel {
 
-template <typename Left, typename Right>
+template <typename First, typename Second>
 class Pair {
 public:
     Pair() = default;
 
-    template <typename LeftT, typename RightT>
-    Pair(LeftT&& left, RightT&& right) : m_left(forward<LeftT>(left)), m_right(forward<RightT>(right))
+    template <typename FirstT, typename SecondT>
+    Pair(FirstT&& first, SecondT&& second) : m_first(forward<FirstT>(first)), m_second(forward<SecondT>(second))
     {
     }
 
-    Left&       left() { return m_left; }
-    const Left& left() const { return m_left; }
+    First&       first() { return m_first; }
+    const First& first() const { return m_first; }
 
-    Right&       right() { return m_right; }
-    const Right& right() const { return m_right; }
+    Second&       second() { return m_second; }
+    const Second& second() const { return m_second; }
 
-    void set_left(const Left& left) { m_left = left; }
-    void set_right(const Right& right) { m_right = right; }
+    void set_first(const First& first) { m_first = first; }
+    void set_second(const Second& second) { m_second = second; }
 
 private:
-    Left  m_left;
-    Right m_right;
+    First  m_first;
+    Second m_second;
 };
 
 template <typename First, typename Second, typename Third, typename Fourth>

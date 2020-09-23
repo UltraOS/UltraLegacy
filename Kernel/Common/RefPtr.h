@@ -56,7 +56,6 @@ public:
         return m_ptr;
     }
 
-
     const T* operator->() const
     {
         ASSERT(m_ptr);
