@@ -5,8 +5,7 @@ namespace kernel {
 
 Screen* Screen::s_instance;
 
-Screen::Screen(VideoDevice& device)
-    : m_device(device), m_rect(0, 0, device.mode().width, device.mode().height)
+Screen::Screen(VideoDevice& device) : m_device(device), m_rect(0, 0, device.mode().width, device.mode().height)
 {
     m_cursor.set_location(rect().center());
 }

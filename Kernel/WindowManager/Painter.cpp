@@ -3,17 +3,18 @@
 
 namespace kernel {
 
-Painter::Painter(const Surface& surface) : m_surface(surface)
+Painter::Painter(Surface* surface) : m_surface(surface)
 {
-    ASSERT(surface.bpp() == 32 && "Painter can only operate on 32bpp surfaces atm");
+    ASSERT(surface != nullptr);
+    ASSERT(surface->bpp() == 32 && "Painter can only operate on 32bpp surfaces atm");
 }
 
 void Painter::fill_rect(const Rect& rect, Color color)
 {
-    size_t  bytes_per_pixel = m_surface.bpp() / 8;
+    size_t  bytes_per_pixel = m_surface->bpp() / 8;
     size_t  x_offset        = rect.top_left().x() * bytes_per_pixel;
-    Address pixels_begin    = Address(m_surface.scanline_at(rect.top_left().y())) + x_offset;
-    size_t  step            = m_surface.pitch() - (x_offset + (rect.width() * bytes_per_pixel)) + x_offset;
+    Address pixels_begin    = Address(m_surface->scanline_at(rect.top_left().y())) + x_offset;
+    size_t  step            = m_surface->pitch() - (x_offset + (rect.width() * bytes_per_pixel)) + x_offset;
 
     for (size_t y = 0; y < rect.height(); ++y) {
         for (size_t x = 0; x < rect.width(); ++x) {
@@ -26,7 +27,7 @@ void Painter::fill_rect(const Rect& rect, Color color)
 
 void Painter::draw_at(size_t x, size_t y, Color pixel)
 {
-    Address pixels_begin = Address(m_surface.scanline_at(y)) + (x * m_surface.bpp() / 8);
+    Address pixels_begin            = Address(m_surface->scanline_at(y)) + (x * m_surface->bpp() / 8);
     *pixels_begin.as_pointer<u32>() = pixel.as_u32();
 }
 
@@ -34,14 +35,15 @@ void Painter::draw_bitmap(const Bitmap& bitmap, const Point& point)
 {
     switch (bitmap.format()) {
     case Bitmap::Format::INDEXED_1_BPP: draw_1_bpp_bitmap(bitmap, point); break;
+    case Bitmap::Format::RGBA_32_BPP: draw_32_bpp_bitmap(bitmap, point); break;
     default: warning() << "Painter: cannot draw unknown format " << static_cast<u8>(bitmap.format());
     }
 }
 
 void Painter::draw_1_bpp_bitmap(const Bitmap& bitmap, const Point& point)
 {
-    size_t  bytes_per_pixel = m_surface.bpp() / 8;
-    Address pixels_begin    = Address(m_surface.scanline_at(point.y())) + point.x() * bytes_per_pixel;
+    size_t  bytes_per_pixel = m_surface->bpp() / 8;
+    Address pixels_begin    = Address(m_surface->scanline_at(point.y())) + point.x() * bytes_per_pixel;
 
     for (size_t y = 0; y < bitmap.height(); ++y) {
         auto* scanline = reinterpret_cast<const u8*>(bitmap.scanline_at(y));
@@ -56,7 +58,25 @@ void Painter::draw_1_bpp_bitmap(const Bitmap& bitmap, const Point& point)
 
             *Address(pixels_begin + (bytes_per_pixel * x)).as_pointer<u32>() = color.as_u32();
         }
-        pixels_begin += m_surface.pitch();
+        pixels_begin += m_surface->pitch();
+    }
+}
+
+void Painter::draw_32_bpp_bitmap(const Bitmap& bitmap, const Point& point)
+{
+    size_t  bytes_per_pixel = m_surface->bpp() / 8;
+    Address pixels_begin    = Address(m_surface->scanline_at(point.y())) + point.x() * bytes_per_pixel;
+
+    for (size_t y = 0; y < bitmap.height(); ++y) {
+        auto* scanline = reinterpret_cast<const u8*>(bitmap.scanline_at(y));
+
+        for (size_t x = 0; x < bitmap.width(); ++x) {
+            // TODO: blending
+
+            *Address(pixels_begin + (bytes_per_pixel * x)).as_pointer<u32>()
+                = *(Address(scanline).as_pointer<u32>() + x);
+        }
+        pixels_begin += m_surface->pitch();
     }
 }
 

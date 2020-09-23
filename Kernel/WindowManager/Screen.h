@@ -26,7 +26,7 @@ public:
 
     const Cursor& cursor() const { return m_cursor; }
 
-    Surface surface() const { return m_device.surface(); }
+    Surface& surface() const { return m_device.surface(); }
 
     size_t width() const { return m_rect.width(); }
     size_t height() const { return m_rect.height(); }
