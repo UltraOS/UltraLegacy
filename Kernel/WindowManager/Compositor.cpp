@@ -2,6 +2,7 @@
 #include "Drivers/Video/VideoDevice.h"
 #include "Multitasking/Sleep.h"
 #include "Screen.h"
+#include "Window.h"
 
 #include "Core/CPU.h"
 
@@ -11,38 +12,32 @@ namespace kernel {
 
 Compositor* Compositor::s_instance;
 
-Compositor::Compositor() : m_painter(new Painter(Screen::the().surface()))
+Compositor::Compositor()
+    : m_painter(new Painter(&Screen::the().surface())), m_last_cursor_location(Screen::the().cursor().location())
 {
-    auto desktop_height = Screen::the().height() * 97 / 100;
-    auto taskbar_height = Screen::the().height() - desktop_height;
-
-    m_desktop_rect.set_width(Screen::the().width());
-    m_desktop_rect.set_height(desktop_height);
-    m_desktop_rect.set_top_left_x(0);
-    m_desktop_rect.set_top_left_y(0);
-
-    m_taskbar_rect.set_width(Screen::the().width());
-    m_taskbar_rect.set_height(taskbar_height);
-    m_taskbar_rect.set_top_left_x(0);
-    m_taskbar_rect.set_top_left_y(desktop_height);
-
-    m_clock_top_left.set_left(Screen::the().width() - 100);
-    m_clock_top_left.set_right(m_taskbar_rect.center().right() - 8);
-
-    const auto& cursor     = Screen::the().cursor();
-    m_last_cursor_location = cursor.location();
-
-    draw_desktop();
-    m_painter->draw_bitmap(cursor.bitmap(), m_last_cursor_location);
+    m_desktop_window = Window::create(*Thread::current(), Screen::the().rect());
+    prepare_desktop();
+    m_painter->draw_bitmap(Screen::the().cursor().bitmap(), m_last_cursor_location);
 }
 
 void Compositor::compose()
 {
-    draw_clock_widget();
-    check_if_cursor_moved();
+    update_clock_widget();
+    update_cursor_position();
 
-    for (auto& rect: m_dirty_rects)
-        m_painter->fill_rect(rect, desktop_color);
+    for (auto& rect: m_dirty_rects) {
+        // This is a crazy hack until we support actual clipping in painter
+        // TODO: Fix. It. :)
+        BitmapView clipped_rect(
+            Address(Address(m_desktop_window->surface().scanline_at(rect.top())) + rect.left() * 4).as_pointer<u8>(),
+            rect.width(),
+            rect.height(),
+            Bitmap::Format::RGBA_32_BPP,
+            nullptr,
+            1024 * 4);
+
+        m_painter->draw_bitmap(clipped_rect, rect.top_left());
+    }
 
     m_dirty_rects.clear();
 
@@ -58,11 +53,11 @@ void Compositor::run()
 
     for (;;) {
         Compositor::the().compose();
-        sleep::for_milliseconds(1000 / 100);
+        sleep::for_milliseconds(1000 / 60);
     }
 }
 
-void Compositor::check_if_cursor_moved()
+void Compositor::update_cursor_position()
 {
     auto& cursor   = Screen::the().cursor();
     auto  location = cursor.location();
@@ -74,13 +69,27 @@ void Compositor::check_if_cursor_moved()
     }
 }
 
-void Compositor::draw_desktop()
+void Compositor::prepare_desktop()
 {
-    m_painter->fill_rect(m_desktop_rect, desktop_color);
-    m_painter->fill_rect(m_taskbar_rect, taskbar_color);
+    auto desktop_height = Screen::the().height() * 97 / 100;
+    auto taskbar_height = Screen::the().height() - desktop_height;
+
+    Rect desktop_rect(0, 0, Screen::the().width(), desktop_height);
+    Rect taskbar_rect(0, desktop_height, Screen::the().width(), taskbar_height);
+
+    m_clock_top_left.set_first(Screen::the().width() - 100);
+    m_clock_top_left.set_second(taskbar_rect.center().y() - 8);
+
+    Painter painter(&m_desktop_window->surface());
+    painter.fill_rect(desktop_rect, desktop_color);
+    painter.fill_rect(taskbar_rect, taskbar_color);
+
+    update_clock_widget();
+
+    m_painter->draw_bitmap(m_desktop_window->surface(), { 0, 0 });
 }
 
-void Compositor::draw_clock_widget()
+void Compositor::update_clock_widget()
 {
     static constexpr Color digit_color = Color::white();
 
@@ -88,6 +97,8 @@ void Compositor::draw_clock_widget()
 
     if (Time::now() == last_drawn_second)
         return;
+
+    Painter painter(&m_desktop_window->surface());
 
     last_drawn_second = Time::now();
 
@@ -109,7 +120,7 @@ void Compositor::draw_clock_widget()
 
     auto draw_digits = [&](char* digits, size_t count) {
         for (size_t i = 0; i < count; ++i) {
-            m_painter->draw_char({ current_x_offset, m_clock_top_left.y() }, digits[i], digit_color, taskbar_color);
+            painter.draw_char({ current_x_offset, m_clock_top_left.y() }, digits[i], digit_color, taskbar_color);
             current_x_offset += font_width;
         }
     };
@@ -148,5 +159,10 @@ void Compositor::draw_clock_widget()
     digits[1] = 'M';
 
     draw_digits(digits, 2);
+
+    // also crazy hack, this should actually check if cursor_rect.intersects(clock_rect)
+    // TODO: fix
+    m_cursor_invalidated = true;
+    m_dirty_rects.emplace(m_clock_top_left, 100, 16);
 }
 }
