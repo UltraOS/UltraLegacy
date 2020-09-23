@@ -15,9 +15,10 @@ public:
 
     const VideoMode& mode() const override { return m_mode; }
 
-    Surface surface() const override;
+    Surface& surface() const override;
 
 private:
     VideoMode m_mode;
+    Surface*  m_surface;
 };
 }

@@ -23,17 +23,19 @@ GenericVideoDevice::GenericVideoDevice(const VideoMode& video_mode) : m_mode(vid
     m_mode.framebuffer = range.begin();
 #endif
 
+    m_surface = new Surface(Address(m_mode.framebuffer).as_pointer<u8>(),
+                            m_mode.width,
+                            m_mode.height,
+                            m_mode.bpp == 24 ? Surface::Format::RGB_24_BPP : Surface::Format::RGBA_32_BPP,
+                            nullptr,
+                            m_mode.pitch);
+
     log() << "Initialized \"" << name() << "\": " << mode().width << "x" << mode().height << " @ " << mode().bpp
           << " bpp";
 }
 
-Surface GenericVideoDevice::surface() const
+Surface& GenericVideoDevice::surface() const
 {
-    return Surface(Address(m_mode.framebuffer).as_pointer<u8>(),
-                   m_mode.width,
-                   m_mode.height,
-                   m_mode.bpp == 24 ? Surface::Format::RGB_24_BPP : Surface::Format::RGBA_32_BPP,
-                   nullptr,
-                   m_mode.pitch);
+    return *m_surface;
 }
 }

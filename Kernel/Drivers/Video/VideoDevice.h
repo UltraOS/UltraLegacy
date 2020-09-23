@@ -15,7 +15,7 @@ public:
 
     static void discover_and_setup(const VideoMode&);
 
-    virtual Surface surface() const = 0;
+    virtual Surface& surface() const = 0;
 
     static VideoDevice& the()
     {
