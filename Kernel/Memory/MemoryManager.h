@@ -57,7 +57,7 @@ public:
 
     void inititalize(AddressSpace& directory);
 
-    [[nodiscard]] RefPtr<Page> allocate_page();
+    [[nodiscard]] RefPtr<Page> allocate_page(bool should_zero = true);
     void                       free_page(Page& page);
 
 #ifdef ULTRA_32
@@ -99,6 +99,8 @@ public:
 
         return *m_memory_map;
     }
+
+    void force_preallocate(const VirtualAllocator::Range& range);
 
 private:
     MemoryManager(const MemoryMap& memory_map);

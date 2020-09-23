@@ -143,7 +143,7 @@ void MemoryManager::unquickmap_page()
 }
 #endif
 
-RefPtr<Page> MemoryManager::allocate_page()
+RefPtr<Page> MemoryManager::allocate_page(bool should_zero)
 {
     bool interrupt_state = false;
     m_lock.lock(interrupt_state);
@@ -160,14 +160,17 @@ RefPtr<Page> MemoryManager::allocate_page()
         log() << "MemoryManager: zeroing the page at physaddr " << page->address();
 #endif
 
+        if (should_zero) {
 #ifdef ULTRA_32
-        ScopedPageMapping mapping(page->address());
+            ScopedPageMapping mapping(page->address());
 
-        zero_memory(mapping.as_pointer(), Page::size);
+            zero_memory(mapping.as_pointer(), Page::size);
 
 #elif defined(ULTRA_64)
-        zero_memory(physical_to_virtual(page->address()).as_pointer<void>(), Page::size);
+            zero_memory(physical_to_virtual(page->address()).as_pointer<void>(), Page::size);
 #endif
+        }
+
         m_lock.unlock(interrupt_state);
         return page;
     }
@@ -205,7 +208,7 @@ void MemoryManager::handle_page_fault(const PageFault& fault)
         AddressSpace::current().store_physical_page(page);
         AddressSpace::current().map_page(rounded_address, page->address(), Thread::current()->is_supervisor());
     } else {
-        error() << "MemoryManager: unexpected page on core " << CPU::current().id() << fault;
+        error() << "MemoryManager: unexpected page fault on core " << CPU::current().id() << fault;
         hang();
     }
 }
@@ -258,6 +261,24 @@ void MemoryManager::set_quickmap_range(const VirtualAllocator::Range& range)
     m_quickmap_range = range;
 }
 #endif
+
+void MemoryManager::force_preallocate(const VirtualAllocator::Range& range)
+{
+    ASSERT_PAGE_ALIGNED(range.begin());
+
+    log() << "MemoryManager: force allocating " << range.length() / Page::size << " physical pages...";
+
+    bool interrupt_state = false;
+    m_lock.lock(interrupt_state);
+
+    for (Address address = range.begin(); address < range.end(); address += Page::size) {
+        auto page = allocate_page(false);
+        AddressSpace::current().map_page(address, page->address());
+        AddressSpace::current().store_physical_page(page);
+    }
+
+    m_lock.unlock(interrupt_state);
+}
 
 MemoryManager& MemoryManager::the()
 {
