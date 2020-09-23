@@ -93,13 +93,13 @@ Process::Process(Address entrypoint, bool is_supervisor)
         auto& kernel_allocator = AddressSpace::of_kernel().allocator();
         auto  main_thread      = Thread::create_user_thread(*m_address_space,
                                                       user_allocator.allocate_range(default_userland_stack_size).end(),
-                                                      kernel_allocator.allocate_range(default_kerenl_stack_size).end(),
+                                                      kernel_allocator.allocate_range(default_kernel_stack_size).end(),
                                                       entrypoint);
         m_threads.emplace(main_thread);
     } else {
         auto& kernel_allocator = AddressSpace::of_kernel().allocator();
         auto  main_thread
-            = Thread::create_supervisor_thread(kernel_allocator.allocate_range(default_kerenl_stack_size).end(),
+            = Thread::create_supervisor_thread(kernel_allocator.allocate_range(default_kernel_stack_size).end(),
                                                entrypoint);
 
         m_threads.emplace(main_thread);

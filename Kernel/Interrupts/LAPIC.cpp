@@ -201,7 +201,7 @@ void LAPIC::start_processor(u8 id)
 
     // TODO: add a literal allocate_stack() function
     // allocate the initial AP stack
-    auto ap_stack = AddressSpace::of_kernel().allocator().allocate_range(Process::default_kerenl_stack_size);
+    auto ap_stack = AddressSpace::of_kernel().allocator().allocate_range(Process::default_kernel_stack_size);
     *MemoryManager::physical_to_virtual(address_of_stack).as_pointer<ptr_t>() = ap_stack.end();
 
     // Force a page fault to actually back this with a physical page as the AP doesn't have the IDT set up yet
