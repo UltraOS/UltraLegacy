@@ -100,7 +100,7 @@ public:
         return *m_memory_map;
     }
 
-    void force_preallocate(const VirtualAllocator::Range& range);
+    void force_preallocate(const VirtualAllocator::Range& range, bool should_zero = false);
 
 private:
     MemoryManager(const MemoryMap& memory_map);

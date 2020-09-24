@@ -7,7 +7,7 @@ namespace kernel {
 class Process {
 public:
     static constexpr auto default_userland_stack_size = 4 * MB;
-    static constexpr auto default_kernel_stack_size   = 1 * MB;
+    static constexpr auto default_kernel_stack_size   = 16 * KB;
 
     static void inititalize_for_this_processor();
 

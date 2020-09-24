@@ -262,22 +262,17 @@ void MemoryManager::set_quickmap_range(const VirtualAllocator::Range& range)
 }
 #endif
 
-void MemoryManager::force_preallocate(const VirtualAllocator::Range& range)
+void MemoryManager::force_preallocate(const VirtualAllocator::Range& range, bool should_zero)
 {
     ASSERT_PAGE_ALIGNED(range.begin());
 
     log() << "MemoryManager: force allocating " << range.length() / Page::size << " physical pages...";
 
-    bool interrupt_state = false;
-    m_lock.lock(interrupt_state);
-
     for (Address address = range.begin(); address < range.end(); address += Page::size) {
-        auto page = allocate_page(false);
+        auto page = allocate_page(should_zero);
         AddressSpace::current().map_page(address, page->address());
         AddressSpace::current().store_physical_page(page);
     }
-
-    m_lock.unlock(interrupt_state);
 }
 
 MemoryManager& MemoryManager::the()
