@@ -83,6 +83,10 @@ public:
     size_t width() const { return m_width; }
     size_t height() const { return m_height; }
 
+    Pair<size_t, size_t> size() { return { m_width, m_height}; }
+
+    bool empty() const { return !m_width || !m_height; }
+
     Point center() const { return { m_x + m_width / 2, m_y + m_height / 2 }; }
 
     Rect translated(size_t x, size_t y) { return { left() + x, top() + y, width(), height() }; }
