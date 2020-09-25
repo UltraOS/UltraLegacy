@@ -26,17 +26,9 @@ void Compositor::compose()
     update_cursor_position();
 
     for (auto& rect: m_dirty_rects) {
-        // This is a crazy hack until we support actual clipping in painter
-        // TODO: Fix. It. :)
-        BitmapView clipped_rect(
-            Address(Address(m_desktop_window->surface().scanline_at(rect.top())) + rect.left() * 4).as_pointer<u8>(),
-            rect.width(),
-            rect.height(),
-            Bitmap::Format::RGBA_32_BPP,
-            nullptr,
-            1024 * 4);
-
-        m_painter->draw_bitmap(clipped_rect, rect.top_left());
+        m_painter->set_clip_rect(rect);
+        m_painter->blit(rect.top_left(), m_desktop_window->surface(), rect);
+        m_painter->reset_clip_rect();
     }
 
     m_dirty_rects.clear();

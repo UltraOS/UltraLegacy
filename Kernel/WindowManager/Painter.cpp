@@ -40,6 +40,43 @@ void Painter::draw_bitmap(const Bitmap& bitmap, const Point& point)
     }
 }
 
+void Painter::blit(const Point& location, const Bitmap& bitmap, const Rect& source_rect)
+{
+    switch (bitmap.format()) {
+    case Bitmap::Format::RGBA_32_BPP: blit_32_bpp_bitmap(location, bitmap, source_rect); break;
+    default: warning() << "Painter: cannot draw unknown format " << static_cast<u8>(bitmap.format());
+    }
+}
+
+void Painter::blit_32_bpp_bitmap(const Point& location, const Bitmap& bitmap, const Rect& source_rect)
+{
+    Rect original_rect(location, source_rect.width(), source_rect.height());
+    Rect drawable_rect = original_rect.intersected(m_clip_rect);
+
+    if (drawable_rect.empty())
+        return;
+
+    auto y_begin = drawable_rect.top() - original_rect.top();
+    auto y_end   = drawable_rect.bottom() - original_rect.top();
+    auto x_begin = drawable_rect.left() - original_rect.left();
+    auto x_end   = drawable_rect.right() - original_rect.left();
+
+    const u32* source
+        = Address(bitmap.scanline_at(source_rect.top() + y_begin)).as_pointer<u32>() + source_rect.left() + x_begin;
+    auto source_skip = bitmap.pitch() / sizeof(u32);
+
+    u32* destination = Address(m_surface->scanline_at(drawable_rect.top())).as_pointer<u32>() + drawable_rect.left();
+    auto destination_skip = m_surface->pitch() / sizeof(u32);
+
+    for (size_t y = y_begin; y <= y_end; ++y) {
+        for (size_t x = 0; x <= (x_end - x_begin); ++x) {
+            destination[x] = source[x];
+        }
+        source += source_skip;
+        destination += destination_skip;
+    }
+}
+
 void Painter::draw_1_bpp_bitmap(const Bitmap& bitmap, const Point& point)
 {
     size_t  bytes_per_pixel = m_surface->bpp() / 8;

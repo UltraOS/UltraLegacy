@@ -83,7 +83,7 @@ public:
     size_t width() const { return m_width; }
     size_t height() const { return m_height; }
 
-    Pair<size_t, size_t> size() { return { m_width, m_height}; }
+    Pair<size_t, size_t> size() { return { m_width, m_height }; }
 
     bool empty() const { return !m_width || !m_height; }
 
