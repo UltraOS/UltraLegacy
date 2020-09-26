@@ -3,7 +3,7 @@
 #include "Core/Runtime.h"
 #include "Cursor.h"
 #include "Drivers/Video/VideoDevice.h"
-#include "Utilities.h"
+#include "Rect.h"
 
 namespace kernel {
 

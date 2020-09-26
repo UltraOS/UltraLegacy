@@ -29,6 +29,9 @@ void Compositor::compose()
         m_painter->set_clip_rect(rect);
         m_painter->blit(rect.top_left(), m_desktop_window->surface(), rect);
         m_painter->reset_clip_rect();
+
+        if (!m_cursor_invalidated)
+            m_cursor_invalidated = rect.intersects({ Screen::the().cursor().location(), 12, 19 });
     }
 
     m_dirty_rects.clear();
@@ -69,8 +72,11 @@ void Compositor::prepare_desktop()
     Rect desktop_rect(0, 0, Screen::the().width(), desktop_height);
     Rect taskbar_rect(0, desktop_height, Screen::the().width(), taskbar_height);
 
-    m_clock_top_left.set_first(Screen::the().width() - 100);
-    m_clock_top_left.set_second(taskbar_rect.center().y() - 8);
+    static constexpr size_t clock_widget_width = 100;
+    static constexpr size_t clock_width_height = 16;
+
+    Point clock_top_left(Screen::the().width() - clock_widget_width, taskbar_rect.center().y() - 8);
+    m_clock_rect = Rect(clock_top_left, clock_widget_width, clock_width_height);
 
     Painter painter(&m_desktop_window->surface());
     painter.fill_rect(desktop_rect, desktop_color);
@@ -108,11 +114,11 @@ void Compositor::update_clock_widget()
     // hardcoded for now
     static constexpr size_t font_width = 8;
 
-    size_t current_x_offset = m_clock_top_left.x();
+    size_t current_x_offset = m_clock_rect.left();
 
     auto draw_digits = [&](char* digits, size_t count) {
         for (size_t i = 0; i < count; ++i) {
-            painter.draw_char({ current_x_offset, m_clock_top_left.y() }, digits[i], digit_color, taskbar_color);
+            painter.draw_char({ current_x_offset, m_clock_rect.top() }, digits[i], digit_color, taskbar_color);
             current_x_offset += font_width;
         }
     };
@@ -152,9 +158,6 @@ void Compositor::update_clock_widget()
 
     draw_digits(digits, 2);
 
-    // also crazy hack, this should actually check if cursor_rect.intersects(clock_rect)
-    // TODO: fix
-    m_cursor_invalidated = true;
-    m_dirty_rects.emplace(m_clock_top_left, 100, 16);
+    m_dirty_rects.emplace(m_clock_rect);
 }
 }

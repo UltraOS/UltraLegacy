@@ -4,7 +4,7 @@
 #include "Common/DynamicArray.h"
 #include "Event.h"
 #include "Multitasking/Thread.h"
-#include "Utilities.h"
+#include "Rect.h"
 
 namespace kernel {
 

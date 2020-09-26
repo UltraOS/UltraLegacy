@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Common/Types.h"
-#include "Utilities.h"
+#include "Color.h"
 
 namespace kernel {
 

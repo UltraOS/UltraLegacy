@@ -4,7 +4,8 @@
 #include "Common/RefPtr.h"
 #include "Core/Runtime.h"
 #include "Painter.h"
-#include "Utilities.h"
+#include "Color.h"
+#include "Rect.h"
 #include "Window.h"
 
 namespace kernel {
@@ -35,7 +36,8 @@ private:
 private:
     Painter*       m_painter;
     RefPtr<Window> m_desktop_window;
-    Point          m_clock_top_left;
+
+    Rect m_clock_rect;
 
     bool  m_cursor_invalidated { false };
     Point m_last_cursor_location;

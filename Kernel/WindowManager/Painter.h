@@ -2,7 +2,8 @@
 
 #include "Bitmap.h"
 #include "Core/Boot.h"
-#include "Utilities.h"
+#include "Point.h"
+#include "Rect.h"
 
 namespace kernel {
 
