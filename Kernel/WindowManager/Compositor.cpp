@@ -31,7 +31,7 @@ void Compositor::compose()
         m_painter->reset_clip_rect();
 
         if (!m_cursor_invalidated)
-            m_cursor_invalidated = rect.intersects({ Screen::the().cursor().location(), 12, 19 });
+            m_cursor_invalidated = rect.intersects(Screen::the().cursor().rect().translated(m_last_cursor_location));
     }
 
     m_dirty_rects.clear();
@@ -58,7 +58,7 @@ void Compositor::update_cursor_position()
     auto  location = cursor.location();
 
     if (location != m_last_cursor_location) {
-        m_dirty_rects.emplace(m_last_cursor_location, cursor.bitmap().width(), cursor.bitmap().height());
+        m_dirty_rects.emplace(cursor.rect().translated(m_last_cursor_location));
         m_cursor_invalidated   = true;
         m_last_cursor_location = location;
     }
@@ -111,15 +111,12 @@ void Compositor::update_clock_widget()
     } else if (time.hour == 0)
         time.hour = 12;
 
-    // hardcoded for now
-    static constexpr size_t font_width = 8;
-
     size_t current_x_offset = m_clock_rect.left();
 
     auto draw_digits = [&](char* digits, size_t count) {
         for (size_t i = 0; i < count; ++i) {
             painter.draw_char({ current_x_offset, m_clock_rect.top() }, digits[i], digit_color, taskbar_color);
-            current_x_offset += font_width;
+            current_x_offset += Painter::font_width;
         }
     };
 

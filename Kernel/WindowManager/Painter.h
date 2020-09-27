@@ -9,6 +9,9 @@ namespace kernel {
 
 class Painter {
 public:
+    static constexpr size_t font_height = 16;
+    static constexpr size_t font_width  = 8;
+
     Painter(Surface* surface);
 
     void draw_bitmap(const Bitmap&, const Point& location);
@@ -30,8 +33,6 @@ private:
     Surface* m_surface;
     Rect     m_clip_rect;
 
-    static constexpr size_t font_height = 16;
-    static constexpr size_t font_width  = 8;
-    static const u8         s_font[256][font_height];
+    static const u8 s_font[256][font_height];
 };
 }

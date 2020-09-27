@@ -14,6 +14,8 @@ public:
 
     const Point& location() const { return m_location; }
 
+    const Rect& rect() const { return m_rect; }
+
     const BitmapView& bitmap() const { return m_bitmap; }
 
 private:
@@ -25,6 +27,7 @@ private:
     static const Color s_palette[2];
 
     BitmapView m_bitmap;
+    Rect       m_rect;
     Point      m_location;
 };
 

@@ -19,6 +19,11 @@ public:
     {
     }
 
+    void set_top_left(const Point& top_left)
+    {
+        m_x = top_left.x();
+        m_y = top_left.y();
+    }
     void set_top_left_x(size_t x) { m_x = x; }
     void set_top_left_y(size_t y) { m_y = y; }
 
@@ -43,9 +48,10 @@ public:
 
     Point center() const { return { m_x + m_width / 2, m_y + m_height / 2 }; }
 
-    Rect translated(size_t x, size_t y) { return { left() + x, top() + y, width(), height() }; }
+    Rect translated(size_t x, size_t y) const { return { left() + x, top() + y, width(), height() }; }
+    Rect translated(const Point& location) const { return translated(location.x(), location.y()); }
 
-    Rect intersected(const Rect& other)
+    Rect intersected(const Rect& other) const
     {
         size_t new_left   = max(left(), other.left());
         size_t new_right  = min(right(), other.right());
@@ -77,9 +83,7 @@ public:
 
     bool intersects(const Rect& other)
     {
-        return left() <= other.right() && other.left() <= right() &&
-               top() <= other.bottom() && other.top() <= bottom();
-
+        return left() <= other.right() && other.left() <= right() && top() <= other.bottom() && other.top() <= bottom();
     }
 
 private:

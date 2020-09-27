@@ -1,10 +1,10 @@
 #pragma once
 
+#include "Color.h"
 #include "Common/DynamicArray.h"
 #include "Common/RefPtr.h"
 #include "Core/Runtime.h"
 #include "Painter.h"
-#include "Color.h"
 #include "Rect.h"
 #include "Window.h"
 

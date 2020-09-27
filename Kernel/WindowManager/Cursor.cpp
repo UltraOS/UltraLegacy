@@ -30,7 +30,7 @@ const Color Cursor::s_palette[2] = { Color::transparent(), Color::white() };
 
 Cursor::Cursor(Point location)
     : m_bitmap(s_bitmap_data, bitmap_width, bitmap_height, Bitmap::Format::INDEXED_1_BPP, s_palette),
-      m_location(location)
+      m_rect(0, 0, bitmap_width, bitmap_height), m_location(location)
 {
 }
 
