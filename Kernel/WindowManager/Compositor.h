@@ -34,8 +34,7 @@ private:
     void update_cursor_position();
 
 private:
-    Painter*       m_painter;
-    RefPtr<Window> m_desktop_window;
+    Painter* m_painter;
 
     Rect m_clock_rect;
 

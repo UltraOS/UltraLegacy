@@ -3,6 +3,7 @@
 #include "Multitasking/Sleep.h"
 #include "Screen.h"
 #include "Window.h"
+#include "WindowManager.h"
 
 #include "Core/CPU.h"
 
@@ -15,7 +16,6 @@ Compositor* Compositor::s_instance;
 Compositor::Compositor()
     : m_painter(new Painter(&Screen::the().surface())), m_last_cursor_location(Screen::the().cursor().location())
 {
-    m_desktop_window = Window::create(*Thread::current(), Screen::the().rect());
     prepare_desktop();
     m_painter->draw_bitmap(Screen::the().cursor().bitmap(), m_last_cursor_location);
 }
@@ -27,7 +27,7 @@ void Compositor::compose()
 
     for (auto& rect: m_dirty_rects) {
         m_painter->set_clip_rect(rect);
-        m_painter->blit(rect.top_left(), m_desktop_window->surface(), rect);
+        m_painter->blit(rect.top_left(), WindowManager::the().desktop()->surface(), rect);
         m_painter->reset_clip_rect();
 
         if (!m_cursor_invalidated)
@@ -78,13 +78,13 @@ void Compositor::prepare_desktop()
     Point clock_top_left(Screen::the().width() - clock_widget_width, taskbar_rect.center().y() - 8);
     m_clock_rect = Rect(clock_top_left, clock_widget_width, clock_width_height);
 
-    Painter painter(&m_desktop_window->surface());
+    Painter painter(&WindowManager::the().desktop()->surface());
     painter.fill_rect(desktop_rect, desktop_color);
     painter.fill_rect(taskbar_rect, taskbar_color);
 
     update_clock_widget();
 
-    m_painter->draw_bitmap(m_desktop_window->surface(), { 0, 0 });
+    m_painter->draw_bitmap(WindowManager::the().desktop()->surface(), { 0, 0 });
 }
 
 void Compositor::update_clock_widget()
@@ -96,7 +96,7 @@ void Compositor::update_clock_widget()
     if (Time::now() == last_drawn_second)
         return;
 
-    Painter painter(&m_desktop_window->surface());
+    Painter painter(&WindowManager::the().desktop()->surface());
 
     last_drawn_second = Time::now();
 
