@@ -1,5 +1,6 @@
 #include "Screen.h"
 #include "Drivers/Video/VideoDevice.h"
+#include "WindowManager.h"
 
 namespace kernel {
 
@@ -8,6 +9,26 @@ Screen* Screen::s_instance;
 Screen::Screen(VideoDevice& device) : m_device(device), m_rect(0, 0, device.mode().width, device.mode().height)
 {
     m_cursor.set_location(rect().center());
+}
+
+void Screen::check_if_focused_window_should_change()
+{
+    RefPtr<Window> window_that_should_be_focused;
+
+    for (const auto& window: WindowManager::the().windows()) {
+        if (window->rect().intersects(m_cursor.rect().translated(m_cursor.location()))) {
+            // cannot break here because we're going from bottom to top
+            // TODO: optimize?
+            window_that_should_be_focused = window;
+        }
+    }
+
+    // TODO: the amount of race conditions here is insane?
+    if (window_that_should_be_focused) {
+        window_that_should_be_focused->set_focused();
+    } else {
+        WindowManager::the().desktop()->set_focused();
+    }
 }
 
 void Screen::recalculate_cursor_position(i16 delta_x, i16 delta_y)

@@ -21,6 +21,7 @@ public:
     }
 
     void recalculate_cursor_position(i16 delta_x, i16 delta_y);
+    void check_if_focused_window_should_change();
 
     const Rect& rect() const { return m_rect; }
 

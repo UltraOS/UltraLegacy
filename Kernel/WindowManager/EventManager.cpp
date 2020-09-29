@@ -20,6 +20,8 @@ void EventManager::generate_button_state_event(VK key, VKState state)
 {
     update_state_of_key(key, state);
 
+    Screen::the().check_if_focused_window_should_change();
+
     if (!Window::is_any_focused())
         return;
 

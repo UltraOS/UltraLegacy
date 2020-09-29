@@ -81,7 +81,7 @@ public:
         m_height = new_bottom - new_top + 1;
     }
 
-    bool intersects(const Rect& other)
+    bool intersects(const Rect& other) const
     {
         return left() <= other.right() && other.left() <= right() && top() <= other.bottom() && other.top() <= bottom();
     }
