@@ -10,7 +10,8 @@ namespace kernel {
 
 class Window {
 public:
-    static RefPtr<Window> create(Thread& owner, const Rect& window_rect) { return new Window(owner, window_rect); }
+    static RefPtr<Window> create(Thread& owner, const Rect& window_rect, bool is_focused = false);
+    static RefPtr<Window> create_desktop(Thread& owner, const Rect& window_rect);
 
     const Rect& rect() const { return m_rect; }
 
@@ -42,12 +43,14 @@ public:
     void enqueue_event(const Event& event) { m_event_queue.append(event); }
 
 private:
-    Window(Thread& owner, const Rect& window_rect);
+    Window(Thread& owner, const Rect& window_rect, bool is_focused);
 
 private:
-    Thread&             m_owner;
-    Rect                m_rect;
-    RefPtr<Surface>     m_front_surface;
+    Thread&         m_owner;
+    Rect            m_rect;
+    RefPtr<Surface> m_front_surface;
+
+    // Should also be a list?
     DynamicArray<Event> m_event_queue;
 
     // TODO: this should be a weak ptr
