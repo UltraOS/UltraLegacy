@@ -27,8 +27,9 @@ public:
 
     class Node : public NodeBase {
     public:
-        Node(T&& value, NodeBase* previous = nullptr, NodeBase* next = nullptr)
-            : NodeBase(previous, next), m_value(forward<T>(value))
+        template <typename U>
+        Node(U&& value, NodeBase* previous = nullptr, NodeBase* next = nullptr)
+            : NodeBase(previous, next), m_value(forward<U>(value))
         {
         }
 
@@ -41,9 +42,11 @@ public:
 
     List() : m_end(&m_end, &m_end) { }
 
-    T& append_back(T&& value)
+    // TODO: enable_if<is_same<T, U>>
+    template <typename U>
+    T& append_back(U&& value)
     {
-        auto* new_node = new Node(forward<T>(value), m_end.previous(), &m_end);
+        auto* new_node = new Node(forward<U>(value), m_end.previous(), &m_end);
 
         m_end.previous()->set_next(new_node);
         m_end.set_previous(new_node);
@@ -53,9 +56,10 @@ public:
         return new_node->value();
     }
 
-    T& append_front(T&& value)
+    template <typename U>
+    T& append_front(U&& value)
     {
-        auto* new_node = new Node(forward<T>(value), &m_end, m_end.next());
+        auto* new_node = new Node(forward<U>(value), &m_end, m_end.next());
 
         m_end.next()->set_previous(new_node);
         m_end.set_next(new_node);
@@ -144,6 +148,8 @@ public:
 
     T&       back() { return as_value_node(m_end.previous())->value(); }
     const T& back() const { return as_value_node(m_end.previous())->value(); }
+
+    size_t size() const { return m_size; }
 
 private:
     Node*       as_value_node(NodeBase* node) { return static_cast<Node*>(node); }
