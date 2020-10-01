@@ -290,3 +290,12 @@ public:
     static Asserter<T> that(T value, std::string_view file, size_t line) { return Asserter<T>(value, file, line); }
     #define that(value) that(value, __FILE__, __LINE__)
 };
+
+class Deletable {
+public:
+    Deletable(size_t& counter) : m_counter(counter) {}
+    ~Deletable() { m_counter++; }
+
+private:
+    size_t& m_counter;
+};
