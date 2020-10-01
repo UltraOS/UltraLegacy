@@ -20,6 +20,8 @@ public:
         void set_next(NodeBase* next) { m_next = next; }
         void set_previous(NodeBase* previous) { m_previous = previous; }
 
+        virtual ~NodeBase() = default;
+
     private:
         NodeBase* m_previous { nullptr };
         NodeBase* m_next { nullptr };
@@ -150,6 +152,17 @@ public:
     const T& back() const { return as_value_node(m_end.previous())->value(); }
 
     size_t size() const { return m_size; }
+
+    ~List()
+    {
+        auto* next_node = m_end.next();
+
+        for (size_t i = 0; i < m_size; ++i) {
+            auto* current_node = next_node;
+            next_node = next_node->next();
+            delete current_node;
+        }
+    }
 
 private:
     Node*       as_value_node(NodeBase* node) { return static_cast<Node*>(node); }
