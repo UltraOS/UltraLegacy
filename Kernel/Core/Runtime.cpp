@@ -1,6 +1,11 @@
 #include "Common/Logger.h"
 #include "Common/Macros.h"
 
+#include "Drivers/Video/VideoDevice.h"
+#include "Interrupts/IPICommunicator.h"
+#include "Interrupts/InterruptController.h"
+#include "WindowManager/Painter.h"
+
 extern "C" void __cxa_pure_virtual()
 {
     kernel::error() << "A pure virtual call!";
@@ -57,10 +62,89 @@ void init_global_objects()
 
 void on_assertion_failed(const char* message, const char* file, const char* function, u32 line)
 {
-    error() << "Assertion failed!"
-  << "\n------> Expression : " << message
-  << "\n------> Function   : " << function
-  << "\n------> File       : " << file << ":" << line;
+    static constexpr auto assertion_failed = "Assertion failed!"_sv;
+    static constexpr auto expression = "\n------> Expression : "_sv;
+    static constexpr auto function_str = "\n------> Function   : "_sv;
+    static constexpr auto file_str = "\n------> File       : "_sv;
+
+    // We don't want to use the heap here as it might be corrupted
+    // TODO: There should really be a stack string builder class
+    size_t offset = 0;
+    char formatted_message[512]{};
+
+    copy_memory(assertion_failed.data(), formatted_message, assertion_failed.size());
+    offset += assertion_failed.size();
+
+    copy_memory(expression.data(), formatted_message + offset, expression.size());
+    offset += expression.size();
+
+    StringView expr_view = message;
+    copy_memory(expr_view.data(), formatted_message + offset, expr_view.size());
+    offset += expr_view.size();
+
+    copy_memory(function_str.data(), formatted_message + offset, function_str.size());
+    offset += function_str.size();
+
+    StringView func_view = function;
+    copy_memory(func_view.data(), formatted_message + offset, func_view.size());
+    offset += func_view.size();
+
+    copy_memory(file_str.data(), formatted_message + offset, file_str.size());
+    offset += file_str.size();
+
+    StringView file_view = file;
+    copy_memory(file_view.data(), formatted_message + offset, file_view.size());
+    offset += file_view.size();
+
+    formatted_message[offset++] = ':';
+
+    to_string(line, formatted_message + offset, 512 - offset);
+
+    panic(formatted_message);
+}
+
+[[noreturn]] void panic(const char* reason)
+{
+    static constexpr auto panic_message = "KERNEL PANIC!"_sv;
+    static Color font_color = Color::white();
+    static Color screen_color = Color::blue();
+
+    error() << panic_message << "\n" << reason;
+
+    if (InterruptController::is_initialized())
+        IPICommunicator::hang_all_cores();
+
+    if (!VideoDevice::the().is_ready())
+        hang();
+
+    auto& surface = VideoDevice::the().surface();
+    Rect surface_rect(0, 0, surface.width(), surface.height());
+    auto center = surface_rect.center();
+    Rect exception_rect(0, 0, center.x(), center.y());
+    Point offset = exception_rect.center();
+    auto initial_x = offset.x();
+
+    Painter p(&surface);
+    p.fill_rect(surface_rect, screen_color);
+
+    Point panic_offset(offset.x() + offset.x() / 2 + (panic_message.size() / 2 * Painter::font_width), offset.y() - 40);
+
+    for (char c : panic_message) {
+        p.draw_char(panic_offset, c, font_color, Color::transparent());
+        panic_offset.first() += Painter::font_width;
+    }
+
+    for (char c : StringView(reason)) {
+        if (c == '\n') {
+            offset.second() += Painter::font_height;
+            offset.first() = initial_x;
+
+            continue;
+        }
+
+        p.draw_char(offset, c, font_color, Color::transparent());
+        offset.first() += Painter::font_width;
+    }
 
     hang();
 }

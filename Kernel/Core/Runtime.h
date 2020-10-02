@@ -8,6 +8,7 @@ namespace kernel::runtime {
 void              ensure_loaded_correctly();
 void              init_global_objects();
 [[noreturn]] void on_assertion_failed(const char* message, const char* file, const char* function, u32 line);
+[[noreturn]] void panic(const char* reason);
 }
 
 inline void* operator new(size_t, void* ptr)
@@ -58,3 +59,5 @@ inline void operator delete[](void* ptr, size_t) noexcept
     (static_cast<bool>(expression)                                                                                     \
          ? static_cast<void>(0)                                                                                        \
          : kernel::runtime::on_assertion_failed(TO_STRING(expression), __FILE__, __PRETTY_FUNCTION__, __LINE__))
+
+#define ASSERT_NEVER_REACHED() ASSERT(!"Tried to execute a non-reachable area")
