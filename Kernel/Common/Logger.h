@@ -63,6 +63,8 @@ public:
         s_write_lock = new InterruptSafeSpinLock;
     }
 
+    static bool is_initialized() { return s_sinks && s_write_lock; }
+
     static DynamicArray<LogSink*>& sinks()
     {
         ASSERT(s_sinks != nullptr);
@@ -79,12 +81,18 @@ public:
 
     void write(StringView string)
     {
+        if (!is_initialized())
+            return;
+
         for (auto& sink: sinks())
             sink->write(string);
     }
 
     Logger(bool should_lock = true) : m_should_unlock(should_lock)
     {
+        if (!is_initialized())
+            return;
+
         if (should_lock)
             write_lock().lock(m_interrupt_state);
     }

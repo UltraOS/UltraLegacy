@@ -24,6 +24,8 @@ public:
         return *s_device;
     }
 
+    static bool is_ready() { return s_device != nullptr; }
+
 private:
     static VideoDevice* s_device;
 };
