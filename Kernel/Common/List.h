@@ -159,7 +159,7 @@ public:
 
         for (size_t i = 0; i < m_size; ++i) {
             auto* current_node = next_node;
-            next_node = next_node->next();
+            next_node          = next_node->next();
             delete current_node;
         }
     }

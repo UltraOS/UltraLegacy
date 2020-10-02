@@ -27,6 +27,9 @@ void Painter::fill_rect(const Rect& rect, Color color)
 
 void Painter::draw_at(size_t x, size_t y, Color pixel)
 {
+    if (!pixel.a())
+        return;
+
     Address pixels_begin            = Address(m_surface->scanline_at(y)) + (x * m_surface->bpp() / 8);
     *pixels_begin.as_pointer<u32>() = pixel.as_u32();
 }
@@ -119,6 +122,15 @@ void Painter::draw_32_bpp_bitmap(const Bitmap& bitmap, const Point& point)
 
 void Painter::draw_char(Point top_left, char c, Color char_color, Color fill_color)
 {
+    // TODO: make this works. We need to reverse the font map for it to work
+    // Color palette[2] { char_color, fill_color };
+    //
+    // BitmapView char_map(s_font[static_cast<size_t>(c)], font_width, font_height, Bitmap::Format::INDEXED_1_BPP,
+    // palette);
+    //
+    // draw_1_bpp_bitmap(char_map, top_left);
+    // return;
+
     for (size_t y = 0; y < font_height; ++y) {
         for (size_t x = 0; x < font_width; ++x) {
             bool present = s_font[static_cast<size_t>(c)][y] & SET_BIT(font_width - 1 - x);
