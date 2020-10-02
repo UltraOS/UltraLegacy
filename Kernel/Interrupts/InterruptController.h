@@ -13,6 +13,7 @@ public:
 
     static InterruptController& the();
 
+    // TODO: this is a dumb way to detect smp support, redo this
     static bool supports_smp() { return s_smp_data != nullptr; }
 
     struct IRQInfo {
@@ -36,6 +37,8 @@ public:
 
         return *s_smp_data;
     }
+
+    static bool is_initialized() { return s_instance != nullptr; }
 
     virtual void end_of_interrupt(u8 request_number) = 0;
 

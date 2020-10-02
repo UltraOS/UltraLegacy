@@ -17,12 +17,24 @@ void IPICommunicator::install()
 
 void IPICommunicator::send_ipi(u8 dest)
 {
+    ASSERT(InterruptController::the().supports_smp());
+
     LAPIC::send_ipi<LAPIC::DestinationType::SPECIFIC>(dest);
+}
+
+void IPICommunicator::hang_all_cores()
+{
+    if (InterruptController::the().supports_smp())
+        LAPIC::send_ipi<LAPIC::DestinationType::ALL_EXCLUDING_SELF>();
 }
 
 void IPICommunicator::on_ipi(RegisterState*)
 {
-    log() << "Got an ipi on cpu " << CPU::current().id();
+    // TODO: At the moment IPIs are only used as a panic mechanism.
+    //       Add a separate handler for panic later or add some kind of a
+    //       message passing system.
+    hang();
+
     LAPIC::end_of_interrupt();
 }
 }

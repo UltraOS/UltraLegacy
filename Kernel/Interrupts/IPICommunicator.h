@@ -15,6 +15,8 @@ public:
 
     static void send_ipi(u8 dest);
 
+    static void hang_all_cores();
+
 private:
     static void on_ipi(RegisterState*) USED;
 };
