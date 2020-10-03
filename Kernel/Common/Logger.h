@@ -168,6 +168,9 @@ public:
 
     ~Logger()
     {
+        if (!is_initialized())
+            return;
+
         if (m_should_terminate) {
             write("\n");
 
