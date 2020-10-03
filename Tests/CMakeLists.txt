@@ -41,6 +41,7 @@ KERNEL_FILE(PATH "Common" FILE "String.h")
 KERNEL_FILE(PATH "Common" FILE "Memory.h")
 KERNEL_FILE(PATH "Common" FILE "Traits.h")
 KERNEL_FILE(PATH "Common" FILE "Utilities.h")
+KERNEL_FILE(PATH "Common" FILE "Conversions.h")
 KERNEL_FILE(PATH "Common" FILE "List.h")
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY         "${OUTPUT_DIRECTORY}")

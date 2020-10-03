@@ -71,3 +71,15 @@ TEST(StringMoveOwnership) {
     Assert::that(test3.c_string()).is_equal(sso_string);
     Assert::that(test3.size()).is_equal(kernel::String::length_of(sso_string));
 }
+
+TEST(StackStringBuilder) {
+    kernel::StackStringBuilder builder;
+    builder += 123;
+    builder += "321";
+    builder.append_hex(0xDEADBEEF);
+    builder.append("test");
+    builder.seal();
+
+    std::string string(builder.as_view().data());
+    Assert::that(string).is_equal("1233210xDEADBEEFtest");
+}

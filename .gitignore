@@ -12,6 +12,7 @@ Tests/Environment/Common/String.h
 Tests/Environment/Common/Memory.h
 Tests/Environment/Common/Traits.h
 Tests/Environment/Common/Utilities.h
+Tests/Environment/Common/Conversions.h
 Tests/Environment/Common/List.h
 *.o
 *.bin
