@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Conversions.h"
 #include "Core/Runtime.h"
 #include "Macros.h"
 #include "Memory.h"
@@ -308,4 +309,76 @@ inline bool String::equals(const StringView& string)
 {
     return string.equals(to_view());
 }
+
+template <size_t buffer_size = 256>
+class StackStringBuilder {
+public:
+    static_assert(buffer_size > 1, "Buffer size cannot be smaller than 2");
+
+    StringView as_view() const { return StringView(m_bufer, m_current_offset); }
+
+    char* data() { return m_bufer; }
+
+    size_t append(StringView string)
+    {
+        if (string.size() > size_left())
+            return 0;
+
+        copy_memory(string.data(), pointer_to_end(), string.size());
+        m_current_offset += string.size();
+
+        return string.size();
+    }
+
+    template <typename T>
+    enable_if_t<is_arithmetic_v<T>, size_t> append(T number)
+    {
+        size_t chars_written = to_string(number, pointer_to_end(), size_left(), false);
+        m_current_offset += chars_written;
+
+        return chars_written;
+    }
+
+    template <typename T>
+    enable_if_t<is_arithmetic_v<T>, size_t> append_hex(T number)
+    {
+        size_t chars_written = to_hex_string(number, pointer_to_end(), size_left(), false);
+        m_current_offset += chars_written;
+
+        return chars_written;
+    }
+
+    size_t append(char c)
+    {
+        if (!size_left())
+            return 0;
+
+        m_bufer[m_current_offset++] = c;
+        return 1;
+    }
+
+    template <typename T>
+    enable_if_t<is_arithmetic_v<T>> operator+=(T number)
+    {
+        append(number);
+    }
+
+    void operator+=(StringView string) { append(string); }
+
+    void operator+=(char c) { append(c); }
+
+    void seal() { m_bufer[m_current_offset] = '\0'; }
+
+    size_t capacity() const { return buffer_size; }
+    size_t size() const { return m_current_offset; }
+
+    size_t size_left() const { return buffer_size - m_current_offset - 1; }
+
+private:
+    char* pointer_to_end() { return m_bufer + m_current_offset; }
+
+private:
+    size_t m_current_offset { 0 };
+    char   m_bufer[buffer_size];
+};
 }
