@@ -7,7 +7,7 @@
 namespace kernel {
 
 template <typename T>
-enable_if_t<is_integral_v<T>, bool> to_string(T number, char* string, size_t max_size, bool null_terminate = true)
+enable_if_t<is_integral_v<T>, size_t> to_string(T number, char* string, size_t max_size, bool null_terminate = true)
 {
     bool   is_negative   = false;
     size_t required_size = 0;
@@ -17,10 +17,10 @@ enable_if_t<is_integral_v<T>, bool> to_string(T number, char* string, size_t max
             string[0] = '0';
             if (null_terminate)
                 string[1] = '\0';
-            return true;
+            return null_terminate ? 2 : 1;
         }
 
-        return false;
+        return 0;
     } else if (number < 0) {
         is_negative = true;
         number      = -number;
@@ -35,7 +35,7 @@ enable_if_t<is_integral_v<T>, bool> to_string(T number, char* string, size_t max
     }
 
     if (required_size + !!null_terminate > max_size)
-        return false;
+        return 0;
 
     T modulos = 0;
     for (size_t divisor = 0; divisor < required_size - !!is_negative; ++divisor) {
@@ -50,11 +50,12 @@ enable_if_t<is_integral_v<T>, bool> to_string(T number, char* string, size_t max
     if (null_terminate)
         string[required_size] = '\0';
 
-    return true;
+    return required_size;
 }
 
 template <typename T>
-enable_if_t<is_floating_point_v<T>, bool> to_string(T number, char* string, size_t max_size, bool null_terminate = true)
+enable_if_t<is_floating_point_v<T>, size_t>
+to_string(T number, char* string, size_t max_size, bool null_terminate = true)
 {
     number += 0.005; // to reduce the digit count
 
@@ -78,7 +79,7 @@ enable_if_t<is_floating_point_v<T>, bool> to_string(T number, char* string, size
 
     if (!i) {
         if (max_size < 1ul)
-            return false;
+            return 0;
         else {
             string[i++] = '0';
             --max_size;
@@ -86,7 +87,7 @@ enable_if_t<is_floating_point_v<T>, bool> to_string(T number, char* string, size
     }
 
     if (max_size < 3ul + !!null_terminate)
-        return false;
+        return 0;
 
     string[i++] = '.';
     string[i++] = (remainder / 10) + '0';
@@ -95,20 +96,22 @@ enable_if_t<is_floating_point_v<T>, bool> to_string(T number, char* string, size
     if (null_terminate)
         string[i] = '\0';
 
-    return true;
+    return required_size;
 }
 
 template <typename T>
-enable_if_t<is_integral_v<T>, bool> to_hex_string(T number, char* string, size_t max_size, bool null_terminate = true)
+enable_if_t<is_integral_v<T>, size_t> to_hex_string(T number, char* string, size_t max_size, bool null_terminate = true)
 {
     constexpr auto required_length = sizeof(number) * 2 + 2; // '0x' + 2 chars per hex byte
 
     if (max_size < required_length + !!null_terminate)
-        return false;
+        return 0;
 
-    string[0]               = '0';
-    string[1]               = 'x';
-    string[required_length] = '\0';
+    string[0] = '0';
+    string[1] = 'x';
+
+    if (null_terminate)
+        string[required_length] = '\0';
 
     static constexpr auto hex_digits = "0123456789ABCDEF";
 
@@ -118,11 +121,11 @@ enable_if_t<is_integral_v<T>, bool> to_hex_string(T number, char* string, size_t
         j += 4;
     }
 
-    return true;
+    return required_length;
 }
 
 template <typename T>
-enable_if_t<is_floating_point_v<T>, bool>
+enable_if_t<is_floating_point_v<T>, size_t>
 to_hex_string(T number, char* string, size_t max_size, bool null_terminate = true)
 {
     return to_hex_string(static_cast<i64>(number), string, max_size, null_terminate);
