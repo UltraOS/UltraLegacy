@@ -1,5 +1,6 @@
 #include "Common/Logger.h"
 #include "Common/Macros.h"
+#include "Common/String.h"
 
 #include "Drivers/Video/VideoDevice.h"
 #include "Interrupts/IPICommunicator.h"
@@ -68,39 +69,21 @@ void on_assertion_failed(const char* message, const char* file, const char* func
     static constexpr auto file_str = "\n------> File       : "_sv;
 
     // We don't want to use the heap here as it might be corrupted
-    // TODO: There should really be a stack string builder class
-    size_t offset = 0;
-    char formatted_message[512]{};
+    StackStringBuilder<512> formatted_message;
 
-    copy_memory(assertion_failed.data(), formatted_message, assertion_failed.size());
-    offset += assertion_failed.size();
+    formatted_message += assertion_failed;
+    formatted_message += expression;
+    formatted_message += message;
+    formatted_message += function_str;
+    formatted_message += function;
+    formatted_message += file_str;
+    formatted_message += file;
+    formatted_message += ':';
+    formatted_message += line;
 
-    copy_memory(expression.data(), formatted_message + offset, expression.size());
-    offset += expression.size();
+    formatted_message.seal();
 
-    StringView expr_view = message;
-    copy_memory(expr_view.data(), formatted_message + offset, expr_view.size());
-    offset += expr_view.size();
-
-    copy_memory(function_str.data(), formatted_message + offset, function_str.size());
-    offset += function_str.size();
-
-    StringView func_view = function;
-    copy_memory(func_view.data(), formatted_message + offset, func_view.size());
-    offset += func_view.size();
-
-    copy_memory(file_str.data(), formatted_message + offset, file_str.size());
-    offset += file_str.size();
-
-    StringView file_view = file;
-    copy_memory(file_view.data(), formatted_message + offset, file_view.size());
-    offset += file_view.size();
-
-    formatted_message[offset++] = ':';
-
-    to_string(line, formatted_message + offset, 512 - offset);
-
-    panic(formatted_message);
+    panic(formatted_message.data());
 }
 
 [[noreturn]] void panic(const char* reason)
@@ -114,7 +97,7 @@ void on_assertion_failed(const char* message, const char* file, const char* func
     if (InterruptController::is_initialized())
         IPICommunicator::hang_all_cores();
 
-    if (!VideoDevice::the().is_ready())
+    if (!VideoDevice::is_ready())
         hang();
 
     auto& surface = VideoDevice::the().surface();
