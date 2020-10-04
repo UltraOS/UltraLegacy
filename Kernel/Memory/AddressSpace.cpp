@@ -459,6 +459,14 @@ void AddressSpace::flush_at(Address virtual_address)
 
 AddressSpace& AddressSpace::current()
 {
+    // this is possible in case a page fault happens before
+    // Scheduler::initialize() or some other memory corruption
+    // in which case the only existing address space is that of kernel
+    if (!CPU::current().current_thread()) {
+        warning() << "AddressSpace: current_thread == nullptr, returning kernel address space";
+        return AddressSpace::of_kernel();
+    }
+
     return CPU::current().current_thread()->address_space();
 }
 
