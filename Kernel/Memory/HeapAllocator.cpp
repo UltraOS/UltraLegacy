@@ -186,7 +186,9 @@ void* HeapAllocator::allocate(size_t bytes)
         }
     }
 
-    error() << "HeapAllocator: Out of memory! (tried to allocate " << bytes << " bytes)";
+    StackStringBuilder error_message;
+    error_message << "HeapAllocator: Out of memory! (tried to allocate " << bytes << " bytes)";
+    runtime::panic(error_message.data());
 
 #ifdef HEAP_ALLOCATOR_DEBUG
 
@@ -204,10 +206,6 @@ void* HeapAllocator::allocate(size_t bytes)
     }
 
 #endif
-
-    hang();
-
-    return nullptr;
 }
 
 void HeapAllocator::free(void* ptr)
@@ -272,8 +270,9 @@ void HeapAllocator::free(void* ptr)
     }
 
     if (!freed_heap) {
-        error() << "HeapAllocator: Couldn't find a heap block to free from. ptr: " << ptr;
-        hang();
+        StackStringBuilder error_string;
+        error_string << "HeapAllocator: Couldn't find a heap block to free from. ptr: " << ptr;
+        runtime::panic(error_string.data());
     }
 
 #ifdef HEAP_ALLOCATOR_DEBUG

@@ -93,8 +93,7 @@ VirtualAllocator::Range VirtualAllocator::allocate_range(size_t length)
     }
 
     if (range_index == m_free_ranges.size()) {
-        error() << "VirtualAlloctor: out of ranges!";
-        hang();
+        runtime::panic("VirtualAlloctor: out of ranges!");
     }
 
     // allocate
@@ -130,8 +129,9 @@ void VirtualAllocator::deallocate_range(const Range& range)
     m_lock.lock(interrupt_state);
 
     if (!contains(range)) {
-        error() << "VirtualAlloctor: range " << range << " doesn't belong to this allocator!";
-        hang();
+        StackStringBuilder error_string;
+        error_string << "VirtualAlloctor: range " << range << " doesn't belong to this allocator!";
+        runtime::panic(error_string.data());
     }
 
     for (size_t range_index = 0; range_index < m_free_ranges.size(); ++range_index) {
@@ -148,8 +148,9 @@ void VirtualAllocator::deallocate_range(const Range& range)
         }
     }
 
-    error() << "VirtualAlloctor: range " << range << " wasn't found as allocated!";
-    hang();
+    StackStringBuilder error_string;
+    error_string << "VirtualAlloctor: range " << range << " wasn't found as allocated!";
+    runtime::panic(error_string.data());
 }
 
 void VirtualAllocator::deallocate_range(Address base_address)
@@ -158,8 +159,9 @@ void VirtualAllocator::deallocate_range(Address base_address)
     m_lock.lock(interrupt_state);
 
     if (!contains(base_address)) {
-        error() << "VirtualAlloctor: address " << base_address << " doesn't belong to this allocator!";
-        hang();
+        StackStringBuilder error_string;
+        error_string << "VirtualAlloctor: address " << base_address << " doesn't belong to this allocator!";
+        runtime::panic(error_string.data());
     }
 
     for (size_t range_index = 0; range_index < m_free_ranges.size(); ++range_index) {
@@ -176,8 +178,9 @@ void VirtualAllocator::deallocate_range(Address base_address)
         }
     }
 
-    error() << "VirtualAlloctor: address " << base_address << " wasn't found as allocated!";
-    hang();
+    StackStringBuilder error_string;
+    error_string << "VirtualAlloctor: address " << base_address << " wasn't found as allocated!";
+    runtime::panic(error_string.data());
 }
 
 void VirtualAllocator::return_back_to_free_pool(size_t allocated_index)

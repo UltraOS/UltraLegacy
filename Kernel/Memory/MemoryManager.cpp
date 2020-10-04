@@ -175,8 +175,7 @@ RefPtr<Page> MemoryManager::allocate_page(bool should_zero)
         return page;
     }
 
-    error() << "MemoryManager: Out of physical memory!";
-    hang();
+    runtime::panic("MemoryManager: Out of physical memory!");
 }
 
 void MemoryManager::free_page(Page& page)
@@ -192,8 +191,9 @@ void MemoryManager::free_page(Page& page)
         }
     }
 
-    error() << "Couldn't find the region that owns the page at " << page.address();
-    hang();
+    StackStringBuilder error_string;
+    error_string << "Couldn't find the region that owns the page at " << page.address();
+    runtime::panic(error_string.data());
 }
 
 void MemoryManager::handle_page_fault(const PageFault& fault)
@@ -208,8 +208,9 @@ void MemoryManager::handle_page_fault(const PageFault& fault)
         AddressSpace::current().store_physical_page(page);
         AddressSpace::current().map_page(rounded_address, page->address(), Thread::current()->is_supervisor());
     } else {
-        error() << "MemoryManager: unexpected page fault on core " << CPU::current().id() << fault;
-        hang();
+        StackStringBuilder error_string;
+        error_string << "MemoryManager: unexpected page fault on core " << CPU::current().id() << fault;
+        runtime::panic(error_string.data());
     }
 }
 
