@@ -112,8 +112,7 @@ u32 LAPIC::my_id()
 void LAPIC::send_ipi(DestinationType destination_type, u32 destination)
 {
     if (destination_type == DestinationType::SPECIFIC && destination == invalid_destination) {
-        error() << "LAPIC: invalid destination with destination type == DEFAULT";
-        hang();
+        runtime::panic("LAPIC: invalid destination with destination type == DEFAULT");
     }
 
     ICR icr {};
@@ -252,8 +251,9 @@ void LAPIC::start_processor(u8 id)
         *ap_acknowledegd = true;
 
     } else {
-        error() << "LAPIC: Application processor " << id << " failed to start after 2 SIPIs";
-        hang();
+        StackStringBuilder error_string;
+        error_string << "LAPIC: Application processor " << id << " failed to start after 2 SIPIs";
+        runtime::panic(error_string.data());
     }
 
     ::kernel::Timer::the().unlock(interrupt_state);

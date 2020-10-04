@@ -17,8 +17,9 @@ PIT::PIT() : IRQHandler(irq_number)
 void PIT::set_frequency(u32 ticks_per_second)
 {
     if (ticks_per_second > max_frequency()) {
-        error() << "Cannot set the timer to frequency " << ticks_per_second;
-        hang();
+        StackStringBuilder error_string;
+        error_string << "PIT: Cannot set the timer to frequency " << ticks_per_second;
+        runtime::panic(error_string.data());
     }
 
     m_frequency = ticks_per_second;
@@ -26,8 +27,9 @@ void PIT::set_frequency(u32 ticks_per_second)
     u32 divisor = max_frequency() / ticks_per_second;
 
     if (divisor > 0xFFFF) {
-        error() << "Timer: divisor is too big (" << divisor << ")";
-        hang();
+        StackStringBuilder error_string;
+        error_string << "Timer: divisor is too big (" << divisor << ")";
+        runtime::panic(error_string.data());
     }
 
     IO::out8<timer_command>(write_word | square_wave_mode | timer_0);
@@ -70,8 +72,11 @@ void PIT::nano_delay(u32 ns)
     u32 ticks = max_frequency() * (ns / static_cast<float>(Time::nanoseconds_in_second));
 
     if (ticks > 0xFFFF) {
-        error() << "PIT: cannot sleep for more than 0xFFFF ticks (got " << format::as_hex << ticks << ")";
-        hang();
+        StackStringBuilder error_string;
+        error_string << "PIT: cannot sleep for more than 0xFFFF ticks (got ";
+        error_string.append_hex(ticks);
+        error_string << ")";
+        runtime::panic(error_string.data());
     }
 
     IO::out8<timer_data>(ticks & 0xFF);

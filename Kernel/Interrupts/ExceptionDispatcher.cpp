@@ -43,9 +43,11 @@ void ExceptionDispatcher::exception_handler(RegisterState* registers)
         exception_number = 21; // security exception is 21st in the array
 
     if (s_handlers[exception_number] == nullptr) {
-        error() << "An exception has occured: " << s_exception_messages[exception_number] << " (" << exception_number
-                << ")";
-        hang();
+        StackStringBuilder error_string;
+
+        error_string << "An exception has occured: " << s_exception_messages[exception_number] << " ("
+                     << exception_number << ")";
+        runtime::panic(error_string.data());
     }
 
     s_handlers[exception_number]->handle(*registers);
