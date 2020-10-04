@@ -61,15 +61,20 @@ void CPU::start_all_processors()
 
 CPU::LocalData& CPU::current()
 {
-    auto this_cpu = LAPIC::my_id();
+    volatile u32 this_cpu;
+    if (supports_smp())
+        this_cpu = LAPIC::my_id();
+    else
+        this_cpu = 0;
 
     for (auto& processor: s_processors) {
         if (processor.id() == this_cpu)
             return processor;
     }
 
-    error() << "CPU: Couldn't find the local data for cpu " << this_cpu;
-    hang();
+    StackStringBuilder error_string;
+    error_string << "CPU: Couldn't find the local data for cpu " << this_cpu;
+    runtime::panic(error_string.data());
 }
 
 void CPU::ap_entrypoint()
