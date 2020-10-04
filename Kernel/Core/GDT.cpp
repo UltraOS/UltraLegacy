@@ -120,8 +120,7 @@ void GDT::create_tss_descriptor(TSS* tss)
 GDT::entry& GDT::new_entry()
 {
     if (m_active_entries >= entry_count) {
-        error() << "GDT is out of free entries!";
-        hang();
+        runtime::panic("GDT is out of free entries!");
     }
 
     m_active_entries++;
@@ -134,8 +133,7 @@ GDT::entry& GDT::new_entry()
 GDT::tss_entry& GDT::new_tss_entry()
 {
     if (m_active_entries >= entry_count) {
-        error() << "GDT is out of free entries!";
-        hang();
+        runtime::panic("GDT is out of free entries!");
     }
 
     m_active_entries += 2;
