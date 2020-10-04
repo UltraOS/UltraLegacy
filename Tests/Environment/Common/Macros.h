@@ -1,3 +1,5 @@
+#pragma once
+
 #define ASSERT(x)
 #define hang()
 

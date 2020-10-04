@@ -2,6 +2,20 @@
 
 #include <unordered_set>
 
+class StackStringBuilder {
+public:
+    const char* data() { return "StackStringBuilder::data()"; }
+
+    template <typename T>
+    StackStringBuilder& operator<<(T) { return *this; }
+};
+
+namespace runtime {
+    void panic(const char* reason) {
+        throw std::runtime_error(std::string("panic() called: ") + reason);
+    }
+}
+
 #define private public
 #include "Memory/HeapAllocator.h"
 #include "Memory/HeapAllocator.cpp"

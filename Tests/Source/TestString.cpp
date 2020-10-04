@@ -1,6 +1,6 @@
-#include "Common/String.h"
-
 #include "TestRunner.h"
+
+#include "Common/String.h"
 
 // Should be SSO for x86 & x86-64
 static const char* sso_string = "SSO St";
@@ -54,7 +54,7 @@ TEST(StringCopyOwnership) {
 
 TEST(StringMoveOwnership) {
     kernel::String test = non_sso_string;
-    kernel::String test1 = kernel::move(test);
+    kernel::String test1 = move(test);
 
     Assert::that(test.c_string()).is_equal("");
     Assert::that(test.size()).is_equal(0);
@@ -63,7 +63,7 @@ TEST(StringMoveOwnership) {
     Assert::that(test1.size()).is_equal(kernel::String::length_of(non_sso_string));
 
     kernel::String test2 = sso_string;
-    kernel::String test3 = kernel::move(test2);
+    kernel::String test3 = move(test2);
 
     Assert::that(test2.c_string()).is_equal("");
     Assert::that(test2.size()).is_equal(0);
@@ -75,11 +75,22 @@ TEST(StringMoveOwnership) {
 TEST(StackStringBuilder) {
     kernel::StackStringBuilder builder;
     builder += 123;
-    builder += "321";
+    builder += "456";
     builder.append_hex(0xDEADBEEF);
     builder.append("test");
-    builder.seal();
+    builder.append(true);
+    builder.append('!');
 
-    std::string string(builder.as_view().data());
-    Assert::that(string).is_equal("1233210xDEADBEEFtest");
+    Assert::that(const_cast<const char*>(builder.data())).is_equal("1234560xDEADBEEFtesttrue!");
+}
+
+TEST(StackStringBuilderLeftShift) {
+    kernel::StackStringBuilder builder;
+
+    int* my_pointer = reinterpret_cast<int*>(static_cast<decltype(sizeof(int))>(0xDEADBEEF));
+
+    builder << 123 << "456" << my_pointer << "test" << true << '!';
+
+    // TODO: deadbeef is hardcoded as the 8 byte representation here, make it dynamic?
+    Assert::that(const_cast<const char*>(builder.data())).is_equal("1234560x00000000DEADBEEFtesttrue!");
 }
