@@ -331,10 +331,7 @@ public:
         return string.size();
     }
 
-    size_t append(const char* string)
-    {
-        return append(StringView(string));
-    }
+    size_t append(const char* string) { return append(StringView(string)); }
 
     template <typename T>
     enable_if_t<is_arithmetic_v<T>, size_t> append(T number)
@@ -369,7 +366,7 @@ public:
 
     size_t append(bool value)
     {
-        static constexpr StringView true_value = "true"_sv;
+        static constexpr StringView true_value  = "true"_sv;
         static constexpr StringView false_value = "false"_sv;
 
         auto value_to_copy = value ? true_value : false_value;
@@ -390,12 +387,9 @@ public:
         return append_hex(reinterpret_cast<ptr_t>(pointer));
     }
 
-    size_t append(Address address)
-    {
-        return append_hex(static_cast<ptr_t>(address));
-    }
+    size_t append(Address address) { return append_hex(static_cast<ptr_t>(address)); }
 
-    template<typename T>
+    template <typename T>
     void operator+=(T value)
     {
         append(value);
@@ -414,7 +408,7 @@ public:
     size_t size_left() const { return buffer_size - m_current_offset - 1; }
 
 private:
-    void seal() { m_bufer[m_current_offset] = '\0'; }
+    void  seal() { m_bufer[m_current_offset] = '\0'; }
     char* pointer_to_end() { return m_bufer + m_current_offset; }
 
 private:

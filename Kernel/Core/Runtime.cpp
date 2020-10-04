@@ -59,38 +59,28 @@ void init_global_objects()
     for (global_constructor_t* ctor = &global_constructors_begin; ctor < &global_constructors_end; ++ctor)
         (*ctor)();
 }
-
+// clang-format on
 
 void on_assertion_failed(const char* message, const char* file, const char* function, u32 line)
 {
     static constexpr auto assertion_failed = "Assertion failed!"_sv;
-    static constexpr auto expression = "\n------> Expression : "_sv;
-    static constexpr auto function_str = "\n------> Function   : "_sv;
-    static constexpr auto file_str = "\n------> File       : "_sv;
+    static constexpr auto expression       = "\n------> Expression : "_sv;
+    static constexpr auto function_str     = "\n------> Function   : "_sv;
+    static constexpr auto file_str         = "\n------> File       : "_sv;
 
     // We don't want to use the heap here as it might be corrupted
     StackStringBuilder<512> formatted_message;
-
-    formatted_message += assertion_failed;
-    formatted_message += expression;
-    formatted_message += message;
-    formatted_message += function_str;
-    formatted_message += function;
-    formatted_message += file_str;
-    formatted_message += file;
-    formatted_message += ':';
-    formatted_message += line;
-
-    formatted_message.seal();
+    formatted_message << assertion_failed << expression << message << function_str << function << file_str << file
+                      << ':' << line;
 
     panic(formatted_message.data());
 }
 
 [[noreturn]] void panic(const char* reason)
 {
-    static constexpr auto panic_message = "KERNEL PANIC!"_sv;
-    static Color font_color = Color::white();
-    static Color screen_color = Color::blue();
+    static constexpr auto  panic_message = "KERNEL PANIC!"_sv;
+    static constexpr Color font_color    = Color::white();
+    static constexpr Color screen_color  = Color::blue();
 
     error() << panic_message << "\n" << reason;
 
@@ -101,23 +91,23 @@ void on_assertion_failed(const char* message, const char* file, const char* func
         hang();
 
     auto& surface = VideoDevice::the().surface();
-    Rect surface_rect(0, 0, surface.width(), surface.height());
-    auto center = surface_rect.center();
-    Rect exception_rect(0, 0, center.x(), center.y());
-    Point offset = exception_rect.center();
-    auto initial_x = offset.x();
+    Rect  surface_rect(0, 0, surface.width(), surface.height());
+    auto  center = surface_rect.center();
+    Rect  exception_rect(0, 0, center.x(), center.y());
+    Point offset    = exception_rect.center();
+    auto  initial_x = offset.x();
 
     Painter p(&surface);
     p.fill_rect(surface_rect, screen_color);
 
     Point panic_offset(offset.x() + offset.x() / 2 + (panic_message.size() / 2 * Painter::font_width), offset.y() - 40);
 
-    for (char c : panic_message) {
+    for (char c: panic_message) {
         p.draw_char(panic_offset, c, font_color, Color::transparent());
         panic_offset.first() += Painter::font_width;
     }
 
-    for (char c : StringView(reason)) {
+    for (char c: StringView(reason)) {
         if (c == '\n') {
             offset.second() += Painter::font_height;
             offset.first() = initial_x;
@@ -131,5 +121,4 @@ void on_assertion_failed(const char* message, const char* file, const char* func
 
     hang();
 }
-// clang-format on
 }
