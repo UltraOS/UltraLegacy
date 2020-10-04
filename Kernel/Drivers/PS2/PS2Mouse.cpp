@@ -52,10 +52,11 @@ u8 PS2Mouse::bytes_in_packet() const
     case SubType::STANDARD_MOUSE: return 3;
     case SubType::SCROLL_WHEEL:
     case SubType::FIVE_BUTTONS: return 4;
-    default:
-        error() << "Unknown sub type " << static_cast<u8>(sub_type());
-        hang();
-        return 0;
+    default: {
+        StackStringBuilder error_string;
+        error_string << "PS2Mouse: Unknown sub type " << static_cast<u8>(sub_type());
+        runtime::panic(error_string.data());
+    }
     }
 }
 

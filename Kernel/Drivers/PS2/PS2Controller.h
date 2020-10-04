@@ -102,8 +102,7 @@ public:
             pause();
 
         if (timeout_counter == 0) {
-            error() << "PS2Controller: unexpected write timeout!";
-            hang();
+            runtime::panic("PS2Controller: unexpected write timeout!");
         }
 
         IO::out8<port>(data);

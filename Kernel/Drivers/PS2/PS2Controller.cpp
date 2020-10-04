@@ -41,11 +41,9 @@ void PS2Controller::discover_all_devices()
     auto controller_test_result = read_data();
 
     if (controller_test_result != controller_test_passed) {
-        StackStringBuilder string;
-        string += "PS2Controller: self test failed, expected: 0x55 received: ";
-        string += controller_test_result;
-        string.seal();
-        runtime::panic(string.data());
+        StackStringBuilder error_string;
+        error_string << "PS2Controller: self test failed, expected: 0x55 received: " << controller_test_result;
+        runtime::panic(error_string.data());
     }
 
     // restore the configuration again because it might've reset
@@ -79,10 +77,7 @@ void PS2Controller::discover_all_devices()
         device_2_present = initialize_device_if_present(Channel::TWO);
 
     if (!port1_passed && !port2_passed) {
-        StackStringBuilder string;
-        string += "PS2Controller: All ports failed self test!";
-        string.seal();
-        runtime::panic(string.data());
+        runtime::panic("PS2Controller: All ports failed self test!");
     }
 
     // This has to be done here and not in the device constructors
@@ -164,17 +159,15 @@ bool PS2Controller::reset_device(Channel channel)
         return true;
     } else {
         if (!did_last_read_timeout()) {
-            StackStringBuilder string;
-            string += "PS2Controller: Device ";
-            string += static_cast<u8>(channel);
-            string += " is present but responded with unknown sequence -> ";
-            string.append_hex(device_response[0]);
-            string += '-';
-            string.append_hex(device_response[1]);
-            string += '-';
-            string.append_hex(device_response[2]);
-            string.seal();
-            runtime::panic(string.data());
+            StackStringBuilder error_string;
+            error_string << "PS2Controller: Device " << static_cast<u8>(channel);
+            error_string << " is present but responded with unknown sequence -> ";
+            error_string.append_hex(device_response[0]);
+            error_string += '-';
+            error_string.append_hex(device_response[1]);
+            error_string += '-';
+            error_string.append_hex(device_response[2]);
+            runtime::panic(error_string.data());
         }
 
         log() << "PS2Controller: Device " << static_cast<u8>(channel) << " is not present.";
@@ -211,7 +204,6 @@ bool PS2Controller::should_resend()
     StackStringBuilder string;
     string += "PS2Controller: unexpected data instead of ACK/resend -> ";
     string.append_hex(data);
-    string.seal();
     runtime::panic(string.data());
 }
 
@@ -233,10 +225,7 @@ void PS2Controller::send_command_to_device(Channel channel, u8 command, bool sho
     } while (should_expect_ack && --resend_counter && should_resend());
 
     if (should_expect_ack && !resend_counter) {
-        StackStringBuilder string;
-        string += "PS2Controller: failed to receive command ACK after 1000 attempts";
-        string.seal();
-        runtime::panic(string.data());
+        runtime::panic("PS2Controller: failed to receive command ACK after 1000 attempts");
     }
 }
 
@@ -251,10 +240,7 @@ u8 PS2Controller::read_data(bool allow_failure, size_t max_attempts)
             return 0x00;
         }
 
-        StackStringBuilder string;
-        string += "PS2Controller: unexpected read timeout!";
-        string.seal();
-        runtime::panic(string.data());
+        runtime::panic("PS2Controller: unexpected read timeout!");
     }
 
     if (allow_failure)
