@@ -326,8 +326,14 @@ public:
 
         copy_memory(string.data(), pointer_to_end(), string.size());
         m_current_offset += string.size();
+        seal();
 
         return string.size();
+    }
+
+    size_t append(const char* string)
+    {
+        return append(StringView(string));
     }
 
     template <typename T>
@@ -335,6 +341,7 @@ public:
     {
         size_t chars_written = to_string(number, pointer_to_end(), size_left(), false);
         m_current_offset += chars_written;
+        seal();
 
         return chars_written;
     }
@@ -344,6 +351,7 @@ public:
     {
         size_t chars_written = to_hex_string(number, pointer_to_end(), size_left(), false);
         m_current_offset += chars_written;
+        seal();
 
         return chars_written;
     }
@@ -354,20 +362,51 @@ public:
             return 0;
 
         m_bufer[m_current_offset++] = c;
+        seal();
+
         return 1;
     }
 
-    template <typename T>
-    enable_if_t<is_arithmetic_v<T>> operator+=(T number)
+    size_t append(bool value)
     {
-        append(number);
+        static constexpr StringView true_value = "true"_sv;
+        static constexpr StringView false_value = "false"_sv;
+
+        auto value_to_copy = value ? true_value : false_value;
+
+        if (size_left() < value_to_copy.size())
+            return 0;
+
+        copy_memory(value_to_copy.data(), pointer_to_end(), value_to_copy.size());
+        m_current_offset += value_to_copy.size();
+        seal();
+
+        return value_to_copy.size();
     }
 
-    void operator+=(StringView string) { append(string); }
+    template <typename T>
+    enable_if_t<is_pointer_v<T>, size_t> append(T pointer)
+    {
+        return append_hex(reinterpret_cast<ptr_t>(pointer));
+    }
 
-    void operator+=(char c) { append(c); }
+    size_t append(Address address)
+    {
+        return append_hex(static_cast<ptr_t>(address));
+    }
 
-    void seal() { m_bufer[m_current_offset] = '\0'; }
+    template<typename T>
+    void operator+=(T value)
+    {
+        append(value);
+    }
+
+    template <typename T>
+    StackStringBuilder& operator<<(T value)
+    {
+        append(value);
+        return *this;
+    }
 
     size_t capacity() const { return buffer_size; }
     size_t size() const { return m_current_offset; }
@@ -375,6 +414,7 @@ public:
     size_t size_left() const { return buffer_size - m_current_offset - 1; }
 
 private:
+    void seal() { m_bufer[m_current_offset] = '\0'; }
     char* pointer_to_end() { return m_bufer + m_current_offset; }
 
 private:
