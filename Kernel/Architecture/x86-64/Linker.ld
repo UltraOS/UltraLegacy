@@ -9,7 +9,7 @@ SECTIONS
     .text ALIGN(4K) : AT (ADDR (.text) - kernel_space_begin)
     {
         *(.entry)
-        *(.text)
+        *(.text .text.*)
     }
 
     .rodata ALIGN(4K) : AT (ADDR (.rodata) - kernel_space_begin)
@@ -18,12 +18,12 @@ SECTIONS
         *(.ctors)
         global_constructors_end = .;
 
-        *(.rodata)
+        *(.rodata .rodata.*)
     }
 
     .data ALIGN(4K) : AT (ADDR (.data) - kernel_space_begin)
     {
-        *(.data)
+        *(.data .data.*)
     }
 
     .magic ALIGN(4K) : AT (ADDR (.magic) - kernel_space_begin)
@@ -35,7 +35,7 @@ SECTIONS
     {
         section_bss_begin = .;
         *(COMMON)
-        *(.bss)
+        *(.bss .bss.*)
         section_bss_end = .;
     }
 }
