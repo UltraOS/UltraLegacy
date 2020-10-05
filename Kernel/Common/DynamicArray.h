@@ -138,6 +138,7 @@ public:
     }
 
     size_t size() const { return m_size; }
+    bool empty() const { return size() == 0; }
 
     size_t capcity() const { return m_capacity; }
 
