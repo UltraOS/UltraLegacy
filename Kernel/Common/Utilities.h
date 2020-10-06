@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Memory.h"
 #include "Traits.h"
 
 namespace kernel {
@@ -42,4 +43,21 @@ void swap(T& l, T& r)
     l     = move(r);
     r     = move(tmp);
 }
+
+// clang-format off
+template <typename To, typename From>
+enable_if_t<
+    sizeof(To) == sizeof(From) &&
+    is_trivially_constructible_v<To> &&
+    is_trivially_copyable_v<To> &&
+    is_trivially_copyable_v<From>,
+    To
+>
+bit_cast(From value)
+{
+    To to;
+    copy_memory(&value, &to, sizeof(value));
+    return to;
+}
+// clang-format on
 }
