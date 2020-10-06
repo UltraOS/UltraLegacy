@@ -157,6 +157,9 @@ bool PS2Controller::reset_device(Channel channel)
     if ((device_response[0] == command_ack && device_response[1] == self_test_passed)
         || (device_response[0] == self_test_passed && device_response[1] == command_ack)) {
         return true;
+    } else if (device_response[0] == reset_failure || device_response[1] == reset_failure) {
+        warning() << "PS2Controller: Device " << static_cast<u8>(channel) << " reset failure";
+        return false;
     } else {
         if (!did_last_read_timeout()) {
             StackStringBuilder error_string;
@@ -185,7 +188,7 @@ PS2Controller::DeviceIdentification PS2Controller::identify_device(Channel chann
 
     for (auto i = 0; i < 2; ++i) {
         ident.id[i] = read_data(true, 250); // this delay is super sensitive and prone to breaking
-        ident.id_bytes += !!did_last_read_timeout();
+        ident.id_bytes += !did_last_read_timeout();
     }
 
     return ident;
@@ -253,16 +256,16 @@ PS2Controller::Status PS2Controller::status()
 {
     auto raw_status = IO::in8<status_port>();
 
-    return *reinterpret_cast<Status*>(&raw_status);
+    return bit_cast<Status>(raw_status);
 }
 
 PS2Controller::Configuration PS2Controller::read_configuration()
 {
     send_command(Command::READ_CONFIGURATION);
 
-    auto config = read_data();
+    auto raw_config = read_data();
 
-    return *reinterpret_cast<Configuration*>(&config);
+    return bit_cast<Configuration>(raw_config);
 }
 
 void PS2Controller::write_configuration(Configuration config)

@@ -33,6 +33,7 @@ public:
     static constexpr u8 self_test_passed = 0xAA;
     static constexpr u8 command_ack      = 0xFA;
     static constexpr u8 resend_command   = 0xFE;
+    static constexpr u8 reset_failure    = 0xFC;
 
     enum class DeviceCommand : u8 {
         RESET            = 0xFF,
