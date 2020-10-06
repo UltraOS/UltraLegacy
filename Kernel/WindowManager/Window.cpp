@@ -1,6 +1,7 @@
 #include "Window.h"
 #include "Memory/MemoryManager.h"
 #include "WindowManager.h"
+#include "Common/Math.h"
 
 namespace kernel {
 
@@ -21,8 +22,10 @@ RefPtr<Window> Window::create_desktop(Thread& owner, const Rect& window_rect)
 
 Window::Window(Thread& owner, const Rect& window_rect, bool is_focused) : m_owner(owner), m_rect(window_rect)
 {
+    auto pages_needed = ceiling_divide(window_rect.width() * window_rect.height() * sizeof(u32), Page::size);
+
     auto bitmap_range
-        = AddressSpace::current().allocator().allocate_range(window_rect.width() * window_rect.height() * sizeof(u32));
+        = AddressSpace::current().allocator().allocate_range(pages_needed * Page::size);
     auto bitmap = bitmap_range.as_pointer<void>();
 
     MemoryManager::the().force_preallocate(bitmap_range);
