@@ -5,6 +5,7 @@
 #include "Drivers/Video/VideoDevice.h"
 #include "Interrupts/IPICommunicator.h"
 #include "Interrupts/InterruptController.h"
+#include "Memory/MemoryManager.h"
 #include "WindowManager/Painter.h"
 
 extern "C" void __cxa_pure_virtual()
@@ -76,13 +77,37 @@ void on_assertion_failed(const char* message, const char* file, const char* func
     panic(formatted_message.data());
 }
 
+size_t dump_backtrace(ptr_t* into, size_t max_depth)
+{
+    Address base_pointer;
+
+#ifdef ULTRA_32
+    asm("mov %%ebp, %0" : "=a"(base_pointer));
+#elif defined(ULTRA_64)
+    asm("mov %%rbp, %0" : "=a"(base_pointer));
+#endif
+
+    size_t current_depth = 0;
+
+    auto is_address_valid = [](Address adr) -> bool {
+        return adr > MemoryManager::kernel_reserved_base && adr < MemoryManager::kernel_end_address;
+    };
+
+    while (--max_depth && is_address_valid(base_pointer)) {
+        into[current_depth++] = base_pointer.as_pointer<ptr_t>()[1];
+        base_pointer          = base_pointer.as_pointer<ptr_t>()[0];
+    }
+
+    return current_depth ? current_depth - 1 : 0;
+}
+
 [[noreturn]] void panic(const char* reason)
 {
     static constexpr auto  panic_message = "KERNEL PANIC!"_sv;
     static constexpr Color font_color    = Color::white();
     static constexpr Color screen_color  = Color::blue();
 
-    error() << panic_message << "\n" << reason;
+    error() << panic_message << "\n";
 
     if (InterruptController::is_initialized())
         IPICommunicator::hang_all_cores();
@@ -107,16 +132,52 @@ void on_assertion_failed(const char* message, const char* file, const char* func
         panic_offset.first() += Painter::font_width;
     }
 
-    for (char c: StringView(reason)) {
-        if (c == '\n') {
-            offset.second() += Painter::font_height;
-            offset.first() = initial_x;
+    Logger bt_logger(false);
 
-            continue;
+    auto write_string = [&](StringView string) {
+        bt_logger << string;
+        for (char c: StringView(string)) {
+            if (c == '\n') {
+                offset.second() += Painter::font_height;
+                offset.first() = initial_x;
+
+                continue;
+            }
+
+            p.draw_char(offset, c, font_color, Color::transparent());
+            offset.first() += Painter::font_width;
         }
+    };
 
-        p.draw_char(offset, c, font_color, Color::transparent());
-        offset.first() += Painter::font_width;
+    write_string(reason);
+
+    offset.second() += Painter::font_height * 2;
+    offset.first() = initial_x;
+
+    bt_logger << "\n\n"_sv;
+    write_string("Backtrace:\n"_sv);
+
+    ptr_t backtrace[8] {};
+    auto  depth = dump_backtrace(backtrace, 8);
+
+    if (depth < 2) {
+        write_string("No backtrace available (possible stack corruption)"_sv);
+        hang();
+    }
+
+    static constexpr auto frame_message = "Frame "_sv;
+
+    char number[20];
+
+    for (size_t current_depth = 1; current_depth < depth; ++current_depth) {
+        write_string(frame_message);
+
+        to_string(current_depth, number, 20);
+        write_string(number);
+        write_string(": "_sv);
+        to_hex_string(backtrace[current_depth], number, 20);
+        write_string(number);
+        write_string("\n"_sv);
     }
 
     hang();
