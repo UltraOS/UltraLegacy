@@ -186,8 +186,18 @@ PS2Controller::DeviceIdentification PS2Controller::identify_device(Channel chann
 
     DeviceIdentification ident {};
 
+    size_t max_attempts_for_id_byte[2];
+
+    if (channel == Channel::ONE) { // Here we expect to get a keyboard which is 2 ID bytes
+        max_attempts_for_id_byte[0] = 100000;
+        max_attempts_for_id_byte[1] = 100000;
+    } else { // Here we expect to get a mouse which is 1 ID byte
+        max_attempts_for_id_byte[0] = 100000;
+        max_attempts_for_id_byte[1] = 250;
+    }
+
     for (auto i = 0; i < 2; ++i) {
-        ident.id[i] = read_data(true, 250); // this delay is super sensitive and prone to breaking
+        ident.id[i] = read_data(true, max_attempts_for_id_byte[i]);
         ident.id_bytes += !did_last_read_timeout();
     }
 
