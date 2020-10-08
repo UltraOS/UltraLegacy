@@ -159,6 +159,7 @@ start:
         ; boot context pointer
         push eax
 
+    xor ebp, ebp
     ; Jump into kernel main
     call KERNEL_ENTRYPOINT
 hang:

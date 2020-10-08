@@ -39,6 +39,7 @@ start:
     ; boot context
     mov rdi, r8
 
+    xor rbp, rbp
     ; Jump into kernel main
     call KERNEL_ENTRYPOINT
 hang:
