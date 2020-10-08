@@ -196,7 +196,7 @@ void MemoryManager::free_page(Page& page)
     runtime::panic(error_string.data());
 }
 
-void MemoryManager::handle_page_fault(const PageFault& fault)
+void MemoryManager::handle_page_fault(const RegisterState& registers, const PageFault& fault)
 {
     if (AddressSpace::current().allocator().is_allocated(fault.address())) {
 #ifdef MEMORY_MANAGER_DEBUG
@@ -210,7 +210,18 @@ void MemoryManager::handle_page_fault(const PageFault& fault)
     } else {
         StackStringBuilder error_string;
         error_string << "MemoryManager: unexpected page fault on core " << CPU::current().id() << fault;
-        runtime::panic(error_string.data());
+
+        Address base_pointer;
+        Address instruction_pointer;
+#ifdef ULTRA_32
+        base_pointer = registers.ebp;
+        instruction_pointer = registers.eip;
+#elif defined(ULTRA_64)
+        base_pointer = registers.rbp;
+        instruction_pointer = registers.rip;
+#endif
+
+        runtime::panic(error_string.data(), base_pointer, instruction_pointer);
     }
 }
 

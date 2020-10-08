@@ -5,6 +5,7 @@
 #include "Page.h"
 #include "PhysicalMemory.h"
 #include "VirtualAllocator.h"
+#include "Core/Registers.h"
 
 namespace kernel {
 
@@ -51,7 +52,7 @@ public:
 
     static void inititalize(const MemoryMap& memory_map);
 
-    static void handle_page_fault(const PageFault& fault);
+    static void handle_page_fault(const RegisterState&, const PageFault&);
 
     static MemoryManager& the();
 

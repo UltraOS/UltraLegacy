@@ -32,7 +32,7 @@ public:
                      state.error_code & user_mask,
                      static_cast<PageFault::Type>(state.error_code & type_mask));
 
-        MemoryManager::handle_page_fault(pf);
+        MemoryManager::handle_page_fault(state, pf);
 
         log() << "PageFaultHandler: page fault resolved, continuing...";
     }

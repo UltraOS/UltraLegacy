@@ -47,7 +47,18 @@ void ExceptionDispatcher::exception_handler(RegisterState* registers)
 
         error_string << "An exception has occured: " << s_exception_messages[exception_number] << " ("
                      << exception_number << ")";
-        runtime::panic(error_string.data());
+
+        Address base_pointer;
+        Address instruction_pointer;
+#ifdef ULTRA_32
+        base_pointer = registers->ebp;
+        instruction_pointer = registers->eip;
+#elif defined(ULTRA_64)
+        base_pointer = registers->rbp;
+        instruction_pointer = registers->rip;
+#endif
+
+        runtime::panic(error_string.data(), base_pointer, instruction_pointer);
     }
 
     s_handlers[exception_number]->handle(*registers);
