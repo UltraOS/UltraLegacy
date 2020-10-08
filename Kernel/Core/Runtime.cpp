@@ -76,8 +76,8 @@ void on_assertion_failed(const char* message, const char* file, const char* func
 
     panic(formatted_message.data());
 }
-
-size_t dump_backtrace(ptr_t* into, size_t max_depth)
+ALWAYS_INLINE inline Address base_pointer();
+inline Address base_pointer()
 {
     Address base_pointer;
 
@@ -87,10 +87,17 @@ size_t dump_backtrace(ptr_t* into, size_t max_depth)
     asm("mov %%rbp, %0" : "=a"(base_pointer));
 #endif
 
+    return base_pointer;
+}
+
+size_t dump_backtrace(ptr_t* into, size_t max_depth, Address base_pointer)
+{
     size_t current_depth = 0;
 
     auto is_address_valid = [](Address adr) -> bool {
-        return adr > MemoryManager::kernel_reserved_base && adr < MemoryManager::kernel_end_address;
+        // this doesn't actually guarantee that we won't crash here
+        // TODO: figure out a way to make this safer?
+        return adr > MemoryManager::kernel_reserved_base;
     };
 
     while (--max_depth && is_address_valid(base_pointer)) {
@@ -98,11 +105,16 @@ size_t dump_backtrace(ptr_t* into, size_t max_depth)
         base_pointer          = base_pointer.as_pointer<ptr_t>()[0];
     }
 
-    return current_depth ? current_depth - 1 : 0;
+    return current_depth;
 }
 
-[[noreturn]] void panic(const char* reason)
+ALWAYS_INLINE inline size_t dump_backtrace(ptr_t* into, size_t max_depth);
+inline size_t dump_backtrace(ptr_t* into, size_t max_depth)
 {
+    return dump_backtrace(into, max_depth, base_pointer());
+}
+
+[[noreturn]] void panic(const char* reason, Address base_pointer, Address instruction_pointer) {
     static constexpr auto  panic_message = "KERNEL PANIC!"_sv;
     static constexpr Color font_color    = Color::white();
     static constexpr Color screen_color  = Color::blue();
@@ -157,10 +169,18 @@ size_t dump_backtrace(ptr_t* into, size_t max_depth)
     bt_logger << "\n\n"_sv;
     write_string("Backtrace:\n"_sv);
 
-    ptr_t backtrace[8] {};
-    auto  depth = dump_backtrace(backtrace, 8);
+    static constexpr size_t backtrace_max_depth = 8;
+    ptr_t backtrace[backtrace_max_depth] {};
+    size_t depth;
 
-    if (depth < 2) {
+    if (instruction_pointer) {
+        backtrace[0] = instruction_pointer;
+        depth = dump_backtrace(backtrace + 1, backtrace_max_depth - 1, base_pointer) + 1;
+    } else {
+        depth = dump_backtrace(backtrace, backtrace_max_depth, base_pointer);
+    }
+
+    if (!depth) {
         write_string("No backtrace available (possible stack corruption)"_sv);
         hang();
     }
@@ -169,7 +189,7 @@ size_t dump_backtrace(ptr_t* into, size_t max_depth)
 
     char number[20];
 
-    for (size_t current_depth = 1; current_depth < depth; ++current_depth) {
+    for (size_t current_depth = 0; current_depth < depth; ++current_depth) {
         write_string(frame_message);
 
         to_string(current_depth, number, 20);
@@ -181,5 +201,10 @@ size_t dump_backtrace(ptr_t* into, size_t max_depth)
     }
 
     hang();
+}
+
+[[noreturn]] void panic(const char* reason)
+{
+    panic(reason, base_pointer());
 }
 }
