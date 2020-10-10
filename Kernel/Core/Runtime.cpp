@@ -62,6 +62,106 @@ void init_global_objects()
 }
 // clang-format on
 
+class KernelSymbolTable {
+public:
+    static constexpr size_t  max_symbols           = 512;
+    static constexpr Address physical_symbols_base = 0x45000;
+
+    class Symbol {
+    public:
+        Symbol() = default;
+
+        Symbol(ptr_t address, char* name) : m_address(address), m_name(name) { }
+
+        ptr_t       address() const { return m_address; }
+        const char* name() const { return m_name; }
+
+        friend bool operator<=(ptr_t address, const Symbol& symbol) { return address <= symbol.address(); }
+
+    private:
+        ptr_t m_address { 0 };
+        char* m_name { nullptr };
+    };
+
+    static bool symbols_available() { return s_symbol_count > 0; }
+
+    static void parse_all()
+    {
+        static constexpr auto ksyms_begin_magic = "KSYMS"_sv;
+        static constexpr auto ksyms_end_magic   = "SMYSK"_sv;
+
+        auto* current_offset = MemoryManager::physical_to_virtual(physical_symbols_base).as_pointer<char>();
+
+        if (StringView(current_offset, ksyms_begin_magic.size()) != ksyms_begin_magic) {
+            warning() << "SymbolTable: invalid symbol base magic, kernel symbols won't be available";
+            return;
+        }
+        current_offset += ksyms_begin_magic.size();
+
+        while (StringView(current_offset, ksyms_end_magic.size()) != ksyms_end_magic) {
+            if (s_symbol_count == max_symbols) {
+                warning() << "SymbolTable: reached the maximum amount of symbols, not all symbols might be available";
+                break;
+            }
+
+            ptr_t base_of_this_symbol = *reinterpret_cast<ptr_t*>(current_offset);
+            current_offset += sizeof(ptr_t);
+
+            s_symbols[s_symbol_count++] = Symbol(base_of_this_symbol, current_offset);
+
+            current_offset += String::length_of(current_offset) + 1;
+        }
+
+        if (!symbols_available())
+            return;
+
+        s_symbols_begin = s_symbols[0].address();
+        s_symbols_end   = s_symbols[s_symbol_count - 1].address();
+
+        log() << "KernelSymbolTable: successfully parsed kernel symbols, " << s_symbol_count << " available.";
+    }
+
+    static bool is_address_within_symbol_table(ptr_t address)
+    {
+        // Add 500 to the last symbol to compensate for the possibility
+        // of this address being the last symbol in the table
+        return address > s_symbols_begin && address < (s_symbols_end + 500);
+    }
+
+    static const Symbol* find_symbol(ptr_t address)
+    {
+        if (!symbols_available())
+            return nullptr;
+
+        if (!is_address_within_symbol_table(address))
+            return nullptr;
+
+        for (size_t i = 0; i < s_symbol_count - 1; ++i) {
+            if (address <= s_symbols[i + 1])
+                return &s_symbols[i];
+        }
+
+        return &s_symbols[s_symbol_count - 1];
+    }
+
+private:
+    static ptr_t s_symbols_begin;
+    static ptr_t s_symbols_end;
+
+    static size_t s_symbol_count;
+    static Symbol s_symbols[max_symbols];
+};
+
+ptr_t                     KernelSymbolTable::s_symbols_begin;
+ptr_t                     KernelSymbolTable::s_symbols_end;
+size_t                    KernelSymbolTable::s_symbol_count;
+KernelSymbolTable::Symbol KernelSymbolTable::s_symbols[max_symbols];
+
+void parse_kernel_symbols()
+{
+    KernelSymbolTable::parse_all();
+}
+
 void on_assertion_failed(const char* message, const char* file, const char* function, u32 line)
 {
     static constexpr auto assertion_failed = "Assertion failed!"_sv;
@@ -77,7 +177,7 @@ void on_assertion_failed(const char* message, const char* file, const char* func
     panic(formatted_message.data());
 }
 ALWAYS_INLINE inline Address base_pointer();
-inline Address base_pointer()
+inline Address               base_pointer()
 {
     Address base_pointer;
 
@@ -109,15 +209,21 @@ size_t dump_backtrace(ptr_t* into, size_t max_depth, Address base_pointer)
 }
 
 ALWAYS_INLINE inline size_t dump_backtrace(ptr_t* into, size_t max_depth);
-inline size_t dump_backtrace(ptr_t* into, size_t max_depth)
+inline size_t               dump_backtrace(ptr_t* into, size_t max_depth)
 {
     return dump_backtrace(into, max_depth, base_pointer());
 }
 
-[[noreturn]] void panic(const char* reason, Address base_pointer, Address instruction_pointer) {
+[[noreturn]] void panic(const char* reason, Address base_pointer, Address instruction_pointer)
+{
     static constexpr auto  panic_message = "KERNEL PANIC!"_sv;
     static constexpr Color font_color    = Color::white();
     static constexpr Color screen_color  = Color::blue();
+
+    static bool in_panic = false;
+    if (in_panic)
+        hang(); // Oops! panicked while trying to panic :(
+    in_panic = true;
 
     error() << panic_message << "\n";
 
@@ -132,7 +238,7 @@ inline size_t dump_backtrace(ptr_t* into, size_t max_depth)
     auto  center = surface_rect.center();
     Rect  exception_rect(0, 0, center.x(), center.y());
     Point offset    = exception_rect.center();
-    auto  initial_x = offset.x();
+    auto  initial_x = 10;
 
     Painter p(&surface);
     p.fill_rect(surface_rect, screen_color);
@@ -145,6 +251,7 @@ inline size_t dump_backtrace(ptr_t* into, size_t max_depth)
     }
 
     Logger bt_logger(false);
+    offset.first() = initial_x;
 
     auto write_string = [&](StringView string) {
         bt_logger << string;
@@ -170,12 +277,12 @@ inline size_t dump_backtrace(ptr_t* into, size_t max_depth)
     write_string("Backtrace:\n"_sv);
 
     static constexpr size_t backtrace_max_depth = 8;
-    ptr_t backtrace[backtrace_max_depth] {};
-    size_t depth;
+    ptr_t                   backtrace[backtrace_max_depth] {};
+    size_t                  depth;
 
     if (instruction_pointer) {
         backtrace[0] = instruction_pointer;
-        depth = dump_backtrace(backtrace + 1, backtrace_max_depth - 1, base_pointer) + 1;
+        depth        = dump_backtrace(backtrace + 1, backtrace_max_depth - 1, base_pointer) + 1;
     } else {
         depth = dump_backtrace(backtrace, backtrace_max_depth, base_pointer);
     }
@@ -197,6 +304,12 @@ inline size_t dump_backtrace(ptr_t* into, size_t max_depth)
         write_string(": "_sv);
         to_hex_string(backtrace[current_depth], number, 20);
         write_string(number);
+        write_string(" in "_sv);
+        auto* symbol = KernelSymbolTable::find_symbol(backtrace[current_depth]);
+        if (symbol)
+            write_string(symbol->name());
+        else
+            write_string("??");
         write_string("\n"_sv);
     }
 

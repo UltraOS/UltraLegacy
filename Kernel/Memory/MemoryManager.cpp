@@ -214,7 +214,7 @@ void MemoryManager::handle_page_fault(const RegisterState& registers, const Page
         Address base_pointer;
         Address instruction_pointer;
 #ifdef ULTRA_32
-        base_pointer = registers.ebp;
+        base_pointer        = registers.ebp;
         instruction_pointer = registers.eip;
 #elif defined(ULTRA_64)
         base_pointer = registers.rbp;

@@ -2,10 +2,10 @@
 
 #include "Common/DynamicArray.h"
 #include "Common/RefPtr.h"
+#include "Core/Registers.h"
 #include "Page.h"
 #include "PhysicalMemory.h"
 #include "VirtualAllocator.h"
-#include "Core/Registers.h"
 
 namespace kernel {
 

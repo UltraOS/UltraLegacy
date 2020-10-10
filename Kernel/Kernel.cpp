@@ -36,6 +36,7 @@ void run(Context* context)
 
     Logger::initialize();
 
+    runtime::parse_kernel_symbols();
     runtime::init_global_objects();
 
     GDT::the().create_basic_descriptors();
@@ -56,9 +57,10 @@ void run(Context* context)
     Timer::discover_and_setup();
     CPU::initialize();
 
+    VideoDevice::discover_and_setup(context->video_mode);
+
     Scheduler::inititalize();
 
-    VideoDevice::discover_and_setup(context->video_mode);
     PS2Controller::initialize();
 
     CPU::start_all_processors();

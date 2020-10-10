@@ -51,10 +51,10 @@ void ExceptionDispatcher::exception_handler(RegisterState* registers)
         Address base_pointer;
         Address instruction_pointer;
 #ifdef ULTRA_32
-        base_pointer = registers->ebp;
+        base_pointer        = registers->ebp;
         instruction_pointer = registers->eip;
 #elif defined(ULTRA_64)
-        base_pointer = registers->rbp;
+        base_pointer        = registers->rbp;
         instruction_pointer = registers->rip;
 #endif
 
