@@ -29,7 +29,7 @@ pushd $root_path
 mkdir -p Build$arch || on_error
 pushd Build$arch
 cmake .. -DARCH=$1 || on_error
-cmake --build . || on_error
+cmake --build . -- -j$(nproc) || on_error
 popd
 popd
 

@@ -263,9 +263,9 @@ REAL_MODE_DATA:            equ 0x20
         movzx ebx, word [bytes_per_sector]
         div ebx
         test edx, edx
-        jz aligned
+        jz %%.aligned
         inc eax
-        aligned:
+        %%.aligned:
         mov [sectors_to_read], eax
         mov [memory_offset], dword %1
 
@@ -276,7 +276,7 @@ REAL_MODE_DATA:            equ 0x20
         add eax, [data_offset_in_sectors]
         mov [sector_offset], eax
 
-        read_one:
+        %%.read_one:
             xor ax, ax
             mov es, ax
             mov [DAP.sector_count], word 1
@@ -286,7 +286,7 @@ REAL_MODE_DATA:            equ 0x20
             mov di, kernel_sector
             call read_disk_lba
 
-        copy_protected:
+        %%.copy_protected:
             switch_to_protected
             xor eax, eax
             mov ax, kernel_sector
@@ -299,7 +299,7 @@ REAL_MODE_DATA:            equ 0x20
             sub [sectors_to_read], dword 1
             switch_to_real
             cmp dword [sectors_to_read], 0
-            jg read_one
+            jg %%.read_one
 %endmacro
 
 ; void retrieve_memory_map(into_buffer, out_count)

@@ -42,8 +42,15 @@ FILE(GLOB ASM_FILES "${PROJECT_SOURCE_DIR}/Architecture/${ARCH_FOLDER}/*asm")
 set(KERNEL_SOURCES ${CPP_FILES} ${ASM_FILES})
 
 set(KERNEL Kernel.bin PARENT_SCOPE)
+set(ELF_KERNEL Kernel.elf PARENT_SCOPE)
 set(KERNEL_PATH ${PROJECT_BINARY_DIR} PARENT_SCOPE)
+
+add_executable(Kernel.elf ${KERNEL_SOURCES})
+target_include_directories(Kernel.elf PRIVATE "${PROJECT_SOURCE_DIR}")
 
 add_executable(Kernel.bin ${KERNEL_SOURCES})
 target_include_directories(Kernel.bin PRIVATE "${PROJECT_SOURCE_DIR}")
+set_target_properties(Kernel.bin PROPERTIES LINK_FLAGS "-Wl,--oformat,binary")
+
 target_link_libraries(Kernel.bin gcc)
+target_link_libraries(Kernel.elf gcc)

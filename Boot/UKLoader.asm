@@ -80,6 +80,7 @@ start:
     read_root_directory [boot_drive], FAT_DIRECTORY_SEGMENT, 0x0000
 
     read_directory_file_protected LOAD_KERNEL_AT, 1, kernel_file
+    read_directory_file_protected 0x45000, 2, ksyms_file
 
     xor ax, ax
     mov es, ax
@@ -264,6 +265,7 @@ PDT_GB3: equ 0x16000
 %endif
 
 kernel_file db "Kernel  bin"
+ksyms_file  db "KSyms   map"
 
 kernel_sector: times SECTOR_SIZE db 0
 gdt_ptr:

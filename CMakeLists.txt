@@ -30,13 +30,20 @@ project(UltraOS)
 add_subdirectory(Boot)
 add_subdirectory(Kernel)
 
-add_custom_target(DiskImage ALL DEPENDS ${PROJECT_SOURCE_DIR}/Images/Ultra${ARCH}HDD.vmdk)
+add_custom_target(DISK_IMAGE ALL DEPENDS ${PROJECT_SOURCE_DIR}/Images/Ultra${ARCH}HDD.vmdk)
+add_custom_target(KSYMS ALL DEPENDS ${KERNEL_PATH}/KSyms.map)
+
+add_custom_command(
+    OUTPUT ${KERNEL_PATH}/KSyms.map
+    COMMAND python3 ${PROJECT_SOURCE_DIR}/Scripts/generate_ksyms_map.py ${KERNEL_PATH} ${ELF_KERNEL}
+    DEPENDS ${ELF_KERNEL}
+)
 
 string(CONCAT VHC_BUILD_COMMAND
   "mkdir -p ${PROJECT_SOURCE_DIR}/Images && "
   "${CMAKE_SOURCE_DIR}/Scripts/vhc --mbr ${BOOTLOADER_PATH}/${MBR} "
                                   "--vbr ${BOOTLOADER_PATH}/${VBR} "
-                                  "--files ${BOOTLOADER_PATH}/${KERNEL_LOADER} ${KERNEL_PATH}/${KERNEL} "
+                                  "--files ${BOOTLOADER_PATH}/${KERNEL_LOADER} ${KERNEL_PATH}/${KERNEL} ${KERNEL_PATH}/KSyms.map "
                                   "--size 64 --image-dir ${PROJECT_SOURCE_DIR}/Images --image-name Ultra${ARCH}HDD"
 )
 
@@ -45,6 +52,6 @@ separate_arguments(VHC_BUILD_COMMAND UNIX_COMMAND "${VHC_BUILD_COMMAND}")
 add_custom_command(
     OUTPUT   ${PROJECT_SOURCE_DIR}/Images/Ultra${ARCH}HDD.vmdk
     COMMAND  ${VHC_BUILD_COMMAND}
-    DEPENDS  ${KERNEL} ${MBR} ${VBR} ${KERNEL_LOADER}
+    DEPENDS  ${KERNEL} ${ELF_KERNEL} ${KERNEL_PATH}/KSyms.map ${MBR} ${VBR} ${KERNEL_LOADER}
 )
 
