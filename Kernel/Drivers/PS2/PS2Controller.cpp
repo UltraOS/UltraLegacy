@@ -149,15 +149,35 @@ bool PS2Controller::reset_device(Channel channel)
     // therefore we cannot afford a smaller delay in read_data()
     send_command_to_device(channel, DeviceCommand::RESET, false);
 
-    u8 device_response[3];
+    u8 device_response[3] {};
     device_response[0] = read_data(true);
     device_response[1] = read_data(true);
-    device_response[2] = read_data(true, 250); // unlikely to not timeout?
 
-    if ((device_response[0] == command_ack && device_response[1] == self_test_passed)
-        || (device_response[0] == self_test_passed && device_response[1] == command_ack)) {
+    // Mouse responds with ack-pass-id while keyboard just does ack-pass
+    // So lets account for that while also allowing the possibility of keyboard being channel 2
+    // (250 might be too little for real hw tho, so might have to tweak it later)
+    device_response[2] = read_data(true, channel == Channel::TWO ? 100000 : 250);
+
+    bool did_get_ack = false;
+    bool did_get_pass = false;
+    bool did_fail = false;
+
+    // These come in absolutely random order everywhere
+    // For example on QEMU I get ack-pass-id and on my laptop I get ack-id-pass
+    for (size_t i = 0; i < 3; ++i) {
+        if (device_response[i] == command_ack)
+            did_get_ack = true;
+        else if (device_response[i] == self_test_passed)
+            did_get_pass = true;
+        else if (device_response[i] == reset_failure) {
+            did_fail = true;
+            break;
+        }
+    }
+
+    if (did_get_ack && did_get_pass) {
         return true;
-    } else if (device_response[0] == reset_failure || device_response[1] == reset_failure) {
+    } else if (did_fail) {
         warning() << "PS2Controller: Device " << static_cast<u8>(channel) << " reset failure";
         return false;
     } else {
