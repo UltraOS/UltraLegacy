@@ -158,9 +158,9 @@ bool PS2Controller::reset_device(Channel channel)
     // (250 might be too little for real hw tho, so might have to tweak it later)
     device_response[2] = read_data(true, channel == Channel::TWO ? 100000 : 250);
 
-    bool did_get_ack = false;
+    bool did_get_ack  = false;
     bool did_get_pass = false;
-    bool did_fail = false;
+    bool did_fail     = false;
 
     // These come in absolutely random order everywhere
     // For example on QEMU I get ack-pass-id and on my laptop I get ack-id-pass

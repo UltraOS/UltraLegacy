@@ -32,8 +32,8 @@ private:
     void parse_packet();
 
 private:
-    u8 m_packet[4];
-    u8 m_packet_bytes;
+    u8 m_packet[4] {};
+    u8 m_packet_bytes {};
 
     SubType m_sub_type { SubType::STANDARD_MOUSE };
 };
