@@ -20,7 +20,7 @@ private:
     void generate_button_state_event(VK, VKState);
 
 private:
-    Mouse::Packet m_last_mouse_state;
+    Mouse::Packet m_last_mouse_state {};
 
     VKState m_key_state[static_cast<u8>(VK::LAST)] { VKState::RELEASED };
 

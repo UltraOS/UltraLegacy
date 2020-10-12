@@ -33,8 +33,6 @@ RefPtr<Process> Process::create_supervisor(Address entrypoint)
     bool interrupt_state = false;
     s_lock.lock(interrupt_state);
 
-    Interrupts::ScopedDisabler d;
-
     RefPtr<Process> process = new Process(entrypoint, true);
     Scheduler::the().register_process(process);
 

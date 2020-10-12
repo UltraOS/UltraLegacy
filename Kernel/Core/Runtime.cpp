@@ -200,7 +200,9 @@ size_t dump_backtrace(ptr_t* into, size_t max_depth, Address base_pointer)
         return adr > MemoryManager::kernel_reserved_base;
     };
 
-    while (--max_depth && is_address_valid(base_pointer)) {
+    // We have to make sure that base pointer is valid before retrieving the instruction pointer
+    // because an invalid base indicates the first frame and accessing memory above that is UB
+    while (--max_depth && is_address_valid(base_pointer) && is_address_valid(base_pointer.as_pointer<ptr_t>()[0])) {
         into[current_depth++] = base_pointer.as_pointer<ptr_t>()[1];
         base_pointer          = base_pointer.as_pointer<ptr_t>()[0];
     }
@@ -214,15 +216,20 @@ inline size_t               dump_backtrace(ptr_t* into, size_t max_depth)
     return dump_backtrace(into, max_depth, base_pointer());
 }
 
-[[noreturn]] void panic(const char* reason, Address base_pointer, Address instruction_pointer)
+[[noreturn]] void panic(const char* reason, const RegisterState* registers)
 {
     static constexpr auto  panic_message = "KERNEL PANIC!"_sv;
     static constexpr Color font_color    = Color::white();
     static constexpr Color screen_color  = Color::blue();
 
+    Interrupts::disable();
+
+    // TODO: make this bool atomic
     static bool in_panic = false;
-    if (in_panic)
-        hang(); // Oops! panicked while trying to panic :(
+    if (in_panic) {
+        error() << "Panicked while inside panic: " << reason;
+        hang();
+    }
     in_panic = true;
 
     error() << panic_message << "\n";
@@ -274,17 +281,213 @@ inline size_t               dump_backtrace(ptr_t* into, size_t max_depth)
     offset.first() = initial_x;
 
     bt_logger << "\n\n"_sv;
+
+    if (registers) {
+        write_string("Register dump:\n"_sv);
+        char reg_as_string[20];
+
+#ifdef ULTRA_32
+        to_hex_string(registers->eax, reg_as_string, 20);
+        write_string("eax=");
+        write_string(reg_as_string);
+        write_string(" ");
+
+        to_hex_string(registers->ebx, reg_as_string, 20);
+        write_string("ebx=");
+        write_string(reg_as_string);
+        write_string(" ");
+
+        to_hex_string(registers->ecx, reg_as_string, 20);
+        write_string("ecx=");
+        write_string(reg_as_string);
+        write_string(" ");
+
+        to_hex_string(registers->edx, reg_as_string, 20);
+        write_string("edx=");
+        write_string(reg_as_string);
+
+        write_string("\n");
+
+        to_hex_string(registers->esi, reg_as_string, 20);
+        write_string("esi=");
+        write_string(reg_as_string);
+        write_string(" ");
+
+        to_hex_string(registers->edi, reg_as_string, 20);
+        write_string("edi=");
+        write_string(reg_as_string);
+        write_string(" ");
+
+        to_hex_string(registers->ebp, reg_as_string, 20);
+        write_string("ebp=");
+        write_string(reg_as_string);
+        write_string(" ");
+
+        to_hex_string(registers->esp, reg_as_string, 20);
+        write_string("esp=");
+        write_string(reg_as_string);
+
+        write_string("\n");
+
+        to_hex_string(registers->eip, reg_as_string, 20);
+        write_string("eip=");
+        write_string(reg_as_string);
+        write_string(" ");
+
+        to_hex_string(registers->cs, reg_as_string, 20);
+        write_string(" cs=");
+        write_string(reg_as_string);
+        write_string(" ");
+
+        to_hex_string(registers->ss, reg_as_string, 20);
+        write_string(" ss=");
+        write_string(reg_as_string);
+        write_string(" ");
+
+        to_hex_string(registers->gs, reg_as_string, 20);
+        write_string(" gs=");
+        write_string(reg_as_string);
+        write_string(" ");
+
+        write_string("\n");
+
+        to_hex_string(registers->fs, reg_as_string, 20);
+        write_string(" fs=");
+        write_string(reg_as_string);
+        write_string(" ");
+
+        to_hex_string(registers->es, reg_as_string, 20);
+        write_string(" es=");
+        write_string(reg_as_string);
+        write_string(" ");
+
+        to_hex_string(registers->ds, reg_as_string, 20);
+        write_string(" ds=");
+        write_string(reg_as_string);
+        write_string(" ");
+
+        to_hex_string(registers->eflags, reg_as_string, 20);
+        write_string("eflags=");
+        write_string(reg_as_string);
+#elif defined(ULTRA_64)
+        to_hex_string(registers->rax, reg_as_string, 20);
+        write_string("rax=");
+        write_string(reg_as_string);
+        write_string(" ");
+
+        to_hex_string(registers->rbx, reg_as_string, 20);
+        write_string("rbx=");
+        write_string(reg_as_string);
+        write_string(" ");
+
+        to_hex_string(registers->rcx, reg_as_string, 20);
+        write_string("rcx=");
+        write_string(reg_as_string);
+        write_string(" ");
+
+        to_hex_string(registers->rdx, reg_as_string, 20);
+        write_string("rdx=");
+        write_string(reg_as_string);
+
+        write_string("\n");
+
+        to_hex_string(registers->rsi, reg_as_string, 20);
+        write_string("rsi=");
+        write_string(reg_as_string);
+        write_string(" ");
+
+        to_hex_string(registers->rdi, reg_as_string, 20);
+        write_string("rdi=");
+        write_string(reg_as_string);
+        write_string(" ");
+
+        to_hex_string(registers->rbp, reg_as_string, 20);
+        write_string("rbp=");
+        write_string(reg_as_string);
+        write_string(" ");
+
+        to_hex_string(registers->r8, reg_as_string, 20);
+        write_string(" r8=");
+        write_string(reg_as_string);
+
+        write_string("\n");
+
+        to_hex_string(registers->r9, reg_as_string, 20);
+        write_string(" r9=");
+        write_string(reg_as_string);
+        write_string(" ");
+
+        to_hex_string(registers->r10, reg_as_string, 20);
+        write_string("r10=");
+        write_string(reg_as_string);
+        write_string(" ");
+
+        to_hex_string(registers->r11, reg_as_string, 20);
+        write_string("r11=");
+        write_string(reg_as_string);
+        write_string(" ");
+
+        to_hex_string(registers->r12, reg_as_string, 20);
+        write_string("r12=");
+        write_string(reg_as_string);
+
+        write_string("\n");
+
+        to_hex_string(registers->r13, reg_as_string, 20);
+        write_string("r13=");
+        write_string(reg_as_string);
+        write_string(" ");
+
+        to_hex_string(registers->r14, reg_as_string, 20);
+        write_string("r14=");
+        write_string(reg_as_string);
+        write_string(" ");
+
+        to_hex_string(registers->r15, reg_as_string, 20);
+        write_string("r15=");
+        write_string(reg_as_string);
+        write_string(" ");
+
+        to_hex_string(registers->rsp, reg_as_string, 20);
+        write_string("rsp=");
+        write_string(reg_as_string);
+
+        write_string("\n");
+
+        to_hex_string(registers->rip, reg_as_string, 20);
+        write_string("rip=");
+        write_string(reg_as_string);
+        write_string(" ");
+
+        to_hex_string(registers->cs, reg_as_string, 20);
+        write_string(" cs=");
+        write_string(reg_as_string);
+        write_string(" ");
+
+        to_hex_string(registers->ss, reg_as_string, 20);
+        write_string(" ss=");
+        write_string(reg_as_string);
+        write_string(" ");
+
+        to_hex_string(registers->rflags, reg_as_string, 20);
+        write_string("rflags=");
+        write_string(reg_as_string);
+#endif
+
+        write_string("\n\n");
+    }
+
     write_string("Backtrace:\n"_sv);
 
     static constexpr size_t backtrace_max_depth = 8;
     ptr_t                   backtrace[backtrace_max_depth] {};
     size_t                  depth;
 
-    if (instruction_pointer) {
-        backtrace[0] = instruction_pointer;
-        depth        = dump_backtrace(backtrace + 1, backtrace_max_depth - 1, base_pointer) + 1;
+    if (registers) {
+        backtrace[0] = instruction_pointer(*registers);
+        depth        = dump_backtrace(backtrace + 1, backtrace_max_depth - 1, base_pointer(*registers)) + 1;
     } else {
-        depth = dump_backtrace(backtrace, backtrace_max_depth, base_pointer);
+        depth = dump_backtrace(backtrace, backtrace_max_depth, base_pointer());
     }
 
     if (!depth) {
@@ -314,10 +517,5 @@ inline size_t               dump_backtrace(ptr_t* into, size_t max_depth)
     }
 
     hang();
-}
-
-[[noreturn]] void panic(const char* reason)
-{
-    panic(reason, base_pointer());
 }
 }

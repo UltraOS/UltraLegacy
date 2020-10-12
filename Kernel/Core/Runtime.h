@@ -3,14 +3,14 @@
 #include "Common/Macros.h"
 #include "Common/Types.h"
 #include "Memory/HeapAllocator.h"
+#include "Registers.h"
 
 namespace kernel::runtime {
 void              ensure_loaded_correctly();
 void              init_global_objects();
 void              parse_kernel_symbols();
 [[noreturn]] void on_assertion_failed(const char* message, const char* file, const char* function, u32 line);
-[[noreturn]] void panic(const char* reason);
-[[noreturn]] void panic(const char* reason, Address base_pointer, Address instruction_pointer = nullptr);
+[[noreturn]] void panic(const char* reason, const RegisterState* = nullptr);
 }
 
 inline void* operator new(size_t, void* ptr)

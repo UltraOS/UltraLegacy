@@ -210,18 +210,7 @@ void MemoryManager::handle_page_fault(const RegisterState& registers, const Page
     } else {
         StackStringBuilder error_string;
         error_string << "MemoryManager: unexpected page fault on core " << CPU::current().id() << fault;
-
-        Address base_pointer;
-        Address instruction_pointer;
-#ifdef ULTRA_32
-        base_pointer        = registers.ebp;
-        instruction_pointer = registers.eip;
-#elif defined(ULTRA_64)
-        base_pointer = registers.rbp;
-        instruction_pointer = registers.rip;
-#endif
-
-        runtime::panic(error_string.data(), base_pointer, instruction_pointer);
+        runtime::panic(error_string.data(), &registers);
     }
 }
 
