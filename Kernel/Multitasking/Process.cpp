@@ -13,15 +13,12 @@ InterruptSafeSpinLock Process::s_lock;
 
 RefPtr<Process> Process::create(Address entrypoint, bool autoregister)
 {
-    bool interrupt_state = false;
-    s_lock.lock(interrupt_state);
+    LockGuard lock_guard(s_lock);
 
     RefPtr<Process> process = new Process(entrypoint);
 
     if (autoregister)
         Scheduler::the().register_process(process);
-
-    s_lock.unlock(interrupt_state);
 
     return process;
 }
@@ -30,21 +27,17 @@ RefPtr<Process> Process::create(Address entrypoint, bool autoregister)
 //       e.g Process::create_supervious and Thread::create_supervisor_thread
 RefPtr<Process> Process::create_supervisor(Address entrypoint)
 {
-    bool interrupt_state = false;
-    s_lock.lock(interrupt_state);
+    LockGuard lock_guard(s_lock);
 
     RefPtr<Process> process = new Process(entrypoint, true);
     Scheduler::the().register_process(process);
-
-    s_lock.unlock(interrupt_state);
 
     return process;
 }
 
 void Process::inititalize_for_this_processor()
 {
-    bool interrupt_state = false;
-    s_lock.lock(interrupt_state);
+    LockGuard lock_guard(s_lock);
 
     // Create the initial idle proccess for this core
     RefPtr<Process> idle_process = new Process();
@@ -73,8 +66,6 @@ void Process::inititalize_for_this_processor()
     // enqueue if needed
     if (last_picked)
         Scheduler::enqueue_thread(*idle_thread);
-
-    s_lock.unlock(interrupt_state);
 }
 
 void Process::commit()

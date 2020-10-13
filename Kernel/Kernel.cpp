@@ -69,6 +69,9 @@ void run(Context* context)
 
     Interrupts::enable();
 
+    // FIXME: There's a small window where PS2 devices are initialized but WindowManage is not
+    // If you click the mouse/press a button the kernel is gonna panic because screen was == nullptr
+    // Should we initialize window manager before calling PS2Controller::initialize()?
     WindowManager::initialize();
 
     // ---> SCHEDULER TESTING AREA

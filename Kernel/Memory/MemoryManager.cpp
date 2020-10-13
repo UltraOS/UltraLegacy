@@ -145,8 +145,7 @@ void MemoryManager::unquickmap_page()
 
 RefPtr<Page> MemoryManager::allocate_page(bool should_zero)
 {
-    bool interrupt_state = false;
-    m_lock.lock(interrupt_state);
+    LockGuard lock_guard(m_lock);
 
     for (auto& region: m_physical_regions) {
         if (!region.has_free_pages())
@@ -171,7 +170,6 @@ RefPtr<Page> MemoryManager::allocate_page(bool should_zero)
 #endif
         }
 
-        m_lock.unlock(interrupt_state);
         return page;
     }
 
@@ -180,13 +178,11 @@ RefPtr<Page> MemoryManager::allocate_page(bool should_zero)
 
 void MemoryManager::free_page(Page& page)
 {
-    bool interrupt_state = false;
-    m_lock.lock(interrupt_state);
+    LockGuard lock_guard(m_lock);
 
     for (auto& region: m_physical_regions) {
         if (region.contains(page)) {
             region.free_page(page);
-            m_lock.unlock(interrupt_state);
             return;
         }
     }
@@ -216,8 +212,7 @@ void MemoryManager::handle_page_fault(const RegisterState& registers, const Page
 
 void MemoryManager::inititalize(AddressSpace& directory)
 {
-    bool interrupt_state = false;
-    m_lock.lock(interrupt_state);
+    LockGuard lock_guard(m_lock);
 #ifdef ULTRA_32
     // map the directory's physical page somewhere temporarily
     ScopedPageMapping mapping(directory.physical_address());
@@ -253,7 +248,6 @@ void MemoryManager::inititalize(AddressSpace& directory)
         directory.entry_at(pdpt_index) = entry;
     }
 #endif
-    m_lock.unlock(interrupt_state);
 }
 
 #ifdef ULTRA_32

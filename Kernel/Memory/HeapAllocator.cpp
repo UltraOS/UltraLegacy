@@ -24,8 +24,7 @@ void HeapAllocator::initialize()
 
 void HeapAllocator::feed_block(void* ptr, size_t size, size_t chunk_size_in_bytes)
 {
-    bool interrupt_state = false;
-    s_lock.lock(interrupt_state);
+    LockGuard lock_guard(s_lock);
 
     auto& new_heap = *reinterpret_cast<HeapBlockHeader*>(ptr);
 
@@ -72,8 +71,6 @@ void HeapAllocator::feed_block(void* ptr, size_t size, size_t chunk_size_in_byte
 #endif
 
     zero_memory(new_heap.bitmap(), bitmap_bytes);
-
-    s_lock.unlock(interrupt_state);
 }
 
 void* HeapAllocator::allocate(size_t bytes)
@@ -83,8 +80,7 @@ void* HeapAllocator::allocate(size_t bytes)
         return nullptr;
     }
 
-    bool interrupt_state = false;
-    s_lock.lock(interrupt_state);
+    LockGuard lock_guard(s_lock);
 
     for (auto* heap = s_heap_block; heap; heap = heap->next) {
         if (heap->free_bytes() < bytes)
@@ -180,8 +176,6 @@ void* HeapAllocator::allocate(size_t bytes)
                   << bytes_to_megabytes_precise(total_free_bytes) << " MB) ";
 
 #endif
-            s_lock.unlock(interrupt_state);
-
             return data;
         }
     }
@@ -218,8 +212,7 @@ void HeapAllocator::free(void* ptr)
         return;
     }
 
-    bool interrupt_state = false;
-    s_lock.lock(interrupt_state);
+    LockGuard lock_guard(s_lock);
 
 #ifdef HEAP_ALLOCATOR_DEBUG
     size_t total_freed_chunks = 0;
@@ -280,7 +273,5 @@ void HeapAllocator::free(void* ptr)
           << total_freed_chunks * freed_heap->chunk_size << " bytes) at address:" << ptr;
 
 #endif
-
-    s_lock.unlock(interrupt_state);
 }
 }

@@ -24,8 +24,7 @@ void Scheduler::inititalize()
 
 void Scheduler::enqueue_thread(Thread& thread)
 {
-    bool interrupt_state = false;
-    s_lock.lock(interrupt_state);
+    LockGuard lock_guard(s_lock);
 
     ++s_thread_count;
 
@@ -39,14 +38,11 @@ void Scheduler::enqueue_thread(Thread& thread)
 
     thread.set_next(s_last_picked);
     thread.set_previous(last_to_run);
-
-    s_lock.unlock(interrupt_state);
 }
 
 void Scheduler::dequeue_thread(Thread& thread)
 {
-    bool interrupt_state = false;
-    s_lock.lock(interrupt_state);
+    LockGuard lock_guard(s_lock);
 
     --s_thread_count;
 
@@ -55,14 +51,11 @@ void Scheduler::dequeue_thread(Thread& thread)
 
     thread.previous()->set_next(thread.next());
     thread.next()->set_previous(thread.previous());
-
-    s_lock.unlock(interrupt_state);
 }
 
 void Scheduler::enqueue_sleeping_thread(Thread& thread)
 {
-    bool interrupt_state = false;
-    s_lock.lock(interrupt_state);
+    LockGuard lock_guard(s_lock);
 
     ASSERT(&thread != s_sleeping_threads);
 
@@ -73,21 +66,16 @@ void Scheduler::enqueue_sleeping_thread(Thread& thread)
         thread.set_next(s_sleeping_threads);
         s_sleeping_threads = &thread;
     }
-
-    s_lock.unlock(interrupt_state);
 }
 
 void Scheduler::register_process(RefPtr<Process> process)
 {
-    bool interrupt_state = false;
-    s_lock.lock(interrupt_state);
+    LockGuard lock_guard(s_lock);
 
     m_processes.emplace(process);
 
     for (auto& thread: process->threads())
         enqueue_thread(*thread);
-
-    s_lock.unlock(interrupt_state);
 }
 
 Scheduler& Scheduler::the()
@@ -126,6 +114,7 @@ void Scheduler::wake_up_ready_threads()
 // TODO: replace it with something more "appropriate"
 void Scheduler::pick_next()
 {
+    // Cannot use LockGuard here as pick_next never returns
     bool interrupt_state = false;
     s_lock.lock(interrupt_state);
 

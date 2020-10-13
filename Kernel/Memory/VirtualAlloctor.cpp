@@ -44,44 +44,35 @@ VirtualAllocator::VirtualAllocator(Address base, size_t length) : m_full_range(b
 
 void VirtualAllocator::set_range(Address base, size_t length)
 {
-    bool interrupt_state = false;
-    m_lock.lock(interrupt_state);
+    LockGuard lock_guard(m_lock);
 
     m_full_range.set(base, length);
     m_allocated_ranges.clear();
     m_free_ranges.clear();
 
     m_free_ranges.emplace(m_full_range);
-
-    m_lock.unlock(interrupt_state);
 }
 
 bool VirtualAllocator::is_allocated(Address address)
 {
-    bool interrupt_state = false;
-    m_lock.lock(interrupt_state);
+    LockGuard lock_guard(m_lock);
 
     // use binary search here
 
     for (auto& range: m_allocated_ranges) {
-        if (range.contains(address)) {
-            m_lock.unlock(interrupt_state);
+        if (range.contains(address))
             return true;
-        }
     }
 
-    m_lock.unlock(interrupt_state);
     return false;
 }
 
 VirtualAllocator::Range VirtualAllocator::allocate_range(size_t length)
 {
-    bool interrupt_state = false;
-    m_lock.lock(interrupt_state);
+    LockGuard lock_guard(m_lock);
 
     if (length == 0) {
         warning() << "VirtualAllocator: looks like somebody tried to allocate a 0 length range (could be a bug?)";
-        m_lock.unlock(interrupt_state);
         return {};
     }
 
@@ -109,7 +100,6 @@ VirtualAllocator::Range VirtualAllocator::allocate_range(size_t length)
     else
         initial_range.set(allocated_range.end(), initial_range.length() - length);
 
-    m_lock.unlock(interrupt_state);
     return allocated_range;
 }
 
@@ -125,8 +115,7 @@ bool VirtualAllocator::contains(const Range& range)
 
 void VirtualAllocator::deallocate_range(const Range& range)
 {
-    bool interrupt_state = false;
-    m_lock.lock(interrupt_state);
+    LockGuard lock_guard(m_lock);
 
     if (!contains(range)) {
         StackStringBuilder error_string;
@@ -142,8 +131,6 @@ void VirtualAllocator::deallocate_range(const Range& range)
             info() << "VirtualAllocator: deallocating range " << allocated_range;
 #endif
             return_back_to_free_pool(range_index);
-
-            m_lock.unlock(interrupt_state);
             return;
         }
     }
@@ -155,8 +142,7 @@ void VirtualAllocator::deallocate_range(const Range& range)
 
 void VirtualAllocator::deallocate_range(Address base_address)
 {
-    bool interrupt_state = false;
-    m_lock.lock(interrupt_state);
+    LockGuard lock_guard(m_lock);
 
     if (!contains(base_address)) {
         StackStringBuilder error_string;
@@ -172,8 +158,6 @@ void VirtualAllocator::deallocate_range(Address base_address)
             info() << "VirtualAllocator: deallocating range " << allocated_range;
 #endif
             return_back_to_free_pool(range_index);
-
-            m_lock.unlock(interrupt_state);
             return;
         }
     }

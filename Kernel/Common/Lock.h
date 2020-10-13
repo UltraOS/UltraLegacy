@@ -116,30 +116,50 @@ public:
     }
 };
 
-class ScopedInterruptSafeLock {
+template <typename LockT>
+class LockGuard {
 public:
-    ScopedInterruptSafeLock(SpinLock& lock) : m_lock(lock) { this->lock(); }
-    ~ScopedInterruptSafeLock() { unlock(); }
+    LockGuard(LockT& lock) : m_lock(lock) { this->lock(); }
+    ~LockGuard() { unlock(); }
 
 private:
-    void lock() ALWAYS_INLINE
-    {
-        m_should_enable_interrupts = Interrupts::are_enabled();
-        Interrupts::disable();
+    void lock() ALWAYS_INLINE { m_lock.lock(); }
 
-        m_lock.lock();
-    }
-
-    void unlock() ALWAYS_INLINE
-    {
-        m_lock.unlock();
-
-        if (m_should_enable_interrupts)
-            Interrupts::enable();
-    }
+    void unlock() ALWAYS_INLINE { m_lock.unlock(); }
 
 private:
-    bool      m_should_enable_interrupts { false };
-    SpinLock& m_lock;
+    RecursiveSpinLock& m_lock;
+};
+
+template <>
+class LockGuard<RecursiveInterruptSafeSpinLock> {
+public:
+    LockGuard(RecursiveInterruptSafeSpinLock& lock) : m_lock(lock) { this->lock(); }
+    ~LockGuard() { unlock(); }
+
+private:
+    void lock() ALWAYS_INLINE { m_lock.lock(m_state); }
+
+    void unlock() ALWAYS_INLINE { m_lock.unlock(m_state); }
+
+private:
+    bool                            m_state { false };
+    RecursiveInterruptSafeSpinLock& m_lock;
+};
+
+template <>
+class LockGuard<InterruptSafeSpinLock> {
+public:
+    LockGuard(InterruptSafeSpinLock& lock) : m_lock(lock) { this->lock(); }
+    ~LockGuard() { unlock(); }
+
+private:
+    void lock() ALWAYS_INLINE { m_lock.lock(m_state); }
+
+    void unlock() ALWAYS_INLINE { m_lock.unlock(m_state); }
+
+private:
+    bool                   m_state { false };
+    InterruptSafeSpinLock& m_lock;
 };
 }
