@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Common/DynamicArray.h"
+#include "Common/List.h"
 #include "Window.h"
 
 namespace kernel {
@@ -9,19 +9,25 @@ class WindowManager {
 public:
     static void initialize();
 
-    // TODO: add locking here
-    void                                add_window(const RefPtr<Window>& window) { m_windows.emplace(window); }
-    const DynamicArray<RefPtr<Window>>& windows() { return m_windows; }
+    void add_window(const RefPtr<Window>& window)
+    {
+        LockGuard lock_guard(m_lock);
+        m_windows.append_front(window);
+    }
+
+    InterruptSafeSpinLock& window_lock() { return m_lock; }
+
+    List<RefPtr<Window>>& windows() { return m_windows; }
 
     static WindowManager& the() { return s_instance; }
 
     RefPtr<Window>& desktop() { return m_desktop_window; }
 
 private:
-    RefPtr<Window> m_desktop_window;
+    InterruptSafeSpinLock m_lock;
 
-    // TODO: this needs to be a linked list
-    DynamicArray<RefPtr<Window>> m_windows;
+    RefPtr<Window>       m_desktop_window;
+    List<RefPtr<Window>> m_windows;
 
     static WindowManager s_instance;
 };

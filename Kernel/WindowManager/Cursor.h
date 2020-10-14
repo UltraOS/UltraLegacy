@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Bitmap.h"
+#include "Common/Lock.h"
 #include "Point.h"
 #include "Rect.h"
 
@@ -10,9 +11,17 @@ class Cursor {
 public:
     Cursor(Point location = { 0, 0 });
 
-    void set_location(Point p) { m_location = p; }
+    void set_location(Point p)
+    {
+        LockGuard lock_guard(m_lock);
+        m_location = p;
+    }
 
-    const Point& location() const { return m_location; }
+    Point location() const
+    {
+        LockGuard lock_guard(m_lock);
+        return m_location;
+    }
 
     const Rect& rect() const { return m_rect; }
 
@@ -26,9 +35,10 @@ private:
     static const u8    s_bitmap_data[bitmap_height * bitmap_width_in_bytes];
     static const Color s_palette[2];
 
-    BitmapView m_bitmap;
-    Rect       m_rect;
-    Point      m_location;
+    mutable InterruptSafeSpinLock m_lock;
+    BitmapView                    m_bitmap;
+    Rect                          m_rect;
+    Point                         m_location;
 };
 
 }

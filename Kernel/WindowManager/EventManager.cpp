@@ -20,7 +20,10 @@ void EventManager::generate_button_state_event(VK key, VKState state)
 {
     update_state_of_key(key, state);
 
-    Screen::the().check_if_focused_window_should_change();
+    LockGuard lock_guard(Window::focus_lock());
+
+    if (state != VKState::RELEASED)
+        Screen::the().check_if_focused_window_should_change();
 
     if (!Window::is_any_focused())
         return;
@@ -39,6 +42,8 @@ void EventManager::post_action(const Keyboard::Packet& packet)
 #endif
 
     update_state_of_key(packet.key, packet.state);
+
+    LockGuard lock_guard(Window::focus_lock());
 
     if (!Window::is_any_focused())
         return;
@@ -67,6 +72,7 @@ void EventManager::post_action(const Mouse::Packet& packet)
         // calculate location relative to window
         e.mouse_move = { 0, 0 };
 
+        LockGuard lock_guard(Window::focus_lock());
         if (!Window::is_any_focused())
             return;
 
@@ -78,7 +84,7 @@ void EventManager::post_action(const Mouse::Packet& packet)
         log() << "EventManager: mouse scroll delta " << packet.wheel_delta << " direction "
               << (packet.scroll_direction == ScrollDirection::VERTICAL ? "vertical" : "horizontal");
 #endif
-
+        LockGuard lock_guard(Window::focus_lock());
         if (!Window::is_any_focused())
             return;
 

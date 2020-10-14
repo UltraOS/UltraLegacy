@@ -17,7 +17,11 @@ public:
 
     void set_focused() { s_currently_focused = this; }
 
+    bool is_focused() { return s_currently_focused == this; }
+
     static bool is_any_focused() { return s_currently_focused != nullptr; }
+
+    static InterruptSafeSpinLock& focus_lock() { return s_lock; }
 
     static Window& focused()
     {

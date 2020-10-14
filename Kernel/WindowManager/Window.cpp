@@ -32,8 +32,9 @@ Window::Window(Thread& owner, const Rect& window_rect, bool is_focused) : m_owne
     m_front_surface
         = RefPtr<Surface>::create(bitmap, window_rect.width(), window_rect.height(), Surface::Format::RGBA_32_BPP);
 
-    if (is_focused)
+    if (is_focused) {
+        LockGuard lock_guard(focus_lock());
         set_focused();
+    }
 }
-
 }

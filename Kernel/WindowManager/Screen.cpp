@@ -13,20 +13,27 @@ Screen::Screen(VideoDevice& device) : m_device(device), m_rect(0, 0, device.mode
 
 void Screen::check_if_focused_window_should_change()
 {
-    RefPtr<Window> window_that_should_be_focused;
+    LockGuard lock_guard(WindowManager::the().window_lock());
 
-    for (const auto& window: WindowManager::the().windows()) {
-        if (window->rect().intersects(m_cursor.rect().translated(m_cursor.location()))) {
-            // cannot break here because we're going from bottom to top
-            // TODO: optimize?
-            window_that_should_be_focused = window;
+    auto& window_list                   = WindowManager::the().windows();
+    auto  window_that_should_be_focused = window_list.end();
+
+    for (auto itr = window_list.begin(); itr != window_list.end(); ++itr) {
+        if ((*itr)->rect().intersects(m_cursor.rect().translated(m_cursor.location()))) {
+            window_that_should_be_focused = itr;
+            break;
         }
     }
 
-    // TODO: the amount of race conditions here is insane?
-    if (window_that_should_be_focused) {
-        window_that_should_be_focused->set_focused();
-    } else {
+    if (window_that_should_be_focused != window_list.end()) {
+        if (Window::is_any_focused() && ((*window_that_should_be_focused).get() == &Window::focused()))
+            return;
+
+        (*window_that_should_be_focused)->set_focused();
+
+        // Move the focused window to the front of window list
+        window_list.splice(window_list.begin(), window_list, window_that_should_be_focused);
+    } else if (!WindowManager::the().desktop()->is_focused()) {
         WindowManager::the().desktop()->set_focused();
     }
 }
