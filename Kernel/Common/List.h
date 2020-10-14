@@ -111,7 +111,7 @@ public:
             return Iterator(old_node);
         }
 
-        bool operator==(const Iterator& itr) { return m_node = itr.m_node; }
+        bool operator==(const Iterator& itr) { return m_node == itr.m_node; }
 
         bool operator!=(const Iterator& itr) { return m_node != itr.m_node; }
 
@@ -128,7 +128,12 @@ public:
         if (this != &source_list) {
             source_list.m_size--;
             m_size++;
+            ASSERT(source_iterator != source_list.end());
+        } else if (after_destionation == source_iterator) {
+            return;
         }
+
+        ASSERT(source_iterator != end());
 
         auto prev = source_iterator.m_node->previous();
         auto next = source_iterator.m_node->next();
