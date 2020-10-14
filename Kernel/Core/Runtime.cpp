@@ -76,7 +76,7 @@ public:
         ptr_t       address() const { return m_address; }
         const char* name() const { return m_name; }
 
-        friend bool operator<=(ptr_t address, const Symbol& symbol) { return address <= symbol.address(); }
+        friend bool operator<(ptr_t address, const Symbol& symbol) { return address < symbol.address(); }
 
     private:
         ptr_t m_address { 0 };
@@ -137,7 +137,7 @@ public:
             return nullptr;
 
         for (size_t i = 0; i < s_symbol_count - 1; ++i) {
-            if (address <= s_symbols[i + 1])
+            if (address < s_symbols[i + 1])
                 return &s_symbols[i];
         }
 
