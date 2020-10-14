@@ -21,8 +21,7 @@ public:
 
     virtual void set_frequency(u32 ticks_per_second) = 0;
 
-    void lock(bool& interrupt_state) { m_lock.lock(interrupt_state); }
-    void unlock(bool interrupt_state) { m_lock.unlock(interrupt_state); }
+    InterruptSafeSpinLock& timer_lock() { return m_lock; }
 
     virtual void nano_delay(u32) = 0;
     virtual void micro_delay(u32 us) { nano_delay(us * Time::nanoseconds_in_microsecond); }

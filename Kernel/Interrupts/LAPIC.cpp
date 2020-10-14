@@ -39,9 +39,8 @@ void LAPIC::initialize_for_this_processor()
 
 void LAPIC::Timer::initialize_for_this_processor()
 {
-    // We can't use PIT simulatneously from multiple processors
-    bool interrupt_state = false;
-    ::kernel::Timer::the().lock(interrupt_state);
+    using Timer = ::kernel::Timer;
+    LockGuard lock_guard(Timer::the().timer_lock());
 
     static constexpr u32 divider_16 = 0b11;
     // TODO: replace with numeric_limits<u32>::max()
@@ -52,14 +51,12 @@ void LAPIC::Timer::initialize_for_this_processor()
     write_register(Register::DIVIDE_CONFIGURATION, divider_16);
     write_register(Register::INITIAL_COUNT, initial_counter);
 
-    ::kernel::Timer::the().mili_delay(sleep_delay);
+    Timer::the().mili_delay(sleep_delay);
 
     auto total_ticks = initial_counter - read_register(Register::CURRENT_COUNT);
 
     write_register(Register::LVT_TIMER, irq_number | periodic_mode);
     write_register(Register::INITIAL_COUNT, total_ticks);
-
-    ::kernel::Timer::the().unlock(interrupt_state);
 }
 
 void LAPIC::Timer::handle_irq(const RegisterState& registers)
@@ -67,9 +64,11 @@ void LAPIC::Timer::handle_irq(const RegisterState& registers)
     end_of_interrupt();
 
     if (CPU::current().is_bsp()) {
+        using Timer = ::kernel::Timer;
+
         // If the timer doesn't have an internal counter than we have to manually increment it
-        if (!::kernel::Timer::the().has_internal_counter())
-            ::kernel::Timer::the().increment_time_since_boot(Time::nanoseconds_in_second / ticks_per_second);
+        if (!Timer::the().has_internal_counter())
+            Timer::the().increment_time_since_boot(Time::nanoseconds_in_second / ticks_per_second);
 
         Time::increment_by(Time::nanoseconds_in_second / ticks_per_second);
     }
@@ -215,24 +214,22 @@ void LAPIC::start_processor(u8 id)
         entrypoint_relocated = true;
     }
 
-    bool interrupt_state = false;
-    ::kernel::Timer::the().lock(interrupt_state);
+    using Timer = ::kernel::Timer;
+    LockGuard lock_guard(Timer::the().timer_lock());
 
     send_init_to(id);
 
-    ::kernel::Timer::the().mili_delay(10);
+    Timer::the().mili_delay(10);
 
     send_startup_to(id);
 
-    ::kernel::Timer::the().mili_delay(1);
+    Timer::the().mili_delay(1);
 
     if (*is_ap_alive) {
         log() << "LAPIC: Application processor " << id << " started successfully";
 
         // allow the ap to boot further
         *ap_acknowledegd = true;
-
-        ::kernel::Timer::the().unlock(interrupt_state);
         return;
     }
 
@@ -242,7 +239,7 @@ void LAPIC::start_processor(u8 id)
 
     // wait for 1 second
     for (size_t i = 0; i < 20; ++i)
-        ::kernel::Timer::the().mili_delay(50);
+        Timer::the().mili_delay(50);
 
     if (*is_ap_alive) {
         log() << "LAPIC: Application processor " << id << " started successfully after second SIPI";
@@ -255,7 +252,5 @@ void LAPIC::start_processor(u8 id)
         error_string << "LAPIC: Application processor " << id << " failed to start after 2 SIPIs";
         runtime::panic(error_string.data());
     }
-
-    ::kernel::Timer::the().unlock(interrupt_state);
 }
 }
