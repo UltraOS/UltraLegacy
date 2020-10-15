@@ -100,7 +100,7 @@ public:
 
         while (StringView(current_offset, ksyms_end_magic.size()) != ksyms_end_magic) {
             if (s_symbol_count == max_symbols) {
-                warning() << "SymbolTable: reached the maximum amount of symbols, not all symbols might be available";
+                warning() << "SymbolTable: reached the maximum amount of symbols, not all symbols will be available";
                 break;
             }
 
@@ -283,198 +283,44 @@ inline size_t               dump_backtrace(ptr_t* into, size_t max_depth)
     bt_logger << "\n\n"_sv;
 
     if (registers) {
+        static constexpr size_t max_number_width = 20;
+
+        char reg_as_string[max_number_width];
+
         write_string("Register dump:\n"_sv);
-        char reg_as_string[20];
+
+        auto trace_reg = [&](size_t reg, StringView repr) {
+            to_hex_string(reg, reg_as_string, max_number_width);
+
+            // padding
+            if (repr.size() == 2)
+                write_string(" ");
+
+            write_string(repr);
+            write_string("=");
+            write_string(reg_as_string);
+            write_string(" ");
+        };
+
+// clang-format off
+#define TRACE_REG(reg) trace_reg(registers->reg, #reg ## _sv)
+#define NL write_string("\n");
 
 #ifdef ULTRA_32
-        to_hex_string(registers->eax, reg_as_string, 20);
-        write_string("eax=");
-        write_string(reg_as_string);
-        write_string(" ");
-
-        to_hex_string(registers->ebx, reg_as_string, 20);
-        write_string("ebx=");
-        write_string(reg_as_string);
-        write_string(" ");
-
-        to_hex_string(registers->ecx, reg_as_string, 20);
-        write_string("ecx=");
-        write_string(reg_as_string);
-        write_string(" ");
-
-        to_hex_string(registers->edx, reg_as_string, 20);
-        write_string("edx=");
-        write_string(reg_as_string);
-
-        write_string("\n");
-
-        to_hex_string(registers->esi, reg_as_string, 20);
-        write_string("esi=");
-        write_string(reg_as_string);
-        write_string(" ");
-
-        to_hex_string(registers->edi, reg_as_string, 20);
-        write_string("edi=");
-        write_string(reg_as_string);
-        write_string(" ");
-
-        to_hex_string(registers->ebp, reg_as_string, 20);
-        write_string("ebp=");
-        write_string(reg_as_string);
-        write_string(" ");
-
-        to_hex_string(registers->esp, reg_as_string, 20);
-        write_string("esp=");
-        write_string(reg_as_string);
-
-        write_string("\n");
-
-        to_hex_string(registers->eip, reg_as_string, 20);
-        write_string("eip=");
-        write_string(reg_as_string);
-        write_string(" ");
-
-        to_hex_string(registers->cs, reg_as_string, 20);
-        write_string(" cs=");
-        write_string(reg_as_string);
-        write_string(" ");
-
-        to_hex_string(registers->ss, reg_as_string, 20);
-        write_string(" ss=");
-        write_string(reg_as_string);
-        write_string(" ");
-
-        to_hex_string(registers->gs, reg_as_string, 20);
-        write_string(" gs=");
-        write_string(reg_as_string);
-        write_string(" ");
-
-        write_string("\n");
-
-        to_hex_string(registers->fs, reg_as_string, 20);
-        write_string(" fs=");
-        write_string(reg_as_string);
-        write_string(" ");
-
-        to_hex_string(registers->es, reg_as_string, 20);
-        write_string(" es=");
-        write_string(reg_as_string);
-        write_string(" ");
-
-        to_hex_string(registers->ds, reg_as_string, 20);
-        write_string(" ds=");
-        write_string(reg_as_string);
-        write_string(" ");
-
-        to_hex_string(registers->eflags, reg_as_string, 20);
-        write_string("eflags=");
-        write_string(reg_as_string);
+        TRACE_REG(eax); TRACE_REG(ebx); TRACE_REG(ecx); TRACE_REG(edx);    NL
+        TRACE_REG(esi); TRACE_REG(edi); TRACE_REG(ebp); TRACE_REG(esp);    NL
+        TRACE_REG(eip); TRACE_REG(cs);  TRACE_REG(ss);  TRACE_REG(gs);     NL
+        TRACE_REG(fs);  TRACE_REG(es);  TRACE_REG(ds);  TRACE_REG(eflags); NL
 #elif defined(ULTRA_64)
-        to_hex_string(registers->rax, reg_as_string, 20);
-        write_string("rax=");
-        write_string(reg_as_string);
-        write_string(" ");
-
-        to_hex_string(registers->rbx, reg_as_string, 20);
-        write_string("rbx=");
-        write_string(reg_as_string);
-        write_string(" ");
-
-        to_hex_string(registers->rcx, reg_as_string, 20);
-        write_string("rcx=");
-        write_string(reg_as_string);
-        write_string(" ");
-
-        to_hex_string(registers->rdx, reg_as_string, 20);
-        write_string("rdx=");
-        write_string(reg_as_string);
-
-        write_string("\n");
-
-        to_hex_string(registers->rsi, reg_as_string, 20);
-        write_string("rsi=");
-        write_string(reg_as_string);
-        write_string(" ");
-
-        to_hex_string(registers->rdi, reg_as_string, 20);
-        write_string("rdi=");
-        write_string(reg_as_string);
-        write_string(" ");
-
-        to_hex_string(registers->rbp, reg_as_string, 20);
-        write_string("rbp=");
-        write_string(reg_as_string);
-        write_string(" ");
-
-        to_hex_string(registers->r8, reg_as_string, 20);
-        write_string(" r8=");
-        write_string(reg_as_string);
-
-        write_string("\n");
-
-        to_hex_string(registers->r9, reg_as_string, 20);
-        write_string(" r9=");
-        write_string(reg_as_string);
-        write_string(" ");
-
-        to_hex_string(registers->r10, reg_as_string, 20);
-        write_string("r10=");
-        write_string(reg_as_string);
-        write_string(" ");
-
-        to_hex_string(registers->r11, reg_as_string, 20);
-        write_string("r11=");
-        write_string(reg_as_string);
-        write_string(" ");
-
-        to_hex_string(registers->r12, reg_as_string, 20);
-        write_string("r12=");
-        write_string(reg_as_string);
-
-        write_string("\n");
-
-        to_hex_string(registers->r13, reg_as_string, 20);
-        write_string("r13=");
-        write_string(reg_as_string);
-        write_string(" ");
-
-        to_hex_string(registers->r14, reg_as_string, 20);
-        write_string("r14=");
-        write_string(reg_as_string);
-        write_string(" ");
-
-        to_hex_string(registers->r15, reg_as_string, 20);
-        write_string("r15=");
-        write_string(reg_as_string);
-        write_string(" ");
-
-        to_hex_string(registers->rsp, reg_as_string, 20);
-        write_string("rsp=");
-        write_string(reg_as_string);
-
-        write_string("\n");
-
-        to_hex_string(registers->rip, reg_as_string, 20);
-        write_string("rip=");
-        write_string(reg_as_string);
-        write_string(" ");
-
-        to_hex_string(registers->cs, reg_as_string, 20);
-        write_string(" cs=");
-        write_string(reg_as_string);
-        write_string(" ");
-
-        to_hex_string(registers->ss, reg_as_string, 20);
-        write_string(" ss=");
-        write_string(reg_as_string);
-        write_string(" ");
-
-        to_hex_string(registers->rflags, reg_as_string, 20);
-        write_string("rflags=");
-        write_string(reg_as_string);
+        TRACE_REG(rax); TRACE_REG(rbx); TRACE_REG(rcx); TRACE_REG(rdx);    NL
+        TRACE_REG(rsi); TRACE_REG(rdi); TRACE_REG(rbp); TRACE_REG(rsp);    NL
+        TRACE_REG(r8);  TRACE_REG(r9);  TRACE_REG(r10); TRACE_REG(r11);    NL
+        TRACE_REG(r12); TRACE_REG(r13); TRACE_REG(r14); TRACE_REG(r15);    NL
+        TRACE_REG(rip); TRACE_REG(cs);  TRACE_REG(ss);  TRACE_REG(rflags); NL
 #endif
+            // clang-format on
 
-        write_string("\n\n");
+            write_string("\n");
     }
 
     write_string("Backtrace:\n"_sv);
