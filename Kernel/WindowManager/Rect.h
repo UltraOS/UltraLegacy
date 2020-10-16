@@ -24,6 +24,7 @@ public:
         m_x = top_left.x();
         m_y = top_left.y();
     }
+
     void set_top_left_x(size_t x) { m_x = x; }
     void set_top_left_y(size_t y) { m_y = y; }
 
@@ -84,6 +85,18 @@ public:
     bool intersects(const Rect& other) const
     {
         return left() <= other.right() && other.left() <= right() && top() <= other.bottom() && other.top() <= bottom();
+    }
+
+    Rect united(const Rect& other) const
+    {
+        Rect new_rect;
+
+        new_rect.set_top_left_x(min(left(), other.left()));
+        new_rect.set_top_left_y(min(top(), other.top()));
+        new_rect.set_width(max(width(), other.width()));
+        new_rect.set_height(max(height(), other.height()));
+
+        return new_rect;
     }
 
 private:
