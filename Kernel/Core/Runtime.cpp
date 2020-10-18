@@ -64,7 +64,7 @@ void init_global_objects()
 
 class KernelSymbolTable {
 public:
-    static constexpr size_t  max_symbols           = 512;
+    static constexpr size_t  max_symbols           = 1024;
     static constexpr Address physical_symbols_base = 0x45000;
 
     class Symbol {

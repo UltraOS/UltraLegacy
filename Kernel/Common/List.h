@@ -129,8 +129,8 @@ public:
             source_list.m_size--;
             m_size++;
             ASSERT(source_iterator != source_list.end());
-        } else if (after_destionation == source_iterator ||
-                   source_iterator.m_node->next() == after_destionation.m_node) {
+        } else if (after_destionation == source_iterator
+                   || source_iterator.m_node->next() == after_destionation.m_node) {
             return;
         }
 

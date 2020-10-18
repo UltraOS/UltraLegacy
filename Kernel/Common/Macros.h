@@ -10,7 +10,8 @@
 
 #define IS_BIT_SET(mask, x) ((mask)&SET_BIT(x))
 
-#define TO_STRING(x) #x
+#define TO_STRING_HELPER(x) #x
+#define TO_STRING(x)        TO_STRING_HELPER(x)
 
 #define cli() asm volatile("cli" ::: "memory")
 #define sti() asm volatile("sti" ::: "memory")

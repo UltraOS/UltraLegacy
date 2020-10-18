@@ -101,14 +101,14 @@ public:
 
     bool contains(const Point& point) const
     {
-        return point.x() >= m_x && point.x() <= (m_x + m_width) &&
-               point.y() >= m_y && point.y() <= (m_y + m_height);
+        return point.x() >= m_x && point.x() <= (m_x + m_width) && point.y() >= m_y && point.y() <= (m_y + m_height);
     }
 
     template <typename LoggerT>
     friend LoggerT& operator<<(LoggerT&& logger, const Rect& rect)
     {
-        logger << "x: " << rect.left() << " y: " << rect.top() << " width: " << rect.width() << " height: " << rect.height();
+        logger << "x: " << rect.left() << " y: " << rect.top() << " width: " << rect.width()
+               << " height: " << rect.height();
 
         return logger;
     }

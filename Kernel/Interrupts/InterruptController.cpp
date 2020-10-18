@@ -122,11 +122,9 @@ void InterruptController::MP::parse_configuration_table(FloatingPointer* fp_tabl
         IO::out8<setting>(IO::in8<setting>() | apic_mode);
     }
 
-    if (fp_table->default_configuration) {
-        // TODO: handle the default configuration as well, its 2 processors and all default mappings
-        log() << "InterruptController: default mp configuration was set, ignoring the rest of the table.";
-        return;
-    }
+    // TODO: handle this case
+    if (fp_table->default_configuration)
+        runtime::panic("InterruptController: default mp configuration was set!");
 
     auto configuration_table_linear = MemoryManager::physical_to_virtual(fp_table->configuration_table_pointer.raw());
 
