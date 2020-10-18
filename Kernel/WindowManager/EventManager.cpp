@@ -32,7 +32,7 @@ void EventManager::generate_button_state_event(VK key, VKState state)
     e.type     = Event::Type::BUTTON_STATE;
     e.vk_state = { key, state };
 
-    Window::focused().enqueue_event(e);
+    Window::focused().handle_event(e);
 }
 
 void EventManager::post_action(const Keyboard::Packet& packet)
@@ -52,7 +52,7 @@ void EventManager::post_action(const Keyboard::Packet& packet)
     e.type     = Event::Type::KEY_STATE;
     e.vk_state = { packet.key, packet.state };
 
-    Window::focused().enqueue_event(e);
+    Window::focused().handle_event(e);
 }
 
 void EventManager::post_action(const Mouse::Packet& packet)
@@ -69,14 +69,16 @@ void EventManager::post_action(const Mouse::Packet& packet)
 
         e.type = Event::Type::MOUSE_MOVE;
 
-        // calculate location relative to window
-        e.mouse_move = { 0, 0 };
+        auto loc = Screen::the().cursor().location();
+
+        // TODO: calculate location relative to window
+        e.mouse_move = { loc.x(), loc.y() };
 
         LockGuard lock_guard(Window::focus_lock());
         if (!Window::is_any_focused())
             return;
 
-        Window::focused().enqueue_event(e);
+        Window::focused().handle_event(e);
     }
 
     if (packet.wheel_delta) {
@@ -93,7 +95,7 @@ void EventManager::post_action(const Mouse::Packet& packet)
         e.type         = Event::Type::MOUSE_MOVE;
         e.mouse_scroll = { packet.scroll_direction, packet.wheel_delta };
 
-        Window::focused().enqueue_event(e);
+        Window::focused().handle_event(e);
     }
 
     if (packet.left_button_state != m_last_mouse_state.left_button_state) {

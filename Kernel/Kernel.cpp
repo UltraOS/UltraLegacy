@@ -21,12 +21,14 @@
 #include "Multitasking/Scheduler.h"
 #include "Multitasking/Sleep.h"
 #include "Time/RTC.h"
+#include "WindowManager/Painter.h"
 #include "WindowManager/WindowManager.h"
 
 namespace kernel {
 
 void dummy_kernel_process();
 void userland_process();
+void process_with_windows();
 
 void run(Context* context)
 {
@@ -71,6 +73,8 @@ void run(Context* context)
 
     Interrupts::enable();
 
+    Process::create_supervisor(process_with_windows);
+
     // ---> SCHEDULER TESTING AREA
     // ----------------------------------------- //
     Process::create_supervisor(dummy_kernel_process);
@@ -95,6 +99,31 @@ void run(Context* context)
 
     for (;;)
         hlt();
+}
+
+void process_with_windows()
+{
+    auto window_1 = Window::create(*Thread::current(), { 10, 10, 200, 100 });
+    auto window_2 = Window::create(*Thread::current(), { 200, 200, 500, 300 });
+
+    Painter window_1_painter(&window_1->surface());
+    Painter window_2_painter(&window_2->surface());
+
+    window_1_painter.fill_rect(window_1->view_rect(), { 0x16, 0x21, 0x3e });
+    window_2_painter.fill_rect(window_2->view_rect(), { 0x0f, 0x34, 0x60 });
+
+    {
+        LockGuard lock_guard(window_1->lock());
+        window_1->set_invalidated(true);
+    }
+
+    {
+        LockGuard lock_guard(window_2->lock());
+        window_2->set_invalidated(true);
+    }
+
+    while (true)
+        ;
 }
 
 void dummy_kernel_process()

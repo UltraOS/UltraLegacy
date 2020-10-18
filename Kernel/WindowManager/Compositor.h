@@ -25,6 +25,12 @@ public:
 
     void compose();
 
+    void add_dirty_rect(const Rect& rect)
+    {
+        LockGuard lock_guard(m_lock);
+        m_dirty_rects.append(rect);
+    }
+
 private:
     Compositor();
 
@@ -34,6 +40,8 @@ private:
     void update_cursor_position();
 
 private:
+    InterruptSafeSpinLock m_lock;
+
     Painter* m_painter;
 
     Rect m_clock_rect;

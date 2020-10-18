@@ -19,7 +19,7 @@ void Screen::check_if_focused_window_should_change()
     auto  window_that_should_be_focused = window_list.end();
 
     for (auto itr = window_list.begin(); itr != window_list.end(); ++itr) {
-        if ((*itr)->rect().intersects(m_cursor.rect().translated(m_cursor.location()))) {
+        if ((*itr)->full_translated_rect().contains(m_cursor.location())) {
             window_that_should_be_focused = itr;
             break;
         }

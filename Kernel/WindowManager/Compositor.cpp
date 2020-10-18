@@ -22,8 +22,19 @@ Compositor::Compositor()
 
 void Compositor::compose()
 {
+    LockGuard compositor_lock_guard(m_lock);
+
     update_clock_widget();
     update_cursor_position();
+
+    LockGuard wm_lock_guard(WindowManager::the().window_lock());
+    for (auto& window: WindowManager::the().windows()) {
+        LockGuard window_lock_guard(window->lock());
+        if (window->is_invalidated()) {
+            m_dirty_rects.append(window->full_translated_rect());
+            window->set_invalidated(false);
+        }
+    }
 
     for (auto& rect: m_dirty_rects) {
         m_painter->set_clip_rect(rect);
@@ -32,6 +43,41 @@ void Compositor::compose()
 
         if (!m_cursor_invalidated)
             m_cursor_invalidated = rect.intersects(Screen::the().cursor().rect().translated(m_last_cursor_location));
+    }
+
+    DynamicArray<Rect> drawn_window_rects;
+
+    auto& windows = WindowManager::the().windows();
+    for (auto itr = --windows.end(); itr != windows.end(); --itr) {
+        auto& window = *itr;
+
+        LockGuard window_lock_guard(window->lock());
+
+        for (auto& rect: m_dirty_rects) {
+            auto window_rect      = window->full_translated_rect();
+            auto intersected_rect = window_rect.intersected(rect);
+
+            if (!intersected_rect.empty()) {
+                m_painter->blit(window_rect.top_left(), window->surface(), window->full_rect());
+
+                if (window_rect.contains(m_last_cursor_location))
+                    m_cursor_invalidated = true;
+                drawn_window_rects.append(window_rect);
+            }
+        }
+
+        for (auto& rect: drawn_window_rects) {
+            auto window_rect      = window->full_translated_rect();
+            auto intersected_rect = window_rect.intersected(rect);
+
+            if (!intersected_rect.empty()) {
+                m_painter->blit(window_rect.top_left(), window->surface(), window->full_rect());
+
+                if (window_rect.contains(m_last_cursor_location))
+                    m_cursor_invalidated = true;
+                drawn_window_rects.append(window_rect);
+            }
+        }
     }
 
     m_dirty_rects.clear();
