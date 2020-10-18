@@ -5,15 +5,25 @@
 #include "Event.h"
 #include "Multitasking/Thread.h"
 #include "Rect.h"
+#include "WindowFrame.h"
 
 namespace kernel {
 
 class Window {
 public:
+    enum class Style { FRAMELESS, NORMAL_FRAME };
+
     static RefPtr<Window> create(Thread& owner, const Rect& window_rect, bool is_focused = false);
     static RefPtr<Window> create_desktop(Thread& owner, const Rect& window_rect);
 
-    const Rect& rect() const { return m_rect; }
+    Rect         full_rect() const { return m_frame.rect(); }
+    const Rect&  window_rect() const { return m_window_rect; }
+    Rect         view_rect() const { return m_frame.view_rect(); }
+    const Point& location() const { return m_location; }
+
+    Rect full_translated_rect() const { return m_frame.rect().translated(m_location); }
+
+    bool has_frame() const { return m_style != Style::FRAMELESS; }
 
     void set_focused() { s_currently_focused = this; }
 
@@ -44,15 +54,31 @@ public:
     size_t width() const { return surface().width(); }
     size_t height() const { return surface().height(); }
 
-    void enqueue_event(const Event& event) { m_event_queue.append(event); }
+    void handle_event(const Event& event);
+
+    bool is_invalidated() { return m_invalidated; }
+    void set_invalidated(bool setting) { m_invalidated = setting; }
+
+    InterruptSafeSpinLock& lock() { return m_lock; }
 
 private:
-    Window(Thread& owner, const Rect& window_rect, bool is_focused);
+    Window(Thread& owner, Style, const Rect& window_rect, bool is_focused);
 
 private:
-    Thread&         m_owner;
-    Rect            m_rect;
+    Thread& m_owner;
+
+    InterruptSafeSpinLock m_lock;
+
+    Style       m_style;
+    Rect        m_window_rect;
+    WindowFrame m_frame;
+    Point       m_location;
+    bool        m_invalidated { true };
+
     RefPtr<Surface> m_front_surface;
+
+    bool  m_is_being_dragged { false };
+    Point m_drag_begin;
 
     // Should also be a list?
     DynamicArray<Event> m_event_queue;
