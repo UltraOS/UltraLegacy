@@ -57,28 +57,38 @@ void Window::handle_event(const Event& event)
 
     if (event.type == Event::Type::BUTTON_STATE) {
         auto key = event.vk_state.vkey;
+        auto state = event.vk_state.state;
 
         if (key == VK::MOUSE_LEFT_BUTTON) {
-            if (event.vk_state.state == VKState::PRESSED
-                && m_frame.translated_top_rect().contains(Screen::the().cursor().location())) {
-                m_is_being_dragged = true;
-                m_drag_begin       = Screen::the().cursor().location();
+            if (state == VKState::PRESSED) {
+                if (m_frame.draggable_rect().contains(Screen::the().cursor().location())) {
+                    m_is_being_dragged = true;
+                    m_drag_begin       = Screen::the().cursor().location();
+                }
             } else {
                 m_is_being_dragged = false;
             }
         }
-    } else if (event.type == Event::Type::MOUSE_MOVE && m_is_being_dragged) {
-        i32 delta_x = static_cast<i32>(event.mouse_move.x) - static_cast<i32>(m_drag_begin.x());
-        i32 delta_y = static_cast<i32>(event.mouse_move.y) - static_cast<i32>(m_drag_begin.y());
+    } else if (event.type == Event::Type::MOUSE_MOVE) {
+        if (m_is_being_dragged) {
+            i32 delta_x = static_cast<i32>(event.mouse_move.x) - static_cast<i32>(m_drag_begin.x());
+            i32 delta_y = static_cast<i32>(event.mouse_move.y) - static_cast<i32>(m_drag_begin.y());
 
-        i32 new_locx = static_cast<i32>(m_location.x()) + delta_x;
-        i32 new_locy = static_cast<i32>(m_location.y()) + delta_y;
+            i32 new_locx = static_cast<i32>(m_location.x()) + delta_x;
+            i32 new_locy = static_cast<i32>(m_location.y()) + delta_y;
 
-        Compositor::the().add_dirty_rect(full_translated_rect());
+            Compositor::the().add_dirty_rect(full_translated_rect());
 
-        LockGuard lock_guard(lock());
-        m_location   = Point(new_locx, new_locy);
-        m_drag_begin = { event.mouse_move.x, event.mouse_move.y };
+            LockGuard lock_guard(lock());
+            m_location   = Point(new_locx, new_locy);
+            m_drag_begin = { event.mouse_move.x, event.mouse_move.y };
+        } else if (m_frame.close_button_rect().contains({ event.mouse_move.x, event.mouse_move.y}) && !m_close_button_hovered) {
+            m_close_button_hovered = true;
+            m_frame.on_close_button_hovered();
+        } else if (!m_frame.close_button_rect().contains({ event.mouse_move.x, event.mouse_move.y}) && m_close_button_hovered) {
+            m_close_button_hovered = false;
+            m_frame.on_close_button_released();
+        }
     }
 }
 }

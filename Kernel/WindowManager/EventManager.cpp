@@ -2,6 +2,7 @@
 #include "Common/Logger.h"
 #include "Screen.h"
 #include "Window.h"
+#include "WindowManager.h"
 
 // #define EVENT_MANAGER_DEBUG
 
@@ -70,15 +71,17 @@ void EventManager::post_action(const Mouse::Packet& packet)
         e.type = Event::Type::MOUSE_MOVE;
 
         auto loc = Screen::the().cursor().location();
-
-        // TODO: calculate location relative to window
         e.mouse_move = { loc.x(), loc.y() };
 
-        LockGuard lock_guard(Window::focus_lock());
-        if (!Window::is_any_focused())
-            return;
+        // FIXME: Deadlocks here :(
+        // The locks in WM are a mess, we have a lock per window, a lock
+        // for compositor, a lock for the WM window queue, a focus lock...
+        // There should be a more elegant way to do this
+        // LockGuard lock_guard(WindowManager::the().window_lock());
 
-        Window::focused().handle_event(e);
+        for (auto& window : WindowManager::the().windows()) {
+            window->handle_event(e);
+        }
     }
 
     if (packet.wheel_delta) {

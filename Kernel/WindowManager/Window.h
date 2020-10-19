@@ -78,6 +78,7 @@ private:
     RefPtr<Surface> m_front_surface;
 
     bool  m_is_being_dragged { false };
+    bool  m_close_button_hovered { false };
     Point m_drag_begin;
 
     // Should also be a list?
