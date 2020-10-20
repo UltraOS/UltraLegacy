@@ -9,6 +9,8 @@
 namespace kernel {
 
 class EventManager {
+    MAKE_SINGLETON(EventManager) = default;
+
 public:
     static EventManager& the() { return s_instance; }
 

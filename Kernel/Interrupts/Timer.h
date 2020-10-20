@@ -9,6 +9,8 @@
 namespace kernel {
 
 class Timer {
+    MAKE_INHERITABLE_SINGLETON(Timer) = default;
+
 public:
     static constexpr u32 default_ticks_per_second = 100;
 

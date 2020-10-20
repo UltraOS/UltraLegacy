@@ -8,6 +8,8 @@ namespace kernel {
 class InterruptSafeSpinLock;
 
 class HeapAllocator {
+    MAKE_STATIC(HeapAllocator);
+
 public:
     static void initialize();
     static void feed_block(void* ptr, size_t size, size_t chunk_size_in_bytes = 32);

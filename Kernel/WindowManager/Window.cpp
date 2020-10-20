@@ -56,7 +56,7 @@ void Window::handle_event(const Event& event)
     }
 
     if (event.type == Event::Type::BUTTON_STATE) {
-        auto key = event.vk_state.vkey;
+        auto key   = event.vk_state.vkey;
         auto state = event.vk_state.state;
 
         if (key == VK::MOUSE_LEFT_BUTTON) {
@@ -82,10 +82,12 @@ void Window::handle_event(const Event& event)
             LockGuard lock_guard(lock());
             m_location   = Point(new_locx, new_locy);
             m_drag_begin = { event.mouse_move.x, event.mouse_move.y };
-        } else if (m_frame.close_button_rect().contains({ event.mouse_move.x, event.mouse_move.y}) && !m_close_button_hovered) {
+        } else if (m_frame.close_button_rect().contains({ event.mouse_move.x, event.mouse_move.y })
+                   && !m_close_button_hovered) {
             m_close_button_hovered = true;
             m_frame.on_close_button_hovered();
-        } else if (!m_frame.close_button_rect().contains({ event.mouse_move.x, event.mouse_move.y}) && m_close_button_hovered) {
+        } else if (!m_frame.close_button_rect().contains({ event.mouse_move.x, event.mouse_move.y })
+                   && m_close_button_hovered) {
             m_close_button_hovered = false;
             m_frame.on_close_button_released();
         }

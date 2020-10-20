@@ -8,6 +8,8 @@
 namespace kernel {
 
 class Screen {
+    MAKE_SINGLETON(Screen);
+
 public:
     Screen(VideoDevice& device);
 

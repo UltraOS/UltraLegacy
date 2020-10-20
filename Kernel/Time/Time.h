@@ -5,6 +5,8 @@
 
 namespace kernel {
 class Time {
+    MAKE_STATIC(Time);
+
 public:
     static constexpr size_t nanoseconds_in_microsecond = 1000;
     static constexpr size_t nanoseconds_in_millisecond = 1000000;

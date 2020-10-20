@@ -6,7 +6,11 @@
 namespace kernel {
 
 class SpinLock {
+    MAKE_NONCOPYABLE(SpinLock);
+
 public:
+    SpinLock() = default;
+
     using lock_t = size_t;
 
     static constexpr lock_t unlocked = 0;

@@ -6,6 +6,8 @@
 namespace kernel {
 
 class Serial {
+    MAKE_STATIC(Serial);
+
 public:
     enum class Port {
         COM1 = 0x3F8,

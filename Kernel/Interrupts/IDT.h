@@ -6,6 +6,8 @@
 namespace kernel {
 
 class IDT {
+    MAKE_SINGLETON(IDT);
+
 public:
     enum attributes : u8 {
         RING_0         = 0b0,
@@ -33,8 +35,6 @@ public:
     static IDT& the();
 
 private:
-    IDT();
-
     struct PACKED entry {
         u16 address_1;
         u16 selector;

@@ -14,6 +14,8 @@ class AddressSpace;
 class PageFault;
 
 class MemoryManager {
+    MAKE_SINGLETON(MemoryManager, const MemoryMap&);
+
 public:
     // TODO: redo most of these constants, they're completely incorrect for x86-64
     static constexpr size_t page_directory_entry_count = 1024;
@@ -104,8 +106,6 @@ public:
     void force_preallocate(const VirtualAllocator::Range& range, bool should_zero = false);
 
 private:
-    MemoryManager(const MemoryMap& memory_map);
-
 // Not needed for 64 bit as we have all the phys memory mapped
 #ifdef ULTRA_32
     u8*  quickmap_page(const Page&);

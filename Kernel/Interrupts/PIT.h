@@ -6,6 +6,8 @@
 namespace kernel {
 
 class PIT final : public Timer, public IRQHandler {
+    MAKE_SINGLETON_INHERITABLE(Timer, PIT);
+
 public:
     static constexpr u32 frequency = 1193180;
     // TODO: replace with numeric_limits<u16>::max();
@@ -19,8 +21,6 @@ public:
 
     static constexpr u8 square_wave_mode = 0x06;
     static constexpr u8 write_word       = 0x30;
-
-    PIT();
 
     void set_frequency(u32 ticks_per_second) override;
 

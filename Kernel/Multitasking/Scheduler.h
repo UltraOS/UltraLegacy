@@ -10,6 +10,8 @@
 namespace kernel {
 
 class Scheduler {
+    MAKE_SINGLETON(Scheduler) = default;
+
 public:
     static void       inititalize();
     static Scheduler& the();
@@ -37,9 +39,6 @@ public:
     static void    set_last_picked(Thread* thread) { s_last_picked = thread; }
 
     void register_process(RefPtr<Process> process);
-
-private:
-    Scheduler() = default;
 
 private:
     DynamicArray<RefPtr<Process>> m_processes;

@@ -1,10 +1,13 @@
 #pragma once
 
+#include "Common/Macros.h"
 #include "Common/Types.h"
 
 namespace kernel {
 
 class IO {
+    MAKE_STATIC(IO);
+
 public:
     template <u16 port>
     static void out8(u8 data)

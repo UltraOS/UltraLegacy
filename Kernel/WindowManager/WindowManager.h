@@ -6,6 +6,8 @@
 namespace kernel {
 
 class WindowManager {
+    MAKE_SINGLETON(WindowManager) = default;
+
 public:
     static void initialize();
 

@@ -6,6 +6,8 @@
 namespace kernel {
 
 class IOAPIC {
+    MAKE_STATIC(IOAPIC);
+
 public:
     static constexpr auto default_register_alignment = 0x10;
 

@@ -4,7 +4,11 @@
 namespace kernel {
 
 class Device {
+    MAKE_NONCOPYABLE(Device);
+
 public:
+    Device() = default;
+
     enum class Type {
         VIDEO,
         KEYBOARD,

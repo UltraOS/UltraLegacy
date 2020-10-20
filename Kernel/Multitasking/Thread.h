@@ -10,6 +10,9 @@ namespace kernel {
 class Window;
 
 class Thread {
+    MAKE_NONCOPYABLE(Thread);
+    MAKE_NONMOVABLE(Thread);
+
 public:
     friend class Process;
 

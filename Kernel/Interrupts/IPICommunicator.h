@@ -8,6 +8,8 @@
 namespace kernel {
 
 class IPICommunicator {
+    MAKE_STATIC(IPICommunicator);
+
 public:
     static constexpr u16 vector_number = 254;
 

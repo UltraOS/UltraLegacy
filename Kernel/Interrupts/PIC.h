@@ -7,6 +7,8 @@
 namespace kernel {
 
 class PIC : public InterruptController {
+    MAKE_SINGLETON_INHERITABLE(InterruptController, PIC);
+
 public:
     static constexpr u16 max_irq_index   = 15;
     static constexpr u8  slave_irq_index = 2;
@@ -24,8 +26,6 @@ public:
     static constexpr u8 slave_data    = slave_port + 1;
 
     static constexpr u8 end_of_interrupt_code = 0x20;
-
-    PIC();
 
     void end_of_interrupt(u8 request_number) override;
 

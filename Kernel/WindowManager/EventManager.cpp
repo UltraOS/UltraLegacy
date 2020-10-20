@@ -70,7 +70,7 @@ void EventManager::post_action(const Mouse::Packet& packet)
 
         e.type = Event::Type::MOUSE_MOVE;
 
-        auto loc = Screen::the().cursor().location();
+        auto loc     = Screen::the().cursor().location();
         e.mouse_move = { loc.x(), loc.y() };
 
         // FIXME: Deadlocks here :(
@@ -79,7 +79,7 @@ void EventManager::post_action(const Mouse::Packet& packet)
         // There should be a more elegant way to do this
         // LockGuard lock_guard(WindowManager::the().window_lock());
 
-        for (auto& window : WindowManager::the().windows()) {
+        for (auto& window: WindowManager::the().windows()) {
             window->handle_event(e);
         }
     }

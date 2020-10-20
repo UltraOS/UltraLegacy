@@ -7,6 +7,8 @@
 namespace kernel {
 
 class VirtualAllocator {
+    MAKE_NONCOPYABLE(VirtualAllocator);
+
 public:
     class Range {
     public:

@@ -16,6 +16,9 @@ enum class MemoryOrder : decltype(__ATOMIC_RELAXED) {
 
 template <typename T>
 class Atomic {
+    MAKE_NONCOPYABLE(Atomic);
+    MAKE_NONMOVABLE(Atomic);
+
 public:
     using order_t = decltype(__ATOMIC_RELAXED);
 

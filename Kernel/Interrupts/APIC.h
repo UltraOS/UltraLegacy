@@ -5,9 +5,9 @@
 namespace kernel {
 
 class APIC : public InterruptController {
-public:
-    APIC();
+    MAKE_SINGLETON_INHERITABLE(InterruptController, APIC);
 
+public:
     void end_of_interrupt(u8 request_number) override;
 
     void clear_all() override;

@@ -12,6 +12,8 @@ namespace kernel {
 class PS2Device;
 
 class PS2Controller : public Device {
+    MAKE_SINGLETON(PS2Controller) = default;
+
 public:
     static constexpr u8 data_port    = 0x60;
     static constexpr u8 status_port  = 0x64;
@@ -134,7 +136,7 @@ private:
 
 private:
     DynamicArray<PS2Device*> m_devices;
-    bool                     m_last_read_timeout;
+    bool                     m_last_read_timeout { false };
 
     static PS2Controller* s_instance;
 };

@@ -19,11 +19,14 @@ const u8 WindowFrame::s_close_button_bitmap_data[] = {
 
 const Color WindowFrame::s_palette[2] = { Color::transparent(), Color::white() };
 
-WindowFrame::WindowFrame(Window& owner) : m_owner(owner),
-    m_close_button_bitmap(s_close_button_bitmap_data,
-                          close_button_bitmap_width,
-                          close_button_bitmap_height,
-                          Bitmap::Format::INDEXED_1_BPP, s_palette) { }
+WindowFrame::WindowFrame(Window& owner)
+    : m_owner(owner), m_close_button_bitmap(s_close_button_bitmap_data,
+                                            close_button_bitmap_width,
+                                            close_button_bitmap_height,
+                                            Bitmap::Format::INDEXED_1_BPP,
+                                            s_palette)
+{
+}
 
 void WindowFrame::paint()
 {
@@ -55,8 +58,7 @@ void WindowFrame::draw_close_button(Color fill)
     painter.fill_rect(close_button_rect, fill);
 
     auto close_button_bitmap_top_left = close_button_rect.top_left();
-    close_button_bitmap_top_left = { close_button_rect.left() + 6,
-                                     close_button_rect.top()  + 6 };
+    close_button_bitmap_top_left      = { close_button_rect.left() + 6, close_button_rect.top() + 6 };
     painter.draw_bitmap(m_close_button_bitmap, close_button_bitmap_top_left);
 
     m_owner.set_invalidated(true);

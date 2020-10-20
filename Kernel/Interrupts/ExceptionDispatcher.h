@@ -13,6 +13,8 @@ namespace kernel {
 class ExceptionHandler;
 
 class ExceptionDispatcher {
+    MAKE_STATIC(ExceptionDispatcher);
+
 public:
     static constexpr size_t exception_count = 20;
 

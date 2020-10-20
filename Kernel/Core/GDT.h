@@ -8,6 +8,8 @@ namespace kernel {
 class TSS;
 
 class GDT {
+    MAKE_SINGLETON(GDT);
+
 public:
     static constexpr size_t entry_size = 8;
 
@@ -67,8 +69,6 @@ public:
     static GDT& the();
 
 private:
-    GDT();
-
     u16 m_active_entries { 0 };
 
     struct PACKED entry {

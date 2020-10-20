@@ -1,11 +1,14 @@
 #pragma once
 
 #include "Color.h"
+#include "Common/Macros.h"
 #include "Common/Types.h"
 
 namespace kernel {
 
 class Bitmap {
+    MAKE_NONCOPYABLE(Bitmap);
+
 public:
     enum class Format : u8 {
         INDEXED_1_BPP,

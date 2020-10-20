@@ -8,6 +8,8 @@
 namespace kernel {
 
 class VideoDevice : public Device {
+    MAKE_INHERITABLE_SINGLETON(VideoDevice) = default;
+
 public:
     Type type() const override { return Type::VIDEO; }
 

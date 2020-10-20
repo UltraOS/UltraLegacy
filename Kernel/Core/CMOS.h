@@ -1,11 +1,13 @@
 #pragma once
 
+#include "Common/Macros.h"
 #include "Common/Types.h"
 #include "IO.h"
 
 namespace kernel {
 
 class CMOS {
+    MAKE_STATIC(CMOS)
 public:
     static constexpr u8 selector_port = 0x70;
     static constexpr u8 register_port = 0x71;

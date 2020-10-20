@@ -10,6 +10,9 @@
 namespace kernel {
 
 class Window {
+    MAKE_NONCOPYABLE(Window);
+    MAKE_NONMOVABLE(Window);
+
 public:
     enum class Style { FRAMELESS, NORMAL_FRAME };
 

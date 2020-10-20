@@ -5,6 +5,9 @@
 namespace kernel {
 
 class Process {
+    MAKE_NONCOPYABLE(Process);
+    MAKE_NONMOVABLE(Process);
+
 public:
     static constexpr auto default_userland_stack_size = 4 * MB;
     static constexpr auto default_kernel_stack_size   = 16 * KB;

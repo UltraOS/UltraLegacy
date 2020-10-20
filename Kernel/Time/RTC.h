@@ -1,10 +1,13 @@
 #pragma once
 
+#include "Common/Macros.h"
 #include "Common/Types.h"
 
 namespace kernel {
 
 class RTC {
+    MAKE_STATIC(RTC);
+
 public:
     static constexpr u8 seconds_register = 0x00;
     static constexpr u8 minutes_register = 0x02;

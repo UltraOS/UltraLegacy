@@ -7,6 +7,8 @@
 namespace kernel {
 
 class SyscallDispatcher {
+    MAKE_STATIC(SyscallDispatcher);
+
 public:
     static constexpr u16 syscall_index = 0x80;
 

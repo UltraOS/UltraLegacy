@@ -8,6 +8,8 @@
 namespace kernel {
 
 class Cursor {
+    MAKE_NONCOPYABLE(Cursor);
+
 public:
     Cursor(Point location = { 0, 0 });
 

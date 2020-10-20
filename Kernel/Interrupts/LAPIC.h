@@ -7,18 +7,21 @@
 namespace kernel {
 
 class LAPIC {
+    MAKE_STATIC(LAPIC);
+
 public:
-    static constexpr u32 spurious_irq_index  = 0xFF;
     static constexpr u32 invalid_destination = -1;
+    static constexpr u32 spurious_irq_index  = 0xFF;
 
     class Timer : IRQHandler {
+        friend class LAPIC;
+        MAKE_SINGLETON(Timer) : IRQHandler(irq_number) { }
+
     public:
         static constexpr u32 irq_number       = 253;
         static constexpr u32 masked_bit       = 1 << 16;
         static constexpr u32 periodic_mode    = 1 << 17;
         static constexpr u32 ticks_per_second = 100;
-
-        Timer() : IRQHandler(irq_number) { }
 
         void initialize_for_this_processor();
 
@@ -29,6 +32,7 @@ public:
         void disable_irq() override;
     };
 
+public:
     static Timer& timer()
     {
         ASSERT(s_timer != nullptr);

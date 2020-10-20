@@ -9,6 +9,7 @@
 namespace kernel {
 
 class ExceptionHandler {
+    MAKE_NONCOPYABLE(ExceptionHandler)
 public:
     ExceptionHandler(size_t exception_number) : m_exception_number(exception_number)
     {

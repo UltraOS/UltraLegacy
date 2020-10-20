@@ -1,3 +1,4 @@
+#include "Common/String.h"
 #include "Common/Types.h"
 
 namespace kernel {

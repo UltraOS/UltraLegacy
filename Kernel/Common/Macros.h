@@ -28,15 +28,31 @@
 #define MB (1024ull * KB)
 #define GB (1024ull * MB)
 
-// A bunch of things to stop Visual Studio from
-// complaining and actually help me instead
-#ifdef _MSVC_LANG
-#define cli()
-#define sti()
-#define hang()
-#define pause()
-#define asm()
-#define USED
-#define PACKED
-#define ALWAYS_INLINE
-#endif
+#define MAKE_NONCOPYABLE(class_name)                                                                                   \
+    class_name(const class_name&) = delete;                                                                            \
+    class_name& operator=(const class_name&) = delete;
+
+#define MAKE_NONMOVABLE(class_name)                                                                                    \
+    class_name(class_name&&) = delete;                                                                                 \
+    class_name& operator=(class_name&&) = delete;
+
+#define MAKE_STATIC(class_name)                                                                                        \
+    MAKE_NONCOPYABLE(class_name)                                                                                       \
+    MAKE_NONMOVABLE(class_name)                                                                                        \
+    class_name() = delete;
+
+#define MAKE_SINGLETON(class_name, ...)                                                                                \
+    MAKE_NONCOPYABLE(class_name)                                                                                       \
+    MAKE_NONMOVABLE(class_name)                                                                                        \
+private:                                                                                                               \
+    class_name(__VA_ARGS__)
+
+#define MAKE_INHERITABLE_SINGLETON(class_name, ...)                                                                    \
+    MAKE_NONCOPYABLE(class_name)                                                                                       \
+    MAKE_NONMOVABLE(class_name)                                                                                        \
+protected:                                                                                                             \
+    class_name(__VA_ARGS__)
+
+#define MAKE_SINGLETON_INHERITABLE(inherited_from, class_name, ...)                                                    \
+    friend class inherited_from;                                                                                       \
+    MAKE_SINGLETON(class_name, ##__VA_ARGS__)

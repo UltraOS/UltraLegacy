@@ -8,6 +8,8 @@
 namespace kernel {
 
 class InterruptController {
+    MAKE_INHERITABLE_SINGLETON(InterruptController) = default;
+
 public:
     static void discover_and_setup();
 

@@ -11,6 +11,7 @@ class Thread;
 class TSS;
 
 class CPU {
+    MAKE_STATIC(CPU)
 public:
     enum class FLAGS : size_t {
         CARRY      = SET_BIT(0),
