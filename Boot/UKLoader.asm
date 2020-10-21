@@ -86,7 +86,7 @@ start:
     mov es, ax
     retrieve_memory_map memory_map_ptr, memory_map.entry_count
 
-    set_video_mode 1024, 768, 24
+    set_video_mode 1024, 768, 32
 
     %ifdef ULTRA_64
 
@@ -322,8 +322,8 @@ gdt_ptr:
 gdt_end:
 
 best_mode:     dw 0
-native_width:  dw 1024
-native_height: dw 768
+native_width:  dw ASSUMED_NATIVE_WIDTH
+native_height: dw ASSUMED_NATIVE_HEIGHT
 
 edid:
     times 0x38 db 0 ; unused

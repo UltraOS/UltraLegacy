@@ -44,6 +44,9 @@ END_OF_MODE_LIST:          equ 0xFFFF
 REAL_MODE_CODE:            equ 0x18
 REAL_MODE_DATA:            equ 0x20
 
+ASSUMED_NATIVE_WIDTH:      equ 1024
+ASSUMED_NATIVE_HEIGHT:     equ 768
+
 ; magic breakpoint in Bochs
 %define BP xchg bx, bx
 
@@ -402,6 +405,18 @@ REAL_MODE_DATA:            equ 0x20
     and   bl, 0xF0
     shl   bx, 4
     add [native_height], bx
+
+    ; I've seen GET_EDID succeed and return a native width & height of 0
+    ; so let's account for that possibility as well
+    cmp [native_width], word 0
+    jne width_valid
+    mov [native_width], word ASSUMED_NATIVE_WIDTH
+    width_valid:
+
+    cmp [native_height], word 0
+    jne height_valid
+    mov [native_height], word ASSUMED_NATIVE_HEIGHT
+    height_valid:
 
 %%.sanity_check:
     ; make sure that requested resolution is <= native
