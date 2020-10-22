@@ -77,6 +77,12 @@ public:
     void map_huge_supervisor_page(Address virtual_address, Address physical_address);
 #endif
 
+#ifdef ULTRA_32
+    static Pair<size_t, size_t> virtual_address_as_paging_indices(Address virtual_address);
+#elif defined(ULTRA_64)
+    static Quad<size_t, size_t, size_t, size_t> virtual_address_as_paging_indices(Address virtual_address);
+#endif
+
     void unmap_page(Address virtual_address);
 
     bool is_active();
@@ -96,10 +102,7 @@ private:
     void map_page_directory_entry(size_t index, Address physical_address, bool is_supervior = true);
 
 #ifdef ULTRA_32
-    Entry&               entry_at(size_t index, Address virtual_base);
-    Pair<size_t, size_t> virtual_address_as_paging_indices(Address virtual_address);
-#elif defined(ULTRA_64)
-    Quad<size_t, size_t, size_t, size_t> virtual_address_as_paging_indices(Address virtual_address);
+    Entry& entry_at(size_t index, Address virtual_base);
 #endif
 
 private:

@@ -15,7 +15,7 @@ PAT::PAT()
         m_state = CPU::MSR::read(msr_index);
 }
 
-void PAT::set_entry(size_t index, MemoryType type)
+void PAT::set_entry(u8 index, MemoryType type)
 {
     ASSERT(index > 3 && index < 8);
 

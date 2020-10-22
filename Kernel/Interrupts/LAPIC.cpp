@@ -124,6 +124,7 @@ void LAPIC::send_ipi(DestinationType destination_type, u32 destination)
     icr.destination_type = destination_type;
     icr.destination_id   = destination;
 
+    // TODO: This breaks strict aliasing, fix
     volatile auto* icr_pointer = Address(&icr).as_pointer<volatile u32>();
 
     write_register(Register::INTERRUPT_COMMAND_REGISTER_HIGHER, *(icr_pointer + 1));

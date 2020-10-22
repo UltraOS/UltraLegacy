@@ -23,7 +23,7 @@ public:
 
     static PAT& the() { return s_instance; }
 
-    void set_entry(size_t index, MemoryType);
+    void set_entry(u8 index, MemoryType);
     void synchronize();
 
 private:

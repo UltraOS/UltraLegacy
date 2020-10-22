@@ -94,7 +94,7 @@ void Compositor::run()
 
     for (;;) {
         Compositor::the().compose();
-        sleep::for_milliseconds(1000 / 60);
+        sleep::for_milliseconds(1000 / 100);
     }
 }
 

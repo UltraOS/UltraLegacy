@@ -2,6 +2,7 @@
 
 #include "Common/Macros.h"
 #include "Common/Types.h"
+#include "Core/Runtime.h"
 
 namespace kernel {
 
@@ -15,8 +16,15 @@ public:
         READ_WRITE    = SET_BIT(1),
         SUPERVISOR    = 0,
         USER          = SET_BIT(2),
+
         WRITE_THROUGH = SET_BIT(3),
+        PWT_BIT       = SET_BIT(3),
+
         DO_NOT_CACHE  = SET_BIT(4),
+        PCD_BIT       = SET_BIT(5),
+
+        PAT_BIT_4K    = SET_BIT(7),
+
         PAGE_4KB      = 0,
 #ifdef ULTRA_32
         PAGE_4MB      = SET_BIT(7),
@@ -24,7 +32,7 @@ public:
         PAGE_2MB      = SET_BIT(7),
         PAGE_1GB      = SET_BIT(7),
 #endif
-        GLOBAL        = SET_BIT(8)
+        GLOBAL        = SET_BIT(8),
     };
     // clang-format on
 
@@ -65,6 +73,39 @@ public:
     }
 
 #endif
+
+    void set_pat_index(u8 index, bool is_4k_page)
+    {
+        ASSERT(index < 8);
+
+        if (index & 1) {
+            m_attributes = m_attributes | Attributes::PWT_BIT;
+        } else {
+            m_attributes = m_attributes & ~(Attributes::PWT_BIT);
+        }
+
+        if (index & 2) {
+            m_attributes = m_attributes | Attributes::PCD_BIT;
+        } else {
+            m_attributes = m_attributes & ~Attributes::PCD_BIT;
+        }
+
+        if (index & 4) {
+            if (is_4k_page) {
+                m_attributes = m_attributes | Attributes::PAT_BIT_4K;
+            } else {
+                // bit 0 is actually PAT
+                m_physical_address |= 1;
+            }
+        } else {
+            if (is_4k_page) {
+                m_attributes = m_attributes & ~Attributes::PAT_BIT_4K;
+            } else {
+                // bit 0 is actually PAT
+                m_physical_address &= ~static_cast<decltype(m_physical_address)>(1);
+            }
+        }
+    }
 
     void make_global() { set_attributes(attributes() | GLOBAL); }
 
