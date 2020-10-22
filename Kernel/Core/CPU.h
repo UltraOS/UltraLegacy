@@ -27,6 +27,23 @@ public:
 
     friend bool operator&(FLAGS l, FLAGS r) { return static_cast<size_t>(l) & static_cast<size_t>(r); }
 
+    struct ID {
+        ID(u32 function);
+
+        u32 a { 0x00000000 };
+        u32 b { 0x00000000 };
+        u32 c { 0x00000000 };
+        u32 d { 0x00000000 };
+    };
+
+    struct MSR {
+        static MSR read(u32 index);
+        void       write(u32 index);
+
+        u32 upper { 0x00000000 };
+        u32 lower { 0x00000000 };
+    };
+
     static void initialize();
 
     static FLAGS flags();

@@ -5,6 +5,7 @@
 #include "Interrupts/LAPIC.h"
 
 #include "Memory/MemoryManager.h"
+#include "Memory/PAT.h"
 
 #include "Multitasking/Process.h"
 #include "Multitasking/TSS.h"
@@ -15,6 +16,25 @@ namespace kernel {
 
 Atomic<size_t>               CPU::s_alive_counter;
 DynamicArray<CPU::LocalData> CPU::s_processors;
+
+CPU::ID::ID(u32 function)
+{
+    asm volatile("cpuid" : "=a"(a), "=b"(b), "=c"(c), "=d"(d) : "a"(function), "c"(0));
+}
+
+CPU::MSR CPU::MSR::read(u32 index)
+{
+    MSR out;
+
+    asm volatile("rdmsr" : "=d"(out.upper), "=a"(out.lower) : "c"(index));
+
+    return out;
+}
+
+void CPU::MSR::write(u32 index)
+{
+    asm volatile("wrmsr" ::"d"(upper), "a"(lower), "c"(index));
+}
 
 void CPU::initialize()
 {
@@ -82,6 +102,7 @@ void CPU::ap_entrypoint()
     GDT::the().install();
     CPU::current().set_tss(new TSS);
     IDT::the().install();
+    PAT::the().synchronize();
     LAPIC::initialize_for_this_processor();
     LAPIC::timer().initialize_for_this_processor();
     Process::inititalize_for_this_processor();
