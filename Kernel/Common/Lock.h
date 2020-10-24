@@ -123,8 +123,8 @@ public:
 template <typename LockT>
 class LockGuard {
 public:
-    LockGuard(LockT& lock) : m_lock(lock) { this->lock(); }
-    ~LockGuard() { unlock(); }
+    ALWAYS_INLINE LockGuard(LockT& lock) : m_lock(lock) { this->lock(); }
+    ~LockGuard() ALWAYS_INLINE { unlock(); }
 
 private:
     void lock() ALWAYS_INLINE { m_lock.lock(); }
@@ -138,8 +138,8 @@ private:
 template <>
 class LockGuard<RecursiveInterruptSafeSpinLock> {
 public:
-    LockGuard(RecursiveInterruptSafeSpinLock& lock) : m_lock(lock) { this->lock(); }
-    ~LockGuard() { unlock(); }
+    ALWAYS_INLINE LockGuard(RecursiveInterruptSafeSpinLock& lock) : m_lock(lock) { this->lock(); }
+    ~LockGuard() ALWAYS_INLINE { unlock(); }
 
 private:
     void lock() ALWAYS_INLINE { m_lock.lock(m_state); }
@@ -154,8 +154,8 @@ private:
 template <>
 class LockGuard<InterruptSafeSpinLock> {
 public:
-    LockGuard(InterruptSafeSpinLock& lock) : m_lock(lock) { this->lock(); }
-    ~LockGuard() { unlock(); }
+    ALWAYS_INLINE LockGuard(InterruptSafeSpinLock& lock) : m_lock(lock) { this->lock(); }
+    ~LockGuard() ALWAYS_INLINE { unlock(); }
 
 private:
     void lock() ALWAYS_INLINE { m_lock.lock(m_state); }
