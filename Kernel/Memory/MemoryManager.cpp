@@ -188,7 +188,7 @@ void MemoryManager::free_page(Page& page)
     }
 
     StackStringBuilder error_string;
-    error_string << "Couldn't find the region that owns the page at " << page.address();
+    error_string << "MemoryManger: Couldn't find the region that owns the page at " << page.address();
     runtime::panic(error_string.data());
 }
 
@@ -208,6 +208,10 @@ void MemoryManager::handle_page_fault(const RegisterState& registers, const Page
         error_string << "MemoryManager: unexpected page fault on core " << CPU::current().id() << fault;
         runtime::panic(error_string.data(), &registers);
     }
+
+#ifdef MEMORY_MANAGER_DEBUG
+    log() << "MemoryManger: page fault resolved, continuing...";
+#endif
 }
 
 void MemoryManager::inititalize(AddressSpace& directory)

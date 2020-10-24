@@ -1,48 +1,23 @@
-#include "Core/Registers.h"
-
+#include "PageFaultHandler.h"
 #include "Memory/MemoryManager.h"
-
-#include "ExceptionHandler.h"
-#include "PageFault.h"
 
 namespace kernel {
 
-class PageFaultHandler : public ExceptionHandler {
-public:
-    static constexpr auto exception_number = 0xE;
+void PageFaultHandler::handle(const RegisterState& state)
+{
+    ++m_occurrences;
 
-    PageFaultHandler() : ExceptionHandler(exception_number) { }
+    static constexpr u32 type_mask = 0b011;
+    static constexpr u32 user_mask = 0b100;
 
-    void handle(const RegisterState& state) override
-    {
-        ++m_occurrences;
+    Address address_of_fault;
+    asm("mov %%cr2, %0" : "=a"(address_of_fault));
 
-        static constexpr u32 type_mask = 0b011;
-        static constexpr u32 user_mask = 0b100;
+    PageFault pf(address_of_fault,
+                 state.instruction_pointer(),
+                 state.error_code & user_mask,
+                 static_cast<PageFault::Type>(state.error_code & type_mask));
 
-        Address address_of_fault;
-        asm("mov %%cr2, %0" : "=a"(address_of_fault));
-
-        PageFault pf(address_of_fault,
-#ifdef ULTRA_32
-                     state.eip,
-#elif defined(ULTRA_64)
-                     state.rip,
-#endif
-                     state.error_code & user_mask,
-                     static_cast<PageFault::Type>(state.error_code & type_mask));
-
-        MemoryManager::handle_page_fault(state, pf);
-
-        log() << "PageFaultHandler: page fault resolved, continuing...";
-    }
-
-    size_t occurances() const { return m_occurrences; }
-
-private:
-    size_t                  m_occurrences { 0 };
-    static PageFaultHandler s_instance;
-};
-
-PageFaultHandler PageFaultHandler::s_instance;
+    MemoryManager::handle_page_fault(state, pf);
+}
 }
