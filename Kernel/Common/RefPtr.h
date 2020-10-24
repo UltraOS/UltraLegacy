@@ -35,28 +35,14 @@ public:
         m_ref_count = new size_t(1);
     }
 
-    T& operator*()
+    T& operator*() const
     {
         ASSERT(m_ptr);
 
         return *m_ptr;
     }
 
-    const T& operator*() const
-    {
-        ASSERT(m_ptr);
-
-        return *m_ptr;
-    }
-
-    T* operator->()
-    {
-        ASSERT(m_ptr);
-
-        return m_ptr;
-    }
-
-    const T* operator->() const
+    T* operator->() const
     {
         ASSERT(m_ptr);
 
