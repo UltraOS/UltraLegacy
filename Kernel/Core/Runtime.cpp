@@ -330,8 +330,8 @@ inline size_t               dump_backtrace(ptr_t* into, size_t max_depth)
     size_t                  depth;
 
     if (registers) {
-        backtrace[0] = instruction_pointer(*registers);
-        depth        = dump_backtrace(backtrace + 1, backtrace_max_depth - 1, base_pointer(*registers)) + 1;
+        backtrace[0] = registers->instruction_pointer();
+        depth        = dump_backtrace(backtrace + 1, backtrace_max_depth - 1, registers->base_pointer()) + 1;
     } else {
         depth = dump_backtrace(backtrace, backtrace_max_depth, base_pointer());
     }

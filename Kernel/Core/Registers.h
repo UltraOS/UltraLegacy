@@ -32,6 +32,9 @@ struct PACKED RegisterState {
     u32 eflags;
     u32 userspace_esp;
     u32 userspace_ss;
+
+    u32 instruction_pointer() const { return eip; }
+    u32 base_pointer() const { return ebp; }
 };
 #elif defined(ULTRA_64)
 struct PACKED RegisterState {
@@ -62,29 +65,9 @@ struct PACKED RegisterState {
     u64 rflags;
     u64 rsp;
     u64 ss;
+
+    u64 instruction_pointer() const { return rip; }
+    u64 base_pointer() const { return rbp; }
 };
 #endif
-
-inline ptr_t instruction_pointer(const RegisterState& registers)
-{
-    ptr_t instruction_pointer_value;
-#ifdef ULTRA_32
-    instruction_pointer_value = registers.eip;
-#elif defined(ULTRA_64)
-    instruction_pointer_value = registers.rip;
-#endif
-    return instruction_pointer_value;
-}
-
-inline ptr_t base_pointer(const RegisterState& registers)
-{
-    ptr_t base_pointer_value;
-#ifdef ULTRA_32
-    base_pointer_value = registers.ebp;
-#elif defined(ULTRA_64)
-    base_pointer_value        = registers.rbp;
-#endif
-
-    return base_pointer_value;
-}
 }
