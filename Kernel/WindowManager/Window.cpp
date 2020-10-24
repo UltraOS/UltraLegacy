@@ -7,22 +7,21 @@
 
 namespace kernel {
 
-Window*               Window::s_currently_focused;
-InterruptSafeSpinLock Window::s_lock;
+Window* Window::s_currently_focused;
 
-RefPtr<Window> Window::create(Thread& owner, const Rect& window_rect, bool is_focused)
+RefPtr<Window> Window::create(Thread& owner, const Rect& window_rect)
 {
-    RefPtr<Window> window = new Window(owner, Style::NORMAL_FRAME, window_rect, is_focused);
+    RefPtr<Window> window = new Window(owner, Style::NORMAL_FRAME, window_rect);
     WindowManager::the().add_window(window);
     return window;
 }
 
 RefPtr<Window> Window::create_desktop(Thread& owner, const Rect& window_rect)
 {
-    return new Window(owner, Style::FRAMELESS, window_rect, false);
+    return new Window(owner, Style::FRAMELESS, window_rect);
 }
 
-Window::Window(Thread& owner, Style style, const Rect& window_rect, bool is_focused)
+Window::Window(Thread& owner, Style style, const Rect& window_rect)
     : m_owner(owner), m_style(style), m_window_rect(0, 0, window_rect.width(), window_rect.height()), m_frame(*this),
       m_location(window_rect.top_left())
 {
@@ -40,11 +39,6 @@ Window::Window(Thread& owner, Style style, const Rect& window_rect, bool is_focu
                                               Surface::Format::RGBA_32_BPP);
 
     m_frame.paint();
-
-    if (is_focused) {
-        LockGuard lock_guard(focus_lock());
-        set_focused();
-    }
 }
 
 void Window::handle_event(const Event& event)
@@ -79,7 +73,6 @@ void Window::handle_event(const Event& event)
 
             Compositor::the().add_dirty_rect(full_translated_rect());
 
-            LockGuard lock_guard(lock());
             m_location   = Point(new_locx, new_locy);
             m_drag_begin = { event.mouse_move.x, event.mouse_move.y };
         } else if (m_frame.close_button_rect().contains({ event.mouse_move.x, event.mouse_move.y })

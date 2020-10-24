@@ -17,7 +17,7 @@ public:
     static constexpr Color desktop_color = { 0x2d, 0x2d, 0x2d };
     static constexpr Color taskbar_color = { 0x8d, 0x26, 0x64 };
 
-    static void run();
+    static void initialize();
 
     static Compositor& the()
     {
@@ -27,11 +27,7 @@ public:
 
     void compose();
 
-    void add_dirty_rect(const Rect& rect)
-    {
-        LockGuard lock_guard(m_lock);
-        m_dirty_rects.append(rect);
-    }
+    void add_dirty_rect(const Rect& rect) { m_dirty_rects.append(rect); }
 
 private:
     void prepare_desktop();
@@ -40,8 +36,6 @@ private:
     void update_cursor_position();
 
 private:
-    InterruptSafeSpinLock m_lock;
-
     Painter* m_painter;
 
     Rect m_clock_rect;

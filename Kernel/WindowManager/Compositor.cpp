@@ -1,6 +1,5 @@
 #include "Compositor.h"
 #include "Drivers/Video/VideoDevice.h"
-#include "Multitasking/Sleep.h"
 #include "Screen.h"
 #include "Window.h"
 #include "WindowManager.h"
@@ -13,6 +12,13 @@ namespace kernel {
 
 Compositor* Compositor::s_instance;
 
+void Compositor::initialize()
+{
+    ASSERT(s_instance == nullptr);
+
+    s_instance = new Compositor;
+}
+
 Compositor::Compositor()
     : m_painter(new Painter(&Screen::the().surface())), m_last_cursor_location(Screen::the().cursor().location())
 {
@@ -22,14 +28,10 @@ Compositor::Compositor()
 
 void Compositor::compose()
 {
-    LockGuard compositor_lock_guard(m_lock);
-
     update_clock_widget();
     update_cursor_position();
 
-    LockGuard wm_lock_guard(WindowManager::the().window_lock());
     for (auto& window: WindowManager::the().windows()) {
-        LockGuard window_lock_guard(window->lock());
         if (window->is_invalidated()) {
             m_dirty_rects.append(window->full_translated_rect());
             window->set_invalidated(false);
@@ -50,8 +52,6 @@ void Compositor::compose()
     auto& windows = WindowManager::the().windows();
     for (auto itr = --windows.end(); itr != windows.end(); --itr) {
         auto& window = *itr;
-
-        LockGuard window_lock_guard(window->lock());
 
         for (auto& rect: m_dirty_rects) {
             auto window_rect      = window->full_translated_rect();
@@ -85,16 +85,6 @@ void Compositor::compose()
     if (m_cursor_invalidated) {
         m_cursor_invalidated = false;
         m_painter->draw_bitmap(Screen::the().cursor().bitmap(), m_last_cursor_location);
-    }
-}
-
-void Compositor::run()
-{
-    s_instance = new Compositor();
-
-    for (;;) {
-        Compositor::the().compose();
-        sleep::for_milliseconds(1000 / 100);
     }
 }
 

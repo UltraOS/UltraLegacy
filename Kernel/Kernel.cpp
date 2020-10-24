@@ -112,15 +112,8 @@ void process_with_windows()
     window_1_painter.fill_rect(window_1->view_rect(), { 0x16, 0x21, 0x3e });
     window_2_painter.fill_rect(window_2->view_rect(), { 0x0f, 0x34, 0x60 });
 
-    {
-        LockGuard lock_guard(window_1->lock());
-        window_1->set_invalidated(true);
-    }
-
-    {
-        LockGuard lock_guard(window_2->lock());
-        window_2->set_invalidated(true);
-    }
+    window_1->set_invalidated(true);
+    window_2->set_invalidated(true);
 
     while (true)
         ;

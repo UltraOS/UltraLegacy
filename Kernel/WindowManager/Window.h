@@ -16,7 +16,7 @@ class Window {
 public:
     enum class Style { FRAMELESS, NORMAL_FRAME };
 
-    static RefPtr<Window> create(Thread& owner, const Rect& window_rect, bool is_focused = false);
+    static RefPtr<Window> create(Thread& owner, const Rect& window_rect);
     static RefPtr<Window> create_desktop(Thread& owner, const Rect& window_rect);
 
     Rect         full_rect() const { return m_frame.rect(); }
@@ -33,8 +33,6 @@ public:
     bool is_focused() { return s_currently_focused == this; }
 
     static bool is_any_focused() { return s_currently_focused != nullptr; }
-
-    static InterruptSafeSpinLock& focus_lock() { return s_lock; }
 
     static Window& focused()
     {
@@ -62,15 +60,11 @@ public:
     bool is_invalidated() { return m_invalidated; }
     void set_invalidated(bool setting) { m_invalidated = setting; }
 
-    InterruptSafeSpinLock& lock() { return m_lock; }
-
 private:
-    Window(Thread& owner, Style, const Rect& window_rect, bool is_focused);
+    Window(Thread& owner, Style, const Rect& window_rect);
 
 private:
     Thread& m_owner;
-
-    InterruptSafeSpinLock m_lock;
 
     Style       m_style;
     Rect        m_window_rect;
@@ -88,7 +82,6 @@ private:
     DynamicArray<Event> m_event_queue;
 
     // TODO: this should be a weak ptr
-    static Window*               s_currently_focused;
-    static InterruptSafeSpinLock s_lock;
+    static Window* s_currently_focused;
 };
 }

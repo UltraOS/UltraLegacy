@@ -8,13 +8,13 @@ Screen* Screen::s_instance;
 
 Screen::Screen(VideoDevice& device) : m_device(device), m_rect(0, 0, device.mode().width, device.mode().height)
 {
-    m_cursor.set_location(rect().center());
+    auto cursor_location = rect().center();
+    m_cursor.set_location(cursor_location);
+    m_shadow_cursor_location = cursor_location;
 }
 
 void Screen::check_if_focused_window_should_change()
 {
-    LockGuard lock_guard(WindowManager::the().window_lock());
-
     auto& window_list                   = WindowManager::the().windows();
     auto  window_that_should_be_focused = window_list.end();
 
@@ -38,7 +38,7 @@ void Screen::check_if_focused_window_should_change()
     }
 }
 
-void Screen::recalculate_cursor_position(i16 delta_x, i16 delta_y)
+Point Screen::cursor_position_for_delta(i16 delta_x, i16 delta_y)
 {
     bool left_movement = delta_x < 0;
     bool down_movement = delta_y < 0;
@@ -46,8 +46,8 @@ void Screen::recalculate_cursor_position(i16 delta_x, i16 delta_y)
     size_t new_x = 0;
     size_t new_y = 0;
 
-    auto current_x = cursor().location().x();
-    auto current_y = cursor().location().y();
+    auto current_x = m_shadow_cursor_location.x();
+    auto current_y = m_shadow_cursor_location.y();
 
     if (left_movement) {
         delta_x *= -1;
@@ -73,6 +73,10 @@ void Screen::recalculate_cursor_position(i16 delta_x, i16 delta_y)
             new_y = current_y - delta_y;
     }
 
-    m_cursor.set_location({ new_x, new_y });
+    Point new_position = { new_x, new_y };
+
+    m_shadow_cursor_location = new_position;
+
+    return new_position;
 }
 }

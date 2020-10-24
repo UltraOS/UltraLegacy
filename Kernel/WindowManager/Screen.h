@@ -22,12 +22,14 @@ public:
         return *s_instance;
     }
 
-    void recalculate_cursor_position(i16 delta_x, i16 delta_y);
-    void check_if_focused_window_should_change();
+    Point cursor_position_for_delta(i16 delta_x, i16 delta_y);
+    void  check_if_focused_window_should_change();
 
     const Rect& rect() const { return m_rect; }
 
     const Cursor& cursor() const { return m_cursor; }
+
+    void move_cursor_to(Point new_location) { m_cursor.set_location(new_location); }
 
     Surface& surface() const { return m_device.surface(); }
 
@@ -38,6 +40,10 @@ private:
     VideoDevice& m_device;
     Cursor       m_cursor;
     Rect         m_rect;
+
+    // To make cursor_position_for_delta() alwaysreturn
+    // an updated position thus preventing cursor lag
+    Point m_shadow_cursor_location;
 
     static Screen* s_instance;
 };
