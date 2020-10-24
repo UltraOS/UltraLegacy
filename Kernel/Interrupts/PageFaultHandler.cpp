@@ -3,6 +3,10 @@
 
 namespace kernel {
 
+PageFaultHandler PageFaultHandler::s_instance;
+
+PageFaultHandler::PageFaultHandler() : ExceptionHandler(exception_number) { }
+
 void PageFaultHandler::handle(const RegisterState& state)
 {
     ++m_occurrences;
