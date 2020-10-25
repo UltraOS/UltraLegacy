@@ -1,7 +1,7 @@
 # UltraOS
 An operating system that doesn't try to be UNIX. Made completely from scratch with its own bootloader. 😊
 
-![alt-text](https://i.ibb.co/2dx8Shv/Untitled.png)
+![alt-text](https://i.ibb.co/Q8HWWLF/new-desktop.png)
 
 ## Current Features
 - Support for both i386 and AMD64
@@ -41,7 +41,7 @@ However, keep in mind that the system is still in very early development stage a
 - Build the system using `./Scripts/build_ultra.{sh/bat}`
 - Find a free USB stick (the default image size is 64MB atm)
 - Find some software to write raw data to usb, I personally use `SUSE ImageWriter`
-- Write the `UltraHDD{32/64}-flat.vmdk` to the stick
+- Write the `Ultra{32/64}HDD-flat.vmdk` to the stick
 - Insert the USB stick into your computer and boot from it (you might have to enable legacy boot/disable secure boot)
 
 If you encounter any bugs/crashes/weird behavior please let me know so I can fix it. :)
