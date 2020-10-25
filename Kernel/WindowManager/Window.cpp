@@ -41,49 +41,84 @@ Window::Window(Thread& owner, Style style, const Rect& window_rect)
     m_frame.paint();
 }
 
-void Window::handle_event(const Event& event)
+bool Window::handle_event(const Event& event, bool is_handled)
 {
     if (!has_frame()) {
         // Uncomment later when needed
         // m_event_queue.append(event);
-        return;
+        return true;
     }
 
-    if (event.type == Event::Type::BUTTON_STATE) {
-        auto key   = event.vk_state.vkey;
-        auto state = event.vk_state.state;
+    switch (event.type) {
+    case Event::Type::BUTTON_STATE: {
+        auto key       = event.vk_state.vkey;
+        auto key_state = event.vk_state.state;
 
         if (key == VK::MOUSE_LEFT_BUTTON) {
-            if (state == VKState::PRESSED) {
+            if (key_state == VKState::PRESSED) {
                 if (m_frame.draggable_rect().contains(Screen::the().cursor().location())) {
-                    m_is_being_dragged = true;
-                    m_drag_begin       = Screen::the().cursor().location();
+                    m_state      = State::IS_BEING_DRAGGED;
+                    m_drag_begin = Screen::the().cursor().location();
+                } else {
+                    m_state = State::NORMAL;
                 }
             } else {
-                m_is_being_dragged = false;
+                m_state = State::NORMAL;
             }
         }
-    } else if (event.type == Event::Type::MOUSE_MOVE) {
-        if (m_is_being_dragged) {
+
+        return true;
+    }
+    case Event::Type::MOUSE_MOVE: {
+        auto release_buttons_if_needed = [this]() {
+            if (m_state == State::CLOSE_BUTTON_HOVERED) {
+                m_state = State::NORMAL;
+                m_frame.on_close_button_released();
+            } else if (m_state == State::MAXIMIZE_BUTTON_HOVERED) {
+                m_state = State::NORMAL;
+                m_frame.on_maximize_button_released();
+            } else if (m_state == State::MINIMIZE_BUTTON_HOVERED) {
+                m_state = State::NORMAL;
+                m_frame.on_minimize_button_released();
+            }
+        };
+
+        if (m_state == State::IS_BEING_DRAGGED) {
             i32 delta_x = static_cast<i32>(event.mouse_move.x) - static_cast<i32>(m_drag_begin.x());
             i32 delta_y = static_cast<i32>(event.mouse_move.y) - static_cast<i32>(m_drag_begin.y());
 
-            i32 new_locx = static_cast<i32>(m_location.x()) + delta_x;
-            i32 new_locy = static_cast<i32>(m_location.y()) + delta_y;
+            i32 new_x = static_cast<i32>(m_location.x()) + delta_x;
+            i32 new_y = static_cast<i32>(m_location.y()) + delta_y;
 
             Compositor::the().add_dirty_rect(full_translated_rect());
 
-            m_location   = Point(new_locx, new_locy);
+            m_location   = Point(new_x, new_y);
             m_drag_begin = { event.mouse_move.x, event.mouse_move.y };
-        } else if (m_frame.close_button_rect().contains({ event.mouse_move.x, event.mouse_move.y })
-                   && !m_close_button_hovered) {
-            m_close_button_hovered = true;
-            m_frame.on_close_button_hovered();
-        } else if (!m_frame.close_button_rect().contains({ event.mouse_move.x, event.mouse_move.y })
-                   && m_close_button_hovered) {
-            m_close_button_hovered = false;
-            m_frame.on_close_button_released();
+        } else if (m_frame.close_button_rect().contains({ event.mouse_move.x, event.mouse_move.y }) && !is_handled) {
+            if (m_state != State::CLOSE_BUTTON_HOVERED) {
+                release_buttons_if_needed();
+                m_state = State::CLOSE_BUTTON_HOVERED;
+                m_frame.on_close_button_hovered();
+            }
+        } else if (m_frame.maximize_button_rect().contains({ event.mouse_move.x, event.mouse_move.y }) && !is_handled) {
+            if (m_state != State::MAXIMIZE_BUTTON_HOVERED) {
+                release_buttons_if_needed();
+                m_state = State::MAXIMIZE_BUTTON_HOVERED;
+                m_frame.on_maximize_button_hovered();
+            }
+        } else if (m_frame.minimize_button_rect().contains({ event.mouse_move.x, event.mouse_move.y }) && !is_handled) {
+            if (m_state != State::MINIMIZE_BUTTON_HOVERED) {
+                release_buttons_if_needed();
+                m_state = State::MINIMIZE_BUTTON_HOVERED;
+                m_frame.on_minimize_button_hovered();
+            }
+        } else {
+            release_buttons_if_needed();
+            return false;
         }
+        return true;
+    }
+    default: return true;
     }
 }
 }

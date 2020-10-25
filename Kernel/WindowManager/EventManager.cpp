@@ -36,8 +36,10 @@ void EventManager::dispatch_pending()
             auto& mouse_event = event.mouse_move;
             Screen::the().move_cursor_to({ mouse_event.x, mouse_event.y });
 
-            for (auto& window: WindowManager::the().windows())
-                window->handle_event(event);
+            bool event_handled = false;
+            for (auto& window: WindowManager::the().windows()) {
+                event_handled = (window->handle_event(event, event_handled) || event_handled);
+            }
             continue;
         }
 

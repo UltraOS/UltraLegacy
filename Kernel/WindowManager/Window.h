@@ -55,13 +55,21 @@ public:
     size_t width() const { return surface().width(); }
     size_t height() const { return surface().height(); }
 
-    void handle_event(const Event& event);
+    bool handle_event(const Event& event, bool is_handled = false);
 
     bool is_invalidated() { return m_invalidated; }
     void set_invalidated(bool setting) { m_invalidated = setting; }
 
 private:
     Window(Thread& owner, Style, const Rect& window_rect);
+
+    enum class State {
+        NORMAL,
+        IS_BEING_DRAGGED,
+        CLOSE_BUTTON_HOVERED,
+        MAXIMIZE_BUTTON_HOVERED,
+        MINIMIZE_BUTTON_HOVERED,
+    };
 
 private:
     Thread& m_owner;
@@ -71,11 +79,10 @@ private:
     WindowFrame m_frame;
     Point       m_location;
     bool        m_invalidated { true };
+    State       m_state { State::NORMAL };
 
     RefPtr<Surface> m_front_surface;
 
-    bool  m_is_being_dragged { false };
-    bool  m_close_button_hovered { false };
     Point m_drag_begin;
 
     // Should also be a list?
