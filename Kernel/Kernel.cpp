@@ -103,8 +103,8 @@ void run(Context* context)
 
 void process_with_windows()
 {
-    auto window_1 = Window::create(*Thread::current(), { 10, 10, 200, 100 });
-    auto window_2 = Window::create(*Thread::current(), { 200, 200, 500, 300 });
+    auto window_1 = Window::create(*Thread::current(), { 10, 10, 200, 100 }, WindowManager::the().active_theme());
+    auto window_2 = Window::create(*Thread::current(), { 200, 200, 500, 300 }, WindowManager::the().active_theme());
 
     Painter window_1_painter(&window_1->surface());
     Painter window_2_painter(&window_2->surface());

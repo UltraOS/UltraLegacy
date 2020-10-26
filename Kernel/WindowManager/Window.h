@@ -5,6 +5,7 @@
 #include "Event.h"
 #include "Multitasking/Thread.h"
 #include "Rect.h"
+#include "Theme.h"
 #include "WindowFrame.h"
 
 namespace kernel {
@@ -16,8 +17,10 @@ class Window {
 public:
     enum class Style { FRAMELESS, NORMAL_FRAME };
 
-    static RefPtr<Window> create(Thread& owner, const Rect& window_rect);
-    static RefPtr<Window> create_desktop(Thread& owner, const Rect& window_rect);
+    static RefPtr<Window> create(Thread& owner, const Rect& window_rect, RefPtr<Theme>);
+    static RefPtr<Window> create_desktop(Thread& owner, const Rect& window_rect, RefPtr<Theme>);
+
+    const RefPtr<Theme> theme() const { return m_theme; }
 
     Rect         full_rect() const { return m_frame.rect(); }
     const Rect&  window_rect() const { return m_window_rect; }
@@ -61,7 +64,7 @@ public:
     void set_invalidated(bool setting) { m_invalidated = setting; }
 
 private:
-    Window(Thread& owner, Style, const Rect& window_rect);
+    Window(Thread& owner, Style, const Rect& window_rect, RefPtr<Theme>);
 
     enum class State {
         NORMAL,
@@ -73,6 +76,8 @@ private:
 
 private:
     Thread& m_owner;
+
+    RefPtr<Theme> m_theme;
 
     Style       m_style;
     Rect        m_window_rect;

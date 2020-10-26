@@ -1,12 +1,13 @@
 #pragma once
 
 #include "Common/List.h"
+#include "Theme.h"
 #include "Window.h"
 
 namespace kernel {
 
 class WindowManager {
-    MAKE_SINGLETON(WindowManager) = default;
+    MAKE_SINGLETON(WindowManager);
 
 public:
     static void initialize();
@@ -20,21 +21,28 @@ public:
 
     static void run();
 
+    RefPtr<Theme> active_theme() const { return m_theme; }
+
     InterruptSafeSpinLock& window_lock() { return m_lock; }
 
     List<RefPtr<Window>>& windows() { return m_windows; }
 
-    static WindowManager& the() { return s_instance; }
+    static WindowManager& the()
+    {
+        ASSERT(s_instance != nullptr);
+        return *s_instance;
+    }
 
     RefPtr<Window>& desktop() { return m_desktop_window; }
 
 private:
     InterruptSafeSpinLock m_lock;
 
+    RefPtr<Theme>        m_theme;
     RefPtr<Window>       m_desktop_window;
     List<RefPtr<Window>> m_windows;
 
-    static WindowManager s_instance;
+    static WindowManager* s_instance;
 };
 
 }

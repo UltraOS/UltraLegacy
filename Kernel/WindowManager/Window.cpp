@@ -9,21 +9,21 @@ namespace kernel {
 
 Window* Window::s_currently_focused;
 
-RefPtr<Window> Window::create(Thread& owner, const Rect& window_rect)
+RefPtr<Window> Window::create(Thread& owner, const Rect& window_rect, RefPtr<Theme> theme)
 {
-    RefPtr<Window> window = new Window(owner, Style::NORMAL_FRAME, window_rect);
+    RefPtr<Window> window = new Window(owner, Style::NORMAL_FRAME, window_rect, theme);
     WindowManager::the().add_window(window);
     return window;
 }
 
-RefPtr<Window> Window::create_desktop(Thread& owner, const Rect& window_rect)
+RefPtr<Window> Window::create_desktop(Thread& owner, const Rect& window_rect, RefPtr<Theme> theme)
 {
-    return new Window(owner, Style::FRAMELESS, window_rect);
+    return new Window(owner, Style::FRAMELESS, window_rect, theme);
 }
 
-Window::Window(Thread& owner, Style style, const Rect& window_rect)
-    : m_owner(owner), m_style(style), m_window_rect(0, 0, window_rect.width(), window_rect.height()), m_frame(*this),
-      m_location(window_rect.top_left())
+Window::Window(Thread& owner, Style style, const Rect& window_rect, RefPtr<Theme> theme)
+    : m_owner(owner), m_theme(theme), m_style(style), m_window_rect(0, 0, window_rect.width(), window_rect.height()),
+      m_frame(*this), m_location(window_rect.top_left())
 {
     auto full_window_rect = full_rect();
     auto pages_needed = ceiling_divide(full_window_rect.width() * full_window_rect.height() * sizeof(u32), Page::size);
@@ -114,7 +114,8 @@ bool Window::handle_event(const Event& event, bool is_handled)
             }
         } else {
             release_buttons_if_needed();
-            return false;
+            if (!full_translated_rect().contains({ event.mouse_move.x, event.mouse_move.y }))
+                return false;
         }
         return true;
     }

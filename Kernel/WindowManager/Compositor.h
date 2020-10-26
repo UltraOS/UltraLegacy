@@ -14,9 +14,6 @@ class Compositor {
     MAKE_SINGLETON(Compositor);
 
 public:
-    static constexpr Color desktop_color = { 0x2d, 0x2d, 0x2d };
-    static constexpr Color taskbar_color = { 0x8d, 0x26, 0x64 };
-
     static void initialize();
 
     static Compositor& the()

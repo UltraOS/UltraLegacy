@@ -8,14 +8,22 @@
 
 namespace kernel {
 
-WindowManager WindowManager::s_instance;
+WindowManager* WindowManager::s_instance;
 
 void WindowManager::initialize()
 {
+    ASSERT(s_instance == nullptr);
+
     Screen::initialize(VideoDevice::the());
-    the().m_desktop_window = Window::create_desktop(*Thread::current(), Screen::the().rect());
+    s_instance = new WindowManager();
     Compositor::initialize();
     Process::create_supervisor(&WindowManager::run);
+}
+
+WindowManager::WindowManager()
+    : m_theme(Theme::make_default()),
+      m_desktop_window(Window::create_desktop(*Thread::current(), Screen::the().rect(), m_theme))
+{
 }
 
 void WindowManager::run()

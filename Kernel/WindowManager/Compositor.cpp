@@ -44,7 +44,7 @@ void Compositor::compose()
         m_painter->reset_clip_rect();
 
         if (!m_cursor_invalidated)
-            m_cursor_invalidated = rect.intersects(Screen::the().cursor().rect().translated(m_last_cursor_location));
+            m_cursor_invalidated = rect.contains(m_last_cursor_location);
     }
 
     DynamicArray<Rect> drawn_window_rects;
@@ -114,9 +114,12 @@ void Compositor::prepare_desktop()
     Point clock_top_left(Screen::the().width() - clock_widget_width, taskbar_rect.center().y() - 8);
     m_clock_rect = Rect(clock_top_left, clock_widget_width, clock_width_height);
 
+    auto& desktop_theme = WindowManager::the().desktop()->theme();
+
     Painter painter(&WindowManager::the().desktop()->surface());
-    painter.fill_rect(desktop_rect, desktop_color);
-    painter.fill_rect(taskbar_rect, taskbar_color);
+
+    painter.fill_rect(desktop_rect, desktop_theme->desktop_background_color());
+    painter.fill_rect(taskbar_rect, desktop_theme->taskbar_color());
 
     update_clock_widget();
 
@@ -148,6 +151,8 @@ void Compositor::update_clock_widget()
         time.hour = 12;
 
     size_t current_x_offset = m_clock_rect.left();
+
+    auto taskbar_color = WindowManager::the().active_theme()->taskbar_color();
 
     auto draw_digits = [&](char* digits, size_t count) {
         for (size_t i = 0; i < count; ++i) {

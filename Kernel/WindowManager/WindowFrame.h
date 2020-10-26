@@ -12,14 +12,6 @@ class WindowFrame {
     MAKE_NONCOPYABLE(WindowFrame);
 
 public:
-    static constexpr size_t upper_frame_height    = 20;
-    static constexpr size_t close_button_width    = 20;
-    static constexpr size_t maximize_button_width = 20;
-    static constexpr size_t minimize_button_width = 20;
-
-    static constexpr Color default_frame_color        = { 0x8d, 0x26, 0x64 };
-    static constexpr Color default_frame_dimmer_color = { 0x69, 0x1c, 0x4a };
-
     WindowFrame(Window& owner);
     void paint();
     Rect rect() const;
@@ -52,27 +44,7 @@ private:
     void draw_minimize_button(Color fill);
 
 private:
-    Window&    m_owner;
-    BitmapView m_close_button_bitmap;
-    BitmapView m_maximize_button_bitmap;
-    BitmapView m_minimize_button_bitmap;
-
-    static constexpr size_t close_button_bitmap_height         = 8;
-    static constexpr size_t close_button_bitmap_width          = 8;
-    static constexpr size_t close_button_bitmap_width_in_bytes = 2;
-
-    static constexpr size_t maximize_button_bitmap_height         = 8;
-    static constexpr size_t maximize_button_bitmap_width          = 8;
-    static constexpr size_t maximize_button_bitmap_width_in_bytes = 2;
-
-    static constexpr size_t minimize_button_bitmap_height         = 8;
-    static constexpr size_t minimize_button_bitmap_width          = 8;
-    static constexpr size_t minimize_button_bitmap_width_in_bytes = 2;
-
-    static const u8    s_close_button_bitmap_data[close_button_bitmap_height * close_button_bitmap_width];
-    static const u8    s_maximize_button_bitmap_data[close_button_bitmap_height * close_button_bitmap_width];
-    static const u8    s_minimize_button_bitmap_data[close_button_bitmap_height * close_button_bitmap_width];
-    static const Color s_palette[2];
+    Window& m_owner;
 };
 
 }
