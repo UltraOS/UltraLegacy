@@ -20,7 +20,8 @@ void Compositor::initialize()
 }
 
 Compositor::Compositor()
-    : m_painter(new Painter(&Screen::the().surface())), m_last_cursor_location(Screen::the().cursor().location())
+    : m_painter(new Painter(&Screen::the().surface()))
+    , m_last_cursor_location(Screen::the().cursor().location())
 {
     prepare_desktop();
     m_painter->draw_bitmap(Screen::the().cursor().bitmap(), m_last_cursor_location);
@@ -31,14 +32,14 @@ void Compositor::compose()
     update_clock_widget();
     update_cursor_position();
 
-    for (auto& window: WindowManager::the().windows()) {
+    for (auto& window : WindowManager::the().windows()) {
         if (window->is_invalidated()) {
             m_dirty_rects.append(window->full_translated_rect());
             window->set_invalidated(false);
         }
     }
 
-    for (auto& rect: m_dirty_rects) {
+    for (auto& rect : m_dirty_rects) {
         m_painter->set_clip_rect(rect);
         m_painter->blit(rect.top_left(), WindowManager::the().desktop()->surface(), rect);
         m_painter->reset_clip_rect();
@@ -53,8 +54,8 @@ void Compositor::compose()
     for (auto itr = --windows.end(); itr != windows.end(); --itr) {
         auto& window = *itr;
 
-        for (auto& rect: m_dirty_rects) {
-            auto window_rect      = window->full_translated_rect();
+        for (auto& rect : m_dirty_rects) {
+            auto window_rect = window->full_translated_rect();
             auto intersected_rect = window_rect.intersected(rect);
 
             if (!intersected_rect.empty()) {
@@ -66,8 +67,8 @@ void Compositor::compose()
             }
         }
 
-        for (auto& rect: drawn_window_rects) {
-            auto window_rect      = window->full_translated_rect();
+        for (auto& rect : drawn_window_rects) {
+            auto window_rect = window->full_translated_rect();
             auto intersected_rect = window_rect.intersected(rect);
 
             if (!intersected_rect.empty()) {
@@ -90,12 +91,12 @@ void Compositor::compose()
 
 void Compositor::update_cursor_position()
 {
-    auto& cursor   = Screen::the().cursor();
-    auto  location = cursor.location();
+    auto& cursor = Screen::the().cursor();
+    auto location = cursor.location();
 
     if (location != m_last_cursor_location) {
         m_dirty_rects.emplace(cursor.rect().translated(m_last_cursor_location));
-        m_cursor_invalidated   = true;
+        m_cursor_invalidated = true;
         m_last_cursor_location = location;
     }
 }
@@ -139,7 +140,7 @@ void Compositor::update_clock_widget()
 
     last_drawn_second = Time::now();
 
-    auto time  = Time::now_readable();
+    auto time = Time::now_readable();
     bool is_pm = false;
 
     if (time.hour >= 12) {

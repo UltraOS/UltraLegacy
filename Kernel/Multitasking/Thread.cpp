@@ -20,8 +20,8 @@ RefPtr<Thread> Thread::create_supervisor_thread(Address kernel_stack, Address en
         ;
 #endif // clang-format on
 
-    auto thread                        = new Thread(AddressSpace::of_kernel(), adjusted_stack);
-    thread->m_is_supervisor            = true;
+    auto thread = new Thread(AddressSpace::of_kernel(), adjusted_stack);
+    thread->m_is_supervisor = true;
     thread->m_initial_kernel_stack_top = kernel_stack;
 
     auto& frame = *new (adjusted_stack.as_pointer<void>()) RegisterState;
@@ -33,15 +33,15 @@ RefPtr<Thread> Thread::create_supervisor_thread(Address kernel_stack, Address en
     frame.es = GDT::kernel_data_selector();
     frame.ds = GDT::kernel_data_selector();
 
-    frame.eip    = entrypoint;
-    frame.cs     = GDT::kernel_code_selector();
+    frame.eip = entrypoint;
+    frame.cs = GDT::kernel_code_selector();
     frame.eflags = static_cast<size_t>(CPU::FLAGS::INTERRUPTS);
 #elif defined(ULTRA_64)
-    frame.cs     = GDT::kernel_code_selector();
-    frame.ss     = GDT::kernel_data_selector();
+    frame.cs = GDT::kernel_code_selector();
+    frame.ss = GDT::kernel_data_selector();
     frame.rflags = static_cast<size_t>(CPU::FLAGS::INTERRUPTS);
-    frame.rsp    = kernel_stack;
-    frame.rip    = entrypoint;
+    frame.rsp = kernel_stack;
+    frame.rip = entrypoint;
 #endif
 
     return thread;
@@ -52,8 +52,8 @@ Thread::create_user_thread(AddressSpace& page_dir, Address user_stack, Address k
 {
     Address adjusted_stack = kernel_stack - sizeof(RegisterState);
 
-    auto thread                        = new Thread(page_dir, adjusted_stack);
-    thread->m_is_supervisor            = false;
+    auto thread = new Thread(page_dir, adjusted_stack);
+    thread->m_is_supervisor = false;
     thread->m_initial_kernel_stack_top = kernel_stack;
 
     auto& frame = *new (adjusted_stack.as_pointer<void>()) RegisterState;
@@ -61,11 +61,11 @@ Thread::create_user_thread(AddressSpace& page_dir, Address user_stack, Address k
     static constexpr auto rpl_ring_3 = 0x3;
 
 #ifdef ULTRA_32
-    frame.gs           = GDT::userland_data_selector() | rpl_ring_3;
-    frame.fs           = GDT::userland_data_selector() | rpl_ring_3;
-    frame.es           = GDT::userland_data_selector() | rpl_ring_3;
-    frame.ds           = GDT::userland_data_selector() | rpl_ring_3;
-    frame.cs           = GDT::userland_code_selector() | rpl_ring_3;
+    frame.gs = GDT::userland_data_selector() | rpl_ring_3;
+    frame.fs = GDT::userland_data_selector() | rpl_ring_3;
+    frame.es = GDT::userland_data_selector() | rpl_ring_3;
+    frame.ds = GDT::userland_data_selector() | rpl_ring_3;
+    frame.cs = GDT::userland_code_selector() | rpl_ring_3;
     frame.userspace_ss = GDT::userland_data_selector() | rpl_ring_3;
 
     frame.userspace_esp = user_stack;
@@ -74,18 +74,20 @@ Thread::create_user_thread(AddressSpace& page_dir, Address user_stack, Address k
 
     frame.eflags = static_cast<size_t>(CPU::FLAGS::INTERRUPTS);
 #elif defined(ULTRA_64)
-    frame.cs     = GDT::userland_code_selector() | rpl_ring_3;
-    frame.ss     = GDT::userland_data_selector() | rpl_ring_3;
+    frame.cs = GDT::userland_code_selector() | rpl_ring_3;
+    frame.ss = GDT::userland_data_selector() | rpl_ring_3;
     frame.rflags = static_cast<size_t>(CPU::FLAGS::INTERRUPTS);
-    frame.rsp    = user_stack;
-    frame.rip    = entrypoint;
+    frame.rsp = user_stack;
+    frame.rip = entrypoint;
 #endif
 
     return thread;
 }
 
 Thread::Thread(AddressSpace& address_space, Address kernel_stack)
-    : m_thread_id(s_next_thread_id++), m_address_space(address_space), m_control_block { kernel_stack }
+    : m_thread_id(s_next_thread_id++)
+    , m_address_space(address_space)
+    , m_control_block { kernel_stack }
 {
 }
 

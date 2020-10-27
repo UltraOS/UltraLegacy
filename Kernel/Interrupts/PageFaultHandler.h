@@ -15,7 +15,7 @@ public:
     size_t occurances() const { return m_occurrences; }
 
 private:
-    size_t                  m_occurrences { 0 };
+    size_t m_occurrences { 0 };
     static PageFaultHandler s_instance;
 };
 }

@@ -12,7 +12,10 @@ class Cursor {
     MAKE_NONCOPYABLE(Cursor);
 
 public:
-    Cursor(Point location = { 0, 0 }) : m_location(location) { }
+    Cursor(Point location = { 0, 0 })
+        : m_location(location)
+    {
+    }
 
     void set_location(Point p) { m_location = p; }
 

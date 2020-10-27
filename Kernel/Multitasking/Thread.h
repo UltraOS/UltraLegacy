@@ -34,13 +34,13 @@ public:
     static RefPtr<Thread>
     create_user_thread(AddressSpace& page_dir, Address user_stack, Address kernel_stack, Address entrypoint);
 
-    void    set_next(Thread* thread) { m_next = thread; }
+    void set_next(Thread* thread) { m_next = thread; }
     Thread* next() { return m_next; }
-    bool    has_next() { return next(); }
+    bool has_next() { return next(); }
 
-    void    set_previous(Thread* thread) { m_previous = thread; }
+    void set_previous(Thread* thread) { m_previous = thread; }
     Thread* previous() { return m_previous; }
-    bool    has_previous() { return previous(); }
+    bool has_previous() { return previous(); }
 
     void activate();
     void deactivate();
@@ -58,13 +58,13 @@ public:
 
     void sleep(u64 until)
     {
-        m_state        = State::BLOCKED;
+        m_state = State::BLOCKED;
         m_wake_up_time = until;
     }
 
     void exit(u8 code)
     {
-        m_state     = State::DEAD;
+        m_state = State::DEAD;
         m_exit_code = code;
     }
 
@@ -83,16 +83,16 @@ private:
     Thread(AddressSpace& page_dir, Address kernel_stack);
 
 private:
-    u32           m_thread_id;
+    u32 m_thread_id;
     AddressSpace& m_address_space;
-    ControlBlock  m_control_block { nullptr };
-    Address       m_initial_kernel_stack_top { nullptr };
-    State         m_state { State::READY };
-    u64           m_wake_up_time { 0 };
-    bool          m_is_supervisor { false };
-    u8            m_exit_code { 0 };
-    Thread*       m_previous { nullptr };
-    Thread*       m_next { nullptr };
+    ControlBlock m_control_block { nullptr };
+    Address m_initial_kernel_stack_top { nullptr };
+    State m_state { State::READY };
+    u64 m_wake_up_time { 0 };
+    bool m_is_supervisor { false };
+    u8 m_exit_code { 0 };
+    Thread* m_previous { nullptr };
+    Thread* m_next { nullptr };
 
     Window* m_window;
 

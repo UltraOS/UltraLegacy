@@ -10,7 +10,7 @@ class Process {
 
 public:
     static constexpr auto default_userland_stack_size = 4 * MB;
-    static constexpr auto default_kernel_stack_size   = 16 * KB;
+    static constexpr auto default_kernel_stack_size = 16 * KB;
 
     static void inititalize_for_this_processor();
 
@@ -32,12 +32,12 @@ private:
     Process() = default;
 
 private:
-    u32                          m_process_id { 0 };
-    RefPtr<AddressSpace>         m_address_space;
-    bool                         m_is_supervisor { false };
+    u32 m_process_id { 0 };
+    RefPtr<AddressSpace> m_address_space;
+    bool m_is_supervisor { false };
     DynamicArray<RefPtr<Thread>> m_threads;
 
-    static Atomic<u32>           s_next_process_id;
+    static Atomic<u32> s_next_process_id;
     static InterruptSafeSpinLock s_lock;
 };
 }

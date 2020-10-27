@@ -21,8 +21,8 @@ void WindowManager::initialize()
 }
 
 WindowManager::WindowManager()
-    : m_theme(Theme::make_default()),
-      m_desktop_window(Window::create_desktop(*Thread::current(), Screen::the().rect(), m_theme))
+    : m_theme(Theme::make_default())
+    , m_desktop_window(Window::create_desktop(*Thread::current(), Screen::the().rect(), m_theme))
 {
 }
 

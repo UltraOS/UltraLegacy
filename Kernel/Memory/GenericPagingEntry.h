@@ -8,33 +8,31 @@ namespace kernel {
 
 class GenericPagingEntry {
 public:
-    // clang-format off
     enum Attributes : u16 {
-        NOT_PRESENT   = 0,
-        PRESENT       = SET_BIT(0),
-        READ_ONLY     = 0,
-        READ_WRITE    = SET_BIT(1),
-        SUPERVISOR    = 0,
-        USER          = SET_BIT(2),
+        NOT_PRESENT = 0,
+        PRESENT = SET_BIT(0),
+        READ_ONLY = 0,
+        READ_WRITE = SET_BIT(1),
+        SUPERVISOR = 0,
+        USER = SET_BIT(2),
 
         WRITE_THROUGH = SET_BIT(3),
-        PWT_BIT       = SET_BIT(3),
+        PWT_BIT = SET_BIT(3),
 
-        DO_NOT_CACHE  = SET_BIT(4),
-        PCD_BIT       = SET_BIT(5),
+        DO_NOT_CACHE = SET_BIT(4),
+        PCD_BIT = SET_BIT(5),
 
-        PAT_BIT_4K    = SET_BIT(7),
+        PAT_BIT_4K = SET_BIT(7),
 
-        PAGE_4KB      = 0,
+        PAGE_4KB = 0,
 #ifdef ULTRA_32
-        PAGE_4MB      = SET_BIT(7),
+        PAGE_4MB = SET_BIT(7),
 #elif defined(ULTRA_64)
-        PAGE_2MB      = SET_BIT(7),
-        PAGE_1GB      = SET_BIT(7),
+        PAGE_2MB = SET_BIT(7),
+        PAGE_1GB = SET_BIT(7),
 #endif
-        GLOBAL        = SET_BIT(8),
+        GLOBAL = SET_BIT(8),
     };
-    // clang-format on
 
     friend Attributes operator|(Attributes l, Attributes r)
     {
@@ -60,7 +58,10 @@ public:
 
 #ifdef ULTRA_64
 
-    void set_executable(bool setting) { m_no_execute = setting; }
+    void set_executable(bool setting)
+    {
+        m_no_execute = setting;
+    }
 
     bool is_executable() { return !m_no_execute; }
 
@@ -138,8 +139,8 @@ private:
     ptr_t m_physical_address : 20;
 #elif defined(ULTRA_64)
     ptr_t m_physical_address : 40;
-    u16   m_unused : 11;
-    bool  m_no_execute : 1;
+    u16 m_unused : 11;
+    bool m_no_execute : 1;
 #endif
 };
 

@@ -138,7 +138,7 @@ public:
     }
 
     size_t size() const { return m_size; }
-    bool   empty() const { return size() == 0; }
+    bool empty() const { return size() == 0; }
 
     size_t capcity() const { return m_capacity; }
 
@@ -236,7 +236,7 @@ private:
 
         destroy_data();
 
-        m_data     = new_data;
+        m_data = new_data;
         m_capacity = new_capacity;
     }
 
@@ -251,6 +251,6 @@ private:
 private:
     size_t m_size { 0 };
     size_t m_capacity { 0 };
-    u8*    m_data { nullptr };
+    u8* m_data { nullptr };
 };
 }

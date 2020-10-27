@@ -15,7 +15,7 @@ namespace kernel {
 class LogSink {
 public:
     virtual void write(StringView string) = 0;
-    virtual ~LogSink()                    = default;
+    virtual ~LogSink() = default;
 };
 
 class E9LogSink : public LogSink {
@@ -24,7 +24,7 @@ public:
 
     void write(StringView string) override
     {
-        for (char c: string)
+        for (char c : string)
             IO::out8<0xE9>(c);
     }
 };
@@ -44,8 +44,8 @@ enum class format {
 
 class Logger {
 public:
-    static constexpr StringView info_prefix  = "[\33[34mINFO\033[0m] "_sv;
-    static constexpr StringView warn_prefix  = "[\33[33mWARNING\033[0m] "_sv;
+    static constexpr StringView info_prefix = "[\33[34mINFO\033[0m] "_sv;
+    static constexpr StringView warn_prefix = "[\33[33mWARNING\033[0m] "_sv;
     static constexpr StringView error_prefix = "[\033[91mERROR\033[0m] "_sv;
 
     static void initialize()
@@ -84,11 +84,12 @@ public:
         if (!is_initialized())
             return;
 
-        for (auto& sink: sinks())
+        for (auto& sink : sinks())
             sink->write(string);
     }
 
-    Logger(bool should_lock = true) : m_should_unlock(should_lock)
+    Logger(bool should_lock = true)
+        : m_should_unlock(should_lock)
     {
         if (!is_initialized())
             return;
@@ -97,7 +98,9 @@ public:
             write_lock().lock(m_interrupt_state);
     }
 
-    Logger(Logger&& other) : m_interrupt_state(other.m_interrupt_state), m_should_unlock(other.m_should_unlock)
+    Logger(Logger&& other)
+        : m_interrupt_state(other.m_interrupt_state)
+        , m_should_unlock(other.m_should_unlock)
     {
         other.m_should_terminate = false;
     }
@@ -181,12 +184,12 @@ public:
 
 private:
     format m_format { format::as_dec };
-    bool   m_should_terminate { true };
-    bool   m_interrupt_state { false };
-    bool   m_should_unlock;
+    bool m_should_terminate { true };
+    bool m_interrupt_state { false };
+    bool m_should_unlock;
 
     static inline DynamicArray<LogSink*>* s_sinks;
-    static inline InterruptSafeSpinLock*  s_write_lock;
+    static inline InterruptSafeSpinLock* s_write_lock;
 };
 
 inline Logger info()

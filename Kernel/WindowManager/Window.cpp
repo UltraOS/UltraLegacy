@@ -22,21 +22,25 @@ RefPtr<Window> Window::create_desktop(Thread& owner, const Rect& window_rect, Re
 }
 
 Window::Window(Thread& owner, Style style, const Rect& window_rect, RefPtr<Theme> theme)
-    : m_owner(owner), m_theme(theme), m_style(style), m_window_rect(0, 0, window_rect.width(), window_rect.height()),
-      m_frame(*this), m_location(window_rect.top_left())
+    : m_owner(owner)
+    , m_theme(theme)
+    , m_style(style)
+    , m_window_rect(0, 0, window_rect.width(), window_rect.height())
+    , m_frame(*this)
+    , m_location(window_rect.top_left())
 {
     auto full_window_rect = full_rect();
     auto pages_needed = ceiling_divide(full_window_rect.width() * full_window_rect.height() * sizeof(u32), Page::size);
 
     auto bitmap_range = AddressSpace::current().allocator().allocate_range(pages_needed * Page::size);
-    auto bitmap       = bitmap_range.as_pointer<void>();
+    auto bitmap = bitmap_range.as_pointer<void>();
 
     MemoryManager::the().force_preallocate(bitmap_range);
 
     m_front_surface = RefPtr<Surface>::create(bitmap,
-                                              full_window_rect.width(),
-                                              full_window_rect.height(),
-                                              Surface::Format::RGBA_32_BPP);
+        full_window_rect.width(),
+        full_window_rect.height(),
+        Surface::Format::RGBA_32_BPP);
 
     m_frame.paint();
 }
@@ -51,13 +55,13 @@ bool Window::handle_event(const Event& event, bool is_handled)
 
     switch (event.type) {
     case Event::Type::BUTTON_STATE: {
-        auto key       = event.vk_state.vkey;
+        auto key = event.vk_state.vkey;
         auto key_state = event.vk_state.state;
 
         if (key == VK::MOUSE_LEFT_BUTTON) {
             if (key_state == VKState::PRESSED) {
                 if (m_frame.draggable_rect().contains(Screen::the().cursor().location())) {
-                    m_state      = State::IS_BEING_DRAGGED;
+                    m_state = State::IS_BEING_DRAGGED;
                     m_drag_begin = Screen::the().cursor().location();
                 } else {
                     m_state = State::NORMAL;
@@ -94,7 +98,7 @@ bool Window::handle_event(const Event& event, bool is_handled)
 
             Compositor::the().add_dirty_rect(full_translated_rect());
 
-            m_location   = Point(new_x, new_y);
+            m_location = Point(new_x, new_y);
             m_drag_begin = { event.mouse_move.x, event.mouse_move.y };
         } else if (m_frame.rect_for_button(WindowFrame::Button::CLOSE).contains(mouse_vec) && !is_handled) {
             if (m_state != State::CLOSE_BUTTON_HOVERED) {
@@ -121,7 +125,8 @@ bool Window::handle_event(const Event& event, bool is_handled)
         }
         return true;
     }
-    default: return true;
+    default:
+        return true;
     }
 }
 }

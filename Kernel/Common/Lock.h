@@ -14,7 +14,7 @@ public:
     using lock_t = size_t;
 
     static constexpr lock_t unlocked = 0;
-    static constexpr lock_t locked   = 1;
+    static constexpr lock_t locked = 1;
 
     void lock() ALWAYS_INLINE
     {
@@ -95,7 +95,7 @@ public:
     size_t depth() const { return m_depth; }
 
 private:
-    size_t         m_depth { 0 };
+    size_t m_depth { 0 };
     Atomic<size_t> m_lock { unlocked };
 };
 
@@ -123,7 +123,11 @@ public:
 template <typename LockT>
 class LockGuard {
 public:
-    ALWAYS_INLINE LockGuard(LockT& lock) : m_lock(lock) { this->lock(); }
+    ALWAYS_INLINE LockGuard(LockT& lock)
+        : m_lock(lock)
+    {
+        this->lock();
+    }
     ~LockGuard() ALWAYS_INLINE { unlock(); }
 
 private:
@@ -138,7 +142,11 @@ private:
 template <>
 class LockGuard<RecursiveInterruptSafeSpinLock> {
 public:
-    ALWAYS_INLINE LockGuard(RecursiveInterruptSafeSpinLock& lock) : m_lock(lock) { this->lock(); }
+    ALWAYS_INLINE LockGuard(RecursiveInterruptSafeSpinLock& lock)
+        : m_lock(lock)
+    {
+        this->lock();
+    }
     ~LockGuard() ALWAYS_INLINE { unlock(); }
 
 private:
@@ -147,14 +155,18 @@ private:
     void unlock() ALWAYS_INLINE { m_lock.unlock(m_state); }
 
 private:
-    bool                            m_state { false };
+    bool m_state { false };
     RecursiveInterruptSafeSpinLock& m_lock;
 };
 
 template <>
 class LockGuard<InterruptSafeSpinLock> {
 public:
-    ALWAYS_INLINE LockGuard(InterruptSafeSpinLock& lock) : m_lock(lock) { this->lock(); }
+    ALWAYS_INLINE LockGuard(InterruptSafeSpinLock& lock)
+        : m_lock(lock)
+    {
+        this->lock();
+    }
     ~LockGuard() ALWAYS_INLINE { unlock(); }
 
 private:
@@ -163,7 +175,7 @@ private:
     void unlock() ALWAYS_INLINE { m_lock.unlock(m_state); }
 
 private:
-    bool                   m_state { false };
+    bool m_state { false };
     InterruptSafeSpinLock& m_lock;
 };
 }

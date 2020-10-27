@@ -22,12 +22,12 @@ public:
         static constexpr u16 raw_port = static_cast<u16>(port);
 
         static constexpr u16 interrupt_enable_register = raw_port + 1;
-        static constexpr u16 fifo_control_register     = raw_port + 2;
-        static constexpr u16 line_control_register     = raw_port + 3;
-        static constexpr u16 modem_control_register    = raw_port + 4;
+        static constexpr u16 fifo_control_register = raw_port + 2;
+        static constexpr u16 line_control_register = raw_port + 3;
+        static constexpr u16 modem_control_register = raw_port + 4;
 
         // Works with DLAB enabled
-        static constexpr u16 divisor_low_register  = raw_port;
+        static constexpr u16 divisor_low_register = raw_port;
         static constexpr u16 divisor_high_register = raw_port + 1;
 
         static constexpr u8 dlab_enable_bit = SET_BIT(7);
@@ -74,7 +74,7 @@ public:
     template <Port port>
     static void write(StringView string)
     {
-        for (char c: string)
+        for (char c : string)
             write<port>(c);
     }
 };

@@ -21,7 +21,7 @@ inline void zero_memory(void* ptr, size_t size)
 inline void copy_memory(const void* source, void* destination, size_t size)
 {
     const u8* byte_src = reinterpret_cast<const u8*>(source);
-    u8*       byte_dst = reinterpret_cast<u8*>(destination);
+    u8* byte_dst = reinterpret_cast<u8*>(destination);
 
     while (size--)
         *byte_dst++ = *byte_src++;
@@ -30,7 +30,7 @@ inline void copy_memory(const void* source, void* destination, size_t size)
 inline void move_memory(const void* source, void* destination, size_t size)
 {
     const u8* byte_src = reinterpret_cast<const u8*>(source);
-    u8*       byte_dst = reinterpret_cast<u8*>(destination);
+    u8* byte_dst = reinterpret_cast<u8*>(destination);
 
     if (source < destination) {
         byte_src += size;

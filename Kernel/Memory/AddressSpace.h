@@ -14,7 +14,7 @@ public:
     friend class MemoryManager;
 
 #ifdef ULTRA_32
-    static constexpr Address recursive_table_base     = 0xFFC00000;
+    static constexpr Address recursive_table_base = 0xFFC00000;
     static constexpr Address recursive_directory_base = 0xFFFFF000;
 #endif
 
@@ -40,7 +40,7 @@ public:
 
     AddressSpace(RefPtr<Page> directory_page);
 
-    static void          inititalize();
+    static void inititalize();
     static AddressSpace& of_kernel();
     static AddressSpace& current();
 
@@ -55,7 +55,7 @@ public:
     Entry& entry_at(size_t index);
 
     VirtualAllocator& allocator();
-    Address           physical_address();
+    Address physical_address();
 
     void store_physical_page(RefPtr<Page> page);
 
@@ -107,8 +107,8 @@ private:
 
 private:
     DynamicArray<RefPtr<Page>> m_physical_pages;
-    RefPtr<Page>               m_main_page;
-    VirtualAllocator           m_allocator;
+    RefPtr<Page> m_main_page;
+    VirtualAllocator m_allocator;
 
     RecursiveInterruptSafeSpinLock m_lock;
 

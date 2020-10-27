@@ -3,7 +3,8 @@
 
 namespace kernel {
 
-Painter::Painter(Surface* surface) : m_surface(surface)
+Painter::Painter(Surface* surface)
+    : m_surface(surface)
 {
     ASSERT(surface != nullptr);
     ASSERT(surface->bpp() == 32 && "Painter can only operate on 32bpp surfaces atm");
@@ -11,10 +12,10 @@ Painter::Painter(Surface* surface) : m_surface(surface)
 
 void Painter::fill_rect(const Rect& rect, Color color)
 {
-    size_t  bytes_per_pixel = m_surface->bpp() / 8;
-    size_t  x_offset        = rect.top_left().x() * bytes_per_pixel;
-    Address pixels_begin    = Address(m_surface->scanline_at(rect.top_left().y())) + x_offset;
-    size_t  step            = m_surface->pitch() - (x_offset + (rect.width() * bytes_per_pixel)) + x_offset;
+    size_t bytes_per_pixel = m_surface->bpp() / 8;
+    size_t x_offset = rect.top_left().x() * bytes_per_pixel;
+    Address pixels_begin = Address(m_surface->scanline_at(rect.top_left().y())) + x_offset;
+    size_t step = m_surface->pitch() - (x_offset + (rect.width() * bytes_per_pixel)) + x_offset;
 
     for (size_t y = 0; y < rect.height(); ++y) {
         for (size_t x = 0; x < rect.width(); ++x) {
@@ -30,24 +31,32 @@ void Painter::draw_at(size_t x, size_t y, Color pixel)
     if (!pixel.a())
         return;
 
-    Address pixels_begin            = Address(m_surface->scanline_at(y)) + (x * m_surface->bpp() / 8);
+    Address pixels_begin = Address(m_surface->scanline_at(y)) + (x * m_surface->bpp() / 8);
     *pixels_begin.as_pointer<u32>() = pixel.as_u32();
 }
 
 void Painter::draw_bitmap(const Bitmap& bitmap, const Point& point)
 {
     switch (bitmap.format()) {
-    case Bitmap::Format::INDEXED_1_BPP: draw_1_bpp_bitmap(bitmap, point); break;
-    case Bitmap::Format::RGBA_32_BPP: draw_32_bpp_bitmap(bitmap, point); break;
-    default: warning() << "Painter: cannot draw unknown format " << static_cast<u8>(bitmap.format());
+    case Bitmap::Format::INDEXED_1_BPP:
+        draw_1_bpp_bitmap(bitmap, point);
+        break;
+    case Bitmap::Format::RGBA_32_BPP:
+        draw_32_bpp_bitmap(bitmap, point);
+        break;
+    default:
+        warning() << "Painter: cannot draw unknown format " << static_cast<u8>(bitmap.format());
     }
 }
 
 void Painter::blit(const Point& location, const Bitmap& bitmap, const Rect& source_rect)
 {
     switch (bitmap.format()) {
-    case Bitmap::Format::RGBA_32_BPP: blit_32_bpp_bitmap(location, bitmap, source_rect); break;
-    default: warning() << "Painter: cannot draw unknown format " << static_cast<u8>(bitmap.format());
+    case Bitmap::Format::RGBA_32_BPP:
+        blit_32_bpp_bitmap(location, bitmap, source_rect);
+        break;
+    default:
+        warning() << "Painter: cannot draw unknown format " << static_cast<u8>(bitmap.format());
     }
 }
 
@@ -60,9 +69,9 @@ void Painter::blit_32_bpp_bitmap(const Point& location, const Bitmap& bitmap, co
         return;
 
     auto y_begin = drawable_rect.top() - original_rect.top();
-    auto y_end   = drawable_rect.bottom() - original_rect.top();
+    auto y_end = drawable_rect.bottom() - original_rect.top();
     auto x_begin = drawable_rect.left() - original_rect.left();
-    auto x_end   = drawable_rect.right() - original_rect.left();
+    auto x_end = drawable_rect.right() - original_rect.left();
 
     const u32* source
         = Address(bitmap.scanline_at(source_rect.top() + y_begin)).as_pointer<u32>() + source_rect.left() + x_begin;
@@ -82,15 +91,15 @@ void Painter::blit_32_bpp_bitmap(const Point& location, const Bitmap& bitmap, co
 
 void Painter::draw_1_bpp_bitmap(const Bitmap& bitmap, const Point& point)
 {
-    size_t  bytes_per_pixel = m_surface->bpp() / 8;
-    Address pixels_begin    = Address(m_surface->scanline_at(point.y())) + point.x() * bytes_per_pixel;
+    size_t bytes_per_pixel = m_surface->bpp() / 8;
+    Address pixels_begin = Address(m_surface->scanline_at(point.y())) + point.x() * bytes_per_pixel;
 
     for (size_t y = 0; y < bitmap.height(); ++y) {
         auto* scanline = reinterpret_cast<const u8*>(bitmap.scanline_at(y));
 
         for (size_t x = 0; x < bitmap.width(); ++x) {
             size_t byte = x / 8;
-            size_t bit  = SET_BIT(x - byte * 8);
+            size_t bit = SET_BIT(x - byte * 8);
 
             auto color = bitmap.color_at(!!(scanline[byte] & bit));
             if (!color.a()) // fully trasnparent
@@ -104,8 +113,8 @@ void Painter::draw_1_bpp_bitmap(const Bitmap& bitmap, const Point& point)
 
 void Painter::draw_32_bpp_bitmap(const Bitmap& bitmap, const Point& point)
 {
-    size_t  bytes_per_pixel = m_surface->bpp() / 8;
-    Address pixels_begin    = Address(m_surface->scanline_at(point.y())) + point.x() * bytes_per_pixel;
+    size_t bytes_per_pixel = m_surface->bpp() / 8;
+    Address pixels_begin = Address(m_surface->scanline_at(point.y())) + point.x() * bytes_per_pixel;
 
     for (size_t y = 0; y < bitmap.height(); ++y) {
         auto* scanline = reinterpret_cast<const u8*>(bitmap.scanline_at(y));

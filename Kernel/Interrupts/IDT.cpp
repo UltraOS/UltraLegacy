@@ -7,7 +7,11 @@ namespace kernel {
 
 IDT IDT::s_instance;
 
-IDT::IDT() : m_entries(), m_pointer { entry_count * sizeof(entry) - 1, m_entries } { }
+IDT::IDT()
+    : m_entries()
+    , m_pointer { entry_count * sizeof(entry) - 1, m_entries }
+{
+}
 
 IDT& IDT::the()
 {
@@ -30,7 +34,7 @@ IDT& IDT::register_isr(u16 index, attributes attrs, isr handler)
     the_entry.address_3 = (reinterpret_cast<size_t>(handler) & 0xFFFFFFFF00000000) >> 32;
 #endif
     the_entry.attributes = attrs;
-    the_entry.selector   = GDT::kernel_code_selector();
+    the_entry.selector = GDT::kernel_code_selector();
 
     return *this;
 }

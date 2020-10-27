@@ -38,8 +38,8 @@ public:
 private:
     InterruptSafeSpinLock m_lock;
 
-    RefPtr<Theme>        m_theme;
-    RefPtr<Window>       m_desktop_window;
+    RefPtr<Theme> m_theme;
+    RefPtr<Window> m_desktop_window;
     List<RefPtr<Window>> m_windows;
 
     static WindowManager* s_instance;

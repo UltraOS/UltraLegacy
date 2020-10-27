@@ -23,7 +23,10 @@ public:
     using order_t = decltype(__ATOMIC_RELAXED);
 
     Atomic() = default;
-    Atomic(T value) : m_value(value) { }
+    Atomic(T value)
+        : m_value(value)
+    {
+    }
 
     void store(T value, MemoryOrder order = MemoryOrder::SEQ_CST) volatile ALWAYS_INLINE
     {
@@ -38,11 +41,11 @@ public:
     bool compare_and_exchange(T* expected, T value) volatile ALWAYS_INLINE
     {
         return __atomic_compare_exchange_n(&m_value,
-                                           expected,
-                                           value,
-                                           false,
-                                           static_cast<order_t>(MemoryOrder::ACQ_REL),
-                                           static_cast<order_t>(MemoryOrder::ACQUIRE));
+            expected,
+            value,
+            false,
+            static_cast<order_t>(MemoryOrder::ACQ_REL),
+            static_cast<order_t>(MemoryOrder::ACQUIRE));
     }
 
     T fetch_add(T value, MemoryOrder order = MemoryOrder::SEQ_CST) volatile ALWAYS_INLINE

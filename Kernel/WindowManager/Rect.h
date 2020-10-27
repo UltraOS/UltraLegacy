@@ -10,12 +10,18 @@ public:
     Rect() = default;
 
     Rect(size_t top_left_x, size_t top_left_y, size_t width, size_t height)
-        : m_x(top_left_x), m_y(top_left_y), m_width(width), m_height(height)
+        : m_x(top_left_x)
+        , m_y(top_left_y)
+        , m_width(width)
+        , m_height(height)
     {
     }
 
     Rect(const Point& top_left, size_t width, size_t height)
-        : m_x(top_left.x()), m_y(top_left.y()), m_width(width), m_height(height)
+        : m_x(top_left.x())
+        , m_y(top_left.y())
+        , m_width(width)
+        , m_height(height)
     {
     }
 
@@ -54,9 +60,9 @@ public:
 
     Rect intersected(const Rect& other) const
     {
-        size_t new_left   = max(left(), other.left());
-        size_t new_right  = min(right(), other.right());
-        size_t new_top    = max(top(), other.top());
+        size_t new_left = max(left(), other.left());
+        size_t new_right = min(right(), other.right());
+        size_t new_top = max(top(), other.top());
         size_t new_bottom = min(bottom(), other.bottom());
 
         if (new_left > new_right || new_top > new_bottom)
@@ -67,9 +73,9 @@ public:
 
     void intersect(const Rect& other)
     {
-        size_t new_left   = max(left(), other.left());
-        size_t new_right  = min(right(), other.right());
-        size_t new_top    = max(top(), other.top());
+        size_t new_left = max(left(), other.left());
+        size_t new_right = min(right(), other.right());
+        size_t new_top = max(top(), other.top());
         size_t new_bottom = min(bottom(), other.bottom());
 
         if (new_left > new_right || new_top > new_bottom)
@@ -78,7 +84,7 @@ public:
         m_x = new_left;
         m_y = new_top;
 
-        m_width  = new_right - new_left + 1;
+        m_width = new_right - new_left + 1;
         m_height = new_bottom - new_top + 1;
     }
 

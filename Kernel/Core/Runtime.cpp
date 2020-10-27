@@ -18,7 +18,7 @@ using global_constructor_t = void (*)();
 global_constructor_t global_constructors_begin;
 global_constructor_t global_constructors_end;
 
-constexpr size_t  magic_length = 13;
+constexpr size_t magic_length = 13;
 extern const char magic_string[magic_length];
 
 namespace kernel::runtime {
@@ -64,16 +64,20 @@ void init_global_objects()
 
 class KernelSymbolTable {
 public:
-    static constexpr size_t  max_symbols           = 1024;
+    static constexpr size_t max_symbols = 1024;
     static constexpr Address physical_symbols_base = 0x45000;
 
     class Symbol {
     public:
         Symbol() = default;
 
-        Symbol(ptr_t address, char* name) : m_address(address), m_name(name) { }
+        Symbol(ptr_t address, char* name)
+            : m_address(address)
+            , m_name(name)
+        {
+        }
 
-        ptr_t       address() const { return m_address; }
+        ptr_t address() const { return m_address; }
         const char* name() const { return m_name; }
 
         friend bool operator<(ptr_t address, const Symbol& symbol) { return address < symbol.address(); }
@@ -88,7 +92,7 @@ public:
     static void parse_all()
     {
         static constexpr auto ksyms_begin_magic = "KSYMS"_sv;
-        static constexpr auto ksyms_end_magic   = "SMYSK"_sv;
+        static constexpr auto ksyms_end_magic = "SMYSK"_sv;
 
         auto* current_offset = MemoryManager::physical_to_virtual(physical_symbols_base).as_pointer<char>();
 
@@ -116,7 +120,7 @@ public:
             return;
 
         s_symbols_begin = s_symbols[0].address();
-        s_symbols_end   = s_symbols[s_symbol_count - 1].address();
+        s_symbols_end = s_symbols[s_symbol_count - 1].address();
 
         log() << "KernelSymbolTable: successfully parsed kernel symbols, " << s_symbol_count << " available.";
     }
@@ -152,9 +156,9 @@ private:
     static Symbol s_symbols[max_symbols];
 };
 
-ptr_t                     KernelSymbolTable::s_symbols_begin;
-ptr_t                     KernelSymbolTable::s_symbols_end;
-size_t                    KernelSymbolTable::s_symbol_count;
+ptr_t KernelSymbolTable::s_symbols_begin;
+ptr_t KernelSymbolTable::s_symbols_end;
+size_t KernelSymbolTable::s_symbol_count;
 KernelSymbolTable::Symbol KernelSymbolTable::s_symbols[max_symbols];
 
 void parse_kernel_symbols()
@@ -165,9 +169,9 @@ void parse_kernel_symbols()
 void on_assertion_failed(const char* message, const char* file, const char* function, u32 line)
 {
     static constexpr auto assertion_failed = "Assertion failed!"_sv;
-    static constexpr auto expression       = "\n------> Expression : "_sv;
-    static constexpr auto function_str     = "\n------> Function   : "_sv;
-    static constexpr auto file_str         = "\n------> File       : "_sv;
+    static constexpr auto expression = "\n------> Expression : "_sv;
+    static constexpr auto function_str = "\n------> Function   : "_sv;
+    static constexpr auto file_str = "\n------> File       : "_sv;
 
     // We don't want to use the heap here as it might be corrupted
     StackStringBuilder<512> formatted_message;
@@ -177,14 +181,16 @@ void on_assertion_failed(const char* message, const char* file, const char* func
     panic(formatted_message.data());
 }
 ALWAYS_INLINE inline Address base_pointer();
-inline Address               base_pointer()
+inline Address base_pointer()
 {
     Address base_pointer;
 
 #ifdef ULTRA_32
-    asm("mov %%ebp, %0" : "=a"(base_pointer));
+    asm("mov %%ebp, %0"
+        : "=a"(base_pointer));
 #elif defined(ULTRA_64)
-    asm("mov %%rbp, %0" : "=a"(base_pointer));
+    asm("mov %%rbp, %0"
+        : "=a"(base_pointer));
 #endif
 
     return base_pointer;
@@ -204,23 +210,23 @@ size_t dump_backtrace(ptr_t* into, size_t max_depth, Address base_pointer)
     // because an invalid base indicates the first frame and accessing memory above that is UB
     while (--max_depth && is_address_valid(base_pointer) && is_address_valid(base_pointer.as_pointer<ptr_t>()[0])) {
         into[current_depth++] = base_pointer.as_pointer<ptr_t>()[1];
-        base_pointer          = base_pointer.as_pointer<ptr_t>()[0];
+        base_pointer = base_pointer.as_pointer<ptr_t>()[0];
     }
 
     return current_depth;
 }
 
 ALWAYS_INLINE inline size_t dump_backtrace(ptr_t* into, size_t max_depth);
-inline size_t               dump_backtrace(ptr_t* into, size_t max_depth)
+inline size_t dump_backtrace(ptr_t* into, size_t max_depth)
 {
     return dump_backtrace(into, max_depth, base_pointer());
 }
 
 [[noreturn]] void panic(const char* reason, const RegisterState* registers)
 {
-    static constexpr auto  panic_message = "KERNEL PANIC!"_sv;
-    static constexpr Color font_color    = Color::white();
-    static constexpr Color screen_color  = Color::blue();
+    static constexpr auto panic_message = "KERNEL PANIC!"_sv;
+    static constexpr Color font_color = Color::white();
+    static constexpr Color screen_color = Color::blue();
 
     Interrupts::disable();
 
@@ -241,18 +247,18 @@ inline size_t               dump_backtrace(ptr_t* into, size_t max_depth)
         hang();
 
     auto& surface = VideoDevice::the().surface();
-    Rect  surface_rect(0, 0, surface.width(), surface.height());
-    auto  center = surface_rect.center();
-    Rect  exception_rect(0, 0, center.x(), center.y());
-    Point offset    = exception_rect.center();
-    auto  initial_x = 10;
+    Rect surface_rect(0, 0, surface.width(), surface.height());
+    auto center = surface_rect.center();
+    Rect exception_rect(0, 0, center.x(), center.y());
+    Point offset = exception_rect.center();
+    auto initial_x = 10;
 
     Painter p(&surface);
     p.fill_rect(surface_rect, screen_color);
 
     Point panic_offset(offset.x() + offset.x() / 2 + (panic_message.size() / 2 * Painter::font_width), offset.y() - 40);
 
-    for (char c: panic_message) {
+    for (char c : panic_message) {
         p.draw_char(panic_offset, c, font_color, Color::transparent());
         panic_offset.first() += Painter::font_width;
     }
@@ -262,7 +268,7 @@ inline size_t               dump_backtrace(ptr_t* into, size_t max_depth)
 
     auto write_string = [&](StringView string) {
         bt_logger << string;
-        for (char c: StringView(string)) {
+        for (char c : StringView(string)) {
             if (c == '\n') {
                 offset.second() += Painter::font_height;
                 offset.first() = initial_x;
@@ -326,12 +332,12 @@ inline size_t               dump_backtrace(ptr_t* into, size_t max_depth)
     write_string("Backtrace:\n"_sv);
 
     static constexpr size_t backtrace_max_depth = 8;
-    ptr_t                   backtrace[backtrace_max_depth] {};
-    size_t                  depth;
+    ptr_t backtrace[backtrace_max_depth] {};
+    size_t depth;
 
     if (registers) {
         backtrace[0] = registers->instruction_pointer();
-        depth        = dump_backtrace(backtrace + 1, backtrace_max_depth - 1, registers->base_pointer()) + 1;
+        depth = dump_backtrace(backtrace + 1, backtrace_max_depth - 1, registers->base_pointer()) + 1;
     } else {
         depth = dump_backtrace(backtrace, backtrace_max_depth, base_pointer());
     }

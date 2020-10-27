@@ -37,7 +37,7 @@ private:
 
     Rect m_clock_rect;
 
-    bool  m_cursor_invalidated { false };
+    bool m_cursor_invalidated { false };
     Point m_last_cursor_location;
 
     DynamicArray<Rect> m_dirty_rects;

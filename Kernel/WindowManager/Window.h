@@ -15,16 +15,19 @@ class Window {
     MAKE_NONMOVABLE(Window);
 
 public:
-    enum class Style { FRAMELESS, NORMAL_FRAME };
+    enum class Style {
+        FRAMELESS,
+        NORMAL_FRAME
+    };
 
     static RefPtr<Window> create(Thread& owner, const Rect& window_rect, RefPtr<Theme>);
     static RefPtr<Window> create_desktop(Thread& owner, const Rect& window_rect, RefPtr<Theme>);
 
     const RefPtr<Theme> theme() const { return m_theme; }
 
-    Rect         full_rect() const { return m_frame.rect(); }
-    const Rect&  window_rect() const { return m_window_rect; }
-    Rect         view_rect() const { return m_frame.view_rect(); }
+    Rect full_rect() const { return m_frame.rect(); }
+    const Rect& window_rect() const { return m_window_rect; }
+    Rect view_rect() const { return m_frame.view_rect(); }
     const Point& location() const { return m_location; }
 
     Rect full_translated_rect() const { return m_frame.rect().translated(m_location); }
@@ -79,12 +82,12 @@ private:
 
     RefPtr<Theme> m_theme;
 
-    Style       m_style;
-    Rect        m_window_rect;
+    Style m_style;
+    Rect m_window_rect;
     WindowFrame m_frame;
-    Point       m_location;
-    bool        m_invalidated { true };
-    State       m_state { State::NORMAL };
+    Point m_location;
+    bool m_invalidated { true };
+    State m_state { State::NORMAL };
 
     RefPtr<Surface> m_front_surface;
 

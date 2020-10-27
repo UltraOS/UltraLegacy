@@ -40,8 +40,8 @@ template <typename T>
 void swap(T& l, T& r)
 {
     T tmp = move(l);
-    l     = move(r);
-    r     = move(tmp);
+    l = move(r);
+    r = move(tmp);
 }
 
 // clang-format off

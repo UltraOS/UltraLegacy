@@ -55,7 +55,7 @@ public:
         return length;
     }
 
-    char*       data() { return is_small() ? m_small_string : m_big_string.data; }
+    char* data() { return is_small() ? m_small_string : m_big_string.data; }
     const char* data() const { return is_small() ? m_small_string : m_big_string.data; }
 
     const char* c_string() const { return data(); }
@@ -63,12 +63,12 @@ public:
     size_t size() const { return m_size; }
 
     const char& at(size_t index) const { return data()[index]; }
-    char&       at(size_t index) { return data()[index]; }
+    char& at(size_t index) { return data()[index]; }
 
-    char*       begin() { return data(); }
+    char* begin() { return data(); }
     const char* begin() const { return data(); }
 
-    char*       end() { return data() + m_size; }
+    char* end() { return data() + m_size; }
     const char* end() const { return data() + m_size; }
 
     String& append(const String& string) { return append(string.data(), string.size()); }
@@ -176,7 +176,7 @@ private:
     {
         if (other.is_small()) {
             construct_from(other.data(), other.size());
-            other.at(0)  = '\0';
+            other.at(0) = '\0';
             other.m_size = 0;
         } else {
             if (is_small())
@@ -203,8 +203,8 @@ private:
             m_big_string = new_buffer;
             return;
         } else {
-            auto* old_data        = m_big_string.data;
-            m_big_string.data     = new char[size];
+            auto* old_data = m_big_string.data;
+            m_big_string.data = new char[size];
             m_big_string.capacity = size;
             copy_memory(old_data, m_big_string.data, m_size);
             delete[] old_data;
@@ -214,7 +214,7 @@ private:
 private:
     union {
         struct {
-            char*  data;
+            char* data;
             size_t capacity;
         } m_big_string;
 
@@ -228,15 +228,27 @@ private:
 
 class StringView {
 public:
-    StringView(const char* string) : m_string(string), m_size(String::length_of(string)) { }
-    StringView(const String& string) : m_string(string.data()), m_size(string.size()) { }
-    constexpr StringView(const char* string, size_t length) : m_string(string), m_size(length) { }
+    StringView(const char* string)
+        : m_string(string)
+        , m_size(String::length_of(string))
+    {
+    }
+    StringView(const String& string)
+        : m_string(string.data())
+        , m_size(string.size())
+    {
+    }
+    constexpr StringView(const char* string, size_t length)
+        : m_string(string)
+        , m_size(length)
+    {
+    }
 
     constexpr const char* begin() const { return data(); }
     constexpr const char* end() const { return data() + m_size; }
 
     constexpr const char* data() const { return m_string; }
-    constexpr size_t      size() const { return m_size; }
+    constexpr size_t size() const { return m_size; }
 
     constexpr const char& at(size_t i) const
     {
@@ -280,7 +292,7 @@ public:
 
 private:
     const char* m_string;
-    size_t      m_size;
+    size_t m_size;
 };
 
 inline constexpr StringView operator""_sv(const char* string, size_t size)
@@ -366,7 +378,7 @@ public:
 
     size_t append(bool value)
     {
-        static constexpr StringView true_value  = "true"_sv;
+        static constexpr StringView true_value = "true"_sv;
         static constexpr StringView false_value = "false"_sv;
 
         auto value_to_copy = value ? true_value : false_value;
@@ -408,11 +420,11 @@ public:
     size_t size_left() const { return buffer_size - m_current_offset - 1; }
 
 private:
-    void  seal() { m_bufer[m_current_offset] = '\0'; }
+    void seal() { m_bufer[m_current_offset] = '\0'; }
     char* pointer_to_end() { return m_bufer + m_current_offset; }
 
 private:
     size_t m_current_offset { 0 };
-    char   m_bufer[buffer_size];
+    char m_bufer[buffer_size];
 };
 }

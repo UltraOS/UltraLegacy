@@ -2,7 +2,10 @@
 
 #include "VirtualKey.h"
 
-enum class ScrollDirection : uint8_t { HORIZONTAL = 0, VERTICAL = 1 };
+enum class ScrollDirection : uint8_t {
+    HORIZONTAL = 0,
+    VERTICAL = 1
+};
 
 struct Event {
     union {
@@ -13,17 +16,17 @@ struct Event {
 
         struct {
             ScrollDirection direction;
-            int8_t          delta;
+            int8_t delta;
         } mouse_scroll;
 
         struct {
-            VK      vkey;
+            VK vkey;
             VKState state;
         } vk_state;
     };
 
-    using MouseMove     = decltype(mouse_move);
-    using MouseScroll   = decltype(mouse_scroll);
+    using MouseMove = decltype(mouse_move);
+    using MouseScroll = decltype(mouse_scroll);
     using VKStateChange = decltype(vk_state);
 
     enum class Type : uint8_t {

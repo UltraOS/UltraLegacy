@@ -9,12 +9,16 @@ class List {
 public:
     class NodeBase {
     public:
-        NodeBase(NodeBase* previous, NodeBase* next) : m_previous(previous), m_next(next) { }
+        NodeBase(NodeBase* previous, NodeBase* next)
+            : m_previous(previous)
+            , m_next(next)
+        {
+        }
 
-        NodeBase*       next() { return m_next; }
+        NodeBase* next() { return m_next; }
         const NodeBase* next() const { return m_next; }
 
-        NodeBase*       previous() { return m_previous; }
+        NodeBase* previous() { return m_previous; }
         const NodeBase* previous() const { return m_previous; }
 
         void set_next(NodeBase* next) { m_next = next; }
@@ -31,18 +35,22 @@ public:
     public:
         template <typename U>
         Node(U&& value, NodeBase* previous = nullptr, NodeBase* next = nullptr)
-            : NodeBase(previous, next), m_value(forward<U>(value))
+            : NodeBase(previous, next)
+            , m_value(forward<U>(value))
         {
         }
 
-        T&       value() { return m_value; }
+        T& value() { return m_value; }
         const T& value() const { return m_value; }
 
     private:
         T m_value;
     };
 
-    List() : m_end(&m_end, &m_end) { }
+    List()
+        : m_end(&m_end, &m_end)
+    {
+    }
 
     // TODO: enable_if<is_same<T, U>>
     template <typename U>
@@ -76,7 +84,10 @@ public:
         friend class List;
 
         Iterator() { }
-        Iterator(NodeBase* node) : m_node(node) { }
+        Iterator(NodeBase* node)
+            : m_node(node)
+        {
+        }
 
         T* operator->() { return &node()->value(); }
         T& operator*() { return node()->value(); }
@@ -130,7 +141,7 @@ public:
             m_size++;
             ASSERT(source_iterator != source_list.end());
         } else if (after_destionation == source_iterator
-                   || source_iterator.m_node->next() == after_destionation.m_node) {
+            || source_iterator.m_node->next() == after_destionation.m_node) {
             return;
         }
 
@@ -151,10 +162,10 @@ public:
     Iterator begin() { return Iterator(m_end.next()); }
     Iterator end() { return Iterator(&m_end); }
 
-    T&       front() { return as_value_node(m_end.next())->value(); }
+    T& front() { return as_value_node(m_end.next())->value(); }
     const T& front() const { return as_value_node(m_end.next())->value(); }
 
-    T&       back() { return as_value_node(m_end.previous())->value(); }
+    T& back() { return as_value_node(m_end.previous())->value(); }
     const T& back() const { return as_value_node(m_end.previous())->value(); }
 
     size_t size() const { return m_size; }
@@ -165,17 +176,17 @@ public:
 
         for (size_t i = 0; i < m_size; ++i) {
             auto* current_node = next_node;
-            next_node          = next_node->next();
+            next_node = next_node->next();
             delete current_node;
         }
     }
 
 private:
-    Node*       as_value_node(NodeBase* node) { return static_cast<Node*>(node); }
+    Node* as_value_node(NodeBase* node) { return static_cast<Node*>(node); }
     const Node* as_value_node(NodeBase* node) const { return static_cast<const Node*>(node); }
 
 private:
     NodeBase m_end;
-    size_t   m_size { 0 };
+    size_t m_size { 0 };
 };
 }

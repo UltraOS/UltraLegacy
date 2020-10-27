@@ -14,19 +14,23 @@
 
 namespace kernel {
 
-Atomic<size_t>               CPU::s_alive_counter;
+Atomic<size_t> CPU::s_alive_counter;
 DynamicArray<CPU::LocalData> CPU::s_processors;
 
 CPU::ID::ID(u32 function)
 {
-    asm volatile("cpuid" : "=a"(a), "=b"(b), "=c"(c), "=d"(d) : "a"(function), "c"(0));
+    asm volatile("cpuid"
+                 : "=a"(a), "=b"(b), "=c"(c), "=d"(d)
+                 : "a"(function), "c"(0));
 }
 
 CPU::MSR CPU::MSR::read(u32 index)
 {
     MSR out;
 
-    asm volatile("rdmsr" : "=d"(out.upper), "=a"(out.lower) : "c"(index));
+    asm volatile("rdmsr"
+                 : "=d"(out.upper), "=a"(out.lower)
+                 : "c"(index));
 
     return out;
 }
@@ -68,10 +72,10 @@ void CPU::start_all_processors()
     if (!InterruptController::supports_smp())
         return;
 
-    for (auto processor_id: InterruptController::smp_data().application_processor_apic_ids)
+    for (auto processor_id : InterruptController::smp_data().application_processor_apic_ids)
         s_processors.emplace(processor_id);
 
-    for (auto processor_id: InterruptController::smp_data().application_processor_apic_ids) {
+    for (auto processor_id : InterruptController::smp_data().application_processor_apic_ids) {
         size_t old_alive_counter = s_alive_counter;
         LAPIC::start_processor(processor_id);
         while (old_alive_counter == s_alive_counter)
@@ -87,7 +91,7 @@ CPU::LocalData& CPU::current()
     else
         this_cpu = 0;
 
-    for (auto& processor: s_processors) {
+    for (auto& processor : s_processors) {
         if (processor.id() == this_cpu)
             return processor;
     }

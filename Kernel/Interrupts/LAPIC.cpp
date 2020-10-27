@@ -11,7 +11,7 @@
 
 namespace kernel {
 
-Address       LAPIC::s_base;
+Address LAPIC::s_base;
 LAPIC::Timer* LAPIC::s_timer;
 
 void LAPIC::set_base_address(Address physical_base)
@@ -116,13 +116,13 @@ void LAPIC::send_ipi(DestinationType destination_type, u32 destination)
 
     ICR icr {};
 
-    icr.vector_number    = IPICommunicator::vector_number;
-    icr.delivery_mode    = DeliveryMode::NORMAL;
+    icr.vector_number = IPICommunicator::vector_number;
+    icr.delivery_mode = DeliveryMode::NORMAL;
     icr.destination_mode = DestinationMode::PHYSICAL;
-    icr.level            = Level::ASSERT;
-    icr.trigger_mode     = TriggerMode::EDGE;
+    icr.level = Level::ASSERT;
+    icr.trigger_mode = TriggerMode::EDGE;
     icr.destination_type = destination_type;
-    icr.destination_id   = destination;
+    icr.destination_id = destination;
 
     // TODO: This breaks strict aliasing, fix
     volatile auto* icr_pointer = Address(&icr).as_pointer<volatile u32>();
@@ -135,12 +135,12 @@ void LAPIC::send_init_to(u8 id)
 {
     ICR icr {};
 
-    icr.delivery_mode    = DeliveryMode::INIT;
+    icr.delivery_mode = DeliveryMode::INIT;
     icr.destination_mode = DestinationMode::PHYSICAL;
-    icr.level            = Level::ASSERT;
-    icr.trigger_mode     = TriggerMode::EDGE;
+    icr.level = Level::ASSERT;
+    icr.trigger_mode = TriggerMode::EDGE;
     icr.destination_type = DestinationType::SPECIFIC;
-    icr.destination_id   = id;
+    icr.destination_id = id;
 
     volatile auto* icr_pointer = Address(&icr).as_pointer<volatile u32>();
 
@@ -154,13 +154,13 @@ void LAPIC::send_startup_to(u8 id)
 
     ICR icr {};
 
-    icr.entrypoint_page  = entrypoint_page_number;
-    icr.delivery_mode    = DeliveryMode::SIPI;
+    icr.entrypoint_page = entrypoint_page_number;
+    icr.delivery_mode = DeliveryMode::SIPI;
     icr.destination_mode = DestinationMode::PHYSICAL;
-    icr.level            = Level::ASSERT;
-    icr.trigger_mode     = TriggerMode::EDGE;
+    icr.level = Level::ASSERT;
+    icr.trigger_mode = TriggerMode::EDGE;
     icr.destination_type = DestinationType::SPECIFIC;
-    icr.destination_id   = id;
+    icr.destination_id = id;
 
     volatile auto* icr_pointer = Address(&icr).as_pointer<volatile u32>();
 
@@ -175,27 +175,27 @@ void LAPIC::start_processor(u8 id)
 {
     log() << "LAPIC: Starting application processor " << id << "...";
 
-    static constexpr Address entrypoint_base        = 0x1000;
+    static constexpr Address entrypoint_base = 0x1000;
     static constexpr Address entrypoint_base_linear = MemoryManager::physical_to_virtual(entrypoint_base);
 
     static bool entrypoint_relocated = false;
 
-    static constexpr ptr_t address_of_alive        = 0x500;
+    static constexpr ptr_t address_of_alive = 0x500;
     static constexpr ptr_t address_of_acknowldeged = 0x510;
-    static constexpr ptr_t address_of_stack        = 0x520;
+    static constexpr ptr_t address_of_stack = 0x520;
 
 #ifdef ULTRA_64
-    static constexpr ptr_t   address_of_pml4 = 0x530;
-    static constexpr Address pml4_linear     = MemoryManager::physical_to_virtual(address_of_pml4);
+    static constexpr ptr_t address_of_pml4 = 0x530;
+    static constexpr Address pml4_linear = MemoryManager::physical_to_virtual(address_of_pml4);
 
     // Identity map the first pdpt for the AP
     AddressSpace::of_kernel().entry_at(0) = AddressSpace::of_kernel().entry_at(256);
 #endif
 
-    volatile auto* is_ap_alive     = MemoryManager::physical_to_virtual(address_of_alive).as_pointer<bool>();
+    volatile auto* is_ap_alive = MemoryManager::physical_to_virtual(address_of_alive).as_pointer<bool>();
     volatile auto* ap_acknowledegd = MemoryManager::physical_to_virtual(address_of_acknowldeged).as_pointer<bool>();
 
-    *is_ap_alive     = false;
+    *is_ap_alive = false;
     *ap_acknowledegd = false;
 
     // TODO: add a literal allocate_stack() function
@@ -206,8 +206,8 @@ void LAPIC::start_processor(u8 id)
 
     if (!entrypoint_relocated) {
         copy_memory(reinterpret_cast<void*>(&application_processor_entrypoint),
-                    entrypoint_base_linear.as_pointer<void>(),
-                    Page::size);
+            entrypoint_base_linear.as_pointer<void>(),
+            Page::size);
 
 #ifdef ULTRA_64
         *pml4_linear.as_pointer<ptr_t>() = AddressSpace::of_kernel().physical_address();

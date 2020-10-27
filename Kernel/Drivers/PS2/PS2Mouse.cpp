@@ -4,7 +4,8 @@
 
 namespace kernel {
 
-PS2Mouse::PS2Mouse(PS2Controller::Channel channel) : PS2Device(channel)
+PS2Mouse::PS2Mouse(PS2Controller::Channel channel)
+    : PS2Device(channel)
 {
     detect_subtype();
     enable_irq();
@@ -49,9 +50,11 @@ void PS2Mouse::detect_subtype()
 u8 PS2Mouse::bytes_in_packet() const
 {
     switch (sub_type()) {
-    case SubType::STANDARD_MOUSE: return 3;
+    case SubType::STANDARD_MOUSE:
+        return 3;
     case SubType::SCROLL_WHEEL:
-    case SubType::FIVE_BUTTONS: return 4;
+    case SubType::FIVE_BUTTONS:
+        return 4;
     default: {
         StackStringBuilder error_string;
         error_string << "PS2Mouse: Unknown sub type " << static_cast<u8>(sub_type());
@@ -82,9 +85,9 @@ void PS2Mouse::parse_packet()
 
     static constexpr u8 y_sign_bit = SET_BIT(5);
     static constexpr u8 x_sign_bit = SET_BIT(4);
-    static constexpr u8 mb_bit     = SET_BIT(2);
-    static constexpr u8 rb_bit     = SET_BIT(1);
-    static constexpr u8 lb_bit     = SET_BIT(0);
+    static constexpr u8 mb_bit = SET_BIT(2);
+    static constexpr u8 rb_bit = SET_BIT(1);
+    static constexpr u8 lb_bit = SET_BIT(0);
 
     Packet p {};
 
@@ -92,8 +95,8 @@ void PS2Mouse::parse_packet()
     bool is_x_negative = m_packet[0] & x_sign_bit;
 
     p.middle_button_state = m_packet[0] & mb_bit ? VKState::PRESSED : VKState::RELEASED;
-    p.right_button_state  = m_packet[0] & rb_bit ? VKState::PRESSED : VKState::RELEASED;
-    p.left_button_state   = m_packet[0] & lb_bit ? VKState::PRESSED : VKState::RELEASED;
+    p.right_button_state = m_packet[0] & rb_bit ? VKState::PRESSED : VKState::RELEASED;
+    p.left_button_state = m_packet[0] & lb_bit ? VKState::PRESSED : VKState::RELEASED;
 
     p.x_delta = is_x_negative ? static_cast<i32>(0xFFFFFF00 | m_packet[1]) : m_packet[1];
     p.y_delta = is_y_negative ? static_cast<i32>(0xFFFFFF00 | m_packet[2]) : m_packet[2];
@@ -109,7 +112,7 @@ void PS2Mouse::parse_packet()
         if (m_packet[3] & SET_BIT(7))
             z_delta |= static_cast<i32>(0xFFFFFFF0);
 
-        p.wheel_delta      = static_cast<i8>(z_delta);
+        p.wheel_delta = static_cast<i8>(z_delta);
         p.scroll_direction = ScrollDirection::VERTICAL;
 
     } else if (sub_type() == SubType::FIVE_BUTTONS) {
@@ -119,19 +122,19 @@ void PS2Mouse::parse_packet()
 
         switch (m_packet[3] & z_delta_mask) {
         case 0x1:
-            p.wheel_delta      = 1;
+            p.wheel_delta = 1;
             p.scroll_direction = ScrollDirection::VERTICAL;
             break;
         case 0xF:
-            p.wheel_delta      = -1;
+            p.wheel_delta = -1;
             p.scroll_direction = ScrollDirection::VERTICAL;
             break;
         case 0x2:
-            p.wheel_delta      = 1;
+            p.wheel_delta = 1;
             p.scroll_direction = ScrollDirection::HORIZONTAL;
             break;
         case 0xE:
-            p.wheel_delta      = -1;
+            p.wheel_delta = -1;
             p.scroll_direction = ScrollDirection::HORIZONTAL;
             break;
         }

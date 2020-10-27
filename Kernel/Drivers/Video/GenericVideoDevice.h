@@ -19,6 +19,6 @@ public:
 
 private:
     VideoMode m_mode;
-    Surface*  m_surface;
+    Surface* m_surface { nullptr };
 };
 }

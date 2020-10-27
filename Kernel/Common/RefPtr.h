@@ -17,9 +17,18 @@ public:
         return RefPtr(new T(forward<Args>(args)...));
     }
 
-    RefPtr(T* ptr) : m_ptr(ptr), m_ref_count(new size_t(1)) { }
+    RefPtr(T* ptr)
+        : m_ptr(ptr)
+        , m_ref_count(new size_t(1))
+    {
+    }
 
-    RefPtr(const RefPtr& other) : m_ptr(other.m_ptr), m_ref_count(other.m_ref_count) { increment(); }
+    RefPtr(const RefPtr& other)
+        : m_ptr(other.m_ptr)
+        , m_ref_count(other.m_ref_count)
+    {
+        increment();
+    }
 
     RefPtr(RefPtr&& other)
     {
@@ -31,7 +40,7 @@ public:
     {
         decrement();
 
-        m_ptr       = ptr;
+        m_ptr = ptr;
         m_ref_count = new size_t(1);
     }
 
@@ -60,7 +69,7 @@ public:
     {
         decrement();
 
-        m_ptr       = other.m_ptr;
+        m_ptr = other.m_ptr;
         m_ref_count = other.m_ref_count;
 
         increment();
@@ -109,7 +118,7 @@ private:
     }
 
 private:
-    T*      m_ptr { nullptr };
+    T* m_ptr { nullptr };
     size_t* m_ref_count { nullptr };
 };
 }

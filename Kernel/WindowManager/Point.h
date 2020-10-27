@@ -8,7 +8,10 @@ namespace kernel {
 class Point : public Pair<size_t, size_t> {
 public:
     Point() = default;
-    Point(size_t x, size_t y) : Pair(x, y) { }
+    Point(size_t x, size_t y)
+        : Pair(x, y)
+    {
+    }
 
     bool operator==(const Point& other) const { return (x() == other.x()) && (y() == other.y()); }
 

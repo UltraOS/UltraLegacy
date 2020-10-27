@@ -24,9 +24,9 @@ void PS2Controller::discover_all_devices()
     flush();
 
     // disable both irqs and translation
-    auto config                       = read_configuration();
-    config.port_1_irq_enabled         = false;
-    config.port_2_irq_enabled         = false;
+    auto config = read_configuration();
+    config.port_1_irq_enabled = false;
+    config.port_2_irq_enabled = false;
     config.port_1_translation_enabled = false;
 
     // potentially
@@ -52,7 +52,7 @@ void PS2Controller::discover_all_devices()
     // check if it's actually a dual channel
     if (is_dual_channel) {
         send_command(Command::ENABLE_PORT_2);
-        auto config     = read_configuration();
+        auto config = read_configuration();
         is_dual_channel = !config.port_2_clock_disabled;
 
         if (is_dual_channel)
@@ -92,11 +92,11 @@ void PS2Controller::discover_all_devices()
     // we have to set scancode set 1 for it manually, or just support set 2
     // because we cannot have auto translation for port 2
     // TODO: disable translation if keyboard ends up on port 2
-    config.port_1_irq_enabled         = device_1_present;
+    config.port_1_irq_enabled = device_1_present;
     config.port_1_translation_enabled = device_1_present;
-    config.port_1_clock_disabled      = !device_1_present;
+    config.port_1_clock_disabled = !device_1_present;
 
-    config.port_2_irq_enabled    = device_2_present;
+    config.port_2_irq_enabled = device_2_present;
     config.port_2_clock_disabled = !device_2_present;
 
     write_configuration(config);
@@ -158,9 +158,9 @@ bool PS2Controller::reset_device(Channel channel)
     // (250 might be too little for real hw tho, so might have to tweak it later)
     device_response[2] = read_data(true, channel == Channel::TWO ? 100000 : 250);
 
-    bool did_get_ack  = false;
+    bool did_get_ack = false;
     bool did_get_pass = false;
-    bool did_fail     = false;
+    bool did_fail = false;
 
     // These come in absolutely random order everywhere
     // For example on QEMU I get ack-pass-id and on my laptop I get ack-id-pass
@@ -251,9 +251,14 @@ void PS2Controller::send_command_to_device(Channel channel, u8 command, bool sho
 
     do {
         switch (channel) {
-        case Channel::TWO: send_command(Command::WRITE_PORT_2); [[fallthrough]];
-        case Channel::ONE: write<data_port>(command); break;
-        default: ASSERT_NEVER_REACHED();
+        case Channel::TWO:
+            send_command(Command::WRITE_PORT_2);
+            [[fallthrough]];
+        case Channel::ONE:
+            write<data_port>(command);
+            break;
+        default:
+            ASSERT_NEVER_REACHED();
         }
     } while (should_expect_ack && --resend_counter && should_resend());
 

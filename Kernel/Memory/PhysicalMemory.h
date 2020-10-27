@@ -10,7 +10,13 @@ struct PACKED PhysicalRange {
     u64 base_address;
     u64 length;
 
-    enum : u32 { FREE = 1, RESERVED = 2, RECLAIMABLE = 3, NON_VOLATILE = 4, BAD = 5 } type;
+    enum : u32 {
+        FREE = 1,
+        RESERVED = 2,
+        RECLAIMABLE = 3,
+        NON_VOLATILE = 4,
+        BAD = 5
+    } type;
 
     u32 extended_attributes;
 
@@ -20,12 +26,18 @@ struct PACKED PhysicalRange {
     StringView type_as_string() const
     {
         switch (type) {
-        case FREE: return "free"_sv;
-        case RESERVED: return "reserved"_sv;
-        case RECLAIMABLE: return "reclaimable"_sv;
-        case NON_VOLATILE: return "ACPI non-volatile"_sv;
-        case BAD: return "bad"_sv;
-        default: return "unknown"_sv;
+        case FREE:
+            return "free"_sv;
+        case RESERVED:
+            return "reserved"_sv;
+        case RECLAIMABLE:
+            return "reclaimable"_sv;
+        case NON_VOLATILE:
+            return "ACPI non-volatile"_sv;
+        case BAD:
+            return "bad"_sv;
+        default:
+            return "unknown"_sv;
         }
     }
 
@@ -41,7 +53,7 @@ struct PACKED PhysicalRange {
 
 struct PACKED MemoryMap {
     PhysicalRange* entries;
-    u32            entry_count;
+    u32 entry_count;
 
     PhysicalRange* begin() { return entries; }
     PhysicalRange* end() { return entries + entry_count; }

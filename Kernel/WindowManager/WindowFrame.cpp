@@ -4,7 +4,10 @@
 
 namespace kernel {
 
-WindowFrame::WindowFrame(Window& owner) : m_owner(owner) { }
+WindowFrame::WindowFrame(Window& owner)
+    : m_owner(owner)
+{
+}
 
 void WindowFrame::paint()
 {
@@ -34,8 +37,8 @@ void WindowFrame::draw_button(Button button, ButtonState state)
 {
     Painter painter(&m_owner.surface());
 
-    auto& theme       = m_owner.theme();
-    auto  button_rect = raw_rect_for_button(button);
+    auto& theme = m_owner.theme();
+    auto button_rect = raw_rect_for_button(button);
 
     painter.fill_rect(button_rect, theme->color_for_button_state(button, state));
 
@@ -53,7 +56,7 @@ Rect WindowFrame::rect() const
     auto final_rect = m_owner.window_rect();
 
     final_rect.set_height(final_rect.height() + m_owner.theme()->upper_window_frame_height()
-                          + m_owner.theme()->bottom_width_frame_height());
+        + m_owner.theme()->bottom_width_frame_height());
     final_rect.set_width(final_rect.width() + (m_owner.theme()->side_window_frame_width() * 2));
 
     return final_rect;
@@ -76,25 +79,31 @@ Rect WindowFrame::view_rect() const
 
 Rect WindowFrame::raw_rect_for_frame(Frame frame) const
 {
-    auto& theme      = m_owner.theme();
-    auto  frame_rect = rect();
-    auto  view_rect  = m_owner.view_rect();
+    auto& theme = m_owner.theme();
+    auto frame_rect = rect();
+    auto view_rect = m_owner.view_rect();
 
     switch (frame) {
-    case Frame::TOP: return { frame_rect.top_left(), frame_rect.width(), theme->upper_window_frame_height() };
+    case Frame::TOP:
+        return { frame_rect.top_left(), frame_rect.width(), theme->upper_window_frame_height() };
     case Frame::LEFT:
         return { 0, theme->upper_window_frame_height(), theme->side_window_frame_width(), view_rect.height() };
     case Frame::RIGHT:
-        return { theme->side_window_frame_width() + view_rect.width(),
-                 theme->upper_window_frame_height(),
-                 theme->side_window_frame_width(),
-                 view_rect.height() };
+        return {
+            theme->side_window_frame_width() + view_rect.width(),
+            theme->upper_window_frame_height(),
+            theme->side_window_frame_width(),
+            view_rect.height()
+        };
     case Frame::BOTTOM:
-        return { frame_rect.left(),
-                 frame_rect.height() - theme->bottom_width_frame_height(),
-                 frame_rect.width(),
-                 theme->bottom_width_frame_height() };
-    default: ASSERT_NEVER_REACHED();
+        return {
+            frame_rect.left(),
+            frame_rect.height() - theme->bottom_width_frame_height(),
+            frame_rect.width(),
+            theme->bottom_width_frame_height()
+        };
+    default:
+        ASSERT_NEVER_REACHED();
     }
 }
 
@@ -110,7 +119,7 @@ Rect WindowFrame::raw_draggable_rect() const
     auto final_rect = rect();
     final_rect.set_height(theme->upper_window_frame_height());
     final_rect.set_width(final_rect.width() - theme->width_for_button(Button::CLOSE)
-                         - theme->width_for_button(Button::MAXIMIZE) - theme->width_for_button(Button::MINIMIZE));
+        - theme->width_for_button(Button::MAXIMIZE) - theme->width_for_button(Button::MINIMIZE));
     return final_rect;
 }
 
@@ -124,10 +133,12 @@ Rect WindowFrame::raw_rect_for_button(Button button) const
     auto& theme = m_owner.theme();
 
     // final_rect == MINIMIZE
-    Rect final_rect = { raw_draggable_rect().right(),
-                        0,
-                        theme->width_for_button(Button::MINIMIZE),
-                        theme->upper_window_frame_height() };
+    Rect final_rect = {
+        raw_draggable_rect().right(),
+        0,
+        theme->width_for_button(Button::MINIMIZE),
+        theme->upper_window_frame_height()
+    };
 
     if (button == Button::MINIMIZE)
         return final_rect;

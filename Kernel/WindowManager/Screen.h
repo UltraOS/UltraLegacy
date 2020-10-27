@@ -23,7 +23,7 @@ public:
     }
 
     Point cursor_position_for_delta(i16 delta_x, i16 delta_y);
-    void  check_if_focused_window_should_change();
+    void check_if_focused_window_should_change();
 
     const Rect& rect() const { return m_rect; }
 
@@ -38,8 +38,8 @@ public:
 
 private:
     VideoDevice& m_device;
-    Cursor       m_cursor;
-    Rect         m_rect;
+    Cursor m_cursor;
+    Rect m_rect;
 
     // To make cursor_position_for_delta() alwaysreturn
     // an updated position thus preventing cursor lag

@@ -9,8 +9,8 @@ class PS2Mouse : public PS2Device, public Mouse {
 public:
     enum class SubType {
         STANDARD_MOUSE = 0x00,
-        SCROLL_WHEEL   = 0x03,
-        FIVE_BUTTONS   = 0x04,
+        SCROLL_WHEEL = 0x03,
+        FIVE_BUTTONS = 0x04,
     };
 
     PS2Mouse(PS2Controller::Channel channel);

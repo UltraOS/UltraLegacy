@@ -23,7 +23,7 @@ void APIC::clear_all() { }
 
 void APIC::enable_irq(u8 index)
 {
-    for (const auto& irq: smp_data().irqs) {
+    for (const auto& irq : smp_data().irqs) {
         if (irq.original_irq_index == index) {
             IOAPIC::map_irq(irq, IRQManager::irq_base_index + index);
             return;

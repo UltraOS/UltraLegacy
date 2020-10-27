@@ -12,7 +12,8 @@ public:
     static constexpr u8 port_2_irq_number = 12;
 
     PS2Device(PS2Controller::Channel channel)
-        : IRQHandler(channel == PS2Controller::Channel::ONE ? port_1_irq_number : port_2_irq_number), m_channel(channel)
+        : IRQHandler(channel == PS2Controller::Channel::ONE ? port_1_irq_number : port_2_irq_number)
+        , m_channel(channel)
     {
     }
 

@@ -7,7 +7,9 @@
 namespace kernel {
 
 PhysicalRegion::PhysicalRegion(Address starting_address, size_t length)
-    : m_starting_address(starting_address), m_free_pages(length / Page::size), m_allocation_map(m_free_pages)
+    : m_starting_address(starting_address)
+    , m_free_pages(length / Page::size)
+    , m_allocation_map(m_free_pages)
 {
 }
 
@@ -45,7 +47,7 @@ RefPtr<Page> PhysicalRegion::allocate_page()
 bool PhysicalRegion::contains(const Page& page)
 {
     return page.address() >= m_starting_address
-           && page.address() < bit_as_physical_address(m_allocation_map.size() - 1);
+        && page.address() < bit_as_physical_address(m_allocation_map.size() - 1);
 }
 
 void PhysicalRegion::free_page(const Page& page)

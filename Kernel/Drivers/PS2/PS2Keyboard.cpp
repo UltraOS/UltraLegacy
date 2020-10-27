@@ -210,7 +210,8 @@ static const VK multi_byte_keys[] = {
     VK::MM_MEDIA_SELECT,
 };
 
-PS2Keyboard::PS2Keyboard(PS2Controller::Channel channel) : PS2Device(channel)
+PS2Keyboard::PS2Keyboard(PS2Controller::Channel channel)
+    : PS2Device(channel)
 {
     enable_irq();
 }
@@ -219,7 +220,7 @@ void PS2Keyboard::handle_action()
 {
     while (data_available()) {
         static constexpr u8 key_released_bit = SET_BIT(7);
-        static constexpr u8 raw_key_mask     = SET_BIT(7) - 1;
+        static constexpr u8 raw_key_mask = SET_BIT(7) - 1;
 
         auto scancode = read_data();
 
@@ -238,7 +239,7 @@ void PS2Keyboard::handle_action()
             m_state = State::NORMAL;
             break;
         case State::E0_REPEAT:
-            static constexpr u8 prt_sc_pressed_code  = 0x37;
+            static constexpr u8 prt_sc_pressed_code = 0x37;
             static constexpr u8 prt_sc_released_code = 0xAA;
 
             if (scancode == prt_sc_pressed_code)
@@ -286,7 +287,7 @@ void PS2Keyboard::handle_action()
         }
 
         bool released = scancode & key_released_bit;
-        auto raw_key  = scancode & raw_key_mask;
+        auto raw_key = scancode & raw_key_mask;
 
         if (m_state == State::NORMAL) {
             EventManager::the().post_action(

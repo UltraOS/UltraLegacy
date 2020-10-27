@@ -22,8 +22,8 @@ AddressSpace* AddressSpace::s_of_kernel;
 AddressSpace::AddressSpace() { }
 
 AddressSpace::AddressSpace(RefPtr<Page> directory_page)
-    : m_main_page(directory_page),
-      m_allocator(MemoryManager::userspace_usable_base, MemoryManager::userspace_usable_length)
+    : m_main_page(directory_page)
+    , m_allocator(MemoryManager::userspace_usable_base, MemoryManager::userspace_usable_length)
 {
     MemoryManager::the().inititalize(*this);
 }
@@ -33,7 +33,7 @@ void AddressSpace::inititalize()
     s_of_kernel = new AddressSpace();
 
 #ifdef ULTRA_32
-    auto as_physical         = MemoryManager::virtual_to_physical(&kernel_page_directory);
+    auto as_physical = MemoryManager::virtual_to_physical(&kernel_page_directory);
     s_of_kernel->m_main_page = RefPtr<Page>::create(as_physical);
 #elif defined(ULTRA_64)
     s_of_kernel->m_main_page = MemoryManager::the().allocate_page();
@@ -42,9 +42,9 @@ void AddressSpace::inititalize()
 
     for (size_t i = 0; i < lower_indentity_size / Page::huge_size; ++i)
         s_of_kernel->map_huge_supervisor_page(MemoryManager::physical_memory_base + Page::huge_size * i,
-                                              Page::huge_size * i);
+            Page::huge_size * i);
 
-    for (const auto& entry: MemoryManager::the().memory_map()) {
+    for (const auto& entry : MemoryManager::the().memory_map()) {
         if (entry.base_address < lower_indentity_size)
             continue; // we already have this mapped
 
@@ -53,8 +53,8 @@ void AddressSpace::inititalize()
 
         if (!Page::is_huge_aligned(entry.base_address)) {
             auto alignment_overhead = entry.base_address % Page::huge_size;
-            base_address            = entry.base_address - alignment_overhead;
-            length                  = entry.length + alignment_overhead;
+            base_address = entry.base_address - alignment_overhead;
+            length = entry.length + alignment_overhead;
 
 #ifdef ADDRESS_SPACE_DEBUG
             log() << "AddressSpace: "
@@ -63,7 +63,7 @@ void AddressSpace::inititalize()
 #endif
         } else {
             base_address = entry.base_address;
-            length       = entry.length;
+            length = entry.length;
         }
 
         auto total_pages = ceiling_divide(length, Page::huge_size);
@@ -74,7 +74,7 @@ void AddressSpace::inititalize()
         for (size_t i = 0; i < total_pages; ++i) {
             auto physical_address = base_address + Page::huge_size * i;
             s_of_kernel->map_huge_supervisor_page(MemoryManager::physical_to_virtual(physical_address),
-                                                  physical_address);
+                physical_address);
         }
     }
 
@@ -118,7 +118,7 @@ void AddressSpace::map_page_directory_entry(size_t index, Address physical_addre
 Pair<size_t, size_t> AddressSpace::virtual_address_as_paging_indices(Address virtual_address)
 {
     return make_pair(static_cast<size_t>(virtual_address >> 22),
-                     static_cast<size_t>((virtual_address >> 12) & (Table::entry_count - 1)));
+        static_cast<size_t>((virtual_address >> 12) & (Table::entry_count - 1)));
 }
 #elif defined(ULTRA_64)
 // clang-format off
@@ -143,7 +143,7 @@ void AddressSpace::map_page(Address virtual_address, Address physical_address, b
 
     LockGuard lock_guard(m_lock);
 
-    auto  indices          = virtual_address_as_paging_indices(virtual_address);
+    auto indices = virtual_address_as_paging_indices(virtual_address);
     auto& page_table_index = indices.first();
     auto& page_entry_index = indices.second();
 
@@ -361,9 +361,9 @@ void AddressSpace::unmap_page(Address virtual_address)
 
     LockGuard lock_guard(m_lock);
 
-    const auto indices          = virtual_address_as_paging_indices(virtual_address);
-    auto&      page_table_index = indices.first();
-    auto&      page_entry_index = indices.second();
+    const auto indices = virtual_address_as_paging_indices(virtual_address);
+    auto& page_table_index = indices.first();
+    auto& page_entry_index = indices.second();
 
 #ifdef ADDRESS_SPACE_DEBUG
     log() << "AddressSpace: unmapping the page at vaddr " << virtual_address;
@@ -411,7 +411,8 @@ bool AddressSpace::is_active()
 {
     ptr_t active_directory_ptr;
 
-    asm("mov %%cr3, %0" : "=a"(active_directory_ptr));
+    asm("mov %%cr3, %0"
+        : "=a"(active_directory_ptr));
 
     return physical_address() == active_directory_ptr;
 }
@@ -428,7 +429,8 @@ void AddressSpace::make_active()
 
 void AddressSpace::flush_all()
 {
-    asm volatile("mov %0, %%cr3" ::"a"(physical_address()) : "memory");
+    asm volatile("mov %0, %%cr3" ::"a"(physical_address())
+                 : "memory");
 }
 
 void AddressSpace::flush_at(Address virtual_address)
@@ -437,7 +439,8 @@ void AddressSpace::flush_at(Address virtual_address)
     log() << "AddressSpace: flushing the page at vaddr " << virtual_address;
 #endif
 
-    asm volatile("invlpg %0" ::"m"(*virtual_address.as_pointer<u8>()) : "memory");
+    asm volatile("invlpg %0" ::"m"(*virtual_address.as_pointer<u8>())
+                 : "memory");
 }
 
 AddressSpace& AddressSpace::current()

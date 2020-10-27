@@ -22,14 +22,14 @@ MemoryManager::MemoryManager(const MemoryMap& memory_map)
 
     u64 total_free_memory = 0;
 
-    for (const auto& entry: memory_map) {
+    for (const auto& entry : memory_map) {
         log() << entry;
 
         if (entry.is_reserved())
             continue;
 
         auto base_address = entry.base_address;
-        auto length       = entry.length;
+        auto length = entry.length;
 
         if (base_address < kernel_reserved_size) {
             if ((base_address + length) < kernel_reserved_size) {
@@ -147,7 +147,7 @@ RefPtr<Page> MemoryManager::allocate_page(bool should_zero)
 {
     LockGuard lock_guard(m_lock);
 
-    for (auto& region: m_physical_regions) {
+    for (auto& region : m_physical_regions) {
         if (!region.has_free_pages())
             continue;
 
@@ -180,7 +180,7 @@ void MemoryManager::free_page(Page& page)
 {
     LockGuard lock_guard(m_lock);
 
-    for (auto& region: m_physical_regions) {
+    for (auto& region : m_physical_regions) {
         if (region.contains(page)) {
             region.free_page(page);
             return;
@@ -247,7 +247,7 @@ void MemoryManager::inititalize(AddressSpace& directory)
 #elif defined(ULTRA_64)
     static constexpr size_t kernel_pdpts[] = { 256, 511 };
 
-    for (auto pdpt_index: kernel_pdpts) {
+    for (auto pdpt_index : kernel_pdpts) {
         auto& entry = AddressSpace::of_kernel().entry_at(pdpt_index);
         directory.entry_at(pdpt_index) = entry;
     }

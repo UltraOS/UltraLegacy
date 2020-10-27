@@ -13,7 +13,11 @@ class IRQHandler {
     MAKE_NONCOPYABLE(IRQHandler);
 
 public:
-    IRQHandler(u16 irq_index) : m_irq_index(irq_index) { IRQManager::register_irq_handler(*this); }
+    IRQHandler(u16 irq_index)
+        : m_irq_index(irq_index)
+    {
+        IRQManager::register_irq_handler(*this);
+    }
 
     u16 irq_index() const { return m_irq_index; }
 

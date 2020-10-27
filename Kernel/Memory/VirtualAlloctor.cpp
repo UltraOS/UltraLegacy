@@ -4,7 +4,11 @@
 
 namespace kernel {
 
-VirtualAllocator::Range::Range(Address start, Address length) : m_start(start), m_length(length) { }
+VirtualAllocator::Range::Range(Address start, Address length)
+    : m_start(start)
+    , m_length(length)
+{
+}
 
 Address VirtualAllocator::Range::begin() const
 {
@@ -28,7 +32,7 @@ bool VirtualAllocator::Range::contains(Address address)
 
 void VirtualAllocator::Range::set(Address start, Address length)
 {
-    m_start  = start;
+    m_start = start;
     m_length = length;
 }
 
@@ -37,7 +41,8 @@ bool VirtualAllocator::Range::operator==(const Range& other) const
     return m_start == other.m_start && m_length == other.m_length;
 }
 
-VirtualAllocator::VirtualAllocator(Address base, size_t length) : m_full_range(base, length)
+VirtualAllocator::VirtualAllocator(Address base, size_t length)
+    : m_full_range(base, length)
 {
     m_free_ranges.emplace(m_full_range);
 }
@@ -59,7 +64,7 @@ bool VirtualAllocator::is_allocated(Address address)
 
     // use binary search here
 
-    for (auto& range: m_allocated_ranges) {
+    for (auto& range : m_allocated_ranges) {
         if (range.contains(address))
             return true;
     }
@@ -88,7 +93,7 @@ VirtualAllocator::Range VirtualAllocator::allocate_range(size_t length)
     }
 
     // allocate
-    auto& initial_range   = m_free_ranges[range_index];
+    auto& initial_range = m_free_ranges[range_index];
     auto& allocated_range = m_allocated_ranges.emplace(initial_range.begin(), length);
 
 #ifdef VIRTUAL_ALLOCATOR_DEBUG

@@ -18,9 +18,18 @@ public:
         MINIMIZE,
     };
 
-    enum class ButtonState { PRESSED, HOVERED, RELEASED };
+    enum class ButtonState {
+        PRESSED,
+        HOVERED,
+        RELEASED
+    };
 
-    enum class Frame { TOP, LEFT, RIGHT, BOTTOM };
+    enum class Frame {
+        TOP,
+        LEFT,
+        RIGHT,
+        BOTTOM
+    };
 
     WindowFrame(Window& owner);
     void paint();

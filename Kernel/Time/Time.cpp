@@ -37,18 +37,40 @@ u32 Time::days_in_months_since_start_of(u16 year, Month current)
     --current;
 
     switch (current) {
-    case Month::December: ASSERT(false && "Current month cannot be > 12");
-    case Month::November: days_total += 30; [[fallthrough]];
-    case Month::October: days_total += 31; [[fallthrough]];
-    case Month::September: days_total += 30; [[fallthrough]];
-    case Month::August: days_total += 31; [[fallthrough]];
-    case Month::July: days_total += 31; [[fallthrough]];
-    case Month::June: days_total += 30; [[fallthrough]];
-    case Month::May: days_total += 31; [[fallthrough]];
-    case Month::April: days_total += 30; [[fallthrough]];
-    case Month::March: days_total += 31; [[fallthrough]];
-    case Month::February: days_total += is_leap_year(year) ? 29 : 28; [[fallthrough]];
-    case Month::January: days_total += 31;
+    case Month::December:
+        ASSERT(false && "Current month cannot be > 12");
+    case Month::November:
+        days_total += 30;
+        [[fallthrough]];
+    case Month::October:
+        days_total += 31;
+        [[fallthrough]];
+    case Month::September:
+        days_total += 30;
+        [[fallthrough]];
+    case Month::August:
+        days_total += 31;
+        [[fallthrough]];
+    case Month::July:
+        days_total += 31;
+        [[fallthrough]];
+    case Month::June:
+        days_total += 30;
+        [[fallthrough]];
+    case Month::May:
+        days_total += 31;
+        [[fallthrough]];
+    case Month::April:
+        days_total += 30;
+        [[fallthrough]];
+    case Month::March:
+        days_total += 31;
+        [[fallthrough]];
+    case Month::February:
+        days_total += is_leap_year(year) ? 29 : 28;
+        [[fallthrough]];
+    case Month::January:
+        days_total += 31;
     }
 
     return days_total;
@@ -57,37 +79,50 @@ u32 Time::days_in_months_since_start_of(u16 year, Month current)
 u8 Time::days_in_month(Month month, u16 of_year)
 {
     switch (month) {
-    case Month::December: return 31;
-    case Month::November: return 30;
-    case Month::October: return 31;
-    case Month::September: return 30;
-    case Month::August: return 31;
-    case Month::July: return 31;
-    case Month::June: return 30;
-    case Month::May: return 31;
-    case Month::April: return 30;
-    case Month::March: return 31;
-    case Month::February: return is_leap_year(of_year) ? 29 : 28;
-    case Month::January: return 31;
-    default: return 0;
+    case Month::December:
+        return 31;
+    case Month::November:
+        return 30;
+    case Month::October:
+        return 31;
+    case Month::September:
+        return 30;
+    case Month::August:
+        return 31;
+    case Month::July:
+        return 31;
+    case Month::June:
+        return 30;
+    case Month::May:
+        return 31;
+    case Month::April:
+        return 30;
+    case Month::March:
+        return 31;
+    case Month::February:
+        return is_leap_year(of_year) ? 29 : 28;
+    case Month::January:
+        return 31;
+    default:
+        return 0;
     }
 }
 
 Time::time_t Time::to_unix(const HumanReadable& time)
 {
     return days_in_years_since_epoch_before(time.year) * seconds_in_day
-           + days_in_months_since_start_of(time.year, time.month) * seconds_in_day + (time.day - 1) * seconds_in_day
-           + time.hour * seconds_in_hour + time.minute * seconds_in_minute + time.second;
+        + days_in_months_since_start_of(time.year, time.month) * seconds_in_day + (time.day - 1) * seconds_in_day
+        + time.hour * seconds_in_hour + time.minute * seconds_in_minute + time.second;
 }
 
 Time::HumanReadable Time::from_unix(time_t time)
 {
     HumanReadable hr_time {};
-    hr_time.year  = epoch_year;
-    hr_time.day   = 1;
+    hr_time.year = epoch_year;
+    hr_time.day = 1;
     hr_time.month = Month::January;
 
-    static constexpr auto seconds_in_year      = seconds_in_day * 365;
+    static constexpr auto seconds_in_year = seconds_in_day * 365;
     static constexpr auto seconds_in_leap_year = seconds_in_day * 366;
 
     while (time >= seconds_in_year) {

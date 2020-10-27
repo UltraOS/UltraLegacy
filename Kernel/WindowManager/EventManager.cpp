@@ -14,7 +14,7 @@ void EventManager::dispatch_pending()
 {
     LockGuard lock_guard(m_event_queue_lock);
 
-    for (auto& event: m_event_queue) {
+    for (auto& event : m_event_queue) {
         switch (event.type) {
         case Event::Type::BUTTON_STATE:
             update_state_of_key(event.vk_state.vkey, event.vk_state.state);
@@ -37,7 +37,7 @@ void EventManager::dispatch_pending()
             Screen::the().move_cursor_to({ mouse_event.x, mouse_event.y });
 
             bool event_handled = false;
-            for (auto& window: WindowManager::the().windows()) {
+            for (auto& window : WindowManager::the().windows()) {
                 event_handled = (window->handle_event(event, event_handled) || event_handled);
             }
             continue;
@@ -51,9 +51,11 @@ void EventManager::dispatch_pending()
             continue;
 
         case Event::Type::WINDOW_RESIZE:
-        case Event::Type::WINDOW_MOVE: continue;
+        case Event::Type::WINDOW_MOVE:
+            continue;
 
-        default: ASSERT_NEVER_REACHED();
+        default:
+            ASSERT_NEVER_REACHED();
         }
     }
 
@@ -82,7 +84,7 @@ void EventManager::update_state_of_key(VK key, VKState state)
 void EventManager::generate_button_state_event(VK key, VKState state)
 {
     Event e {};
-    e.type     = Event::Type::BUTTON_STATE;
+    e.type = Event::Type::BUTTON_STATE;
     e.vk_state = { key, state };
 
     push_event(e);
@@ -95,7 +97,7 @@ void EventManager::post_action(const Keyboard::Packet& packet)
 #endif
 
     Event e {};
-    e.type     = Event::Type::KEY_STATE;
+    e.type = Event::Type::KEY_STATE;
     e.vk_state = { packet.key, packet.state };
 
     push_event(e);
@@ -109,8 +111,8 @@ void EventManager::post_action(const Mouse::Packet& packet)
         log() << "EventManager: mouse move x " << packet.x_delta << " y " << packet.y_delta;
 #endif
         Event e {};
-        e.type       = Event::Type::MOUSE_MOVE;
-        auto loc     = Screen::the().cursor_position_for_delta(packet.x_delta, packet.y_delta);
+        e.type = Event::Type::MOUSE_MOVE;
+        auto loc = Screen::the().cursor_position_for_delta(packet.x_delta, packet.y_delta);
         e.mouse_move = { loc.x(), loc.y() };
 
         push_event(e);
@@ -123,7 +125,7 @@ void EventManager::post_action(const Mouse::Packet& packet)
 #endif
         Event e {};
 
-        e.type         = Event::Type::MOUSE_MOVE;
+        e.type = Event::Type::MOUSE_MOVE;
         e.mouse_scroll = { packet.scroll_direction, packet.wheel_delta };
 
         push_event(e);

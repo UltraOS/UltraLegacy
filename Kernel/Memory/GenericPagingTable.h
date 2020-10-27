@@ -15,7 +15,7 @@ public:
 #endif
 
     static constexpr size_t entry_size = sizeof(Address);
-    static constexpr size_t size       = entry_count * entry_size;
+    static constexpr size_t size = entry_count * entry_size;
 
     Entry& entry_at(size_t index) { return m_entries[index]; }
 

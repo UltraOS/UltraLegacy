@@ -24,7 +24,10 @@ public:
 
     static constexpr bool is_aligned(Address address) { return (address % size) == 0; }
 #ifdef ULTRA_64
-    static constexpr bool is_huge_aligned(Address address) { return (address % (2 * MB)) == 0; }
+    static constexpr bool is_huge_aligned(Address address)
+    {
+        return (address % (2 * MB)) == 0;
+    }
 #endif
 
     ~Page();

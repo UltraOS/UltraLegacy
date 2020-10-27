@@ -4,7 +4,7 @@
 
 namespace kernel {
 Address IOAPIC::s_base;
-u8      IOAPIC::s_cached_redirection_entry_count;
+u8 IOAPIC::s_cached_redirection_entry_count;
 
 void IOAPIC::set_base_address(Address physical_base)
 {
@@ -36,13 +36,13 @@ IOAPIC::Register IOAPIC::redirection_entry(u8 index, bool is_lower)
 void IOAPIC::map_irq(const InterruptController::IRQInfo& irq, u8 to_index)
 {
     RedirectionEntry re {};
-    re.index            = to_index;
-    re.delivery_mode    = DeliveryMode::FIXED;
+    re.index = to_index;
+    re.delivery_mode = DeliveryMode::FIXED;
     re.destination_mode = DestinationMode::PHYSICAL;
-    re.pin_polarity     = irq.is_active_high ? PinPolarity::ACTIVE_HIGH : PinPolarity::ACTIVE_LOW;
-    re.trigger_mode     = irq.is_edge ? TriggerMode::EDGE : TriggerMode::LEVEL;
-    re.is_disabled      = false;
-    re.local_apic_id    = InterruptController::smp_data().bootstrap_processor_apic_id;
+    re.pin_polarity = irq.is_active_high ? PinPolarity::ACTIVE_HIGH : PinPolarity::ACTIVE_LOW;
+    re.trigger_mode = irq.is_edge ? TriggerMode::EDGE : TriggerMode::LEVEL;
+    re.is_disabled = false;
+    re.local_apic_id = InterruptController::smp_data().bootstrap_processor_apic_id;
 
     volatile auto* redirection_lower = Address(&re).as_pointer<u32>();
 

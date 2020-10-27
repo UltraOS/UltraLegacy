@@ -19,7 +19,7 @@ public:
         CONTROLLER,
     };
 
-    virtual Type       type() const = 0;
+    virtual Type type() const = 0;
     virtual StringView name() const = 0;
 
     virtual ~Device() = default;

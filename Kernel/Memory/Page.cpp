@@ -3,7 +3,10 @@
 
 namespace kernel {
 
-Page::Page(Address physical_address) : m_physical_address(physical_address) { }
+Page::Page(Address physical_address)
+    : m_physical_address(physical_address)
+{
+}
 
 Address Page::address() const
 {

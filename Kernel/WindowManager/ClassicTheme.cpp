@@ -62,26 +62,30 @@ const Color ClassicTheme::s_palette[2] = { Color::transparent(), Color::white() 
 // clang-format on
 
 ClassicTheme::ClassicTheme()
-    : m_cursor_bitmap(s_cursor_bitmap_data,
-                      cursor_bitmap_width,
-                      cursor_bitmap_height,
-                      Bitmap::Format::INDEXED_1_BPP,
-                      s_palette),
-      m_close_button_bitmap(s_close_button_bitmap_data,
-                            close_button_bitmap_width,
-                            close_button_bitmap_height,
-                            Bitmap::Format::INDEXED_1_BPP,
-                            s_palette),
-      m_maximize_button_bitmap(s_maximize_button_bitmap_data,
-                               maximize_button_bitmap_width,
-                               maximize_button_bitmap_height,
-                               Bitmap::Format::INDEXED_1_BPP,
-                               s_palette),
-      m_minimize_button_bitmap(s_minimize_button_bitmap_data,
-                               minimize_button_bitmap_width,
-                               minimize_button_bitmap_height,
-                               Bitmap::Format::INDEXED_1_BPP,
-                               s_palette)
+    : m_cursor_bitmap(
+        s_cursor_bitmap_data,
+        cursor_bitmap_width,
+        cursor_bitmap_height,
+        Bitmap::Format::INDEXED_1_BPP,
+        s_palette)
+    , m_close_button_bitmap(
+          s_close_button_bitmap_data,
+          close_button_bitmap_width,
+          close_button_bitmap_height,
+          Bitmap::Format::INDEXED_1_BPP,
+          s_palette)
+    , m_maximize_button_bitmap(
+          s_maximize_button_bitmap_data,
+          maximize_button_bitmap_width,
+          maximize_button_bitmap_height,
+          Bitmap::Format::INDEXED_1_BPP,
+          s_palette)
+    , m_minimize_button_bitmap(
+          s_minimize_button_bitmap_data,
+          minimize_button_bitmap_width,
+          minimize_button_bitmap_height,
+          Bitmap::Format::INDEXED_1_BPP,
+          s_palette)
 {
 }
 }

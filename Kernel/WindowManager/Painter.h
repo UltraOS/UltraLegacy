@@ -10,7 +10,7 @@ namespace kernel {
 class Painter {
 public:
     static constexpr size_t font_height = 16;
-    static constexpr size_t font_width  = 8;
+    static constexpr size_t font_width = 8;
 
     Painter(Surface* surface);
 
@@ -31,7 +31,7 @@ private:
 
 private:
     Surface* m_surface;
-    Rect     m_clip_rect;
+    Rect m_clip_rect;
 
     static const u8 s_font[256][font_height];
 };

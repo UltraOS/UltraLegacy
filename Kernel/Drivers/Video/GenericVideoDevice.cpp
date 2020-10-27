@@ -6,7 +6,8 @@
 
 namespace kernel {
 
-GenericVideoDevice::GenericVideoDevice(const VideoMode& video_mode) : m_mode(video_mode)
+GenericVideoDevice::GenericVideoDevice(const VideoMode& video_mode)
+    : m_mode(video_mode)
 {
     static constexpr u8 wc_pat_index = 4;
 
@@ -15,7 +16,7 @@ GenericVideoDevice::GenericVideoDevice(const VideoMode& video_mode) : m_mode(vid
 
 #ifdef ULTRA_32
     auto bytes_to_allocate = m_mode.pitch * m_mode.height;
-    auto pages             = ceiling_divide(bytes_to_allocate, Page::size);
+    auto pages = ceiling_divide(bytes_to_allocate, Page::size);
 
     auto aligned_bytes_to_allocate = pages * Page::size;
 
@@ -39,7 +40,7 @@ GenericVideoDevice::GenericVideoDevice(const VideoMode& video_mode) : m_mode(vid
     // TODO: align manually
     ASSERT_HUGE_PAGE_ALIGNED(m_mode.framebuffer);
 
-    auto pages           = ceiling_divide(static_cast<size_t>(m_mode.pitch * m_mode.height), Page::huge_size);
+    auto pages = ceiling_divide(static_cast<size_t>(m_mode.pitch * m_mode.height), Page::huge_size);
     auto framebuffer_end = m_mode.framebuffer + pages * Page::huge_size;
 
     for (Address current_address = m_mode.framebuffer; current_address < framebuffer_end;
@@ -55,11 +56,11 @@ GenericVideoDevice::GenericVideoDevice(const VideoMode& video_mode) : m_mode(vid
 #endif
 
     m_surface = new Surface(Address(m_mode.framebuffer).as_pointer<u8>(),
-                            m_mode.width,
-                            m_mode.height,
-                            m_mode.bpp == 24 ? Surface::Format::RGB_24_BPP : Surface::Format::RGBA_32_BPP,
-                            nullptr,
-                            m_mode.pitch);
+        m_mode.width,
+        m_mode.height,
+        m_mode.bpp == 24 ? Surface::Format::RGB_24_BPP : Surface::Format::RGBA_32_BPP,
+        nullptr,
+        m_mode.pitch);
 
     log() << "Initialized \"" << name() << "\": " << mode().width << "x" << mode().height << " @ " << mode().bpp
           << " bpp";

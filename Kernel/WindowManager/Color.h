@@ -7,7 +7,13 @@ namespace kernel {
 // represents an RGBA value in little endian layout (BGRA)
 class Color {
 public:
-    constexpr Color(u8 r, u8 g, u8 b, u8 a = 0xFF) : m_b(b), m_g(g), m_r(r), m_a(a) { }
+    constexpr Color(u8 r, u8 g, u8 b, u8 a = 0xFF)
+        : m_b(b)
+        , m_g(g)
+        , m_r(r)
+        , m_a(a)
+    {
+    }
 
     static constexpr Color white() { return { 0xFF, 0xFF, 0xFF }; }
     static constexpr Color black() { return { 0x00, 0x00, 0x00 }; }

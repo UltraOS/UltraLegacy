@@ -10,9 +10,9 @@ RecursiveInterruptSafeSpinLock Scheduler::s_lock;
 
 // 1 because the first process doesn't register itself
 // TODO: fix that
-size_t     Scheduler::s_thread_count = 1;
-Thread*    Scheduler::s_last_picked;
-Thread*    Scheduler::s_sleeping_threads;
+size_t Scheduler::s_thread_count = 1;
+Thread* Scheduler::s_last_picked;
+Thread* Scheduler::s_sleeping_threads;
 Scheduler* Scheduler::s_instance;
 
 void Scheduler::inititalize()
@@ -74,7 +74,7 @@ void Scheduler::register_process(RefPtr<Process> process)
 
     m_processes.emplace(process);
 
-    for (auto& thread: process->threads())
+    for (auto& thread : process->threads())
         enqueue_thread(*thread);
 }
 
@@ -93,13 +93,13 @@ void Scheduler::yield()
 
 void Scheduler::wake_up_ready_threads()
 {
-    auto*          next    = s_sleeping_threads;
+    auto* next = s_sleeping_threads;
     decltype(next) current = nullptr;
-    s_sleeping_threads     = nullptr;
+    s_sleeping_threads = nullptr;
 
     while (next) {
         current = next;
-        next    = current->next();
+        next = current->next();
         ASSERT(current != next);
 
         if (current->should_be_woken_up()) {

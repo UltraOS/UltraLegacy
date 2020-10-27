@@ -8,7 +8,11 @@ namespace kernel {
 
 GDT GDT::s_instance;
 
-GDT::GDT() : m_entries(), m_pointer { m_active_entries, m_entries } { }
+GDT::GDT()
+    : m_entries()
+    , m_pointer { m_active_entries, m_entries }
+{
+}
 
 GDT& GDT::the()
 {
@@ -23,14 +27,14 @@ void GDT::create_basic_descriptors()
 // kernel code
 #ifdef ULTRA_32
     create_descriptor(0x00000000,
-                      0xFFFFFFFF,
-                      PRESENT | CODE_OR_DATA | EXECUTABLE | READABLE,
-                      GRANULARITY_4KB | MODE_32_BIT);
+        0xFFFFFFFF,
+        PRESENT | CODE_OR_DATA | EXECUTABLE | READABLE,
+        GRANULARITY_4KB | MODE_32_BIT);
 #elif defined(ULTRA_64)
     create_descriptor(0x00000000,
-                      0xFFFFFFFF,
-                      PRESENT | CODE_OR_DATA | EXECUTABLE | READABLE,
-                      GRANULARITY_4KB | MODE_64_BIT);
+        0xFFFFFFFF,
+        PRESENT | CODE_OR_DATA | EXECUTABLE | READABLE,
+        GRANULARITY_4KB | MODE_64_BIT);
 #endif
 
     // kernel data
@@ -39,21 +43,21 @@ void GDT::create_basic_descriptors()
 // userspace code
 #ifdef ULTRA_32
     create_descriptor(0x00000000,
-                      0xFFFFFFFF,
-                      PRESENT | CODE_OR_DATA | EXECUTABLE | RING_3 | READABLE,
-                      GRANULARITY_4KB | MODE_32_BIT);
+        0xFFFFFFFF,
+        PRESENT | CODE_OR_DATA | EXECUTABLE | RING_3 | READABLE,
+        GRANULARITY_4KB | MODE_32_BIT);
 #elif defined(ULTRA_64)
     create_descriptor(0x00000000,
-                      0xFFFFFFFF,
-                      PRESENT | CODE_OR_DATA | EXECUTABLE | READABLE | RING_3,
-                      GRANULARITY_4KB | MODE_64_BIT);
+        0xFFFFFFFF,
+        PRESENT | CODE_OR_DATA | EXECUTABLE | READABLE | RING_3,
+        GRANULARITY_4KB | MODE_64_BIT);
 #endif
 
     // userspace data
     create_descriptor(0x00000000,
-                      0xFFFFFFFF,
-                      PRESENT | CODE_OR_DATA | WRITABLE | RING_3,
-                      GRANULARITY_4KB | MODE_32_BIT);
+        0xFFFFFFFF,
+        PRESENT | CODE_OR_DATA | WRITABLE | RING_3,
+        GRANULARITY_4KB | MODE_32_BIT);
 }
 
 void GDT::create_tss_descriptor(TSS* tss)
@@ -72,18 +76,18 @@ void GDT::create_tss_descriptor(TSS* tss)
     static entry* cached_entry;
 
     if (!cached_entry) {
-        cached_entry    = &new_entry();
+        cached_entry = &new_entry();
         cached_selector = (m_active_entries - 1) * entry_size;
     }
 
     auto base = reinterpret_cast<ptr_t>(tss);
 
-    cached_entry->base_lower  = base & 0x0000FFFF;
+    cached_entry->base_lower = base & 0x0000FFFF;
     cached_entry->base_middle = (base & 0x00FF0000) >> 16;
-    cached_entry->base_upper  = (base & 0xFF000000) >> 24;
+    cached_entry->base_upper = (base & 0xFF000000) >> 24;
 
     cached_entry->access = EXECUTABLE | IS_TSS | RING_3 | PRESENT;
-    cached_entry->flags  = NULL_FLAG;
+    cached_entry->flags = NULL_FLAG;
 
     cached_entry->limit_lower = TSS::size & 0x0000FFFF;
     cached_entry->limit_upper = (TSS::size & 0x000F0000) >> 16;
@@ -92,19 +96,19 @@ void GDT::create_tss_descriptor(TSS* tss)
     static tss_entry* cached_entry;
 
     if (!cached_entry) {
-        cached_entry    = &new_tss_entry();
+        cached_entry = &new_tss_entry();
         cached_selector = (m_active_entries - 2) * entry_size;
     }
 
     ptr_t base = reinterpret_cast<ptr_t>(tss);
 
-    cached_entry->base_lower   = base & 0x0000FFFF;
-    cached_entry->base_middle  = (base & 0x00FF0000) >> 16;
-    cached_entry->base_upper   = (base & 0xFF000000) >> 24;
+    cached_entry->base_lower = base & 0x0000FFFF;
+    cached_entry->base_middle = (base & 0x00FF0000) >> 16;
+    cached_entry->base_upper = (base & 0xFF000000) >> 24;
     cached_entry->base_upper_2 = (base & 0xFFFFFFFF00000000ull) >> 32;
 
     cached_entry->access = EXECUTABLE | IS_TSS | RING_3 | PRESENT;
-    cached_entry->flags  = NULL_FLAG;
+    cached_entry->flags = NULL_FLAG;
 
     cached_entry->limit_lower = TSS::size & 0x0000FFFF;
     cached_entry->limit_upper = (TSS::size & 0x000F0000) >> 16;
@@ -147,12 +151,12 @@ void GDT::create_descriptor(u32 base, u32 size, access_attributes access, flag_a
 {
     auto& this_entry = new_entry();
 
-    this_entry.base_lower  = base & 0x0000FFFF;
+    this_entry.base_lower = base & 0x0000FFFF;
     this_entry.base_middle = (base & 0x00FF0000) >> 16;
-    this_entry.base_upper  = (base & 0xFF000000) >> 24;
+    this_entry.base_upper = (base & 0xFF000000) >> 24;
 
     this_entry.access = access;
-    this_entry.flags  = flags;
+    this_entry.flags = flags;
 
     this_entry.limit_lower = size & 0x0000FFFF;
     this_entry.limit_upper = (size & 0x000F0000) >> 16;
@@ -190,8 +194,8 @@ void GDT::install()
                  "mov %1, %%ss"
                  :
                  : "m"(m_pointer),
-                   "r"(static_cast<ptr_t>(kernel_data_selector())),
-                   "r"(static_cast<ptr_t>(kernel_code_selector()))
+                 "r"(static_cast<ptr_t>(kernel_data_selector())),
+                 "r"(static_cast<ptr_t>(kernel_code_selector()))
                  : "memory");
 }
 }

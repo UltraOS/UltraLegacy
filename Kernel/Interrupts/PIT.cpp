@@ -9,7 +9,8 @@
 
 namespace kernel {
 
-PIT::PIT() : IRQHandler(irq_number)
+PIT::PIT()
+    : IRQHandler(irq_number)
 {
     set_frequency(default_ticks_per_second);
 }
@@ -82,9 +83,9 @@ void PIT::nano_delay(u32 ns)
     IO::out8<timer_data>(ticks & 0xFF);
     IO::out8<timer_data>((ticks & 0xFF00) >> 8);
 
-    static constexpr u8 latch_count_flag  = SET_BIT(5);
-    static constexpr u8 timer_channel_0   = SET_BIT(1);
-    static constexpr u8 timer_done_flag   = SET_BIT(7);
+    static constexpr u8 latch_count_flag = SET_BIT(5);
+    static constexpr u8 timer_channel_0 = SET_BIT(1);
+    static constexpr u8 timer_done_flag = SET_BIT(7);
     static constexpr u8 read_back_command = SET_BIT(7) | SET_BIT(6);
 
     for (;;) {

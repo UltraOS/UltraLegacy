@@ -5,7 +5,10 @@
 namespace kernel {
 
 Bitmap::Bitmap(size_t width, size_t height, Format format, size_t pitch)
-    : m_width(width), m_height(height), m_pitch(pitch), m_format(format)
+    : m_width(width)
+    , m_height(height)
+    , m_pitch(pitch)
+    , m_format(format)
 {
     if (m_pitch == 0)
         calculate_pitch();
@@ -17,12 +20,16 @@ void Bitmap::calculate_pitch()
 }
 
 MutableBitmap::MutableBitmap(void* data, size_t width, size_t height, Format format, Color* palette, size_t pitch)
-    : Bitmap(width, height, format, pitch), m_data(reinterpret_cast<u8*>(data)), m_palette(palette)
+    : Bitmap(width, height, format, pitch)
+    , m_data(reinterpret_cast<u8*>(data))
+    , m_palette(palette)
 {
 }
 
 BitmapView::BitmapView(const void* data, size_t width, size_t height, Format format, const Color* palette, size_t pitch)
-    : Bitmap(width, height, format, pitch), m_data(reinterpret_cast<const u8*>(data)), m_palette(palette)
+    : Bitmap(width, height, format, pitch)
+    , m_data(reinterpret_cast<const u8*>(data))
+    , m_palette(palette)
 {
 }
 
@@ -32,21 +39,31 @@ bool Bitmap::is_indexed() const
     case Format::INDEXED_1_BPP:
     case Format::INDEXED_2_BPP:
     case Format::INDEXED_4_BPP:
-    case Format::INDEXED_8_BPP: return true;
-    default: return false;
+    case Format::INDEXED_8_BPP:
+        return true;
+    default:
+        return false;
     }
 }
 
 size_t Bitmap::bpp() const
 {
     switch (format()) {
-    case Format::INDEXED_1_BPP: return 1;
-    case Format::INDEXED_2_BPP: return 2;
-    case Format::INDEXED_4_BPP: return 4;
-    case Format::INDEXED_8_BPP: return 8;
-    case Format::RGB_24_BPP: return 24;
-    case Format::RGBA_32_BPP: return 32;
-    default: ASSERT(false && "Unknown bitmap type"); return 0;
+    case Format::INDEXED_1_BPP:
+        return 1;
+    case Format::INDEXED_2_BPP:
+        return 2;
+    case Format::INDEXED_4_BPP:
+        return 4;
+    case Format::INDEXED_8_BPP:
+        return 8;
+    case Format::RGB_24_BPP:
+        return 24;
+    case Format::RGBA_32_BPP:
+        return 32;
+    default:
+        ASSERT(false && "Unknown bitmap type");
+        return 0;
     }
 }
 

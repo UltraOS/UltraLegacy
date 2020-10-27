@@ -14,7 +14,10 @@ namespace kernel {
 class EventManager {
     static constexpr size_t max_event_queue_size = 64;
 
-    MAKE_SINGLETON(EventManager) : m_event_queue(max_event_queue_size) { }
+    MAKE_SINGLETON(EventManager)
+        : m_event_queue(max_event_queue_size)
+    {
+    }
 
 public:
     static EventManager& the() { return s_instance; }

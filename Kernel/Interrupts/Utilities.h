@@ -21,7 +21,11 @@ inline void disable()
 
 class ScopedDisabler {
 public:
-    ScopedDisabler() : m_should_enable(are_enabled()) { disable(); }
+    ScopedDisabler()
+        : m_should_enable(are_enabled())
+    {
+        disable();
+    }
 
     ~ScopedDisabler()
     {

@@ -24,7 +24,7 @@ public:
         }
 
         Address end() const;
-        size_t  length() const;
+        size_t length() const;
 
         bool contains(Address address);
 
@@ -42,7 +42,7 @@ public:
 
     private:
         Address m_start { nullptr };
-        size_t  m_length { 0 };
+        size_t m_length { 0 };
     };
 
     VirtualAllocator() = default;
@@ -55,8 +55,8 @@ public:
     bool is_allocated(Address address);
 
     Range allocate_range(size_t length);
-    void  deallocate_range(const Range& range);
-    void  deallocate_range(Address base_address);
+    void deallocate_range(const Range& range);
+    void deallocate_range(Address base_address);
 
 private:
     void return_back_to_free_pool(size_t allocated_index);

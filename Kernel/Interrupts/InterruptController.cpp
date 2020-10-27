@@ -7,7 +7,7 @@
 
 namespace kernel {
 
-InterruptController*          InterruptController::s_instance;
+InterruptController* InterruptController::s_instance;
 InterruptController::SMPData* InterruptController::s_smp_data;
 
 void InterruptController::discover_and_setup()
@@ -52,50 +52,55 @@ Address InterruptController::find_string_in_range(Address begin, Address end, si
 
 InterruptController::MP::FloatingPointer* InterruptController::MP::find_floating_pointer_table()
 {
-    static constexpr auto   mp_floating_pointer_signature = "_MP_"_sv;
-    static constexpr size_t table_alignment               = 16;
+    static constexpr auto mp_floating_pointer_signature = "_MP_"_sv;
+    static constexpr size_t table_alignment = 16;
 
-    static constexpr Address ebda_base        = 0x80000;
-    static constexpr Address ebda_end         = 0x9FFFF;
+    static constexpr Address ebda_base = 0x80000;
+    static constexpr Address ebda_end = 0x9FFFF;
     static constexpr Address ebda_base_linear = MemoryManager::physical_to_virtual(ebda_base);
-    static constexpr Address ebda_end_linear  = MemoryManager::physical_to_virtual(ebda_end);
+    static constexpr Address ebda_end_linear = MemoryManager::physical_to_virtual(ebda_end);
 
     log() << "InterruptController: Trying to find the floating pointer table in the EBDA...";
 
-    auto address
-        = find_string_in_range(ebda_base_linear, ebda_end_linear, table_alignment, mp_floating_pointer_signature);
+    auto address = find_string_in_range(
+        ebda_base_linear,
+        ebda_end_linear,
+        table_alignment,
+        mp_floating_pointer_signature);
 
     if (address)
         return address.as_pointer<MP::FloatingPointer>();
 
-    static constexpr Address bios_rom_base        = 0xF0000;
-    static constexpr Address bios_rom_end         = 0xFFFFF;
+    static constexpr Address bios_rom_base = 0xF0000;
+    static constexpr Address bios_rom_end = 0xFFFFF;
     static constexpr Address bios_rom_base_linear = MemoryManager::physical_to_virtual(bios_rom_base);
-    static constexpr Address bios_rom_end_linear  = MemoryManager::physical_to_virtual(bios_rom_end);
+    static constexpr Address bios_rom_end_linear = MemoryManager::physical_to_virtual(bios_rom_end);
 
     log() << "InterruptController: Couldn't find the floating pointer table in the EBDA, trying ROM...";
 
-    address = find_string_in_range(bios_rom_base_linear,
-                                   bios_rom_end_linear,
-                                   table_alignment,
-                                   mp_floating_pointer_signature);
+    address = find_string_in_range(
+        bios_rom_base_linear,
+        bios_rom_end_linear,
+        table_alignment,
+        mp_floating_pointer_signature);
 
     if (address)
         return address.as_pointer<FloatingPointer>();
 
-    static constexpr Address bda_address                  = 0x400;
-    static constexpr Address bda_address_linear           = MemoryManager::physical_to_virtual(bda_address);
-    static constexpr size_t  kilobytes_before_ebda_offset = 0x13;
+    static constexpr Address bda_address = 0x400;
+    static constexpr Address bda_address_linear = MemoryManager::physical_to_virtual(bda_address);
+    static constexpr size_t kilobytes_before_ebda_offset = 0x13;
 
     auto kilobytes_before_ebda = *Address(bda_address_linear + kilobytes_before_ebda_offset).as_pointer<u16>();
-    auto last_base_kilobyte    = MemoryManager::physical_to_virtual((kilobytes_before_ebda - 1) * KB);
+    auto last_base_kilobyte = MemoryManager::physical_to_virtual((kilobytes_before_ebda - 1) * KB);
 
     log() << "InterruptController: Couldn't find the floating pointer table in ROM, trying last 1KB of base memory...";
 
-    address = find_string_in_range(last_base_kilobyte,
-                                   last_base_kilobyte + 1 * KB,
-                                   table_alignment,
-                                   mp_floating_pointer_signature);
+    address = find_string_in_range(
+        last_base_kilobyte,
+        last_base_kilobyte + 1 * KB,
+        table_alignment,
+        mp_floating_pointer_signature);
 
     if (address)
         return address.as_pointer<MP::FloatingPointer>();
@@ -113,9 +118,9 @@ void InterruptController::MP::parse_configuration_table(FloatingPointer* fp_tabl
     if (fp_table->features & imcr_register) {
         log() << "InterruptController: IMCR register found, switching to APIC mode...";
 
-        static constexpr u8 imcr      = 0x70;
-        static constexpr u8 select    = 0x22;
-        static constexpr u8 setting   = 0x23;
+        static constexpr u8 imcr = 0x70;
+        static constexpr u8 select = 0x22;
+        static constexpr u8 setting = 0x23;
         static constexpr u8 apic_mode = 1;
 
         IO::out8<select>(imcr);
@@ -141,7 +146,7 @@ void InterruptController::MP::parse_configuration_table(FloatingPointer* fp_tabl
 
     Address entry_address = &configuration_table + 1;
 
-    s_smp_data                = new SMPData;
+    s_smp_data = new SMPData;
     s_smp_data->lapic_address = static_cast<ptr_t>(configuration_table.local_apic_pointer);
 
     u8 isa_bus_id = 0xFF;
@@ -154,7 +159,7 @@ void InterruptController::MP::parse_configuration_table(FloatingPointer* fp_tabl
             auto& processor = *entry_address.as_pointer<ProcessorEntry>();
 
             bool is_bsp = processor.flags & ProcessorEntry::Flags::BSP;
-            bool is_ok  = processor.flags & ProcessorEntry::Flags::OK;
+            bool is_ok = processor.flags & ProcessorEntry::Flags::OK;
 
             log() << "InterruptController: A new processor -> APIC id:" << processor.local_apic_id
                   << " type:" << (is_bsp ? "BSP" : "AP") << " is_ok:" << is_ok;
@@ -216,7 +221,7 @@ void InterruptController::MP::parse_configuration_table(FloatingPointer* fp_tabl
 
             // TODO: take care of the possibility of having multiple IOAPICs
             IRQInfo info {};
-            info.original_irq_index   = interrupt.source_bus_irq;
+            info.original_irq_index = interrupt.source_bus_irq;
             info.redirected_irq_index = interrupt.destination_ioapic_pin;
 
             if (interrupt.polarity != InterruptEntry::Polarity::CONFORMING) {

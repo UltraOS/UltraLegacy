@@ -24,19 +24,22 @@ void SyscallDispatcher::dispatch(RegisterState* registers)
 
 #ifdef ULTRA_32
     const auto syscall_number = registers->eax;
-    const auto arg0           = registers->ebx;
+    const auto arg0 = registers->ebx;
 #elif defined(ULTRA_64)
     const auto syscall_number = registers->rax;
-    const auto arg0           = registers->rbx;
+    const auto arg0 = registers->rbx;
 #endif
 
     switch (syscall_number) {
-    case exit: Syscall::exit(arg0); break;
+    case exit:
+        Syscall::exit(arg0);
+        break;
     case debug_log:
         // TODO: some safety to make sure this pointer doesn't lead to a ring 0 page fault :D
         Syscall::debug_log(reinterpret_cast<char*>(arg0));
         break;
-    default: log() << "SyscallDispatcher: unknown syscall " << syscall_number;
+    default:
+        log() << "SyscallDispatcher: unknown syscall " << syscall_number;
     }
 }
 }

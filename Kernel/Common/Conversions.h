@@ -9,7 +9,7 @@ namespace kernel {
 template <typename T>
 enable_if_t<is_integral_v<T>, size_t> to_string(T number, char* string, size_t max_size, bool null_terminate = true)
 {
-    bool   is_negative   = false;
+    bool is_negative = false;
     size_t required_size = 0;
 
     if (number == 0) {
@@ -23,7 +23,7 @@ enable_if_t<is_integral_v<T>, size_t> to_string(T number, char* string, size_t m
         return 0;
     } else if (number < 0) {
         is_negative = true;
-        number      = -number;
+        number = -number;
         ++required_size;
     }
 
@@ -59,11 +59,11 @@ to_string(T number, char* string, size_t max_size, bool null_terminate = true)
 {
     number += 0.005; // to reduce the digit count
 
-    i64 as_int    = number;
+    i64 as_int = number;
     i64 remainder = static_cast<i64>(number * 100) % 100;
 
     size_t required_size = 0;
-    i64    copy          = as_int;
+    i64 copy = as_int;
 
     while (copy) {
         copy /= 10;

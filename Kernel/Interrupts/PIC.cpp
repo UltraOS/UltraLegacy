@@ -104,7 +104,7 @@ bool PIC::is_irq_being_serviced(u8 request_number)
 void PIC::remap(u8 offset)
 {
     u8 master_mask = IO::in8<master_data>();
-    u8 slave_mask  = IO::in8<slave_data>();
+    u8 slave_mask = IO::in8<slave_data>();
 
     static constexpr u8 icw1_icw4 = 0x01;
     static constexpr u8 icw1_init = 0x10;
@@ -112,7 +112,7 @@ void PIC::remap(u8 offset)
 
     static constexpr u8 irqs_per_controller = 8;
 
-    static constexpr u8 slave_irq              = 0b00000100;
+    static constexpr u8 slave_irq = 0b00000100;
     static constexpr u8 slave_cascade_identity = 0b00000010;
 
     IO::out8<master_command>(icw1_init | icw1_icw4);

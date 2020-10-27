@@ -6,7 +6,9 @@ namespace kernel {
 
 Screen* Screen::s_instance;
 
-Screen::Screen(VideoDevice& device) : m_device(device), m_rect(0, 0, device.mode().width, device.mode().height)
+Screen::Screen(VideoDevice& device)
+    : m_device(device)
+    , m_rect(0, 0, device.mode().width, device.mode().height)
 {
     auto cursor_location = rect().center();
     m_cursor.set_location(cursor_location);
@@ -15,8 +17,8 @@ Screen::Screen(VideoDevice& device) : m_device(device), m_rect(0, 0, device.mode
 
 void Screen::check_if_focused_window_should_change()
 {
-    auto& window_list                   = WindowManager::the().windows();
-    auto  window_that_should_be_focused = window_list.end();
+    auto& window_list = WindowManager::the().windows();
+    auto window_that_should_be_focused = window_list.end();
 
     for (auto itr = window_list.begin(); itr != window_list.end(); ++itr) {
         if ((*itr)->full_translated_rect().contains(m_cursor.location())) {

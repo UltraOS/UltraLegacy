@@ -6,13 +6,13 @@
 namespace kernel {
 
 // signed types
-using i8  = int8_t;
+using i8 = int8_t;
 using i16 = int16_t;
 using i32 = int32_t;
 using i64 = int64_t;
 
 // unsigned types
-using u8  = uint8_t;
+using u8 = uint8_t;
 using u16 = uint16_t;
 using u32 = uint32_t;
 using u64 = uint64_t;
@@ -29,12 +29,12 @@ using ssize_t = i64;
 using f32 = float;
 using f64 = double;
 
-#define SIZEOF_I8  1
+#define SIZEOF_I8 1
 #define SIZEOF_I16 2
 #define SIZEOF_I32 4
 #define SIZEOF_I64 8
 
-#define SIZEOF_U8  1
+#define SIZEOF_U8 1
 #define SIZEOF_U16 2
 #define SIZEOF_U32 4
 #define SIZEOF_U64 8
@@ -74,13 +74,20 @@ public:
     BasicAddress() = default;
 
     template <typename T>
-    constexpr BasicAddress(T* ptr) : m_ptr(reinterpret_cast<ptr_t>(ptr))
+    constexpr BasicAddress(T* ptr)
+        : m_ptr(reinterpret_cast<ptr_t>(ptr))
     {
     }
 
-    constexpr BasicAddress(decltype(nullptr)) : m_ptr(0) { }
+    constexpr BasicAddress(decltype(nullptr))
+        : m_ptr(0)
+    {
+    }
 
-    constexpr BasicAddress(SizeT address) : m_ptr(address) { }
+    constexpr BasicAddress(SizeT address)
+        : m_ptr(address)
+    {
+    }
 
     constexpr ptr_t raw() const { return m_ptr; }
 
@@ -104,7 +111,7 @@ private:
     SizeT m_ptr;
 };
 
-using Address   = BasicAddress<ptr_t>;
+using Address = BasicAddress<ptr_t>;
 using Address32 = BasicAddress<u32>;
 using Address64 = BasicAddress<u64>;
 }

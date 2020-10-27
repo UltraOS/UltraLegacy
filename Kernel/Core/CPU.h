@@ -14,15 +14,15 @@ class CPU {
     MAKE_STATIC(CPU)
 public:
     enum class FLAGS : size_t {
-        CARRY      = SET_BIT(0),
-        PARITY     = SET_BIT(2),
-        ADJUST     = SET_BIT(4),
-        ZERO       = SET_BIT(6),
-        SIGN       = SET_BIT(7),
+        CARRY = SET_BIT(0),
+        PARITY = SET_BIT(2),
+        ADJUST = SET_BIT(4),
+        ZERO = SET_BIT(6),
+        SIGN = SET_BIT(7),
         INTERRUPTS = SET_BIT(9),
-        DIRECTION  = SET_BIT(10),
-        OVERFLOW   = SET_BIT(11),
-        CPUID      = SET_BIT(21),
+        DIRECTION = SET_BIT(10),
+        OVERFLOW = SET_BIT(11),
+        CPUID = SET_BIT(21),
     };
 
     friend bool operator&(FLAGS l, FLAGS r) { return static_cast<size_t>(l) & static_cast<size_t>(r); }
@@ -38,7 +38,7 @@ public:
 
     struct MSR {
         static MSR read(u32 index);
-        void       write(u32 index);
+        void write(u32 index);
 
         u32 upper { 0x00000000 };
         u32 lower { 0x00000000 };
@@ -56,12 +56,15 @@ public:
 
     class LocalData {
     public:
-        LocalData(u32 id) : m_id(id) { }
+        LocalData(u32 id)
+            : m_id(id)
+        {
+        }
 
         u32 id() const { return m_id; }
 
         Thread* current_thread() const { return m_current_thread; }
-        void    set_current_thread(Thread* thread) { m_current_thread = thread; }
+        void set_current_thread(Thread* thread) { m_current_thread = thread; }
 
         TSS* tss() { return m_tss; }
         void set_tss(TSS* tss) { m_tss = tss; }
@@ -70,9 +73,9 @@ public:
         bool is_bsp() { return this == &s_processors[0]; }
 
     private:
-        u32     m_id;
+        u32 m_id;
         Thread* m_current_thread { nullptr };
-        TSS*    m_tss { nullptr };
+        TSS* m_tss { nullptr };
         // some other stuff
     };
 

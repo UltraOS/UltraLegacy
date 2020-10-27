@@ -16,8 +16,8 @@ public:
 
     ssize_t find_range(size_t length, bool of_value)
     {
-        size_t  contiguous_bits = 0;
-        ssize_t first_bit       = -1;
+        size_t contiguous_bits = 0;
+        ssize_t first_bit = -1;
 
         for (size_t i = 0; i < m_bit_count; ++i) {
             auto is_suitable = of_value == bit_at(i);
@@ -29,7 +29,7 @@ public:
                     first_bit = i;
             } else {
                 contiguous_bits = 0;
-                first_bit       = -1;
+                first_bit = -1;
             }
 
             if (contiguous_bits == length)
@@ -105,7 +105,7 @@ private:
     u8 bit_as_mask(size_t bit) { return 1 << bit; }
 
 private:
-    size_t           m_bit_count { 0 };
+    size_t m_bit_count { 0 };
     DynamicArray<u8> m_bits;
 };
 }

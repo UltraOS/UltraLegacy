@@ -15,33 +15,33 @@ class PS2Controller : public Device {
     MAKE_SINGLETON(PS2Controller) = default;
 
 public:
-    static constexpr u8 data_port    = 0x60;
-    static constexpr u8 status_port  = 0x64;
+    static constexpr u8 data_port = 0x60;
+    static constexpr u8 status_port = 0x64;
     static constexpr u8 command_port = 0x64;
 
     enum class Command : u8 {
-        READ_CONFIGURATION  = 0x20,
+        READ_CONFIGURATION = 0x20,
         WRITE_CONFIGURATION = 0x60,
-        DISABLE_PORT_2      = 0xA7,
-        ENABLE_PORT_2       = 0xA8,
-        TEST_PORT_2         = 0xA9,
-        TEST_CONTROLLER     = 0xAA,
-        TEST_PORT_1         = 0xAB,
-        DISABLE_PORT_1      = 0xAD,
-        ENABLE_PORT_1       = 0xAE,
-        WRITE_PORT_2        = 0xD4,
+        DISABLE_PORT_2 = 0xA7,
+        ENABLE_PORT_2 = 0xA8,
+        TEST_PORT_2 = 0xA9,
+        TEST_CONTROLLER = 0xAA,
+        TEST_PORT_1 = 0xAB,
+        DISABLE_PORT_1 = 0xAD,
+        ENABLE_PORT_1 = 0xAE,
+        WRITE_PORT_2 = 0xD4,
     };
 
     static constexpr u8 self_test_passed = 0xAA;
-    static constexpr u8 command_ack      = 0xFA;
-    static constexpr u8 resend_command   = 0xFE;
-    static constexpr u8 reset_failure    = 0xFC;
+    static constexpr u8 command_ack = 0xFA;
+    static constexpr u8 resend_command = 0xFE;
+    static constexpr u8 reset_failure = 0xFC;
 
     enum class DeviceCommand : u8 {
-        RESET            = 0xFF,
-        ENABLE_SCANNING  = 0xF4,
+        RESET = 0xFF,
+        ENABLE_SCANNING = 0xF4,
         DISABLE_SCANNING = 0xF5,
-        IDENTIFY         = 0xF2,
+        IDENTIFY = 0xF2,
     };
 
     struct Configuration {
@@ -69,7 +69,7 @@ public:
     static_assert(sizeof(Configuration) == 1);
     static_assert(sizeof(Status) == 1);
 
-    Type       type() const override { return Type::CONTROLLER; }
+    Type type() const override { return Type::CONTROLLER; }
     StringView name() const override { return "8042 PS/2 Controller"; }
 
     static void initialize();
@@ -85,11 +85,14 @@ public:
     void flush();
 
     Configuration read_configuration();
-    void          write_configuration(Configuration);
+    void write_configuration(Configuration);
 
     Status status();
 
-    enum class Channel { ONE = 1, TWO = 2 };
+    enum class Channel {
+        ONE = 1,
+        TWO = 2
+    };
 
     void send_command_to_device(Channel, DeviceCommand, bool should_expect_ack = true);
     void send_command_to_device(Channel, u8, bool should_expect_ack = true);
@@ -136,7 +139,7 @@ private:
 
 private:
     DynamicArray<PS2Device*> m_devices;
-    bool                     m_last_read_timeout { false };
+    bool m_last_read_timeout { false };
 
     static PS2Controller* s_instance;
 };
