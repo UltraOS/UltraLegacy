@@ -2,6 +2,7 @@
 
 #include "Core/Runtime.h"
 #include "Theme.h"
+#include "WindowFrame.h"
 
 namespace kernel {
 
@@ -13,31 +14,31 @@ public:
     Color window_frame_color() const override { return taskbar_color(); }
     Color taskbar_color() const override { return { 0x8d, 0x26, 0x64 }; }
 
-    size_t width_for_button(Button) const override { return 20; }
+    size_t width_for_button(WindowFrame::Button) const override { return 20; }
 
-    Color color_for_button_state(Button button, ButtonState state) const override
+    Color color_for_button_state(WindowFrame::Button button, WindowFrame::ButtonState state) const override
     {
         static constexpr Color dimmer_frame_color = { 0x69, 0x1c, 0x4a };
 
         switch (button) {
-        case Button::CLOSE:
-            if (state == ButtonState::HOVERED)
+        case WindowFrame::Button::CLOSE:
+            if (state == WindowFrame::ButtonState::HOVERED)
                 return Color::red();
             [[fallthrough]];
         default:
-            if (state == ButtonState::HOVERED)
+            if (state == WindowFrame::ButtonState::HOVERED)
                 return dimmer_frame_color;
             else
                 return window_frame_color();
         }
     }
 
-    const BitmapView& button_bitmap(Button button) const override
+    const BitmapView& button_bitmap(WindowFrame::Button button) const override
     {
         switch (button) {
-        case Button::CLOSE: return m_close_button_bitmap;
-        case Button::MAXIMIZE: return m_maximize_button_bitmap;
-        case Button::MINIMIZE: return m_minimize_button_bitmap;
+        case WindowFrame::Button::CLOSE: return m_close_button_bitmap;
+        case WindowFrame::Button::MAXIMIZE: return m_maximize_button_bitmap;
+        case WindowFrame::Button::MINIMIZE: return m_minimize_button_bitmap;
         default: ASSERT_NEVER_REACHED();
         }
     }
@@ -45,6 +46,8 @@ public:
     const BitmapView& cursor_bitmap() const override { return m_cursor_bitmap; }
 
     size_t upper_window_frame_height() const override { return 20; }
+    size_t side_window_frame_width() const override { return 1; }
+    size_t bottom_width_frame_height() const override { return 1; }
 
 private:
     static constexpr size_t cursor_bitmap_height         = 19;

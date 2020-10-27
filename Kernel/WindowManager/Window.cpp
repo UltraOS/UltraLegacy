@@ -73,15 +73,17 @@ bool Window::handle_event(const Event& event, bool is_handled)
         auto release_buttons_if_needed = [this]() {
             if (m_state == State::CLOSE_BUTTON_HOVERED) {
                 m_state = State::NORMAL;
-                m_frame.on_close_button_released();
+                m_frame.on_button_state_changed(WindowFrame::Button::CLOSE, WindowFrame::ButtonState::RELEASED);
             } else if (m_state == State::MAXIMIZE_BUTTON_HOVERED) {
                 m_state = State::NORMAL;
-                m_frame.on_maximize_button_released();
+                m_frame.on_button_state_changed(WindowFrame::Button::MAXIMIZE, WindowFrame::ButtonState::RELEASED);
             } else if (m_state == State::MINIMIZE_BUTTON_HOVERED) {
                 m_state = State::NORMAL;
-                m_frame.on_minimize_button_released();
+                m_frame.on_button_state_changed(WindowFrame::Button::MINIMIZE, WindowFrame::ButtonState::RELEASED);
             }
         };
+
+        auto mouse_vec = Point(event.mouse_move.x, event.mouse_move.y);
 
         if (m_state == State::IS_BEING_DRAGGED) {
             i32 delta_x = static_cast<i32>(event.mouse_move.x) - static_cast<i32>(m_drag_begin.x());
@@ -94,27 +96,27 @@ bool Window::handle_event(const Event& event, bool is_handled)
 
             m_location   = Point(new_x, new_y);
             m_drag_begin = { event.mouse_move.x, event.mouse_move.y };
-        } else if (m_frame.close_button_rect().contains({ event.mouse_move.x, event.mouse_move.y }) && !is_handled) {
+        } else if (m_frame.rect_for_button(WindowFrame::Button::CLOSE).contains(mouse_vec) && !is_handled) {
             if (m_state != State::CLOSE_BUTTON_HOVERED) {
                 release_buttons_if_needed();
                 m_state = State::CLOSE_BUTTON_HOVERED;
-                m_frame.on_close_button_hovered();
+                m_frame.on_button_state_changed(WindowFrame::Button::CLOSE, WindowFrame::ButtonState::HOVERED);
             }
-        } else if (m_frame.maximize_button_rect().contains({ event.mouse_move.x, event.mouse_move.y }) && !is_handled) {
+        } else if (m_frame.rect_for_button(WindowFrame::Button::MAXIMIZE).contains(mouse_vec) && !is_handled) {
             if (m_state != State::MAXIMIZE_BUTTON_HOVERED) {
                 release_buttons_if_needed();
                 m_state = State::MAXIMIZE_BUTTON_HOVERED;
-                m_frame.on_maximize_button_hovered();
+                m_frame.on_button_state_changed(WindowFrame::Button::MAXIMIZE, WindowFrame::ButtonState::HOVERED);
             }
-        } else if (m_frame.minimize_button_rect().contains({ event.mouse_move.x, event.mouse_move.y }) && !is_handled) {
+        } else if (m_frame.rect_for_button(WindowFrame::Button::MINIMIZE).contains(mouse_vec) && !is_handled) {
             if (m_state != State::MINIMIZE_BUTTON_HOVERED) {
                 release_buttons_if_needed();
                 m_state = State::MINIMIZE_BUTTON_HOVERED;
-                m_frame.on_minimize_button_hovered();
+                m_frame.on_button_state_changed(WindowFrame::Button::MINIMIZE, WindowFrame::ButtonState::HOVERED);
             }
         } else {
             release_buttons_if_needed();
-            if (!full_translated_rect().contains({ event.mouse_move.x, event.mouse_move.y }))
+            if (!full_translated_rect().contains(mouse_vec))
                 return false;
         }
         return true;

@@ -51,7 +51,7 @@ const u8 ClassicTheme::s_minimize_button_bitmap_data[] = {
     0b00000000,
     0b00000000,
     0b00000000,
-    0b11111111,
+    0b00000000,
     0b11111111,
     0b00000000,
     0b00000000,
