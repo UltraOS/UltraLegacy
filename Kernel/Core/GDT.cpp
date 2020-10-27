@@ -26,7 +26,8 @@ void GDT::create_basic_descriptors()
 
 // kernel code
 #ifdef ULTRA_32
-    create_descriptor(0x00000000,
+    create_descriptor(
+        0x00000000,
         0xFFFFFFFF,
         PRESENT | CODE_OR_DATA | EXECUTABLE | READABLE,
         GRANULARITY_4KB | MODE_32_BIT);
@@ -42,19 +43,22 @@ void GDT::create_basic_descriptors()
 
 // userspace code
 #ifdef ULTRA_32
-    create_descriptor(0x00000000,
+    create_descriptor(
+        0x00000000,
         0xFFFFFFFF,
         PRESENT | CODE_OR_DATA | EXECUTABLE | RING_3 | READABLE,
         GRANULARITY_4KB | MODE_32_BIT);
 #elif defined(ULTRA_64)
-    create_descriptor(0x00000000,
+    create_descriptor(
+        0x00000000,
         0xFFFFFFFF,
         PRESENT | CODE_OR_DATA | EXECUTABLE | READABLE | RING_3,
         GRANULARITY_4KB | MODE_64_BIT);
 #endif
 
     // userspace data
-    create_descriptor(0x00000000,
+    create_descriptor(
+        0x00000000,
         0xFFFFFFFF,
         PRESENT | CODE_OR_DATA | WRITABLE | RING_3,
         GRANULARITY_4KB | MODE_32_BIT);

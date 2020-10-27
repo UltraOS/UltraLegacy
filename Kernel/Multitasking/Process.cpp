@@ -86,7 +86,8 @@ Process::Process(Address entrypoint, bool is_supervisor)
         m_address_space = RefPtr<AddressSpace>::create(MemoryManager::the().allocate_page());
         auto& user_allocator = m_address_space->allocator();
 
-        auto main_thread = Thread::create_user_thread(*m_address_space,
+        auto main_thread = Thread::create_user_thread(
+            *m_address_space,
             user_allocator.allocate_range(default_userland_stack_size).end(),
             stack_range.end(),
             entrypoint);

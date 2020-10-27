@@ -41,7 +41,8 @@ void AddressSpace::inititalize()
     static constexpr size_t lower_indentity_size = 4 * GB;
 
     for (size_t i = 0; i < lower_indentity_size / Page::huge_size; ++i)
-        s_of_kernel->map_huge_supervisor_page(MemoryManager::physical_memory_base + Page::huge_size * i,
+        s_of_kernel->map_huge_supervisor_page(
+            MemoryManager::physical_memory_base + Page::huge_size * i,
             Page::huge_size * i);
 
     for (const auto& entry : MemoryManager::the().memory_map()) {
@@ -73,7 +74,8 @@ void AddressSpace::inititalize()
 #endif
         for (size_t i = 0; i < total_pages; ++i) {
             auto physical_address = base_address + Page::huge_size * i;
-            s_of_kernel->map_huge_supervisor_page(MemoryManager::physical_to_virtual(physical_address),
+            s_of_kernel->map_huge_supervisor_page(
+                MemoryManager::physical_to_virtual(physical_address),
                 physical_address);
         }
     }

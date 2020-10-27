@@ -40,7 +40,8 @@ public:
 
     bool compare_and_exchange(T* expected, T value) volatile ALWAYS_INLINE
     {
-        return __atomic_compare_exchange_n(&m_value,
+        return __atomic_compare_exchange_n(
+            &m_value,
             expected,
             value,
             false,
