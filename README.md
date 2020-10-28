@@ -1,7 +1,7 @@
 # UltraOS
 An operating system that doesn't try to be UNIX. Made completely from scratch with its own bootloader. 😊
 
-![alt-text](https://i.ibb.co/Q8HWWLF/new-desktop.png)
+![alt-text](https://i.ibb.co/Js87MW7/Ultra-OSDesktop.png)
 
 ## Current Features
 - Support for both i386 and AMD64
