@@ -3,6 +3,7 @@
 #include "Common/Macros.h"
 #include "Common/Utilities.h"
 #include "Core/Runtime.h"
+#include "Common/Atomic.h"
 
 namespace kernel {
 
@@ -19,7 +20,7 @@ public:
 
     RefPtr(T* ptr)
         : m_ptr(ptr)
-        , m_ref_count(new size_t(1))
+        , m_ref_count(new Atomic<size_t>(1))
     {
     }
 
@@ -41,7 +42,7 @@ public:
         decrement();
 
         m_ptr = ptr;
-        m_ref_count = new size_t(1);
+        m_ref_count = new Atomic<size_t>(1);
     }
 
     T& operator*() const
@@ -93,7 +94,11 @@ public:
 
     operator bool() const { return get(); }
 
-    size_t reference_count() const { return m_ref_count; }
+    size_t reference_count() const
+    {
+        ASSERT(m_ref_count != nullptr);
+        return *m_ref_count;
+    }
 
     ~RefPtr() { decrement(); }
 
@@ -119,6 +124,6 @@ private:
 
 private:
     T* m_ptr { nullptr };
-    size_t* m_ref_count { nullptr };
+    Atomic<size_t>* m_ref_count { nullptr };
 };
 }
