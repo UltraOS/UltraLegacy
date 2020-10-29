@@ -23,7 +23,7 @@ public:
     static RefPtr<Window> create(Thread& owner, const Rect& window_rect, RefPtr<Theme>);
     static RefPtr<Window> create_desktop(Thread& owner, const Rect& window_rect, RefPtr<Theme>);
 
-    const RefPtr<Theme> theme() const { return m_theme; }
+    const RefPtr<Theme>& theme() const { return m_theme; }
 
     Rect full_rect() const { return m_frame.rect(); }
     const Rect& window_rect() const { return m_window_rect; }
