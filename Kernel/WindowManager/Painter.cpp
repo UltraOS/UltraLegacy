@@ -8,6 +8,7 @@ Painter::Painter(Surface* surface)
 {
     ASSERT(surface != nullptr);
     ASSERT(surface->bpp() == 32 && "Painter can only operate on 32bpp surfaces atm");
+    reset_clip_rect();
 }
 
 void Painter::fill_rect(const Rect& rect, Color color)
@@ -80,8 +81,8 @@ void Painter::blit_32_bpp_bitmap(const Point& location, const Bitmap& bitmap, co
     u32* destination = Address(m_surface->scanline_at(drawable_rect.top())).as_pointer<u32>() + drawable_rect.left();
     auto destination_skip = m_surface->pitch() / sizeof(u32);
 
-    for (size_t y = y_begin; y <= y_end; ++y) {
-        for (size_t x = 0; x <= (x_end - x_begin); ++x) {
+    for (auto y = y_begin; y <= y_end; ++y) {
+        for (auto x = 0; x <= (x_end - x_begin); ++x) {
             destination[x] = source[x];
         }
         source += source_skip;
