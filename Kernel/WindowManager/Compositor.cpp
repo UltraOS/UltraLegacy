@@ -24,7 +24,8 @@ Compositor::Compositor()
     , m_last_cursor_location(Screen::the().cursor().location())
 {
     prepare_desktop();
-    m_painter->draw_bitmap(Screen::the().cursor().bitmap(), m_last_cursor_location);
+    auto& cursor = Screen::the().cursor();
+    m_painter->blit(m_last_cursor_location, cursor.bitmap(), cursor.rect());
 }
 
 void Compositor::compose()
@@ -40,9 +41,12 @@ void Compositor::compose()
     }
 
     for (auto& rect : m_dirty_rects) {
-        m_painter->set_clip_rect(rect);
+        auto clip_rect = rect.intersected(Screen::the().rect());
+
+        if (clip_rect.empty())
+            continue;
+
         m_painter->blit(rect.top_left(), WindowManager::the().desktop()->surface(), rect);
-        m_painter->reset_clip_rect();
 
         if (!m_cursor_invalidated)
             m_cursor_invalidated = rect.contains(m_last_cursor_location);
@@ -59,7 +63,9 @@ void Compositor::compose()
             auto intersected_rect = window_rect.intersected(rect);
 
             if (!intersected_rect.empty()) {
+                m_painter->set_clip_rect(m_wallpaper_rect);
                 m_painter->blit(window_rect.top_left(), window->surface(), window->full_rect());
+                m_painter->reset_clip_rect();
 
                 if (window_rect.contains(m_last_cursor_location))
                     m_cursor_invalidated = true;
@@ -72,7 +78,9 @@ void Compositor::compose()
             auto intersected_rect = window_rect.intersected(rect);
 
             if (!intersected_rect.empty()) {
+                m_painter->set_clip_rect(m_wallpaper_rect);
                 m_painter->blit(window_rect.top_left(), window->surface(), window->full_rect());
+                m_painter->reset_clip_rect();
 
                 if (window_rect.contains(m_last_cursor_location))
                     m_cursor_invalidated = true;
@@ -85,7 +93,10 @@ void Compositor::compose()
 
     if (m_cursor_invalidated) {
         m_cursor_invalidated = false;
-        m_painter->draw_bitmap(Screen::the().cursor().bitmap(), m_last_cursor_location);
+
+        auto& cursor = Screen::the().cursor();
+
+        m_painter->blit(m_last_cursor_location, cursor.bitmap(), cursor.rect());
     }
 }
 
@@ -108,6 +119,9 @@ void Compositor::prepare_desktop()
 
     Rect desktop_rect(0, 0, Screen::the().width(), desktop_height);
     Rect taskbar_rect(0, desktop_height, Screen::the().width(), taskbar_height);
+
+    m_wallpaper_rect = desktop_rect;
+    m_wallpaper_rect.set_height(desktop_height);
 
     static constexpr size_t clock_widget_width = 100;
     static constexpr size_t clock_width_height = 16;
@@ -151,7 +165,7 @@ void Compositor::update_clock_widget()
     } else if (time.hour == 0)
         time.hour = 12;
 
-    size_t current_x_offset = m_clock_rect.left();
+    auto current_x_offset = m_clock_rect.left();
 
     auto taskbar_color = WindowManager::the().active_theme()->taskbar_color();
 

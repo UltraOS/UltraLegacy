@@ -36,6 +36,7 @@ private:
     Painter* m_painter;
 
     Rect m_clock_rect;
+    Rect m_wallpaper_rect;
 
     bool m_cursor_invalidated { false };
     Point m_last_cursor_location;
