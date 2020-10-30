@@ -34,7 +34,7 @@ void EventManager::dispatch_pending()
 
         case Event::Type::MOUSE_MOVE: {
             auto& mouse_event = event.mouse_move;
-            Screen::the().move_cursor_to({ mouse_event.x, mouse_event.y });
+            Screen::the().move_cursor_to({ static_cast<ssize_t>(mouse_event.x), static_cast<ssize_t>(mouse_event.y) });
 
             bool event_handled = false;
             for (auto& window : WindowManager::the().windows()) {
@@ -113,7 +113,7 @@ void EventManager::post_action(const Mouse::Packet& packet)
         Event e {};
         e.type = Event::Type::MOUSE_MOVE;
         auto loc = Screen::the().cursor_position_for_delta(packet.x_delta, packet.y_delta);
-        e.mouse_move = { loc.x(), loc.y() };
+        e.mouse_move = { static_cast<size_t>(loc.x()), static_cast<size_t>(loc.y()) };
 
         push_event(e);
     }

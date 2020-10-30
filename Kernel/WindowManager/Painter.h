@@ -27,6 +27,8 @@ public:
 private:
     void draw_1_bpp_bitmap(const Bitmap&, const Point&);
     void draw_32_bpp_bitmap(const Bitmap&, const Point&);
+
+    void blit_1_bpp_bitmap(const Point& location, const Bitmap&, const Rect& source_rect);
     void blit_32_bpp_bitmap(const Point& location, const Bitmap&, const Rect& source_rect);
 
 private:
