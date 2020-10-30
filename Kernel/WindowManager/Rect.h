@@ -5,11 +5,12 @@
 
 namespace kernel {
 
-class Rect {
+template <typename T>
+class BasicRect {
 public:
-    Rect() = default;
+    BasicRect() = default;
 
-    Rect(size_t top_left_x, size_t top_left_y, size_t width, size_t height)
+    BasicRect(T top_left_x, T top_left_y, T width, T height)
         : m_x(top_left_x)
         , m_y(top_left_y)
         , m_width(width)
@@ -17,7 +18,7 @@ public:
     {
     }
 
-    Rect(const Point& top_left, size_t width, size_t height)
+    BasicRect(const Point& top_left, T width, T height)
         : m_x(top_left.x())
         , m_y(top_left.y())
         , m_width(width)
@@ -31,39 +32,39 @@ public:
         m_y = top_left.y();
     }
 
-    void set_top_left_x(size_t x) { m_x = x; }
-    void set_top_left_y(size_t y) { m_y = y; }
+    void set_top_left_x(T x) { m_x = x; }
+    void set_top_left_y(T y) { m_y = y; }
 
-    void set_width(size_t width) { m_width = width; }
-    void set_height(size_t height) { m_height = height; }
+    void set_width(T width) { m_width = width; }
+    void set_height(T height) { m_height = height; }
 
     Point top_left() const { return { m_x, m_y }; }
     Point bottom_right() const { return { m_x + m_width, m_y + m_height }; }
 
-    size_t left() const { return m_x; }
-    size_t right() const { return m_x + m_width - 1; }
+    T left() const { return m_x; }
+    T right() const { return m_x + m_width - 1; }
 
-    size_t top() const { return m_y; }
-    size_t bottom() const { return m_y + m_height - 1; }
+    T top() const { return m_y; }
+    T bottom() const { return m_y + m_height - 1; }
 
-    size_t width() const { return m_width; }
-    size_t height() const { return m_height; }
+    T width() const { return m_width; }
+    T height() const { return m_height; }
 
-    Pair<size_t, size_t> size() { return { m_width, m_height }; }
+    Pair<T, T> size() { return { m_width, m_height }; }
 
     bool empty() const { return !m_width || !m_height; }
 
     Point center() const { return { m_x + m_width / 2, m_y + m_height / 2 }; }
 
-    Rect translated(size_t x, size_t y) const { return { left() + x, top() + y, width(), height() }; }
-    Rect translated(const Point& location) const { return translated(location.x(), location.y()); }
+    BasicRect translated(T x, T y) const { return { left() + x, top() + y, width(), height() }; }
+    BasicRect translated(const Point& location) const { return translated(location.x(), location.y()); }
 
-    Rect intersected(const Rect& other) const
+    BasicRect intersected(const BasicRect& other) const
     {
-        size_t new_left = max(left(), other.left());
-        size_t new_right = min(right(), other.right());
-        size_t new_top = max(top(), other.top());
-        size_t new_bottom = min(bottom(), other.bottom());
+        T new_left = max(left(), other.left());
+        T new_right = min(right(), other.right());
+        T new_top = max(top(), other.top());
+        T new_bottom = min(bottom(), other.bottom());
 
         if (new_left > new_right || new_top > new_bottom)
             return {};
@@ -71,12 +72,12 @@ public:
         return { new_left, new_top, new_right - new_left + 1, new_bottom - new_top + 1 };
     }
 
-    void intersect(const Rect& other)
+    void intersect(const BasicRect& other)
     {
-        size_t new_left = max(left(), other.left());
-        size_t new_right = min(right(), other.right());
-        size_t new_top = max(top(), other.top());
-        size_t new_bottom = min(bottom(), other.bottom());
+        T new_left = max(left(), other.left());
+        T new_right = min(right(), other.right());
+        T new_top = max(top(), other.top());
+        T new_bottom = min(bottom(), other.bottom());
 
         if (new_left > new_right || new_top > new_bottom)
             m_x = m_y = m_width = m_height = 0;
@@ -88,14 +89,14 @@ public:
         m_height = new_bottom - new_top + 1;
     }
 
-    bool intersects(const Rect& other) const
+    bool intersects(const BasicRect& other) const
     {
         return left() <= other.right() && other.left() <= right() && top() <= other.bottom() && other.top() <= bottom();
     }
 
-    Rect united(const Rect& other) const
+    BasicRect united(const BasicRect& other) const
     {
-        Rect new_rect;
+        BasicRect new_rect;
 
         new_rect.set_top_left_x(min(left(), other.left()));
         new_rect.set_top_left_y(min(top(), other.top()));
@@ -111,7 +112,7 @@ public:
     }
 
     template <typename LoggerT>
-    friend LoggerT& operator<<(LoggerT&& logger, const Rect& rect)
+    friend LoggerT& operator<<(LoggerT&& logger, const BasicRect& rect)
     {
         logger << "x: " << rect.left() << " y: " << rect.top() << " width: " << rect.width()
                << " height: " << rect.height();
@@ -120,9 +121,11 @@ public:
     }
 
 private:
-    size_t m_x { 0 };
-    size_t m_y { 0 };
-    size_t m_width { 0 };
-    size_t m_height { 0 };
+    T m_x { 0 };
+    T m_y { 0 };
+    T m_width { 0 };
+    T m_height { 0 };
 };
+
+using Rect = BasicRect<ssize_t>;
 }

@@ -99,7 +99,7 @@ bool Window::handle_event(const Event& event, bool is_handled)
             Compositor::the().add_dirty_rect(full_translated_rect());
 
             m_location = Point(new_x, new_y);
-            m_drag_begin = { event.mouse_move.x, event.mouse_move.y };
+            m_drag_begin = { static_cast<ssize_t>(event.mouse_move.x), static_cast<ssize_t>(event.mouse_move.y) };
         } else if (m_frame.rect_for_button(WindowFrame::Button::CLOSE).contains(mouse_vec) && !is_handled) {
             if (m_state != State::CLOSE_BUTTON_HOVERED) {
                 release_buttons_if_needed();

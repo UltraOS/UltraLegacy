@@ -33,8 +33,8 @@ public:
 
     Surface& surface() const { return m_device.surface(); }
 
-    size_t width() const { return m_rect.width(); }
-    size_t height() const { return m_rect.height(); }
+    ssize_t width() const { return m_rect.width(); }
+    ssize_t height() const { return m_rect.height(); }
 
 private:
     VideoDevice& m_device;

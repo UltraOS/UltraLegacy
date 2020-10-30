@@ -4,7 +4,7 @@
 
 namespace kernel {
 
-Bitmap::Bitmap(size_t width, size_t height, Format format, size_t pitch)
+Bitmap::Bitmap(ssize_t width, ssize_t height, Format format, ssize_t pitch)
     : m_width(width)
     , m_height(height)
     , m_pitch(pitch)
@@ -19,14 +19,14 @@ void Bitmap::calculate_pitch()
     m_pitch = ceiling_divide(m_width * bpp(), static_cast<decltype(m_width)>(8));
 }
 
-MutableBitmap::MutableBitmap(void* data, size_t width, size_t height, Format format, Color* palette, size_t pitch)
+MutableBitmap::MutableBitmap(void* data, ssize_t width, ssize_t height, Format format, Color* palette, ssize_t pitch)
     : Bitmap(width, height, format, pitch)
     , m_data(reinterpret_cast<u8*>(data))
     , m_palette(palette)
 {
 }
 
-BitmapView::BitmapView(const void* data, size_t width, size_t height, Format format, const Color* palette, size_t pitch)
+BitmapView::BitmapView(const void* data, ssize_t width, ssize_t height, Format format, const Color* palette, ssize_t pitch)
     : Bitmap(width, height, format, pitch)
     , m_data(reinterpret_cast<const u8*>(data))
     , m_palette(palette)
@@ -46,7 +46,7 @@ bool Bitmap::is_indexed() const
     }
 }
 
-size_t Bitmap::bpp() const
+ssize_t Bitmap::bpp() const
 {
     switch (format()) {
     case Format::INDEXED_1_BPP:
@@ -67,17 +67,17 @@ size_t Bitmap::bpp() const
     }
 }
 
-void* MutableBitmap::scanline_at(size_t y)
+void* MutableBitmap::scanline_at(ssize_t y)
 {
     return Address(m_data).as_pointer<u8>() + pitch() * y;
 }
 
-const void* MutableBitmap::scanline_at(size_t y) const
+const void* MutableBitmap::scanline_at(ssize_t y) const
 {
     return Address(m_data).as_pointer<u8>() + pitch() * y;
 }
 
-const void* BitmapView::scanline_at(size_t y) const
+const void* BitmapView::scanline_at(ssize_t y) const
 {
     return Address(m_data).as_pointer<u8>() + pitch() * y;
 }

@@ -5,25 +5,28 @@
 
 namespace kernel {
 
-class Point : public Pair<size_t, size_t> {
+template <typename T>
+class BasicPoint : public Pair<T, T> {
 public:
-    Point() = default;
-    Point(size_t x, size_t y)
-        : Pair(x, y)
+    BasicPoint() = default;
+    BasicPoint(T x, T y)
+        : Pair<T, T>(x, y)
     {
     }
 
-    bool operator==(const Point& other) const { return (x() == other.x()) && (y() == other.y()); }
+    bool operator==(const BasicPoint& other) const { return (x() == other.x()) && (y() == other.y()); }
 
-    bool operator!=(const Point& other) const { return !(*this == other); }
+    bool operator!=(const BasicPoint& other) const { return !(*this == other); }
 
-    void move_by(size_t x, size_t y)
+    void move_by(T x, T y)
     {
-        first() += x;
-        second() += y;
+        this->first() += x;
+        this->second() += y;
     }
 
-    size_t x() const { return first(); }
-    size_t y() const { return second(); }
+    T x() const { return this->first(); }
+    T y() const { return this->second(); }
 };
+
+using Point = BasicPoint<ssize_t>;
 }

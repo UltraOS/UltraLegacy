@@ -14,7 +14,7 @@ public:
     Color window_frame_color() const override { return taskbar_color(); }
     Color taskbar_color() const override { return { 0x8d, 0x26, 0x64 }; }
 
-    size_t width_for_button(WindowFrame::Button) const override { return 20; }
+    ssize_t width_for_button(WindowFrame::Button) const override { return 20; }
 
     Color color_for_button_state(WindowFrame::Button button, WindowFrame::ButtonState state) const override
     {
@@ -49,26 +49,26 @@ public:
 
     const BitmapView& cursor_bitmap() const override { return m_cursor_bitmap; }
 
-    size_t upper_window_frame_height() const override { return 20; }
-    size_t side_window_frame_width() const override { return 1; }
-    size_t bottom_width_frame_height() const override { return 1; }
+    ssize_t upper_window_frame_height() const override { return 20; }
+    ssize_t side_window_frame_width() const override { return 1; }
+    ssize_t bottom_width_frame_height() const override { return 1; }
 
 private:
-    static constexpr size_t cursor_bitmap_height = 19;
-    static constexpr size_t cursor_bitmap_width = 12;
-    static constexpr size_t cursor_bitmap_width_in_bytes = 2;
+    static constexpr ssize_t cursor_bitmap_height = 19;
+    static constexpr ssize_t cursor_bitmap_width = 12;
+    static constexpr ssize_t cursor_bitmap_width_in_bytes = 2;
 
-    static constexpr size_t close_button_bitmap_height = 8;
-    static constexpr size_t close_button_bitmap_width = 8;
-    static constexpr size_t close_button_bitmap_width_in_bytes = 2;
+    static constexpr ssize_t close_button_bitmap_height = 8;
+    static constexpr ssize_t close_button_bitmap_width = 8;
+    static constexpr ssize_t close_button_bitmap_width_in_bytes = 2;
 
-    static constexpr size_t maximize_button_bitmap_height = 8;
-    static constexpr size_t maximize_button_bitmap_width = 8;
-    static constexpr size_t maximize_button_bitmap_width_in_bytes = 2;
+    static constexpr ssize_t maximize_button_bitmap_height = 8;
+    static constexpr ssize_t maximize_button_bitmap_width = 8;
+    static constexpr ssize_t maximize_button_bitmap_width_in_bytes = 2;
 
-    static constexpr size_t minimize_button_bitmap_height = 8;
-    static constexpr size_t minimize_button_bitmap_width = 8;
-    static constexpr size_t minimize_button_bitmap_width_in_bytes = 2;
+    static constexpr ssize_t minimize_button_bitmap_height = 8;
+    static constexpr ssize_t minimize_button_bitmap_width = 8;
+    static constexpr ssize_t minimize_button_bitmap_width_in_bytes = 2;
 
     static const u8 s_cursor_bitmap_data[cursor_bitmap_width * cursor_bitmap_height];
     static const u8 s_close_button_bitmap_data[close_button_bitmap_width * close_button_bitmap_height];

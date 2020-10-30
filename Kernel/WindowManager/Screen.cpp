@@ -45,8 +45,8 @@ Point Screen::cursor_position_for_delta(i16 delta_x, i16 delta_y)
     bool left_movement = delta_x < 0;
     bool down_movement = delta_y < 0;
 
-    size_t new_x = 0;
-    size_t new_y = 0;
+    ssize_t new_x = 0;
+    ssize_t new_y = 0;
 
     auto current_x = m_shadow_cursor_location.x();
     auto current_y = m_shadow_cursor_location.y();
@@ -57,19 +57,19 @@ Point Screen::cursor_position_for_delta(i16 delta_x, i16 delta_y)
         if (current_x > static_cast<decltype(current_x)>(delta_x))
             new_x = current_x - delta_x;
     } else {
-        if ((current_x + delta_x + m_cursor.bitmap().width()) < rect().width())
+        if ((current_x + delta_x + 1) < rect().width())
             new_x = current_x + delta_x;
         else
-            new_x = rect().width() - m_cursor.bitmap().width();
+            new_x = rect().width() - 1;
     }
 
     if (down_movement) {
         delta_y *= -1;
 
-        if ((current_y + delta_y + m_cursor.bitmap().height()) < rect().height())
+        if ((current_y + delta_y + 1) < rect().height())
             new_y = current_y + delta_y;
         else
-            new_y = rect().height() - m_cursor.bitmap().height();
+            new_y = rect().height() - 1;
     } else {
         if (current_y > static_cast<decltype(current_x)>(delta_y))
             new_y = current_y - delta_y;
