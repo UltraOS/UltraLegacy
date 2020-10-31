@@ -1,4 +1,5 @@
 #include "Screen.h"
+#include "Compositor.h"
 #include "Drivers/Video/VideoDevice.h"
 #include "WindowManager.h"
 
@@ -30,6 +31,9 @@ void Screen::check_if_focused_window_should_change()
     if (window_that_should_be_focused != window_list.end()) {
         if (Window::is_any_focused() && ((*window_that_should_be_focused).get() == &Window::focused()))
             return;
+
+        if (Window::is_any_focused())
+            Compositor::the().add_dirty_rect(Window::focused().full_translated_rect());
 
         (*window_that_should_be_focused)->set_focused();
 

@@ -67,6 +67,8 @@ public:
     void set_invalidated(bool setting) { m_invalidated = setting; }
 
 private:
+    void invalidate_rects_based_on_drag_delta(const Rect& new_rect);
+
     Window(Thread& owner, Style, const Rect& window_rect, RefPtr<Theme>);
 
     enum class State {

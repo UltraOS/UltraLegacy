@@ -1,4 +1,5 @@
 #include "WindowFrame.h"
+#include "Compositor.h"
 #include "Painter.h"
 #include "Window.h"
 
@@ -45,7 +46,7 @@ void WindowFrame::draw_button(Button button, ButtonState state)
     // TODO: unhardcode padding
     painter.draw_bitmap(theme->button_bitmap(button), { button_rect.left() + 6, button_rect.top() + 6 });
 
-    m_owner.set_invalidated(true);
+    Compositor::the().add_dirty_rect(button_rect.translated(m_owner.location()));
 }
 
 Rect WindowFrame::rect() const

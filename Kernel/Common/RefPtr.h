@@ -1,9 +1,9 @@
 #pragma once
 
+#include "Common/Atomic.h"
 #include "Common/Macros.h"
 #include "Common/Utilities.h"
 #include "Core/Runtime.h"
-#include "Common/Atomic.h"
 
 namespace kernel {
 

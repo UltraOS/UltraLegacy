@@ -37,13 +37,145 @@ Window::Window(Thread& owner, Style style, const Rect& window_rect, RefPtr<Theme
 
     MemoryManager::the().force_preallocate(bitmap_range);
 
-    m_front_surface = RefPtr<Surface>::create(bitmap,
+    m_front_surface = RefPtr<Surface>::create(
+        bitmap,
         full_window_rect.width(),
         full_window_rect.height(),
         Surface::Format::RGBA_32_BPP);
 
     m_frame.paint();
 }
+
+// clang-format off
+void Window::invalidate_rects_based_on_drag_delta(const Rect& new_rect)
+{
+    enum class DragDirection {
+        NONE,
+        LEFT,
+        RIGHT,
+        UP,
+        DOWN,
+        UP_LEFT,
+        DOWN_LEFT,
+        UP_RIGHT,
+        DOWN_RIGHT
+    };
+
+    auto drag_direction = [](const Rect& old_rect, const Rect& new_rect) -> DragDirection {
+        if (old_rect == new_rect)
+            return DragDirection::NONE;
+
+        // up or down
+        if (old_rect.left() == new_rect.left()) {
+            ASSERT(old_rect.top() != new_rect.top());
+            return old_rect.top() > new_rect.top() ? DragDirection::UP : DragDirection::DOWN;
+        }
+
+        // left or right
+        if (old_rect.top() == new_rect.top()) {
+            ASSERT(old_rect.left() != new_rect.left());
+            return old_rect.left() > new_rect.left() ? DragDirection::LEFT : DragDirection::RIGHT;
+        }
+
+        // up left, up right
+        if (old_rect.top() > new_rect.top()) {
+            return old_rect.left() > new_rect.left() ? DragDirection::UP_LEFT : DragDirection::UP_RIGHT;
+        }
+
+        // down left, down right
+        return old_rect.left() > new_rect.left() ? DragDirection::DOWN_LEFT : DragDirection::DOWN_RIGHT;
+    };
+
+    auto old_rect = full_translated_rect();
+
+    switch (drag_direction(old_rect, new_rect)) {
+    case DragDirection::NONE:
+        return;
+    case DragDirection::LEFT:
+        Compositor::the().add_dirty_rect({
+            new_rect.top_right(),
+            old_rect.right() - new_rect.right() + 1,
+            new_rect.height()
+        });
+        break;
+    case DragDirection::RIGHT:
+        Compositor::the().add_dirty_rect({
+            old_rect.top_left(),
+            new_rect.left() - old_rect.left() + 1,
+            new_rect.height()
+        });
+        break;
+    case DragDirection::UP:
+        Compositor::the().add_dirty_rect({
+            new_rect.bottom_left(),
+            new_rect.width(),
+            old_rect.bottom() - new_rect.bottom() + 1
+        });
+        break;
+    case DragDirection::DOWN:
+        Compositor::the().add_dirty_rect({
+            old_rect.top_left(),
+            new_rect.width(),
+            new_rect.top() - old_rect.top() + 1
+        });
+        break;
+    case DragDirection::UP_LEFT:
+        Compositor::the().add_dirty_rect({
+            new_rect.right(),
+            old_rect.top(),
+            old_rect.right() - new_rect.right() + 1,
+            new_rect.bottom() - old_rect.top() + 1
+        });
+        Compositor::the().add_dirty_rect({
+            old_rect.left(),
+            new_rect.bottom(),
+            old_rect.width(),
+            old_rect.bottom() - new_rect.bottom() + 1
+        });
+        break;
+    case DragDirection::DOWN_LEFT:
+        Compositor::the().add_dirty_rect({
+            old_rect.top_left(),
+            old_rect.width(),
+            new_rect.top() - old_rect.top() + 1
+        });
+        Compositor::the().add_dirty_rect({
+            new_rect.top_right(),
+            old_rect.right() - new_rect.right() + 1,
+            old_rect.bottom() - new_rect.top() + 1
+        });
+        break;
+    case DragDirection::UP_RIGHT:
+        Compositor::the().add_dirty_rect({
+            old_rect.top_left(),
+            new_rect.left() - old_rect.left() + 1,
+            new_rect.bottom() - old_rect.top() + 1
+        });
+        Compositor::the().add_dirty_rect({
+            old_rect.left(),
+            new_rect.bottom(),
+            old_rect.width(),
+            old_rect.bottom() - new_rect.bottom() + 1
+        });
+        break;
+    case DragDirection::DOWN_RIGHT:
+        Compositor::the().add_dirty_rect({
+            old_rect.top_left(),
+            old_rect.width(),
+            new_rect.top() - old_rect.top() + 1
+        });
+        Compositor::the().add_dirty_rect({
+            old_rect.left(),
+            new_rect.top(),
+            new_rect.left() - old_rect.left() + 1,
+            new_rect.bottom() - new_rect.top() + 1
+        });
+        break;
+    default:
+        ASSERT_NEVER_REACHED();
+    }
+}
+// clang-format on
 
 bool Window::handle_event(const Event& event, bool is_handled)
 {
@@ -90,16 +222,21 @@ bool Window::handle_event(const Event& event, bool is_handled)
         auto mouse_vec = Point(event.mouse_move.x, event.mouse_move.y);
 
         if (m_state == State::IS_BEING_DRAGGED) {
-            i32 delta_x = static_cast<i32>(event.mouse_move.x) - static_cast<i32>(m_drag_begin.x());
-            i32 delta_y = static_cast<i32>(event.mouse_move.y) - static_cast<i32>(m_drag_begin.y());
+            ssize_t delta_x = static_cast<ssize_t>(event.mouse_move.x) - static_cast<ssize_t>(m_drag_begin.x());
+            ssize_t delta_y = static_cast<ssize_t>(event.mouse_move.y) - static_cast<ssize_t>(m_drag_begin.y());
 
-            i32 new_x = static_cast<i32>(m_location.x()) + delta_x;
-            i32 new_y = static_cast<i32>(m_location.y()) + delta_y;
+            ssize_t new_x = m_location.x() + delta_x;
+            ssize_t new_y = m_location.y() + delta_y;
 
-            Compositor::the().add_dirty_rect(full_translated_rect());
+            Rect new_window_rect = full_translated_rect();
+            new_window_rect.set_top_left_x(new_x);
+            new_window_rect.set_top_left_y(new_y);
+            invalidate_rects_based_on_drag_delta(new_window_rect);
 
             m_location = Point(new_x, new_y);
             m_drag_begin = { static_cast<ssize_t>(event.mouse_move.x), static_cast<ssize_t>(event.mouse_move.y) };
+
+            set_invalidated(true);
         } else if (m_frame.rect_for_button(WindowFrame::Button::CLOSE).contains(mouse_vec) && !is_handled) {
             if (m_state != State::CLOSE_BUTTON_HOVERED) {
                 release_buttons_if_needed();
