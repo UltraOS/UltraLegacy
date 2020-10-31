@@ -33,63 +33,44 @@ void Compositor::compose()
     update_clock_widget();
     update_cursor_position();
 
-    for (auto& window : WindowManager::the().windows()) {
-        if (window->is_invalidated()) {
-            m_dirty_rects.append(window->full_translated_rect());
-            window->set_invalidated(false);
-        }
-    }
+    auto& windows = WindowManager::the().windows();
 
     for (auto& rect : m_dirty_rects) {
-        auto clip_rect = rect.intersected(Screen::the().rect());
-
-        if (clip_rect.empty())
-            continue;
-
         m_painter->blit(rect.top_left(), WindowManager::the().desktop()->surface(), rect);
+
+        for (auto itr = --windows.end(); itr != windows.end(); --itr) {
+            auto& window = *itr;
+
+            if (window->is_invalidated())
+                continue;
+
+            auto intersected_rect = window->full_translated_rect().intersected(rect);
+            if (intersected_rect.empty())
+                continue;
+
+            m_painter->set_clip_rect(m_wallpaper_rect);
+            m_painter->blit(intersected_rect.top_left(), window->surface(), intersected_rect.translated(-window->location()));
+            m_painter->reset_clip_rect();
+        }
 
         if (!m_cursor_invalidated)
             m_cursor_invalidated = rect.contains(m_last_cursor_location);
     }
 
-    DynamicArray<Rect> drawn_window_rects;
-
-    auto& windows = WindowManager::the().windows();
-    for (auto itr = --windows.end(); itr != windows.end(); --itr) {
-        auto& window = *itr;
-
-        for (auto& rect : m_dirty_rects) {
-            auto window_rect = window->full_translated_rect();
-            auto intersected_rect = window_rect.intersected(rect);
-
-            if (!intersected_rect.empty()) {
-                m_painter->set_clip_rect(m_wallpaper_rect);
-                m_painter->blit(window_rect.top_left(), window->surface(), window->full_rect());
-                m_painter->reset_clip_rect();
-
-                if (window_rect.contains(m_last_cursor_location))
-                    m_cursor_invalidated = true;
-                drawn_window_rects.append(window_rect);
-            }
-        }
-
-        for (auto& rect : drawn_window_rects) {
-            auto window_rect = window->full_translated_rect();
-            auto intersected_rect = window_rect.intersected(rect);
-
-            if (!intersected_rect.empty()) {
-                m_painter->set_clip_rect(m_wallpaper_rect);
-                m_painter->blit(window_rect.top_left(), window->surface(), window->full_rect());
-                m_painter->reset_clip_rect();
-
-                if (window_rect.contains(m_last_cursor_location))
-                    m_cursor_invalidated = true;
-                drawn_window_rects.append(window_rect);
-            }
-        }
-    }
-
     m_dirty_rects.clear();
+
+    for (auto& window : windows) {
+        if (window->is_invalidated()) {
+            m_painter->set_clip_rect(m_wallpaper_rect);
+            m_painter->blit(window->location(), window->surface(), window->full_rect());
+            m_painter->reset_clip_rect();
+        }
+
+        window->set_invalidated(false);
+
+        if (!m_cursor_invalidated)
+            m_cursor_invalidated = window->full_translated_rect().contains(m_last_cursor_location);
+    }
 
     if (m_cursor_invalidated) {
         m_cursor_invalidated = false;
