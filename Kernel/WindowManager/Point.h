@@ -24,6 +24,11 @@ public:
         this->second() += y;
     }
 
+    BasicPoint operator-() const
+    {
+        return BasicPoint(-this->first(), -this->second());
+    }
+
     T x() const { return this->first(); }
     T y() const { return this->second(); }
 };
