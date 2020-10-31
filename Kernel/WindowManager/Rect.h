@@ -38,8 +38,11 @@ public:
     void set_width(T width) { m_width = width; }
     void set_height(T height) { m_height = height; }
 
-    Point top_left() const { return { m_x, m_y }; }
-    Point bottom_right() const { return { m_x + m_width, m_y + m_height }; }
+    Point top_left() const { return { left(), top() }; }
+    Point top_right() const { return { right(), top() }; }
+
+    Point bottom_left() const { return { left(), bottom() }; }
+    Point bottom_right() const { return { right(), bottom() }; }
 
     T left() const { return m_x; }
     T right() const { return m_x + m_width - 1; }
@@ -109,6 +112,11 @@ public:
     bool contains(const Point& point) const
     {
         return point.x() >= m_x && point.x() <= (m_x + m_width) && point.y() >= m_y && point.y() <= (m_y + m_height);
+    }
+
+    bool operator==(const BasicRect& other) const
+    {
+        return m_x == other.m_x && m_y == other.m_y && m_width == other.m_width && m_height == other.m_height;
     }
 
     template <typename LoggerT>
