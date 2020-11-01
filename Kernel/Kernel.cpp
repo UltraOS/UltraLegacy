@@ -112,11 +112,32 @@ void process_with_windows()
     window_1_painter.fill_rect(window_1->view_rect(), { 0x16, 0x21, 0x3e });
     window_2_painter.fill_rect(window_2->view_rect(), { 0x0f, 0x34, 0x60 });
 
-    window_1->set_invalidated(true);
-    window_2->set_invalidated(true);
+    window_1->invalidate_part_of_view_rect({ 0, 0, 200, 100 });
+    window_2->invalidate_part_of_view_rect({ 0, 0, 500, 300 });
 
-    while (true)
-        ;
+    while (true) {
+        {
+            LockGuard lock_guard(window_1->event_queue_lock());
+            window_1->event_queue().clear();
+        }
+
+        LockGuard lock_guard(window_2->event_queue_lock());
+
+        for (auto& event : window_2->event_queue()) {
+            switch (event.type) {
+            case Event::Type::MOUSE_MOVE:
+                // TODO: handle
+                break;
+            case Event::Type::KEY_STATE:
+                // TODO: handle
+                break;
+            default:
+                break;
+            }
+        }
+
+        window_2->event_queue().clear();
+    }
 }
 
 void dummy_kernel_process()

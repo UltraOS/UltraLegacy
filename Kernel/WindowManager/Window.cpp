@@ -57,7 +57,8 @@ void Window::submit_dirty_rects()
     LockGuard lock_guard(m_dirty_rect_lock);
 
     for (const auto& rect : m_dirty_rects) {
-        Compositor::the().add_dirty_rect(rect.translated(view_rect().top_left()));
+        auto view_rectangle = view_rect().translated(location());
+        Compositor::the().add_dirty_rect(rect.translated(view_rectangle.top_left()));
     }
 
     m_dirty_rects.clear();
