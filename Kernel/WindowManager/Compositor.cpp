@@ -35,6 +35,10 @@ void Compositor::compose()
 
     auto& windows = WindowManager::the().windows();
 
+    for (auto& window : windows) {
+        window->submit_dirty_rects();
+    }
+
     for (auto& rect : m_dirty_rects) {
         m_painter->blit(rect.top_left(), WindowManager::the().desktop()->surface(), rect);
 

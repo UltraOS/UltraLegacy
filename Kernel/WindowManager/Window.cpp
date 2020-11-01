@@ -46,6 +46,23 @@ Window::Window(Thread& owner, Style style, const Rect& window_rect, RefPtr<Theme
     m_frame.paint();
 }
 
+void Window::invalidate_part_of_view_rect(const Rect& rect)
+{
+    LockGuard lock_guard(m_dirty_rect_lock);
+    m_dirty_rects.append(rect);
+}
+
+void Window::submit_dirty_rects()
+{
+    LockGuard lock_guard(m_dirty_rect_lock);
+
+    for (const auto& rect : m_dirty_rects) {
+        Compositor::the().add_dirty_rect(rect.translated(view_rect().top_left()));
+    }
+
+    m_dirty_rects.clear();
+}
+
 // clang-format off
 void Window::invalidate_rects_based_on_drag_delta(const Rect& new_rect)
 {
@@ -177,13 +194,36 @@ void Window::invalidate_rects_based_on_drag_delta(const Rect& new_rect)
 }
 // clang-format on
 
+void Window::push_window_event(const Event& event)
+{
+    static constexpr size_t max_event_queue_size = 16;
+
+    LockGuard lock_guard(m_event_queue_lock);
+
+    if (m_event_queue.size() >= max_event_queue_size)
+        return;
+
+    m_event_queue.append(event);
+}
+
 bool Window::handle_event(const Event& event, bool is_handled)
 {
-    if (!has_frame()) {
-        // Uncomment later when needed
-        // m_event_queue.append(event);
-        return true;
-    }
+    if (event.type == Event::Type::MOUSE_MOVE) {
+        if (!is_handled) {
+            auto mouse_vec = Point(event.mouse_move.x, event.mouse_move.y);
+
+            auto view_rectangle = view_rect();
+
+            if (view_rectangle.translated(location()).contains(mouse_vec)) {
+                Event user_event = event;
+                mouse_vec.move_by(-m_location.x(), -m_location.y());
+                mouse_vec.move_by(-view_rectangle.left(), -view_rectangle.top());
+                user_event.mouse_move = { static_cast<size_t>(mouse_vec.x()), static_cast<size_t>(mouse_vec.y()) };
+                push_window_event(user_event);
+            }
+        }
+    } else
+        push_window_event(event);
 
     switch (event.type) {
     case Event::Type::BUTTON_STATE: {

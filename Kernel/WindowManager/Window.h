@@ -66,6 +66,14 @@ public:
     bool is_invalidated() { return m_invalidated; }
     void set_invalidated(bool setting) { m_invalidated = setting; }
 
+    void invalidate_part_of_view_rect(const Rect&);
+    void submit_dirty_rects();
+
+    void push_window_event(const Event&);
+
+    InterruptSafeSpinLock& event_queue_lock() { return m_event_queue_lock; }
+    DynamicArray<Event>& event_queue() { return m_event_queue; }
+
 private:
     void invalidate_rects_based_on_drag_delta(const Rect& new_rect);
 
@@ -95,7 +103,10 @@ private:
 
     Point m_drag_begin;
 
-    // Should also be a list?
+    InterruptSafeSpinLock m_dirty_rect_lock;
+    DynamicArray<Rect> m_dirty_rects;
+
+    InterruptSafeSpinLock m_event_queue_lock;
     DynamicArray<Event> m_event_queue;
 
     // TODO: this should be a weak ptr
