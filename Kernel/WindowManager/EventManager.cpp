@@ -25,13 +25,6 @@ void EventManager::dispatch_pending()
             Window::focused().handle_event(event);
             continue;
 
-        case Event::Type::KEY_STATE:
-            update_state_of_key(event.vk_state.vkey, event.vk_state.state);
-            if (!Window::is_any_focused())
-                continue;
-            Window::focused().handle_event(event);
-            continue;
-
         case Event::Type::MOUSE_MOVE: {
             auto& mouse_event = event.mouse_move;
             Screen::the().move_cursor_to({ static_cast<ssize_t>(mouse_event.x), static_cast<ssize_t>(mouse_event.y) });
@@ -43,7 +36,11 @@ void EventManager::dispatch_pending()
             continue;
         }
 
+        case Event::Type::KEY_STATE:
+            update_state_of_key(event.vk_state.vkey, event.vk_state.state);
+            [[fallthrough]];
         case Event::Type::MOUSE_SCROLL:
+        case Event::Type::CHAR_TYPED:
             if (!Window::is_any_focused())
                 continue;
 
@@ -78,6 +75,17 @@ void EventManager::update_state_of_key(VK key, VKState state)
 {
     ASSERT(static_cast<u8>(key) < static_cast<u8>(VK::LAST));
 
+    // keys that must be toggled
+    if (key == VK::CAPS_LOCK || key == VK::NUM_LK || key == VK::SCR_LK) {
+        if (state == VKState::RELEASED)
+            return;
+
+        auto& state_of_key = m_key_state[static_cast<u8>(key)];
+
+        state_of_key = (state_of_key == VKState::PRESSED) ? VKState::RELEASED : VKState::PRESSED;
+        return;
+    }
+
     m_key_state[static_cast<u8>(key)] = state;
 }
 
@@ -88,6 +96,19 @@ void EventManager::generate_button_state_event(VK key, VKState state)
     e.vk_state = { key, state };
 
     push_event(e);
+}
+
+void EventManager::generate_char_typed_if_applicable(VK key)
+{
+    bool is_convertable = false;
+    auto as_char = to_char(key, state_of_key(VK::LEFT_SHIFT), state_of_key(VK::CAPS_LOCK), is_convertable);
+
+    if (is_convertable) {
+        Event e {};
+        e.type = Event::Type::CHAR_TYPED;
+        e.char_typed.character = static_cast<size_t>(as_char);
+        push_event(e);
+    }
 }
 
 void EventManager::post_action(const Keyboard::Packet& packet)
@@ -101,6 +122,9 @@ void EventManager::post_action(const Keyboard::Packet& packet)
     e.vk_state = { packet.key, packet.state };
 
     push_event(e);
+
+    if (packet.state == VKState::PRESSED)
+        generate_char_typed_if_applicable(packet.key);
 }
 
 void EventManager::post_action(const Mouse::Packet& packet)

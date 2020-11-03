@@ -28,9 +28,17 @@ public:
 
     void dispatch_pending();
 
+    VKState state_of_key(VK key)
+    {
+        ASSERT(static_cast<u8>(key) < static_cast<u8>(VK::LAST));
+
+        return m_key_state[static_cast<u8>(key)];
+    }
+
 private:
     void update_state_of_key(VK, VKState);
     void generate_button_state_event(VK, VKState);
+    void generate_char_typed_if_applicable(VK);
 
 private:
     InterruptSafeSpinLock m_event_queue_lock;

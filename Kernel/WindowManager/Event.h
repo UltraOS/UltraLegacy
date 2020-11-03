@@ -23,6 +23,10 @@ struct Event {
             VK vkey;
             VKState state;
         } vk_state;
+
+        struct {
+            size_t character;
+        } char_typed;
     };
 
     using MouseMove = decltype(mouse_move);
@@ -36,5 +40,6 @@ struct Event {
         KEY_STATE,
         WINDOW_RESIZE,
         WINDOW_MOVE,
+        CHAR_TYPED,
     } type;
 };
