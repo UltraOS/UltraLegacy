@@ -23,16 +23,16 @@ public:
     static RefPtr<Window> create(Thread& owner, const Rect& window_rect, RefPtr<Theme>);
     static RefPtr<Window> create_desktop(Thread& owner, const Rect& window_rect, RefPtr<Theme>);
 
-    const Theme& theme() const { return *m_theme; }
+    [[nodiscard]] const Theme& theme() const { return *m_theme; }
 
-    Rect full_rect() const { return m_frame.rect(); }
-    const Rect& window_rect() const { return m_window_rect; }
-    Rect view_rect() const { return m_frame.view_rect(); }
-    const Point& location() const { return m_location; }
+    [[nodiscard]] Rect full_rect() const { return m_frame.rect(); }
+    [[nodiscard]] const Rect& window_rect() const { return m_window_rect; }
+    [[nodiscard]] Rect view_rect() const { return m_frame.view_rect(); }
+    [[nodiscard]] const Point& location() const { return m_location; }
 
-    Rect full_translated_rect() const { return m_frame.rect().translated(m_location); }
+    [[nodiscard]] Rect full_translated_rect() const { return m_frame.rect().translated(m_location); }
 
-    bool has_frame() const { return m_style != Style::FRAMELESS; }
+    [[nodiscard]] bool has_frame() const { return m_style != Style::FRAMELESS; }
 
     void set_focused() { s_currently_focused = this; }
 
@@ -52,18 +52,18 @@ public:
         return *m_front_surface;
     }
 
-    const Surface& surface() const
+    [[nodiscard]] const Surface& surface() const
     {
         ASSERT(m_front_surface.get() != nullptr);
         return *m_front_surface;
     }
 
-    size_t width() const { return surface().width(); }
-    size_t height() const { return surface().height(); }
+    [[nodiscard]] size_t width() const { return surface().width(); }
+    [[nodiscard]] size_t height() const { return surface().height(); }
 
     bool handle_event(const Event& event, bool is_handled = false);
 
-    bool is_invalidated() { return m_invalidated; }
+    [[nodiscard]] bool is_invalidated() const { return m_invalidated; }
     void set_invalidated(bool setting) { m_invalidated = setting; }
 
     void invalidate_part_of_view_rect(const Rect&);
@@ -76,7 +76,7 @@ public:
     DynamicArray<Event>& event_queue() { return m_event_queue; }
 
 private:
-    void invalidate_rects_based_on_drag_delta(const Rect& new_rect);
+    void invalidate_rects_based_on_drag_delta(const Rect& new_rect) const;
 
     Window(Thread& owner, Style, const Rect& window_rect, RefPtr<Theme>);
 
@@ -97,6 +97,8 @@ private:
     Rect m_window_rect;
     WindowFrame m_frame;
     Point m_location;
+    // TODO: set this to false and invalidate the entire window
+    // with invalidate_rect() upon creation instead?
     bool m_invalidated { true };
     State m_state { State::NORMAL };
 

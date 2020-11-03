@@ -70,7 +70,7 @@ void Window::submit_dirty_rects()
 }
 
 // clang-format off
-void Window::invalidate_rects_based_on_drag_delta(const Rect& new_rect)
+void Window::invalidate_rects_based_on_drag_delta(const Rect& new_rect) const
 {
     enum class DragDirection {
         NONE,
