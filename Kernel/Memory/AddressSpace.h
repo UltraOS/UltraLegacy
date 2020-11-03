@@ -59,7 +59,7 @@ public:
 
     void store_physical_page(RefPtr<Page> page);
 
-    void map_page(Address virtual_address, Address physical_address, bool is_supervior = true);
+    void map_page(Address virtual_address, Address physical_address, bool is_supervisor = true);
 
     void map_user_page(Address virtual_address, const Page& physical_address);
     void map_user_page(Address virtual_address, Address physical_address);
