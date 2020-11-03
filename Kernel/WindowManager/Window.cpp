@@ -49,6 +49,12 @@ Window::Window(Thread& owner, Style style, const Rect& window_rect, RefPtr<Theme
 void Window::invalidate_part_of_view_rect(const Rect& rect)
 {
     LockGuard lock_guard(m_dirty_rect_lock);
+    m_dirty_rects.append(rect.translated(view_rect().top_left()));
+}
+
+void Window::invalidate_rect(const Rect& rect)
+{
+    LockGuard lock_guard(m_dirty_rect_lock);
     m_dirty_rects.append(rect);
 }
 
@@ -57,8 +63,7 @@ void Window::submit_dirty_rects()
     LockGuard lock_guard(m_dirty_rect_lock);
 
     for (const auto& rect : m_dirty_rects) {
-        auto view_rectangle = view_rect().translated(location());
-        Compositor::the().add_dirty_rect(rect.translated(view_rectangle.top_left()));
+        Compositor::the().add_dirty_rect(rect.translated(location()));
     }
 
     m_dirty_rects.clear();

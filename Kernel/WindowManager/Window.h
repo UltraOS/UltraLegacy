@@ -23,7 +23,7 @@ public:
     static RefPtr<Window> create(Thread& owner, const Rect& window_rect, RefPtr<Theme>);
     static RefPtr<Window> create_desktop(Thread& owner, const Rect& window_rect, RefPtr<Theme>);
 
-    const RefPtr<Theme>& theme() const { return m_theme; }
+    const Theme& theme() const { return *m_theme; }
 
     Rect full_rect() const { return m_frame.rect(); }
     const Rect& window_rect() const { return m_window_rect; }
@@ -67,6 +67,7 @@ public:
     void set_invalidated(bool setting) { m_invalidated = setting; }
 
     void invalidate_part_of_view_rect(const Rect&);
+    void invalidate_rect(const Rect&);
     void submit_dirty_rects();
 
     void push_window_event(const Event&);
