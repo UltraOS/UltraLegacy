@@ -11,7 +11,7 @@ namespace kernel {
 
 class PS2Device;
 
-class PS2Controller : public Device {
+class PS2Controller final : public Device {
     MAKE_SINGLETON(PS2Controller) = default;
 
 public:
@@ -69,8 +69,8 @@ public:
     static_assert(sizeof(Configuration) == 1);
     static_assert(sizeof(Status) == 1);
 
-    Type type() const override { return Type::CONTROLLER; }
-    StringView name() const override { return "8042 PS/2 Controller"; }
+    [[nodiscard]] Type type() const override { return Type::CONTROLLER; }
+    [[nodiscard]] StringView name() const override { return "8042 PS/2 Controller"; }
 
     static void initialize();
 
@@ -82,12 +82,12 @@ public:
     }
 
     void send_command(Command);
-    void flush();
+    static void flush();
 
     Configuration read_configuration();
     void write_configuration(Configuration);
 
-    Status status();
+    static Status status();
 
     enum class Channel {
         ONE = 1,
@@ -116,14 +116,14 @@ public:
 
     u8 read_data(bool allow_failure = false, size_t max_attempts = 100000);
 
-    bool did_last_read_timeout() { return m_last_read_timeout; }
+    [[nodiscard]] bool did_last_read_timeout() const { return m_last_read_timeout; }
 
     struct DeviceIdentification {
         u8 id_bytes;
         u8 id[2];
 
-        bool is_keyboard() { return id_bytes == 0 || id_bytes == 2; }
-        bool is_mouse() { return id_bytes == 1; }
+        [[nodiscard]] bool is_keyboard() const { return id_bytes == 0 || id_bytes == 2; }
+        [[nodiscard]] bool is_mouse() const { return id_bytes == 1; }
     };
 
     DeviceIdentification identify_device(Channel);

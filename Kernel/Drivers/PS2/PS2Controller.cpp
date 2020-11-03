@@ -147,16 +147,26 @@ bool PS2Controller::reset_device(Channel channel)
 {
     // This command takes a ton of time on real hw (and apparanetly on VirtualBox too)
     // therefore we cannot afford a smaller delay in read_data()
+    // I have one laptop where this is the minumum safe delay for channel 1 reset
+    // This is a bit ridiculous tho, but I don't know a better way of doing this :(
+    static constexpr size_t reset_max_attempts = 1'000'000;
+
     send_command_to_device(channel, DeviceCommand::RESET, false);
 
+    size_t response_bytes = 0;
     u8 device_response[3] {};
-    device_response[0] = read_data(true);
-    device_response[1] = read_data(true);
+
+    device_response[0] = read_data(true, reset_max_attempts);
+    response_bytes += !did_last_read_timeout();
+
+    device_response[1] = read_data(true, reset_max_attempts);
+    response_bytes += !did_last_read_timeout();
 
     // Mouse responds with ack-pass-id while keyboard just does ack-pass
     // So lets account for that while also allowing the possibility of keyboard being channel 2
     // (250 might be too little for real hw tho, so might have to tweak it later)
-    device_response[2] = read_data(true, channel == Channel::TWO ? 100000 : 250);
+    device_response[2] = read_data(true, channel == Channel::TWO ? reset_max_attempts : 250);
+    response_bytes += !did_last_read_timeout();
 
     bool did_get_ack = false;
     bool did_get_pass = false;
@@ -164,7 +174,7 @@ bool PS2Controller::reset_device(Channel channel)
 
     // These come in absolutely random order everywhere
     // For example on QEMU I get ack-pass-id and on my laptop I get ack-id-pass
-    for (size_t i = 0; i < 3; ++i) {
+    for (size_t i = 0; i < response_bytes; ++i) {
         if (device_response[i] == command_ack)
             did_get_ack = true;
         else if (device_response[i] == self_test_passed)
@@ -181,7 +191,7 @@ bool PS2Controller::reset_device(Channel channel)
         warning() << "PS2Controller: Device " << static_cast<u8>(channel) << " reset failure";
         return false;
     } else {
-        if (!did_last_read_timeout()) {
+        if (response_bytes != 0) {
             StackStringBuilder error_string;
             error_string << "PS2Controller: Device " << static_cast<u8>(channel);
             error_string << " is present but responded with unknown sequence -> ";
@@ -190,6 +200,7 @@ bool PS2Controller::reset_device(Channel channel)
             error_string.append_hex(device_response[1]);
             error_string += '-';
             error_string.append_hex(device_response[2]);
+            error_string << " (" << response_bytes << " bytes)";
             runtime::panic(error_string.data());
         }
 

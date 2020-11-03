@@ -5,13 +5,13 @@
 
 namespace kernel {
 
-class PS2Keyboard : public PS2Device, public Keyboard {
+class PS2Keyboard final : public PS2Device, public Keyboard {
 public:
-    PS2Keyboard(PS2Controller::Channel channel);
+    explicit PS2Keyboard(PS2Controller::Channel channel);
 
     void handle_action() override;
 
-    StringView name() const override { return "PS2 Keyboard"; }
+    [[nodiscard]] StringView name() const override { return "PS2 Keyboard"; }
 
 private:
     enum State {
@@ -28,6 +28,6 @@ private:
         PAUSE_2,
         E1_REPEAT,
         PAUSE_3,
-    } m_state;
+    } m_state { State::NORMAL };
 };
 }

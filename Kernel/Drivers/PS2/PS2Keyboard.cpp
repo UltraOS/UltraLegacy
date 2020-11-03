@@ -284,6 +284,8 @@ void PS2Keyboard::handle_action()
 
             m_state = State::NORMAL;
             continue;
+        default:
+            ASSERT_NEVER_REACHED();
         }
 
         bool released = scancode & key_released_bit;

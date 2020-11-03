@@ -5,7 +5,7 @@
 
 namespace kernel {
 
-class PS2Mouse : public PS2Device, public Mouse {
+class PS2Mouse final : public PS2Device, public Mouse {
 public:
     enum class SubType {
         STANDARD_MOUSE = 0x00,
@@ -13,20 +13,19 @@ public:
         FIVE_BUTTONS = 0x04,
     };
 
-    PS2Mouse(PS2Controller::Channel channel);
+    explicit PS2Mouse(PS2Controller::Channel channel);
 
     void set_sample_rate(u8 rate);
 
     void handle_action() override;
 
-    StringView name() const override { return "PS2 Mouse"; }
-
-    SubType sub_type() const { return m_sub_type; }
+    [[nodiscard]] StringView name() const override { return "PS2 Mouse"; }
+    [[nodiscard]] SubType sub_type() const { return m_sub_type; }
 
 private:
     void detect_subtype();
 
-    u8 bytes_in_packet() const;
+    [[nodiscard]] u8 bytes_in_packet() const;
 
     void append_packet_data(u8 data);
     void parse_packet();
