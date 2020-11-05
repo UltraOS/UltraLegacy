@@ -459,6 +459,13 @@ inline char to_char(VK key, VKState shift_state, VKState caps_state, bool& did_c
             return '?';
         else
             return '/';
+
+    case VK::SPACE:
+        return ' ';
+
+    case VK::TAB:
+        return '\t';
+
     default:
         did_convert = false;
         return static_cast<char>(-1);
