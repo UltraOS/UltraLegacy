@@ -19,9 +19,9 @@ public:
         window->set_focused();
     }
 
-    static void run();
+    [[noreturn]] static void run();
 
-    RefPtr<Theme> active_theme() const { return m_theme; }
+    [[nodiscard]] RefPtr<Theme> active_theme() const { return m_theme; }
 
     InterruptSafeSpinLock& window_lock() { return m_lock; }
 
