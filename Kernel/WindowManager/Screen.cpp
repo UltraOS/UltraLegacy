@@ -32,10 +32,10 @@ void Screen::check_if_focused_window_should_change()
         if (Window::is_any_focused() && ((*window_that_should_be_focused).get() == &Window::focused()))
             return;
 
+        (*window_that_should_be_focused)->set_focused();
+
         if (Window::is_any_focused())
             Compositor::the().add_dirty_rect(Window::focused().full_translated_rect());
-
-        (*window_that_should_be_focused)->set_focused();
 
         // Move the focused window to the front of window list
         window_list.splice(window_list.begin(), window_list, window_that_should_be_focused);
