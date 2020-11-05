@@ -8,9 +8,9 @@ namespace kernel {
 template <typename T>
 class BasicRect {
 public:
-    BasicRect() = default;
+    constexpr BasicRect() = default;
 
-    BasicRect(T top_left_x, T top_left_y, T width, T height)
+    constexpr BasicRect(T top_left_x, T top_left_y, T width, T height)
         : m_x(top_left_x)
         , m_y(top_left_y)
         , m_width(width)
@@ -18,7 +18,7 @@ public:
     {
     }
 
-    BasicRect(const Point& top_left, T width, T height)
+    constexpr BasicRect(const Point& top_left, T width, T height)
         : m_x(top_left.x())
         , m_y(top_left.y())
         , m_width(width)
@@ -26,43 +26,43 @@ public:
     {
     }
 
-    void set_top_left(const Point& top_left)
+    constexpr void set_top_left(const Point& top_left)
     {
         m_x = top_left.x();
         m_y = top_left.y();
     }
 
-    void set_top_left_x(T x) { m_x = x; }
-    void set_top_left_y(T y) { m_y = y; }
+    constexpr void set_top_left_x(T x) { m_x = x; }
+    constexpr void set_top_left_y(T y) { m_y = y; }
 
-    void set_width(T width) { m_width = width; }
-    void set_height(T height) { m_height = height; }
+    constexpr void set_width(T width) { m_width = width; }
+    constexpr void set_height(T height) { m_height = height; }
 
-    Point top_left() const { return { left(), top() }; }
-    Point top_right() const { return { right(), top() }; }
+    constexpr Point top_left() const { return { left(), top() }; }
+    constexpr Point top_right() const { return { right(), top() }; }
 
-    Point bottom_left() const { return { left(), bottom() }; }
-    Point bottom_right() const { return { right(), bottom() }; }
+    constexpr Point bottom_left() const { return { left(), bottom() }; }
+    constexpr Point bottom_right() const { return { right(), bottom() }; }
 
-    T left() const { return m_x; }
-    T right() const { return m_x + m_width - 1; }
+    constexpr T left() const { return m_x; }
+    constexpr T right() const { return m_x + m_width - 1; }
 
-    T top() const { return m_y; }
-    T bottom() const { return m_y + m_height - 1; }
+    constexpr T top() const { return m_y; }
+    constexpr T bottom() const { return m_y + m_height - 1; }
 
-    T width() const { return m_width; }
-    T height() const { return m_height; }
+    constexpr T width() const { return m_width; }
+    constexpr T height() const { return m_height; }
 
-    Pair<T, T> size() { return { m_width, m_height }; }
+    constexpr Pair<T, T> size() { return { m_width, m_height }; }
 
-    bool empty() const { return !m_width || !m_height; }
+    constexpr bool empty() const { return !m_width || !m_height; }
 
-    Point center() const { return { m_x + m_width / 2, m_y + m_height / 2 }; }
+    constexpr Point center() const { return { m_x + m_width / 2, m_y + m_height / 2 }; }
 
-    BasicRect translated(T x, T y) const { return { left() + x, top() + y, width(), height() }; }
-    BasicRect translated(const Point& location) const { return translated(location.x(), location.y()); }
+    constexpr BasicRect translated(T x, T y) const { return { left() + x, top() + y, width(), height() }; }
+    constexpr BasicRect translated(const Point& location) const { return translated(location.x(), location.y()); }
 
-    BasicRect intersected(const BasicRect& other) const
+    constexpr BasicRect intersected(const BasicRect& other) const
     {
         T new_left = max(left(), other.left());
         T new_right = min(right(), other.right());
@@ -75,7 +75,7 @@ public:
         return { new_left, new_top, new_right - new_left + 1, new_bottom - new_top + 1 };
     }
 
-    void intersect(const BasicRect& other)
+    constexpr void intersect(const BasicRect& other)
     {
         T new_left = max(left(), other.left());
         T new_right = min(right(), other.right());
@@ -92,12 +92,12 @@ public:
         m_height = new_bottom - new_top + 1;
     }
 
-    bool intersects(const BasicRect& other) const
+    constexpr bool intersects(const BasicRect& other) const
     {
         return left() <= other.right() && other.left() <= right() && top() <= other.bottom() && other.top() <= bottom();
     }
 
-    BasicRect united(const BasicRect& other) const
+    constexpr BasicRect united(const BasicRect& other) const
     {
         BasicRect new_rect;
 
@@ -109,12 +109,12 @@ public:
         return new_rect;
     }
 
-    bool contains(const Point& point) const
+    constexpr bool contains(const Point& point) const
     {
         return point.x() >= m_x && point.x() <= (m_x + m_width) && point.y() >= m_y && point.y() <= (m_y + m_height);
     }
 
-    bool operator==(const BasicRect& other) const
+    constexpr bool operator==(const BasicRect& other) const
     {
         return m_x == other.m_x && m_y == other.m_y && m_width == other.m_width && m_height == other.m_height;
     }
