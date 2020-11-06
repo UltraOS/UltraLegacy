@@ -59,6 +59,8 @@ public:
         return __atomic_fetch_sub(&m_value, value, static_cast<order_t>(order));
     }
 
+    T operator+=(T value) ALWAYS_INLINE { return fetch_add(value) + value; };
+
     T operator++() ALWAYS_INLINE { return fetch_add(1) + 1; }
 
     T operator++(int) ALWAYS_INLINE { return fetch_add(1); }
