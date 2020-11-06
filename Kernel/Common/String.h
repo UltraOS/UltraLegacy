@@ -89,6 +89,26 @@ public:
         return *this;
     }
 
+    void pop_back()
+    {
+        if (m_size == 0)
+            return;
+
+        m_size -= 1;
+
+        if (m_size == max_small_string_size) {
+            char buffer[max_small_string_size];
+            copy_memory(m_big_string.data, buffer, max_small_string_size - 1);
+            delete[] m_big_string.data;
+
+            m_small_string[max_small_string_size] = '\0';
+            copy_memory(buffer, m_small_string, max_small_string_size);
+        } else {
+            *end() = '\0';
+        }
+    }
+
+
     bool empty() const { return m_size == 0; }
 
     String operator+(const String& other)
@@ -233,13 +253,21 @@ public:
         , m_size(String::length_of(string))
     {
     }
+
     StringView(const String& string)
         : m_string(string.data())
         , m_size(string.size())
     {
     }
+
     constexpr StringView(const char* string, size_t length)
         : m_string(string)
+        , m_size(length)
+    {
+    }
+
+    constexpr StringView(StringView string, size_t length)
+        : m_string(string.data())
         , m_size(length)
     {
     }
