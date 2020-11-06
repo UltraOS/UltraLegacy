@@ -83,8 +83,8 @@ public:
     public:
         friend class List;
 
-        Iterator() { }
-        Iterator(NodeBase* node)
+        Iterator() = default;
+        explicit Iterator(NodeBase* node)
             : m_node(node)
         {
         }
@@ -122,9 +122,9 @@ public:
             return Iterator(old_node);
         }
 
-        bool operator==(const Iterator& itr) { return m_node == itr.m_node; }
+        bool operator==(const Iterator& itr) const { return m_node == itr.m_node; }
 
-        bool operator!=(const Iterator& itr) { return m_node != itr.m_node; }
+        bool operator!=(const Iterator& itr) const { return m_node != itr.m_node; }
 
     private:
         // You probably shouldn't try to dereference end() :)
@@ -168,7 +168,7 @@ public:
     T& back() { return as_value_node(m_end.previous())->value(); }
     const T& back() const { return as_value_node(m_end.previous())->value(); }
 
-    size_t size() const { return m_size; }
+    [[nodiscard]] size_t size() const { return m_size; }
 
     ~List()
     {
