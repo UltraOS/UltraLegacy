@@ -154,12 +154,12 @@ public:
 
     void clear()
     {
-        m_size = 0;
-
         if (is_small())
             m_small_string[0] = '\0';
         else
             delete[] m_big_string.data;
+
+        m_size = 0;
     }
 
     ~String()
