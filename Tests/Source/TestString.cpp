@@ -72,6 +72,42 @@ TEST(StringMoveOwnership) {
     Assert::that(test3.size()).is_equal(kernel::String::length_of(sso_string));
 }
 
+TEST(StringPopBackSSO) {
+    kernel::String sso_test = "sso";
+
+    sso_test.pop_back();
+    Assert::that(sso_test.c_string()).is_equal("ss");
+    Assert::that(sso_test.size()).is_equal(2);
+
+    sso_test.pop_back();
+    Assert::that(sso_test.c_string()).is_equal("s");
+    Assert::that(sso_test.size()).is_equal(1);
+
+    sso_test.pop_back();
+    Assert::that(sso_test.c_string()).is_equal("");
+    Assert::that(sso_test.size()).is_equal(0);
+
+    sso_test.pop_back();
+    Assert::that(sso_test.c_string()).is_equal("");
+    Assert::that(sso_test.size()).is_equal(0);
+}
+
+TEST(StringPopBackNonSSO) {
+    kernel::String non_sso_test = "non-sso-string-that-is-long";
+    size_t initial_length = non_sso_test.size();
+
+    non_sso_test.pop_back();
+    Assert::that(non_sso_test.c_string()).is_equal("non-sso-string-that-is-lon");
+    Assert::that(non_sso_test.size()).is_equal(initial_length - 1);
+
+    for (size_t i = 0; i < initial_length - 4; ++i) {
+        non_sso_test.pop_back();
+    }
+
+    Assert::that(non_sso_test.c_string()).is_equal("non");
+    Assert::that(non_sso_test.size()).is_equal(3);
+}
+
 TEST(StackStringBuilder) {
     kernel::StackStringBuilder builder;
     builder += 123;
@@ -91,6 +127,13 @@ TEST(StackStringBuilderLeftShift) {
 
     builder << 123 << "456" << my_pointer << "test" << true << '!';
 
-    // TODO: deadbeef is hardcoded as the 8 byte representation here, make it dynamic?
-    Assert::that(const_cast<const char*>(builder.data())).is_equal("1234560x00000000DEADBEEFtesttrue!");
+    const char* expected_string = nullptr;
+
+    if constexpr (sizeof(void*) == 8) {
+        expected_string = "1234560x00000000DEADBEEFtesttrue!";
+    } else {
+        expected_string = "1234560xDEADBEEFtesttrue!";
+    }
+
+    Assert::that(const_cast<const char*>(builder.data())).is_equal(expected_string);
 }
