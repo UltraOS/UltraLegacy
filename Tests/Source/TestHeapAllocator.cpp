@@ -11,7 +11,7 @@ public:
 };
 
 namespace runtime {
-    void panic(const char* reason) {
+    [[noreturn]] void panic(const char* reason) {
         throw std::runtime_error(std::string("panic() called: ") + reason);
     }
 }

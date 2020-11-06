@@ -11,3 +11,5 @@
 #include "Utilities.h"
 #define move    ::kernel::move
 #define forward ::kernel::forward
+
+#define MAKE_STATIC(x) x() = delete;
