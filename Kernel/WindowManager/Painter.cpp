@@ -97,7 +97,7 @@ void Painter::blit_1_bpp_bitmap(const Point& location, const Bitmap& bitmap, con
             }
 
             auto color = bitmap.color_at(!!(source[source_byte] & SET_BIT(source_bit++)));
-            if (!color.a()) // fully trasnparent
+            if (!color.a()) // fully transparent
                 continue;
 
             destination[x] = color.as_u32();
@@ -152,7 +152,7 @@ void Painter::draw_1_bpp_bitmap(const Bitmap& bitmap, const Point& point)
             size_t bit = SET_BIT(x - byte * 8);
 
             auto color = bitmap.color_at(!!(scanline[byte] & bit));
-            if (!color.a()) // fully trasnparent
+            if (!color.a()) // fully transparent
                 continue;
 
             *Address(pixels_begin + (bytes_per_pixel * x)).as_pointer<u32>() = color.as_u32();
@@ -1182,8 +1182,8 @@ const u8 Painter::s_font[256][16] = {
       0b01000001,
       0b01000001,
       0b01000001,
-      0b00100010,
-      0b00011100,
+      0b01000001,
+      0b00111110,
       0b00000000,
       0b00000000,
       0b00000000,
