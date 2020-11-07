@@ -82,6 +82,8 @@ void* HeapAllocator::allocate(size_t bytes)
 
     LockGuard lock_guard(s_lock);
 
+    s_calls_to_allocate++;
+
     for (auto* heap = s_heap_block; heap; heap = heap->next) {
         if (heap->free_bytes() < bytes)
             continue;
@@ -214,6 +216,8 @@ void HeapAllocator::free(void* ptr)
 
     LockGuard lock_guard(s_lock);
 
+    s_calls_to_free++;
+
 #ifdef HEAP_ALLOCATOR_DEBUG
     size_t total_freed_chunks = 0;
 #endif
@@ -274,4 +278,25 @@ void HeapAllocator::free(void* ptr)
 
 #endif
 }
+
+HeapAllocator::Stats HeapAllocator::stats()
+{
+    ASSERT(s_heap_block != nullptr);
+
+    LockGuard lock_guard(s_lock);
+
+    Stats stats {};
+
+    for (auto heap = s_heap_block; heap; heap = heap->next) {
+        stats.heap_blocks += 1;
+        stats.free_bytes += heap->free_bytes();
+        stats.total_bytes += heap->chunk_count * heap->chunk_size;
+    }
+
+    stats.calls_to_allocate = s_calls_to_allocate;
+    stats.calls_to_free = s_calls_to_free;
+
+    return stats;
+}
+
 }

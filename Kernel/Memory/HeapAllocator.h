@@ -17,6 +17,16 @@ public:
     static void* allocate(size_t bytes);
     static void free(void* ptr);
 
+    struct Stats {
+        size_t heap_blocks;
+        size_t free_bytes;
+        size_t total_bytes;
+        size_t calls_to_free;
+        size_t calls_to_allocate;
+    };
+
+    static Stats stats();
+
 private:
     struct HeapBlockHeader {
         HeapBlockHeader* next;
@@ -32,8 +42,10 @@ private:
         size_t which_bit(void* ptr) { return ((reinterpret_cast<u8*>(ptr) - begin()) / chunk_size) * 2; }
         size_t free_bytes() { return free_chunks * chunk_size; }
         bool contains(void* ptr) { return ptr <= end() && ptr >= begin(); }
-
     } static* s_heap_block;
+
+    inline static size_t s_calls_to_allocate;
+    inline static size_t s_calls_to_free;
 
     static InterruptSafeSpinLock s_lock;
 };
