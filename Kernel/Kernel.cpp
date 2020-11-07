@@ -21,14 +21,15 @@
 #include "Multitasking/Scheduler.h"
 #include "Multitasking/Sleep.h"
 #include "Time/RTC.h"
+#include "WindowManager/DemoTTY.h"
 #include "WindowManager/Painter.h"
 #include "WindowManager/WindowManager.h"
 
 namespace kernel {
 
-void dummy_kernel_process();
-void userland_process();
-void process_with_windows();
+[[noreturn]] void dummy_kernel_process();
+[[noreturn]] void userland_process();
+[[noreturn]] void process_with_windows();
 
 void run(Context* context)
 {
@@ -63,8 +64,6 @@ void run(Context* context)
 
     Scheduler::inititalize();
 
-    PS2Controller::initialize();
-
     CPU::start_all_processors();
 
     RTC::synchronize_system_clock();
@@ -73,7 +72,11 @@ void run(Context* context)
 
     Interrupts::enable();
 
+    PS2Controller::initialize();
+
     Process::create_supervisor(process_with_windows);
+
+    DemoTTY::initialize();
 
     // ---> SCHEDULER TESTING AREA
     // ----------------------------------------- //
@@ -103,40 +106,19 @@ void run(Context* context)
 
 void process_with_windows()
 {
-    auto window_1 = Window::create(*Thread::current(), { 10, 10, 200, 100 }, WindowManager::the().active_theme());
-    auto window_2 = Window::create(*Thread::current(), { 200, 200, 500, 300 }, WindowManager::the().active_theme());
+    auto window = Window::create(*Thread::current(), { 10, 10, 200, 100 }, WindowManager::the().active_theme(), "Demo"_sv);
+    Painter window_painter(&window->surface());
 
-    Painter window_1_painter(&window_1->surface());
-    Painter window_2_painter(&window_2->surface());
+    window_painter.fill_rect(window->view_rect(), { 0x16, 0x21, 0x3e });
 
-    window_1_painter.fill_rect(window_1->view_rect(), { 0x16, 0x21, 0x3e });
-    window_2_painter.fill_rect(window_2->view_rect(), { 0x0f, 0x34, 0x60 });
-
-    window_1->invalidate_part_of_view_rect({ 0, 0, 200, 100 });
-    window_2->invalidate_part_of_view_rect({ 0, 0, 500, 300 });
+    window->invalidate_part_of_view_rect({ 0, 0, 200, 100 });
 
     while (true) {
         {
-            LockGuard lock_guard(window_1->event_queue_lock());
-            window_1->event_queue().clear();
+            LockGuard lock_guard(window->event_queue_lock());
+            window->event_queue().clear();
         }
-
-        LockGuard lock_guard(window_2->event_queue_lock());
-
-        for (auto& event : window_2->event_queue()) {
-            switch (event.type) {
-            case Event::Type::MOUSE_MOVE:
-                // TODO: handle
-                break;
-            case Event::Type::KEY_STATE:
-                // TODO: handle
-                break;
-            default:
-                break;
-            }
-        }
-
-        window_2->event_queue().clear();
+        sleep::for_milliseconds(10);
     }
 }
 
