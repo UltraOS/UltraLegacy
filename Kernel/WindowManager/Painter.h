@@ -9,8 +9,8 @@ namespace kernel {
 
 class Painter {
 public:
-    static constexpr size_t font_height = 16;
-    static constexpr size_t font_width = 8;
+    static constexpr ssize_t font_height = 16;
+    static constexpr ssize_t font_width = 8;
 
     Painter(Surface* surface);
 

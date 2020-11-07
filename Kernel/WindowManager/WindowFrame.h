@@ -47,6 +47,7 @@ private:
     Rect raw_rect_for_frame(Frame) const;
 
     void draw_button(Button, ButtonState);
+    void draw_title();
 
 private:
     Window& m_owner;

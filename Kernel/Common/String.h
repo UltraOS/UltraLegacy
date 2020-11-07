@@ -108,7 +108,6 @@ public:
         }
     }
 
-
     bool empty() const { return m_size == 0; }
 
     String operator+(const String& other)

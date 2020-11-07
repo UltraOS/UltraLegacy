@@ -118,8 +118,8 @@ void Compositor::prepare_desktop()
 
     Painter painter(&WindowManager::the().desktop()->surface());
 
-    painter.fill_rect(desktop_rect, desktop_theme->desktop_background_color());
-    painter.fill_rect(taskbar_rect, desktop_theme->taskbar_color());
+    painter.fill_rect(desktop_rect, desktop_theme.desktop_background_color());
+    painter.fill_rect(taskbar_rect, desktop_theme.taskbar_color());
 
     update_clock_widget();
 

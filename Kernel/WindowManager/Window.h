@@ -20,7 +20,7 @@ public:
         NORMAL_FRAME
     };
 
-    static RefPtr<Window> create(Thread& owner, const Rect& window_rect, RefPtr<Theme>);
+    static RefPtr<Window> create(Thread& owner, const Rect& window_rect, RefPtr<Theme>, StringView title = "Unnamed"_sv);
     static RefPtr<Window> create_desktop(Thread& owner, const Rect& window_rect, RefPtr<Theme>);
 
     [[nodiscard]] const Theme& theme() const { return *m_theme; }
@@ -75,10 +75,12 @@ public:
     InterruptSafeSpinLock& event_queue_lock() { return m_event_queue_lock; }
     DynamicArray<Event>& event_queue() { return m_event_queue; }
 
+    [[nodiscard]] const String& title() const { return m_title; }
+
 private:
     void invalidate_rects_based_on_drag_delta(const Rect& new_rect) const;
 
-    Window(Thread& owner, Style, const Rect& window_rect, RefPtr<Theme>);
+    Window(Thread& owner, Style, const Rect& window_rect, RefPtr<Theme>, StringView title);
 
     enum class State {
         NORMAL,
@@ -90,6 +92,8 @@ private:
 
 private:
     Thread& m_owner;
+
+    String m_title;
 
     RefPtr<Theme> m_theme;
 

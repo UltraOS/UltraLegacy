@@ -34,6 +34,7 @@ void Screen::check_if_focused_window_should_change()
 
         (*window_that_should_be_focused)->set_focused();
 
+        // FIXME: should this do Window::focused().invalidate_rect(...) instead?
         // Invalidate the focused window as it must be redrawn on top of everything
         Compositor::the().add_dirty_rect(Window::focused().full_translated_rect());
 

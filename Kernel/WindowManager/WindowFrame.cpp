@@ -27,6 +27,7 @@ void WindowFrame::paint()
     draw_button(Button::CLOSE, ButtonState::RELEASED);
     draw_button(Button::MAXIMIZE, ButtonState::RELEASED);
     draw_button(Button::MINIMIZE, ButtonState::RELEASED);
+    draw_title();
 }
 
 void WindowFrame::on_button_state_changed(Button button, ButtonState state)
@@ -46,6 +47,52 @@ void WindowFrame::draw_button(Button button, ButtonState state)
     // TODO: unhardcode padding
     painter.draw_bitmap(theme.button_bitmap(button), { button_rect.left() + 6, button_rect.top() + 6 });
     m_owner.invalidate_rect(button_rect);
+}
+
+void WindowFrame::draw_title()
+{
+    auto& title = m_owner.title();
+
+    if (title.empty())
+        return;
+
+    Painter painter(&m_owner.surface());
+
+    static constexpr ssize_t y_offset = 1;
+
+    ssize_t x_offset = 2;
+    Rect title_rect = raw_draggable_rect();
+    title_rect.set_top_left({ x_offset, y_offset });
+    title_rect.set_width(title_rect.width() - x_offset);
+    title_rect.set_height(title_rect.height() - y_offset);
+
+    size_t max_title_length = title_rect.width() / Painter::font_width;
+
+    bool title_too_long = max_title_length < m_owner.title().size();
+
+    painter.set_clip_rect(title_rect);
+
+    auto write_title_text = [&](StringView text) {
+        for (char c : text) {
+            painter.draw_char({ x_offset, y_offset }, c, Color::white(), m_owner.theme().window_frame_color());
+            x_offset += Painter::font_width;
+        }
+    };
+
+    size_t chars_to_write = title.size();
+    if (title_too_long) {
+        chars_to_write = max_title_length - 3;
+    }
+
+    write_title_text(StringView(m_owner.title().c_string(), chars_to_write));
+
+    if (title_too_long) {
+        write_title_text("..."_sv);
+    }
+
+    painter.reset_clip_rect();
+
+    m_owner.invalidate_rect(title_rect);
 }
 
 Rect WindowFrame::rect() const

@@ -9,20 +9,21 @@ namespace kernel {
 
 Window* Window::s_currently_focused;
 
-RefPtr<Window> Window::create(Thread& owner, const Rect& window_rect, RefPtr<Theme> theme)
+RefPtr<Window> Window::create(Thread& owner, const Rect& window_rect, RefPtr<Theme> theme, StringView title)
 {
-    RefPtr<Window> window = new Window(owner, Style::NORMAL_FRAME, window_rect, theme);
+    RefPtr<Window> window = new Window(owner, Style::NORMAL_FRAME, window_rect, theme, title);
     WindowManager::the().add_window(window);
     return window;
 }
 
 RefPtr<Window> Window::create_desktop(Thread& owner, const Rect& window_rect, RefPtr<Theme> theme)
 {
-    return new Window(owner, Style::FRAMELESS, window_rect, theme);
+    return new Window(owner, Style::FRAMELESS, window_rect, theme, "Desktop"_sv);
 }
 
-Window::Window(Thread& owner, Style style, const Rect& window_rect, RefPtr<Theme> theme)
+Window::Window(Thread& owner, Style style, const Rect& window_rect, RefPtr<Theme> theme, StringView title)
     : m_owner(owner)
+    , m_title(title)
     , m_theme(theme)
     , m_style(style)
     , m_window_rect(0, 0, window_rect.width(), window_rect.height())
