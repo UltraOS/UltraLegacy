@@ -47,7 +47,7 @@ public:
     ~PIT() { disable_irq(); }
 
 private:
-    u64 m_nanoseconds_since_boot { 0 };
+    Atomic<u64> m_nanoseconds_since_boot { 0 };
     u32 m_frequency { 0 };
 };
 }
