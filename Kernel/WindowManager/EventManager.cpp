@@ -36,10 +36,18 @@ void EventManager::dispatch_pending()
             continue;
         }
 
+        case Event::Type::MOUSE_SCROLL:
+            for (auto& window : WindowManager::the().windows()) {
+                if (window->full_translated_rect().contains(Screen::the().cursor().location())) {
+                    window->handle_event(event, false);
+                    break;
+                }
+            }
+            continue;
+
         case Event::Type::KEY_STATE:
             update_state_of_key(event.vk_state.vkey, event.vk_state.state);
             [[fallthrough]];
-        case Event::Type::MOUSE_SCROLL:
         case Event::Type::CHAR_TYPED:
             if (!Window::is_any_focused())
                 continue;
@@ -149,7 +157,7 @@ void EventManager::post_action(const Mouse::Packet& packet)
 #endif
         Event e {};
 
-        e.type = Event::Type::MOUSE_MOVE;
+        e.type = Event::Type::MOUSE_SCROLL;
         e.mouse_scroll = { packet.scroll_direction, packet.wheel_delta };
 
         push_event(e);
