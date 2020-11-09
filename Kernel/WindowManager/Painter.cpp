@@ -13,13 +13,18 @@ Painter::Painter(Surface* surface)
 
 void Painter::fill_rect(const Rect& rect, Color color)
 {
-    auto bytes_per_pixel = m_surface->bpp() / 8;
-    auto x_offset = rect.top_left().x() * bytes_per_pixel;
-    Address pixels_begin = Address(m_surface->scanline_at(rect.top_left().y())) + x_offset;
-    auto step = m_surface->pitch() - (x_offset + (rect.width() * bytes_per_pixel)) + x_offset;
+    auto drawable_rect = rect.intersected(m_clip_rect);
 
-    for (auto y = 0; y < rect.height(); ++y) {
-        for (auto x = 0; x < rect.width(); ++x) {
+    if (drawable_rect.empty())
+        return;
+
+    auto bytes_per_pixel = m_surface->bpp() / 8;
+    auto x_offset = drawable_rect.top_left().x() * bytes_per_pixel;
+    Address pixels_begin = Address(m_surface->scanline_at(drawable_rect.top_left().y())) + x_offset;
+    auto step = m_surface->pitch() - (x_offset + (drawable_rect.width() * bytes_per_pixel)) + x_offset;
+
+    for (auto y = 0; y < drawable_rect.height(); ++y) {
+        for (auto x = 0; x < drawable_rect.width(); ++x) {
             *Address(pixels_begin).as_pointer<u32>() = color.as_u32();
             pixels_begin += bytes_per_pixel;
         }
