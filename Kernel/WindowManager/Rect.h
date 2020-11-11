@@ -38,11 +38,11 @@ public:
     constexpr void set_width(T width) { m_width = width; }
     constexpr void set_height(T height) { m_height = height; }
 
-    constexpr Point top_left() const { return { left(), top() }; }
-    constexpr Point top_right() const { return { right(), top() }; }
+    [[nodiscard]] constexpr Point top_left() const { return { left(), top() }; }
+    [[nodiscard]] constexpr Point top_right() const { return { right(), top() }; }
 
-    constexpr Point bottom_left() const { return { left(), bottom() }; }
-    constexpr Point bottom_right() const { return { right(), bottom() }; }
+    [[nodiscard]] constexpr Point bottom_left() const { return { left(), bottom() }; }
+    [[nodiscard]] constexpr Point bottom_right() const { return { right(), bottom() }; }
 
     constexpr T left() const { return m_x; }
     constexpr T right() const { return m_x + m_width - 1; }
@@ -55,12 +55,18 @@ public:
 
     constexpr Pair<T, T> size() { return { m_width, m_height }; }
 
-    constexpr bool empty() const { return !m_width || !m_height; }
+    [[nodiscard]] constexpr bool empty() const { return !m_width || !m_height; }
 
-    constexpr Point center() const { return { m_x + m_width / 2, m_y + m_height / 2 }; }
+    [[nodiscard]] constexpr Point center() const { return { m_x + m_width / 2, m_y + m_height / 2 }; }
 
     constexpr BasicRect translated(T x, T y) const { return { left() + x, top() + y, width(), height() }; }
     constexpr BasicRect translated(const Point& location) const { return translated(location.x(), location.y()); }
+
+    constexpr void translate(T x, T y)
+    {
+        m_x += x;
+        m_y += y;
+    }
 
     constexpr BasicRect intersected(const BasicRect& other) const
     {
@@ -109,7 +115,7 @@ public:
         return new_rect;
     }
 
-    constexpr bool contains(const Point& point) const
+    [[nodiscard]] constexpr bool contains(const Point& point) const
     {
         return point.x() >= m_x && point.x() <= (m_x + m_width) && point.y() >= m_y && point.y() <= (m_y + m_height);
     }
