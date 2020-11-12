@@ -36,12 +36,6 @@ public:
     void write(StringView string) override { Serial::write<Serial::Port::COM1>(string); }
 };
 
-enum class format {
-    as_dec,
-    as_hex,
-    as_address, // force format char* as address
-};
-
 class Logger {
 public:
     static constexpr StringView info_prefix = "[\33[34mINFO\033[0m] "_sv;

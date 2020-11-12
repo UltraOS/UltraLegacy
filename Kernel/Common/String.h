@@ -8,6 +8,12 @@
 
 namespace kernel {
 
+enum class format {
+    as_dec,
+    as_hex,
+    as_address, // force format char* as address
+};
+
 class StringView;
 
 class String {
@@ -43,7 +49,7 @@ public:
         return *this;
     }
 
-    StringView to_view() const;
+    [[nodiscard]] StringView to_view() const;
 
     static size_t length_of(const char* string)
     {
@@ -56,20 +62,39 @@ public:
     }
 
     char* data() { return is_small() ? m_small_string : m_big_string.data; }
-    const char* data() const { return is_small() ? m_small_string : m_big_string.data; }
+    [[nodiscard]] const char* data() const { return is_small() ? m_small_string : m_big_string.data; }
 
-    const char* c_string() const { return data(); }
+    [[nodiscard]] const char* c_string() const { return data(); }
 
-    size_t size() const { return m_size; }
+    [[nodiscard]] size_t size() const { return m_size; }
 
-    const char& at(size_t index) const { return data()[index]; }
-    char& at(size_t index) { return data()[index]; }
+    [[nodiscard]] const char& at(size_t index) const
+    {
+        ASSERT(index < size());
+        return data()[index];
+    }
+    
+    [[nodiscard]] char& at(size_t index)
+    {
+        ASSERT(index < size());
+        return data()[index];
+    }
 
-    char* begin() { return data(); }
-    const char* begin() const { return data(); }
+    [[nodiscard]] char& operator[](size_t index)
+    {
+        return at(index);
+    }
 
-    char* end() { return data() + m_size; }
-    const char* end() const { return data() + m_size; }
+    [[nodiscard]] const char& operator[](size_t index) const
+    {
+        return at(index);
+    }
+
+    [[nodiscard]] char* begin() { return data(); }
+    [[nodiscard]] const char* begin() const { return data(); }
+
+    [[nodiscard]] char* end() { return data() + m_size; }
+    [[nodiscard]] const char* end() const { return data() + m_size; }
 
     String& append(const String& string) { return append(string.data(), string.size()); }
     String& append(const char* string) { return append(string, length_of(string)); }
@@ -84,7 +109,7 @@ public:
 
         m_size += length;
         copy_memory(string, end() - length, length);
-        at(m_size) = '\0';
+        *end() = '\0';
 
         return *this;
     }
@@ -108,7 +133,7 @@ public:
         }
     }
 
-    bool empty() const { return m_size == 0; }
+    [[nodiscard]] bool empty() const { return m_size == 0; }
 
     String operator+(const String& other)
     {
@@ -128,9 +153,9 @@ public:
 
     String& operator+=(const char* string) { return append(string); }
 
-    bool equals(const StringView& string);
+    [[nodiscard]] bool equals(const StringView& string) const;
 
-    bool equals(const String& other)
+    [[nodiscard]] bool equals(const String& other) const
     {
         if (size() != other.size())
             return false;
@@ -143,13 +168,13 @@ public:
         return true;
     }
 
-    bool operator==(const StringView& string) { return equals(string); }
+    bool operator==(const StringView& string) const { return equals(string); }
 
-    bool operator==(const String& other) { return equals(other); }
+    bool operator==(const String& other) const { return equals(other); }
 
-    bool operator!=(const StringView& string) { return !equals(string); }
+    bool operator!=(const StringView& string) const { return !equals(string); }
 
-    bool operator!=(const String& other) { return !equals(other); }
+    bool operator!=(const String& other) const { return !equals(other); }
 
     void clear()
     {
@@ -271,20 +296,20 @@ public:
     {
     }
 
-    constexpr const char* begin() const { return data(); }
-    constexpr const char* end() const { return data() + m_size; }
+    [[nodiscard]] constexpr const char* begin() const { return data(); }
+    [[nodiscard]] constexpr const char* end() const { return data() + m_size; }
 
-    constexpr const char* data() const { return m_string; }
-    constexpr size_t size() const { return m_size; }
+    [[nodiscard]] constexpr const char* data() const { return m_string; }
+    [[nodiscard]] constexpr size_t size() const { return m_size; }
 
-    constexpr const char& at(size_t i) const
+    [[nodiscard]] constexpr const char& at(size_t i) const
     {
         ASSERT(i < m_size);
 
         return data()[i];
     }
 
-    constexpr bool equals(StringView other) const
+    [[nodiscard]] constexpr bool equals(StringView other) const
     {
         if (size() != other.size())
             return false;
@@ -327,14 +352,14 @@ inline constexpr StringView operator""_sv(const char* string, size_t size)
     return StringView(string, size);
 }
 
-inline String::String(StringView view)
+inline String::String(StringView string)
 {
-    construct_from(view.data(), view.size());
+    construct_from(string.data(), string.size());
 }
 
-inline String& String::operator=(StringView view)
+inline String& String::operator=(StringView string)
 {
-    construct_from(view.data(), view.size());
+    construct_from(string.data(), string.size());
 
     return *this;
 }
@@ -344,7 +369,7 @@ inline StringView String::to_view() const
     return StringView(*this);
 }
 
-inline bool String::equals(const StringView& string)
+inline bool String::equals(const StringView& string) const
 {
     return string.equals(to_view());
 }
@@ -354,9 +379,9 @@ class StackStringBuilder {
 public:
     static_assert(buffer_size > 1, "Buffer size cannot be smaller than 2");
 
-    StringView as_view() const { return StringView(m_bufer, m_current_offset); }
+    [[nodiscard]] StringView as_view() const { return StringView(m_buffer, m_current_offset); }
 
-    char* data() { return m_bufer; }
+    char* data() { return m_buffer; }
 
     size_t append(StringView string)
     {
@@ -375,7 +400,14 @@ public:
     template <typename T>
     enable_if_t<is_arithmetic_v<T>, size_t> append(T number)
     {
-        size_t chars_written = to_string(number, pointer_to_end(), size_left(), false);
+        size_t chars_written = 0;
+
+        if (m_format == format::as_hex) {
+            chars_written = to_hex_string(number, pointer_to_end(), size_left(), false);
+        } else {
+            chars_written = to_string(number, pointer_to_end(), size_left(), false);
+        }
+        
         m_current_offset += chars_written;
         seal();
 
@@ -397,7 +429,7 @@ public:
         if (!size_left())
             return 0;
 
-        m_bufer[m_current_offset++] = c;
+        m_buffer[m_current_offset++] = c;
         seal();
 
         return 1;
@@ -434,24 +466,33 @@ public:
         append(value);
     }
 
+    void set_format(format new_format) {
+        m_format = new_format;
+    }
+
     template <typename T>
     StackStringBuilder& operator<<(T value)
     {
-        append(value);
+        if constexpr (is_same_v<T, format>) {
+            set_format(value);
+        } else
+            append(value);
         return *this;
     }
 
-    size_t capacity() const { return buffer_size; }
-    size_t size() const { return m_current_offset; }
+    [[nodiscard]] size_t capacity() const { return buffer_size; }
+    [[nodiscard]] size_t size() const { return m_current_offset; }
 
-    size_t size_left() const { return buffer_size - m_current_offset - 1; }
-
-private:
-    void seal() { m_bufer[m_current_offset] = '\0'; }
-    char* pointer_to_end() { return m_bufer + m_current_offset; }
+    [[nodiscard]] size_t size_left() const { return buffer_size - m_current_offset - 1; }
 
 private:
+    void seal() { m_buffer[m_current_offset] = '\0'; }
+    char* pointer_to_end() { return m_buffer + m_current_offset; }
+
+private:
+    format m_format { format::as_dec };
+
     size_t m_current_offset { 0 };
-    char m_bufer[buffer_size];
+    char m_buffer[buffer_size];
 };
 }
