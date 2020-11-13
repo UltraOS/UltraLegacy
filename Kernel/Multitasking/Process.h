@@ -10,13 +10,17 @@ class Process {
 
 public:
     static constexpr auto default_userland_stack_size = 4 * MB;
-    static constexpr auto default_kernel_stack_size = 16 * KB;
+    static constexpr auto default_kernel_stack_size = 32 * KB;
 
     static void inititalize_for_this_processor();
 
-    // TODO: add name?                                     vvv this parameter is a temporary hack
-    static RefPtr<Process> create(Address entrypoint, bool autoregister = true);
-    static RefPtr<Process> create_supervisor(Address entrypoint);
+    // TODO: add name?
+    static RefPtr<Process> create(
+        Address entrypoint,
+        bool autoregister = true, // <--- this parameter is a temporary hack
+        size_t stack_size = default_userland_stack_size);
+
+    static RefPtr<Process> create_supervisor(Address entrypoint, size_t stack_size = default_kernel_stack_size);
 
     void commit();
 
@@ -24,11 +28,11 @@ public:
 
     AddressSpace& address_space() { return *m_address_space; }
 
-    bool is_supervisor() const { return m_is_supervisor; }
-    bool is_user() const { return !is_supervisor(); }
+    [[nodiscard]] bool is_supervisor() const { return m_is_supervisor; }
+    [[nodiscard]] bool is_user() const { return !is_supervisor(); }
 
 private:
-    Process(Address entrypoint, bool is_supervisor = false);
+    Process(Address entrypoint, size_t stack_size, bool is_supervisor = false);
     Process() = default;
 
 private:

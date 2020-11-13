@@ -50,7 +50,7 @@ hang:
 section .bss
 align 16
 kernel_stack_end:
-    resb 16384
+    resb 32768
 global kernel_stack_begin
 kernel_stack_begin:
 

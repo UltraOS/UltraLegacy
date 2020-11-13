@@ -11,11 +11,11 @@ namespace kernel {
 Atomic<u32> Process::s_next_process_id;
 InterruptSafeSpinLock Process::s_lock;
 
-RefPtr<Process> Process::create(Address entrypoint, bool autoregister)
+RefPtr<Process> Process::create(Address entrypoint, bool autoregister, size_t stack_size)
 {
     LockGuard lock_guard(s_lock);
 
-    RefPtr<Process> process = new Process(entrypoint);
+    RefPtr<Process> process = new Process(entrypoint, stack_size);
 
     if (autoregister)
         Scheduler::the().register_process(process);
@@ -25,11 +25,11 @@ RefPtr<Process> Process::create(Address entrypoint, bool autoregister)
 
 // TODO: figure out the best way to fix the naming inconsistency here
 //       e.g Process::create_supervious and Thread::create_supervisor_thread
-RefPtr<Process> Process::create_supervisor(Address entrypoint)
+RefPtr<Process> Process::create_supervisor(Address entrypoint, size_t stack_size)
 {
     LockGuard lock_guard(s_lock);
 
-    RefPtr<Process> process = new Process(entrypoint, true);
+    RefPtr<Process> process = new Process(entrypoint, stack_size, true);
     Scheduler::the().register_process(process);
 
     return process;
@@ -73,7 +73,7 @@ void Process::commit()
     Scheduler::the().register_process(this);
 }
 
-Process::Process(Address entrypoint, bool is_supervisor)
+Process::Process(Address entrypoint, size_t stack_size, bool is_supervisor)
     : m_process_id(s_next_process_id++)
     , m_address_space()
     , m_is_supervisor(is_supervisor)
@@ -88,13 +88,13 @@ Process::Process(Address entrypoint, bool is_supervisor)
 
         auto main_thread = Thread::create_user_thread(
             *m_address_space,
-            user_allocator.allocate_range(default_userland_stack_size).end(),
+            user_allocator.allocate_range(stack_size).end(),
             stack_range.end(),
             entrypoint);
         m_threads.emplace(main_thread);
     } else {
         auto& kernel_allocator = AddressSpace::of_kernel().allocator();
-        auto stack_range = kernel_allocator.allocate_range(default_kernel_stack_size);
+        auto stack_range = kernel_allocator.allocate_range(stack_size);
         MemoryManager::the().force_preallocate(stack_range, true);
         auto main_thread = Thread::create_supervisor_thread(stack_range.end(), entrypoint);
 
