@@ -153,6 +153,7 @@ bool PS2Controller::reset_device(Channel channel)
 
     send_command_to_device(channel, DeviceCommand::RESET, false);
 
+    // TODO: this doesn't handle the case where the device might ask to resend the data (0xFE)
     size_t response_bytes = 0;
     u8 device_response[3] {};
 
@@ -258,7 +259,7 @@ void PS2Controller::send_command_to_device(Channel channel, DeviceCommand comman
 
 void PS2Controller::send_command_to_device(Channel channel, u8 command, bool should_expect_ack)
 {
-    size_t resend_counter = 1000;
+    size_t resend_counter = 3;
 
     do {
         switch (channel) {
@@ -274,7 +275,7 @@ void PS2Controller::send_command_to_device(Channel channel, u8 command, bool sho
     } while (should_expect_ack && --resend_counter && should_resend());
 
     if (should_expect_ack && !resend_counter) {
-        runtime::panic("PS2Controller: failed to receive command ACK after 1000 attempts");
+        runtime::panic("PS2Controller: failed to receive command ACK after 3 attempts");
     }
 }
 
