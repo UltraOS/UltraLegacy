@@ -6,9 +6,9 @@
 namespace kernel {
 
 template <typename T, size_t Size>
-class StaticArray
-{
+class StaticArray {
     static_assert(Size > 0, "StaticArray size cannot be zero");
+
 public:
     constexpr size_t size() const { return Size; }
 

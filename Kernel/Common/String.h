@@ -73,7 +73,7 @@ public:
         ASSERT(index < size());
         return data()[index];
     }
-    
+
     [[nodiscard]] char& at(size_t index)
     {
         ASSERT(index < size());
@@ -407,7 +407,7 @@ public:
         } else {
             chars_written = to_string(number, pointer_to_end(), size_left(), false);
         }
-        
+
         m_current_offset += chars_written;
         seal();
 
@@ -466,7 +466,8 @@ public:
         append(value);
     }
 
-    void set_format(format new_format) {
+    void set_format(format new_format)
+    {
         m_format = new_format;
     }
 
