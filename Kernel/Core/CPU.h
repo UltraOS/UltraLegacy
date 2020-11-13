@@ -52,24 +52,27 @@ public:
 
     static void start_all_processors();
 
-    static bool is_initialized() { return s_processors.size() > 0; }
+    static bool is_initialized() { return !s_processors.empty(); }
+
+    static size_t processor_count() { return s_processors.size(); }
+    static size_t alive_processor_count() { return s_alive_counter; }
 
     class LocalData {
     public:
-        LocalData(u32 id)
+        explicit LocalData(u32 id)
             : m_id(id)
         {
         }
 
-        u32 id() const { return m_id; }
+        [[nodiscard]] u32 id() const { return m_id; }
 
-        Thread* current_thread() const { return m_current_thread; }
+        [[nodiscard]] Thread* current_thread() const { return m_current_thread; }
         void set_current_thread(Thread* thread) { m_current_thread = thread; }
 
         TSS* tss() { return m_tss; }
         void set_tss(TSS* tss) { m_tss = tss; }
 
-        // bsp always the first processor
+        // bsp is always the first processor
         bool is_bsp() { return this == &s_processors[0]; }
 
     private:
