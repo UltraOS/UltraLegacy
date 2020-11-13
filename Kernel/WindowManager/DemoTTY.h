@@ -27,7 +27,8 @@ public:
         DOWN
     };
 
-    void scroll(Direction);
+    void scroll_to_bottom();
+    void scroll(Direction, ssize_t lines, bool force = false);
     void clear_screen();
 
 private:
@@ -36,9 +37,14 @@ private:
     [[noreturn]] static void run();
     void tick();
     void execute_command();
+    void new_line();
+    void redraw_screen();
+
+    [[nodiscard]] bool is_current_line_visible() const { return m_scrollback_top_y <= m_scrollback_current_y && (m_scrollback_current_y < (m_scrollback_top_y + m_height_in_char)); }
+    [[nodiscard]] bool is_scrolled() const { return m_prescroll_top_y != m_scrollback_top_y; }
 
 private:
-    static constexpr Rect window_rect = { 200, 200, 500, 300 };
+    static constexpr Rect window_rect = { 200, 200, 600, 400 };
     static constexpr Color background_color = { 0x1F, 0x1B, 0x24 };
     static constexpr StringView command_prompt = "> "_sv;
 
@@ -59,6 +65,11 @@ private:
 
     Time::time_t m_last_cursor_blink_time { 0 };
     bool m_cursor_is_shown { false };
+
+    DynamicArray<DynamicArray<char>> m_scrollback_buffer;
+    ssize_t m_scrollback_top_y { 0 }; // current Y offset of the top line in terminal
+    ssize_t m_prescroll_top_y { 0 }; // Y offset prior to scrolling, used to return back to where we were
+    ssize_t m_scrollback_current_y { 0 }; // Y offset of scrollback where we're currently writing data to
 
     static DemoTTY* s_instance;
 };
