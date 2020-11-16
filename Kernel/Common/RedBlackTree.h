@@ -125,20 +125,39 @@ private:
             return !is_aunt_black();
         }
 
+        enum class Position {
+            LEFT_LEFT,
+            LEFT_RIGHT,
+            RIGHT_LEFT,
+            RIGHT_RIGHT
+        };
+
+        Position position_with_respect_to_grandparent()
+        {
+            bool left_child = is_left_child();
+
+            if (parent->is_left_child())
+                return left_child ? Position::LEFT_LEFT : Position::LEFT_RIGHT;
+            else
+                return left_child ? Position::RIGHT_LEFT : Position::RIGHT_RIGHT;
+        }
+
     }* m_root { nullptr };
 
     void fix_violations_if_needed(Node* node)
     {
-        while (node != m_root) {
+        while (node && node != m_root) {
             if (node->parent->is_black() || node->is_black())
                 return;
+
+            auto* grandparent = node->grandparent();
 
             if (node->is_aunt_red())
                 color_filp(node);
             else
                 rotate(node);
 
-            node = node->parent;
+            node = grandparent;
         }
     }
 
@@ -155,7 +174,87 @@ private:
 
     void rotate(Node* violating_node)
     {
-        // TODO: implement
+        switch (violating_node->position_with_respect_to_grandparent())
+        {
+            case Node::Position::LEFT_RIGHT: // left-right rotation
+                rotate_left(violating_node->parent);
+                violating_node = violating_node->left;
+                [[fallthrough]];
+            case Node::Position::LEFT_LEFT: { // right rotation
+                auto* grandparent = violating_node->grandparent();
+                grandparent->color = Node::Color::RED;
+                violating_node->parent->color = Node::Color::BLACK;
+                violating_node->color = Node::Color::RED;
+
+                rotate_right(grandparent);
+
+                return;
+            }
+            case Node::Position::RIGHT_LEFT: // right-left rotation
+                rotate_right(violating_node->parent);
+                violating_node = violating_node->right;
+                [[fallthrough]];
+            case Node::Position::RIGHT_RIGHT: { // left rotation
+                auto* grandparent = violating_node->grandparent();
+                grandparent->color = Node::Color::RED;
+                violating_node->parent->color = Node::Color::BLACK;
+                violating_node->color = Node::Color::RED;
+
+                rotate_left(grandparent);
+
+                return;
+            }
+        }
+    }
+
+    void rotate_left(Node* node)
+    {
+        auto* parent = node->parent;
+        auto* right_child = node->right;
+
+        node->right = right_child->left;
+
+        if (node->right)
+            node->right->parent = node;
+
+        right_child->parent = parent;
+
+        if (parent) {
+            if (node->is_left_child())
+                parent->left = right_child;
+            else
+                parent->right = right_child;
+        } else {
+            m_root = right_child;
+        }
+
+        right_child->left = node;
+        node->parent = right_child;
+    }
+
+    void rotate_right(Node* node)
+    {
+        auto* parent = node->parent;
+        auto* left_child = node->left;
+
+        node->left = left_child->right;
+
+        if (node->left)
+            node->left->parent = node;
+
+        left_child->parent = parent;
+
+        if (parent) {
+            if (node->is_left_child())
+                parent->left = left_child;
+            else
+                parent->right = left_child;
+        } else {
+            m_root = left_child;
+        }
+
+        left_child->right = node;
+        node->parent = left_child;
     }
 };
 
