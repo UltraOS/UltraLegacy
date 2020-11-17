@@ -9,6 +9,8 @@ template <typename T>
 class RedBlackTree
 {
 public:
+    using element_type = T;
+
     template <typename... Args>
     void add(Args&&... args)
     {
@@ -17,6 +19,7 @@ public:
         if (m_root == nullptr) {
             m_root = new_node;
             m_root->color = Node::Color::BLACK;
+            m_size = 1;
             return;
         }
 
@@ -44,13 +47,27 @@ public:
             }
         }
 
-        fix_violations_if_needed(new_node);
+        fix_insertion_violations_if_needed(new_node);
+        ++m_size;
     }
 
-    void remove(const T&)
+    const T& get(const T& value)
     {
-        // TODO: implement
+        // TODO: assert(find_node)
+        return find_node(value)->value;
     }
+
+    bool contains(const T& value)
+    {
+        return find_node(value) != nullptr;
+    }
+
+    void remove(const T& value)
+    {
+        remove_node(find_node(value));
+    }
+
+    size_t size() const { return m_size; }
 
     ~RedBlackTree()
     {
@@ -61,7 +78,7 @@ private:
     struct Node {
         template <typename... Args>
         Node(Args&&... args)
-                : value(forward<Args>(args)...)
+            : value(forward<Args>(args)...)
         {
         }
 
@@ -141,10 +158,83 @@ private:
             else
                 return left_child ? Position::RIGHT_LEFT : Position::RIGHT_RIGHT;
         }
+    };
 
-    }* m_root { nullptr };
+    template <typename V>
+    Node* find_node(const V& value)
+    {
+        if (size() == 0)
+            return nullptr;
 
-    void fix_violations_if_needed(Node* node)
+        auto* current_node = m_root;
+
+        while (current_node) {
+            if (current_node->value < value) {
+                current_node = current_node->right;
+            } else if (value < current_node->value) {
+                current_node = current_node->left;
+            } else {
+                return current_node;
+            }
+        }
+
+        return nullptr;
+    }
+
+    void remove_node(Node* node)
+    {
+        if (node == nullptr)
+            return;
+
+        if (!(node->left && node->right)) { // leaf or root or 1 child
+            auto* child = node->left ? node->left : node->right;
+
+            if (node == m_root) {
+                delete node;
+                m_root = child;
+
+                if (child) {
+                    child->parent = nullptr;
+                    child->color = Node::Color::BLACK;
+                }
+
+                m_size = child ? 1 : 0;
+                return;
+            }
+
+            auto* parent = node->parent;
+            auto color = node->color;
+            bool is_left_child = node->is_left_child();
+
+            if (is_left_child)
+                parent->left = child;
+            else
+                parent->right = child;
+
+            delete node;
+            m_size--;
+
+            fix_removal_violations_if_needed(child, color);
+        } else { // deleting an internal node :(
+            // TODO
+        }
+    }
+
+    void fix_removal_violations_if_needed(Node* child, typename Node::Color deleted_node_color)
+    {
+        auto child_color = child ? child->color : Node::Color::BLACK;
+
+        if (child_color == Node::Color::RED || deleted_node_color == Node::Color::RED) {
+            if (child)
+                child->color = Node::Color::BLACK;
+            return;
+        }
+
+        // double black :(
+        // TODO: rotate/recolor as needed
+    }
+
+    void fix_insertion_violations_if_needed(Node* node)
     {
         while (node && node != m_root) {
             if (node->parent->is_black() || node->is_black())
@@ -256,6 +346,10 @@ private:
         left_child->right = node;
         node->parent = left_child;
     }
+
+private:
+    Node*  m_root { nullptr };
+    size_t m_size { 0 };
 };
 
 }
