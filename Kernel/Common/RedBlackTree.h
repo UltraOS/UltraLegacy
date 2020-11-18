@@ -106,6 +106,9 @@ private:
         bool is_black() const { return color == Color::BLACK; }
         bool is_red() const { return color == Color::RED; }
 
+        Color left_child_color() const { return left ? left->color : Color::BLACK; }
+        Color right_child_color() const { return right ? right->color : Color::BLACK; }
+
         Node* grandparent() const
         {
             if (!parent)
@@ -158,6 +161,14 @@ private:
             else
                 return left_child ? Position::RIGHT_LEFT : Position::RIGHT_RIGHT;
         }
+
+        Node* sibling()
+        {
+            if (is_left_child())
+                return parent->right;
+            else
+                return parent->left;
+        }
     };
 
     template <typename V>
@@ -206,17 +217,59 @@ private:
             auto color = node->color;
             bool is_left_child = node->is_left_child();
 
-            if (is_left_child)
-                parent->left = child;
-            else
-                parent->right = child;
+            // we want to defer the deletion of the node for as long
+            // as possible as it makes it convenient for us to retrieve
+            // siblings and deduce the location with respect to parent node
+            // during the possible removal violations correction
+            // note that this is not needed if node to be deleted has a valid child
+            bool deferred_delete = true;
 
-            delete node;
+            if (child) {
+                if (is_left_child)
+                    parent->left = child;
+                else
+                    parent->right = child;
+
+                deferred_delete = false;
+                delete node;
+            } else {
+                // Null nodes are always black :)
+                node->color = Node::Color::BLACK;
+            }
+
             m_size--;
 
-            fix_removal_violations_if_needed(child, color);
+            fix_removal_violations_if_needed(child ? child : node, color);
+
+            if (deferred_delete)
+                delete node;
+
         } else { // deleting an internal node :(
-            // TODO
+            auto* successor = inorder_successor_of(node);
+
+            auto* succ_parent = successor->parent;
+            auto* succ_right = successor->right;
+            auto* succ_left = successor->left;
+            auto succ_color = successor->color;
+
+            if (succ_parent == node) {
+                succ_parent = successor; // successor itself will be parent
+
+                if (node == m_root)
+                    m_root = successor;
+            }
+
+            successor->parent = node->parent;
+            successor->right = node->right;
+            successor->left = node->left;
+            successor->color = node->color;
+
+            node->parent = succ_parent;
+            node->right = succ_right;
+            node->left = succ_left;
+            node->color = succ_color;
+
+            remove_node(node);
         }
     }
 
@@ -230,8 +283,120 @@ private:
             return;
         }
 
-        // double black :(
-        // TODO: rotate/recolor as needed
+        fix_double_black(child);
+    }
+
+    void fix_double_black(Node* node)
+    {
+        if (node == m_root)
+            return;
+
+        ASSERT(node->parent != nullptr);
+
+        auto* sibling = node->sibling();
+        auto sibling_color = sibling ? sibling->color : Node::Color::BLACK;
+        auto sibling_left_child_color = sibling ? sibling->left_child_color() : Node::Color::BLACK;
+        auto sibling_right_child_color = sibling ? sibling->right_child_color() : Node::Color::BLACK;
+        auto parent = node->parent;
+
+        if (parent->is_black() &&
+            sibling_color == Node::Color::RED &&
+            sibling_left_child_color == Node::Color::BLACK &&
+            sibling_right_child_color == Node::Color::BLACK) { // black parent, red sibling, both children are black
+
+            parent->color = Node::Color::RED;
+            sibling->color = Node::Color::BLACK;
+
+            if (node->is_left_child())
+                rotate_left(parent);
+            else
+                rotate_right(parent);
+
+            fix_double_black(node);
+
+            return;
+        }
+
+        if (parent->is_black() &&
+            sibling_color == Node::Color::RED &&
+            sibling_left_child_color == Node::Color::BLACK &&
+            sibling_right_child_color == Node::Color::BLACK) { // parent, sibling and both children are black
+
+            sibling->color = Node::Color::RED;
+            node->color = Node::Color::BLACK;
+
+            fix_double_black(parent);
+
+            return;
+        }
+
+        if (parent->is_red() &&
+            sibling_color == Node::Color::BLACK &&
+            sibling_left_child_color == Node::Color::BLACK &&
+            sibling_right_child_color == Node::Color::BLACK) { // parent is red, sibling and both children are black
+
+            if (sibling)
+                sibling->color = Node::Color::RED;
+            node->color = Node::Color::BLACK;
+
+            return;
+        }
+
+        if (node->is_left_child() &&
+            sibling_color == Node::Color::BLACK &&
+            sibling_left_child_color == Node::Color::RED &&
+            sibling_right_child_color == Node::Color::BLACK) { // black sibling, red left child, black right child
+
+            sibling->color = Node::Color::RED;
+            sibling->left->color = Node::Color::BLACK;
+
+            rotate_right(sibling);
+
+            fix_double_black(node);
+
+            return;
+        }
+
+        if (node->is_right_child() &&
+            sibling_color == Node::Color::BLACK &&
+            sibling_left_child_color == Node::Color::BLACK &&
+            sibling_right_child_color == Node::Color::RED) { // black sibling, black left child, red right child
+
+            sibling->color = Node::Color::RED;
+            sibling->right->color = Node::Color::BLACK;
+
+            rotate_left(sibling);
+
+            fix_double_black(node);
+
+            return;
+        }
+
+        if (node->is_left_child() &&
+            sibling_color == Node::Color::BLACK &&
+            sibling_right_child_color == Node::Color::RED) { // black sibling, red right child
+
+            parent->color = Node::Color::BLACK;
+            sibling->right->color = Node::Color::BLACK;
+            node->color = Node::Color::BLACK;
+
+            rotate_left(parent);
+
+            return;
+        }
+
+        if (node->is_right_child() &&
+            sibling_color == Node::Color::BLACK &&
+            sibling_left_child_color == Node::Color::RED) { // black sibling, red left child
+
+            parent->color = Node::Color::BLACK;
+            sibling->left->color = Node::Color::BLACK;
+            node->color = Node::Color::BLACK;
+
+            rotate_right(parent);
+
+            return;
+        }
     }
 
     void fix_insertion_violations_if_needed(Node* node)
@@ -345,6 +510,28 @@ private:
 
         left_child->right = node;
         node->parent = left_child;
+    }
+
+    Node* inorder_successor_of(Node* node)
+    {
+        if (node->right) {
+            node = node->right;
+
+            while (node->left) {
+                node = node->left;
+            }
+
+            return node;
+        }
+
+        auto* parent = node->parent;
+
+        while (parent && node->is_right_child()) {
+            node = parent;
+            parent = node->parent;
+        }
+
+        return node;
     }
 
 private:
