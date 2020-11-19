@@ -241,8 +241,14 @@ private:
 
             fix_removal_violations_if_needed(child ? child : node, color);
 
-            if (deferred_delete)
+            if (deferred_delete) {
+                if (node->is_left_child())
+                    node->parent->left = nullptr;
+                else
+                    node->parent->right = nullptr;
+
                 delete node;
+            }
 
         } else { // deleting an internal node :(
             auto* successor = inorder_successor_of(node);
@@ -257,12 +263,30 @@ private:
 
                 if (node == m_root)
                     m_root = successor;
+            } else {
+                if (successor->is_left_child())
+                    successor->parent->left = node;
+                else
+                    successor->parent->right = node;
+
+                if (node->is_left_child())
+                    node->parent->left = successor;
+                else
+                    node->parent->right = successor;
             }
 
             successor->parent = node->parent;
             successor->right = node->right;
             successor->left = node->left;
             successor->color = node->color;
+
+            if (successor->right)
+                successor->right->parent = node;
+
+            if (node->right)
+                node->right->parent = successor;
+            if (node->left)
+                node->left->parent = successor;
 
             node->parent = succ_parent;
             node->right = succ_right;
@@ -376,6 +400,7 @@ private:
             sibling_color == Node::Color::BLACK &&
             sibling_right_child_color == Node::Color::RED) { // black sibling, red right child
 
+            sibling->color = Node::Color::RED;
             parent->color = Node::Color::BLACK;
             sibling->right->color = Node::Color::BLACK;
             node->color = Node::Color::BLACK;
