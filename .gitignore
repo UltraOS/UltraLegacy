@@ -14,6 +14,7 @@ Tests/Environment/Common/Traits.h
 Tests/Environment/Common/Utilities.h
 Tests/Environment/Common/Conversions.h
 Tests/Environment/Common/List.h
+Tests/Environment/Common/RedBlackTree.h
 .idea/
 *.o
 *.bin
