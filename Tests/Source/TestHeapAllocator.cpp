@@ -63,7 +63,7 @@ TEST(SmallAllocations) {
 
             Assert::that(allocation).is_not_null();
 
-            Assert::that(allocations.find(allocation) == allocations.end()).is_equal(true);
+            Assert::that(allocations.find(allocation) == allocations.end()).is_true();
 
             allocations.emplace(allocation);
         }

@@ -3,7 +3,7 @@
 
 #include "TestRunner.h"
 
-TEST(ListAppendFront) {
+TEST(AppendFront) {
     using kernel::List;
 
     List<std::string> list;
@@ -20,7 +20,7 @@ TEST(ListAppendFront) {
     Assert::that(list.size()).is_equal(test_size);
 }
 
-TEST(ListAppendBack) {
+TEST(AppendBack) {
     using kernel::List;
 
     List<std::string> list;
@@ -37,7 +37,7 @@ TEST(ListAppendBack) {
     Assert::that(list.size()).is_equal(test_size);
 }
 
-TEST(ListDestructor) {
+TEST(Destructor) {
     using kernel::List;
 
     static constexpr size_t test_size = 100;
@@ -55,7 +55,7 @@ TEST(ListDestructor) {
     Assert::that(deleted_counter).is_equal(test_size);
 }
 
-TEST(ListSpliceSingleEndToBegin) {
+TEST(SpliceSingleEndToBegin) {
     using kernel::List;
 
     List<int> list;
@@ -79,10 +79,10 @@ TEST(ListSpliceSingleEndToBegin) {
     // TODO: this should be usable within the asserter?
     bool is_end = itr == list.end();
 
-    Assert::that(is_end).is_equal(true);
+    Assert::that(is_end).is_true();
 }
 
-TEST(ListSpliceSingleBeginToEnd) {
+TEST(SpliceSingleBeginToEnd) {
     using kernel::List;
 
     List<int> list;
@@ -106,10 +106,10 @@ TEST(ListSpliceSingleBeginToEnd) {
     // TODO: this should be usable within the asserter?
     bool is_end = itr == list.end();
 
-    Assert::that(is_end).is_equal(true);
+    Assert::that(is_end).is_true();
 }
 
-TEST(ListMultipleSpliceFront) {
+TEST(MultipleSpliceFront) {
     using kernel::List;
 
     List<int> list_1;
@@ -136,5 +136,5 @@ TEST(ListMultipleSpliceFront) {
     // TODO: this should be usable within the asserter?
     bool is_end = itr == list_1.end();
 
-    Assert::that(is_end).is_equal(true);
+    Assert::that(is_end).is_true();
 }

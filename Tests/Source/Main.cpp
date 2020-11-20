@@ -1,6 +1,6 @@
 #include "TestRunner.h"
 
-int main()
+int main(int argc, char** argv)
 {
-    return TestRunner::run_all();
+    return TestRunner::run(argc, argv);
 }

@@ -9,7 +9,7 @@ static const char* sso_string = "SSO St";
 static const char* non_sso_string = "NON SSO String!!!";
 
 
-TEST(BasicString) {
+TEST(Basic) {
     kernel::String test;
 
     test = sso_string;
@@ -38,7 +38,7 @@ TEST(Append) {
     Assert::that(test.c_string()).is_equal("HELLO WORLD, NON SSO!!");
 }
 
-TEST(StringCopyOwnership) {
+TEST(CopyOwnership) {
     kernel::String test = non_sso_string;
     kernel::String test1 = test;
 
@@ -52,7 +52,7 @@ TEST(StringCopyOwnership) {
     Assert::that(test3.size()).is_equal(test2.size());
 }
 
-TEST(StringMoveOwnership) {
+TEST(MoveOwnership) {
     kernel::String test = non_sso_string;
     kernel::String test1 = move(test);
 
@@ -72,7 +72,7 @@ TEST(StringMoveOwnership) {
     Assert::that(test3.size()).is_equal(kernel::String::length_of(sso_string));
 }
 
-TEST(StringPopBackSSO) {
+TEST(PopBackSSO) {
     kernel::String sso_test = "sso";
 
     sso_test.pop_back();
@@ -92,7 +92,7 @@ TEST(StringPopBackSSO) {
     Assert::that(sso_test.size()).is_equal(0);
 }
 
-TEST(StringPopBackNonSSO) {
+TEST(PopBackNonSSO) {
     kernel::String non_sso_test = "non-sso-string-that-is-long";
     size_t initial_length = non_sso_test.size();
 
