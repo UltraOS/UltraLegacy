@@ -11,6 +11,35 @@ class RedBlackTree
 public:
     using element_type = T;
 
+    RedBlackTree() = default;
+
+    // TODO: RedBlackTree(const RedBlackTree& other)
+    // TODO: RedBlackTree& operator=(const RedBlackTree& other)
+    // We could use a simple approach where we just iterate
+    // over other and call add() for each element.
+    // However, since we already now the entire final tree
+    // structure this could be heavily optimized by recreating
+    // the other tree 1 : 1. That sounds like something that's
+    // a lot harder to implement tho.
+
+    RedBlackTree(RedBlackTree&& other)
+        : m_root(other.m_root), m_size(other.m_size)
+    {
+        other.m_root = nullptr;
+        other.m_size = 0;
+    }
+
+    RedBlackTree& operator=(RedBlackTree&& other)
+    {
+        if (this == &other)
+            return *this;
+
+        swap(m_root, other.m_root);
+        swap(m_size, other.m_size);
+
+        return *this;
+    }
+
     template <typename... Args>
     void add(Args&&... args)
     {
@@ -68,6 +97,7 @@ public:
     }
 
     size_t size() const { return m_size; }
+    bool empty() const { return m_size == 0; }
 
     void clear()
     {
