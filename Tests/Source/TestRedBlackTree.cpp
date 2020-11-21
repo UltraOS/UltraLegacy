@@ -54,3 +54,32 @@ TEST(Destructor) {
 
     Assert::that(items_deleted_counter).is_equal(test_size);
 }
+
+TEST(MoveConstructor) {
+    constexpr size_t test_size = 10;
+
+    kernel::RedBlackTree<size_t> original_tree;
+
+    for (size_t i = 0; i < test_size; ++i)
+        original_tree.add(i);
+
+    kernel::RedBlackTree<size_t> new_tree(kernel::move(original_tree));
+
+    Assert::that(original_tree.size()).is_equal(0);
+    Assert::that(new_tree.size()).is_equal(test_size);
+}
+
+TEST(MoveAssignment) {
+    constexpr size_t test_size = 10;
+
+    kernel::RedBlackTree<size_t> original_tree;
+    kernel::RedBlackTree<size_t> new_tree;
+
+    for (size_t i = 0; i < test_size; ++i)
+        original_tree.add(i);
+
+    new_tree = kernel::move(original_tree);
+
+    Assert::that(original_tree.size()).is_equal(0);
+    Assert::that(new_tree.size()).is_equal(test_size);
+}
