@@ -114,7 +114,7 @@ public:
     {
         if (argc > 1) {
             if (argc != 2) {
-                std::cout << "Usage: " << argv[0] << " <test_name>" << std::endl;
+                std::cout << "Usage: " << argv[0] << " <test_subject>" << std::endl;
                 return -1;
             }
 
