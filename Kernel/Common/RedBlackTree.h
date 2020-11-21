@@ -69,9 +69,16 @@ public:
 
     size_t size() const { return m_size; }
 
+    void clear()
+    {
+        recursive_clear_all(m_root);
+        m_root = nullptr;
+        m_size = 0;
+    }
+
     ~RedBlackTree()
     {
-        // TODO: implement
+        clear();
     }
 
 private:
@@ -170,6 +177,25 @@ private:
                 return parent->left;
         }
     };
+
+    void recursive_clear_all(Node* node)
+    {
+        if (node == nullptr)
+            return;
+
+        if (node->left == nullptr && node->right == nullptr) {
+            delete node;
+            return;
+        }
+
+        if (node->left)
+            recursive_clear_all(node->left);
+
+        if (node->right)
+            recursive_clear_all(node->right);
+
+        delete node;
+    }
 
     template <typename V>
     Node* find_node(const V& value)
@@ -374,7 +400,7 @@ private:
             sibling->color = Node::Color::RED;
             sibling->left->color = Node::Color::BLACK;
 
-            rotate_right(sibling);
+            rotate_right(parent);
 
             fix_double_black(node);
 
@@ -389,7 +415,7 @@ private:
             sibling->color = Node::Color::RED;
             sibling->right->color = Node::Color::BLACK;
 
-            rotate_left(sibling);
+            rotate_left(parent);
 
             fix_double_black(node);
 
