@@ -148,7 +148,7 @@ public:
 
         Iterator& operator++()
         {
-            increment();
+            m_node = inorder_successor_of(m_node);
 
             return *this;
         }
@@ -157,7 +157,7 @@ public:
         {
             Iterator old(m_node);
 
-            increment();
+            m_node = inorder_successor_of(m_node);
 
             return old;
         }
@@ -170,27 +170,6 @@ public:
         bool operator!=(const Iterator& other) const
         {
             return m_node != other.m_node;
-        }
-
-    private:
-        void increment()
-        {
-            // TODO: ASSERT(m_node)
-
-            if (m_node->right) {
-                m_node = m_node->right;
-
-                while (m_node->left)
-                    m_node = m_node->left;
-            } else {
-                auto* parent = m_node->parent;
-                while (parent && m_node->is_right_child()) {
-                    m_node = parent;
-                    parent = parent->parent;
-                }
-
-                m_node = parent;
-            }
         }
 
     private:
@@ -666,7 +645,7 @@ private:
         node->parent = left_child;
     }
 
-    Node* inorder_successor_of(Node* node)
+    static Node* inorder_successor_of(Node* node)
     {
         if (node->right) {
             node = node->right;
@@ -685,7 +664,7 @@ private:
             parent = node->parent;
         }
 
-        return node;
+        return parent;
     }
 
 private:
