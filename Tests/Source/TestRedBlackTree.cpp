@@ -83,3 +83,29 @@ TEST(MoveAssignment) {
     Assert::that(original_tree.size()).is_equal(0);
     Assert::that(new_tree.size()).is_equal(test_size);
 }
+
+TEST(EmptyIterator) {
+    kernel::RedBlackTree<size_t> tree;
+
+    size_t iterations = 0;
+
+    for (const auto& elem : tree) {
+        iterations++;
+    }
+
+    Assert::that(iterations).is_equal(0);
+}
+
+TEST(Iterator) {
+    kernel::RedBlackTree<size_t> tree;
+
+    size_t size = 10001;
+
+    for (size_t i = 0; i < size; ++i)
+        tree.add(i);
+
+    size_t i = 0;
+    for (const auto& elem : tree) {
+        Assert::that(elem).is_equal(i++);
+    }
+}
