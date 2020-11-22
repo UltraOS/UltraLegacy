@@ -40,78 +40,6 @@ public:
         return *this;
     }
 
-    template <typename... Args>
-    void add(Args&&... args)
-    {
-        auto* new_node = new Node(forward<Args>(args)...);
-
-        if (m_root == nullptr) {
-            m_root = new_node;
-            m_root->color = Node::Color::BLACK;
-            m_size = 1;
-            return;
-        }
-
-        auto* current = m_root;
-
-        for (;;) {
-            if (current->value < new_node->value) {
-                if (current->right == nullptr) {
-                    current->right = new_node;
-                    new_node->parent = current;
-                    break;
-                } else {
-                    current = current->right;
-                    continue;
-                }
-            } else {
-                if (current->left == nullptr) {
-                    current->left = new_node;
-                    new_node->parent = current;
-                    break;
-                } else {
-                    current = current->left;
-                    continue;
-                }
-            }
-        }
-
-        fix_insertion_violations_if_needed(new_node);
-        ++m_size;
-    }
-
-    const T& get(const T& value)
-    {
-        // TODO: assert(find_node)
-        return find_node(value)->value;
-    }
-
-    bool contains(const T& value)
-    {
-        return find_node(value) != nullptr;
-    }
-
-    void remove(const T& value)
-    {
-        remove_node(find_node(value));
-    }
-
-    size_t size() const { return m_size; }
-    bool empty() const { return m_size == 0; }
-
-    void clear()
-    {
-        recursive_clear_all(m_root);
-        m_root = nullptr;
-        m_size = 0;
-    }
-
-    ~RedBlackTree()
-    {
-        clear();
-    }
-
-private:
     struct Node {
         template <typename... Args>
         Node(Args&&... args)
@@ -208,6 +136,136 @@ private:
         }
     };
 
+    class Iterator {
+    public:
+        Iterator(Node* node) : m_node(node) {}
+
+        const T& operator*() const
+        {
+            // TODO: ASSERT(m_node)
+            return m_node->value;
+        }
+
+        Iterator& operator++()
+        {
+            // TODO: ASSERT(m_node)
+
+            if (m_node->right) {
+                m_node = m_node->right;
+
+                while (m_node->left)
+                    m_node = m_node->left;
+            } else {
+                auto* parent = m_node->parent;
+                while (parent && m_node->is_right_child()) {
+                    m_node = parent;
+                    parent = parent->parent;
+                }
+
+                m_node = parent;
+            }
+
+            return *this;
+        }
+
+        bool operator==(const Iterator& other) const
+        {
+            return m_node == other.m_node;
+        }
+
+        bool operator!=(const Iterator& other) const
+        {
+            return m_node != other.m_node;
+        }
+
+    private:
+        Node* m_node;
+    };
+
+    Iterator begin() const
+    {
+        auto* left_most = m_root;
+
+        while (left_most && left_most->left)
+            left_most = left_most->left;
+
+        return Iterator(left_most);
+    }
+
+    Iterator end() const { return Iterator(nullptr); }
+
+    template <typename... Args>
+    void add(Args&&... args)
+    {
+        auto* new_node = new Node(forward<Args>(args)...);
+
+        if (m_root == nullptr) {
+            m_root = new_node;
+            m_root->color = Node::Color::BLACK;
+            m_size = 1;
+            return;
+        }
+
+        auto* current = m_root;
+
+        for (;;) {
+            if (current->value < new_node->value) {
+                if (current->right == nullptr) {
+                    current->right = new_node;
+                    new_node->parent = current;
+                    break;
+                } else {
+                    current = current->right;
+                    continue;
+                }
+            } else {
+                if (current->left == nullptr) {
+                    current->left = new_node;
+                    new_node->parent = current;
+                    break;
+                } else {
+                    current = current->left;
+                    continue;
+                }
+            }
+        }
+
+        fix_insertion_violations_if_needed(new_node);
+        ++m_size;
+    }
+
+    const T& get(const T& value)
+    {
+        // TODO: assert(find_node)
+        return find_node(value)->value;
+    }
+
+    bool contains(const T& value)
+    {
+        return find_node(value) != nullptr;
+    }
+
+    void remove(const T& value)
+    {
+        remove_node(find_node(value));
+    }
+
+    size_t size() const { return m_size; }
+    bool empty() const { return m_size == 0; }
+
+    void clear()
+    {
+        recursive_clear_all(m_root);
+        m_root = nullptr;
+        m_size = 0;
+    }
+
+    ~RedBlackTree()
+    {
+        clear();
+    }
+
+private:
     void recursive_clear_all(Node* node)
     {
         if (node == nullptr)
