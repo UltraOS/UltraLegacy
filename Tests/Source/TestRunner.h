@@ -363,12 +363,12 @@ public:
 
         void is_true() {
             if (m_value == false)
-                throw FailedAssertion(m_value + " != true", m_file, m_line);
+                throw FailedAssertion("false != true", m_file, m_line);
         }
 
         void is_false() {
             if (m_value == true)
-                throw FailedAssertion(m_value + " != false", m_file, m_line);
+                throw FailedAssertion("true != false", m_file, m_line);
         }
 
     private:

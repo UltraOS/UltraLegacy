@@ -109,3 +109,16 @@ TEST(Iterator) {
         Assert::that(elem).is_equal(i++);
     }
 }
+
+TEST(IteratorPostIncrement) {
+    kernel::RedBlackTree<size_t> tree;
+
+    tree.add(1);
+    tree.add(2);
+
+    kernel::RedBlackTree<size_t>::Iterator itr = tree.begin();
+
+    Assert::that(*(itr++)).is_equal(1);
+    Assert::that(*(itr++)).is_equal(2);
+    Assert::that(itr == tree.end()).is_true();
+}
