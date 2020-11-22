@@ -148,6 +148,33 @@ public:
 
         Iterator& operator++()
         {
+            increment();
+
+            return *this;
+        }
+
+        Iterator operator++(int)
+        {
+            Iterator old(m_node);
+
+            increment();
+
+            return old;
+        }
+
+        bool operator==(const Iterator& other) const
+        {
+            return m_node == other.m_node;
+        }
+
+        bool operator!=(const Iterator& other) const
+        {
+            return m_node != other.m_node;
+        }
+
+    private:
+        void increment()
+        {
             // TODO: ASSERT(m_node)
 
             if (m_node->right) {
@@ -164,18 +191,6 @@ public:
 
                 m_node = parent;
             }
-
-            return *this;
-        }
-
-        bool operator==(const Iterator& other) const
-        {
-            return m_node == other.m_node;
-        }
-
-        bool operator!=(const Iterator& other) const
-        {
-            return m_node != other.m_node;
         }
 
     private:
