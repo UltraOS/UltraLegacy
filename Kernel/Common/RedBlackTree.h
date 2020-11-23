@@ -667,6 +667,28 @@ private:
         return parent;
     }
 
+    static Node* inorder_predecessor_of(Node* node)
+    {
+        if (node->left) {
+            node = node->left;
+
+            while (node->right) {
+                node = node->right;
+            }
+
+            return node;
+        }
+
+        auto* parent = node->parent;
+
+        while (parent && node->is_left_child()) {
+            node = parent;
+            parent = node->parent;
+        }
+
+        return parent;
+    }
+
 private:
     Node*  m_root { nullptr };
     size_t m_size { 0 };
