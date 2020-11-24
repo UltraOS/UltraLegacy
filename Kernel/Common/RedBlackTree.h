@@ -40,23 +40,12 @@ public:
         return *this;
     }
 
-    struct Node {
-        template <typename... Args>
-        Node(Args&&... args)
-            : value(forward<Args>(args)...)
-        {
-        }
-
-        Node* parent { nullptr };
-        Node* left { nullptr };
-        Node* right { nullptr };
-
-        enum class Color : u8 {
-            RED = 0,
-            BLACK = 1
-        } color { Color::RED };
-
-        T value;
+    template <typename ValueNodeT>
+    class Node {
+    public:
+        ValueNodeT* parent { nullptr };
+        ValueNodeT* left { nullptr };
+        ValueNodeT* right { nullptr };
 
         bool is_left_child() const
         {
@@ -68,13 +57,7 @@ public:
 
         bool is_right_child() const { return !is_left_child(); }
 
-        bool is_black() const { return color == Color::BLACK; }
-        bool is_red() const { return color == Color::RED; }
-
-        Color left_child_color() const { return left ? left->color : Color::BLACK; }
-        Color right_child_color() const { return right ? right->color : Color::BLACK; }
-
-        Node* grandparent() const
+        ValueNodeT* grandparent() const
         {
             if (!parent)
                 return nullptr;
@@ -82,7 +65,7 @@ public:
             return parent->parent;
         }
 
-        Node* aunt() const
+        ValueNodeT* aunt() const
         {
             auto* grandparent = this->grandparent();
 
@@ -93,21 +76,6 @@ public:
                 return grandparent->right;
 
             return grandparent->left;
-        }
-
-        bool is_aunt_black() const
-        {
-            auto* aunt = this->aunt();
-
-            if (!aunt || aunt->is_black())
-                return true;
-
-            return false;
-        }
-
-        bool is_aunt_red() const
-        {
-            return !is_aunt_black();
         }
 
         enum class Position {
@@ -127,18 +95,58 @@ public:
                 return left_child ? Position::RIGHT_LEFT : Position::RIGHT_RIGHT;
         }
 
-        Node* sibling()
+        ValueNodeT* sibling()
         {
             if (is_left_child())
                 return parent->right;
             else
                 return parent->left;
         }
+
+        bool is_null() const { return parent == nullptr; }
+    };
+
+    struct ValueNode : public Node<ValueNode> {
+        template <typename... Args>
+        ValueNode(Args&&... args)
+            : value(forward<Args>(args)...)
+        {
+        }
+
+        using Position = typename Node<ValueNode>::Position;
+
+        enum class Color : u8 {
+            RED = 0,
+            BLACK = 1
+        } color { Color::RED };
+
+        T value;
+
+        bool is_black() const { return color == Color::BLACK; }
+        bool is_red() const { return color == Color::RED; }
+
+        Color left_child_color() const { return this->left ? this->left->color : Color::BLACK; }
+        Color right_child_color() const { return this->right ? this->right->color : Color::BLACK; }
+
+        bool is_aunt_black() const
+        {
+            auto* aunt = this->aunt();
+
+            if (!aunt || aunt->is_black())
+                return true;
+
+            return false;
+        }
+
+        bool is_aunt_red() const
+        {
+            return !is_aunt_black();
+        }
     };
 
     class Iterator {
     public:
-        Iterator(Node* node) : m_node(node) {}
+        Iterator(const ValueNode* node) : m_node(node) {}
 
         const T& operator*() const
         {
@@ -162,40 +170,74 @@ public:
             return old;
         }
 
+        Iterator& operator--()
+        {
+            decrement();
+
+            return *this;
+        }
+
+        Iterator operator--(int)
+        {
+            Iterator old(m_node);
+
+            decrement();
+
+            return old;
+        }
+
         bool operator==(const Iterator& other) const
         {
+            // TODO: assert owner == other.owner
             return m_node == other.m_node;
         }
 
         bool operator!=(const Iterator& other) const
         {
+            // TODO: assert owner == other.owner
             return m_node != other.m_node;
         }
 
     private:
-        Node* m_node;
+        void decrement()
+        {
+            if (m_node->is_null()) {
+                m_node = m_node->right;
+            } else {
+                m_node = inorder_predecessor_of(m_node);
+            }
+        }
+
+    private:
+        const ValueNode* m_node;
     };
 
     Iterator begin() const
     {
-        auto* left_most = m_root;
-
-        while (left_most && left_most->left)
-            left_most = left_most->left;
-
-        return Iterator(left_most);
+        return Iterator(left_most_node());
     }
 
-    Iterator end() const { return Iterator(nullptr); }
+    Iterator end() const { return Iterator(super_root_as_value_node()); }
 
     template <typename... Args>
     void add(Args&&... args)
     {
-        auto* new_node = new Node(forward<Args>(args)...);
+        auto* new_node = new ValueNode(forward<Args>(args)...);
+
+        if (m_super_root.left == nullptr)
+            m_super_root.left = new_node;
+        else if (new_node->value < m_super_root.left->value)
+            m_super_root.left = new_node;
+
+        if (m_super_root.right == nullptr)
+            m_super_root.right = new_node;
+        else if (m_super_root.right->value < new_node->value)
+            m_super_root.right = new_node;
 
         if (m_root == nullptr) {
             m_root = new_node;
-            m_root->color = Node::Color::BLACK;
+            m_root->parent = super_root_as_value_node();
+            m_root->color = ValueNode::Color::BLACK;
             m_size = 1;
             return;
         }
@@ -241,14 +283,67 @@ public:
 
     void remove(const T& value)
     {
-        remove_node(find_node(value));
+        auto* node = find_node(value);
+
+        if (!node)
+            return;
+
+        if (node == left_most_node())
+            super_root_as_value_node()->left = inorder_successor_of(node);
+        else if (node == right_most_node())
+            super_root_as_value_node()->right = inorder_predecessor_of(node);
+
+        remove_node(node);
     }
 
     size_t size() const { return m_size; }
     bool empty() const { return m_size == 0; }
 
+    Iterator lower_bound(const T& value)
+    {
+        if (empty())
+            return Iterator(super_root_as_value_node());
+
+        ValueNode* node = m_root;
+        ValueNode* result = super_root_as_value_node();
+
+        while (node) {
+            if (node->value < value) {
+                node = node->right;
+            } else {
+                result = node;
+                node = node->left;
+            }
+        }
+
+        return Iterator(result);
+    }
+
+    Iterator upper_bound(const T& value)
+    {
+        if (m_root == nullptr)
+            return Iterator(super_root_as_value_node());
+
+        ValueNode* node = m_root;
+        ValueNode* result = super_root_as_value_node();
+
+        while (node) {
+            if (value < node->value) {
+                result = node;
+                node = node->left;
+            } else {
+                node = node->right;
+            }
+        }
+
+        return Iterator(result);
+    }
+
     void clear()
     {
+        if (empty())
+            return;
+
         recursive_clear_all(m_root);
         m_root = nullptr;
         m_size = 0;
@@ -260,11 +355,23 @@ public:
     }
 
 private:
-    void recursive_clear_all(Node* node)
+    ValueNode* super_root_as_value_node() const
     {
-        if (node == nullptr)
-            return;
+        return const_cast<ValueNode*>(static_cast<const ValueNode*>(&m_super_root));
+    }
 
+    ValueNode* left_most_node() const
+    {
+        return empty() ? super_root_as_value_node() : super_root_as_value_node()->left;
+    }
+
+    ValueNode* right_most_node() const
+    {
+        return empty() ? super_root_as_value_node() : super_root_as_value_node()->right;
+    }
+
+    void recursive_clear_all(ValueNode* node)
+    {
         if (node->left == nullptr && node->right == nullptr) {
             delete node;
             return;
@@ -280,9 +387,9 @@ private:
     }
 
     template <typename V>
-    Node* find_node(const V& value)
+    ValueNode* find_node(const V& value)
     {
-        if (size() == 0)
+        if (empty())
             return nullptr;
 
         auto* current_node = m_root;
@@ -300,7 +407,7 @@ private:
         return nullptr;
     }
 
-    void remove_node(Node* node)
+    void remove_node(ValueNode* node)
     {
         if (node == nullptr)
             return;
@@ -313,8 +420,8 @@ private:
                 m_root = child;
 
                 if (child) {
-                    child->parent = nullptr;
-                    child->color = Node::Color::BLACK;
+                    child->parent = super_root_as_value_node();
+                    child->color = ValueNode::Color::BLACK;
                 }
 
                 m_size = child ? 1 : 0;
@@ -338,11 +445,13 @@ private:
                 else
                     parent->right = child;
 
+                child->parent = parent;
+
                 deferred_delete = false;
                 delete node;
             } else {
                 // Null nodes are always black :)
-                node->color = Node::Color::BLACK;
+                node->color = ValueNode::Color::BLACK;
             }
 
             m_size--;
@@ -359,85 +468,147 @@ private:
             }
 
         } else { // deleting an internal node :(
-            auto* successor = inorder_successor_of(node);
-
-            auto* succ_parent = successor->parent;
-            auto* succ_right = successor->right;
-            auto* succ_left = successor->left;
-            auto succ_color = successor->color;
-
-            if (succ_parent == node) {
-                succ_parent = successor; // successor itself will be parent
-
-                if (node == m_root)
-                    m_root = successor;
-            } else {
-                if (successor->is_left_child())
-                    successor->parent->left = node;
-                else
-                    successor->parent->right = node;
-
-                if (node->is_left_child())
-                    node->parent->left = successor;
-                else
-                    node->parent->right = successor;
-            }
-
-            successor->parent = node->parent;
-            successor->right = node->right;
-            successor->left = node->left;
-            successor->color = node->color;
-
-            if (successor->right)
-                successor->right->parent = node;
-
-            if (node->right)
-                node->right->parent = successor;
-            if (node->left)
-                node->left->parent = successor;
-
-            node->parent = succ_parent;
-            node->right = succ_right;
-            node->left = succ_left;
-            node->color = succ_color;
+            swap_node_with_successor(node, inorder_successor_of(node));
 
             remove_node(node);
         }
     }
 
-    void fix_removal_violations_if_needed(Node* child, typename Node::Color deleted_node_color)
+    void swap_node_with_successor(ValueNode* node, ValueNode* successor)
     {
-        auto child_color = child ? child->color : Node::Color::BLACK;
+        auto* node_parent = node->parent;
+        auto* node_right = node->right;
+        auto* node_left = node->left;
+        auto  node_color = node->color;
+        bool node_is_left_child = node->is_left_child();
 
-        if (child_color == Node::Color::RED || deleted_node_color == Node::Color::RED) {
+        auto* successor_parent = successor->parent;
+        auto* successor_right = successor->right;
+        auto* successor_left = successor->left;
+        auto  successor_color = successor->color;
+        bool successor_is_left_child = successor->is_left_child();
+
+        if (successor_parent == node) {
+            node->parent = successor;
+            node->right = successor_right;
+            node->left = successor_left;
+            node->color = successor_color;
+
+            successor->parent = node_parent;
+            successor->right = successor_is_left_child ? node_right : node;
+            successor->left = successor_is_left_child ? node : node_left;
+            successor->color = node_color;
+
+            if (successor_right)
+                successor_right->parent = node;
+
+            if (node != m_root) {
+                if (node_is_left_child)
+                    node_parent->left = successor;
+                else
+                    node_parent->right = successor;
+            }
+
+            if (node_left)
+                node_left->parent = successor;
+        } else if (node->parent == successor) {
+            node->parent = successor_parent;
+            node->right = node_is_left_child ? successor_right : successor;
+            node->left = node_is_left_child ? successor : successor_left;
+            node->color = successor_color;
+
+            successor->parent = node;
+            successor->right = node_right;
+            successor->left = node_left;
+            successor->color = node_color;
+
+            if (node_right)
+                node_right->parent = node;
+            if (node_left)
+                node_left->parent = node;
+
+            if (successor != m_root) {
+                if (successor_is_left_child)
+                    successor_parent->left = node;
+                else
+                    successor_parent->right = node;
+            }
+
+            if (successor_left)
+                successor_left->parent = node;
+        } else {
+            node->parent = successor_parent;
+            node->right = successor_right;
+            node->left = successor_left;
+            node->color = successor_color;
+
+            successor->parent = node_parent;
+            successor->right = node_right;
+            successor->left = node_left;
+            successor->color = node_color;
+
+            if (successor_right)
+                successor_right->parent = node;
+
+            if (successor_is_left_child)
+                successor_parent->left = node;
+            else
+                successor_parent->right = node;
+
+            if (node_right)
+                node_right->parent = successor;
+            if (node_left)
+                node_left->parent = successor;
+
+            if (node != m_root) {
+                if (node_is_left_child)
+                    node_parent->left = successor;
+                else
+                    node_parent->right = successor;
+            }
+        }
+
+        if (node == m_root)
+            m_root = successor;
+    }
+
+    void fix_removal_violations_if_needed(ValueNode* child, typename ValueNode::Color deleted_node_color)
+    {
+        auto child_color = child ? child->color : ValueNode::Color::BLACK;
+
+        if (child_color == ValueNode::Color::RED || deleted_node_color == ValueNode::Color::RED) {
             if (child)
-                child->color = Node::Color::BLACK;
+                child->color = ValueNode::Color::BLACK;
             return;
         }
 
         fix_double_black(child);
     }
 
-    void fix_double_black(Node* node)
+    void fix_double_black(ValueNode* node)
     {
-        if (node == m_root)
+        // CASE 1
+        if (node == m_root) {
+            node->color = ValueNode::Color::BLACK;
             return;
+        }
 
         ASSERT(node->parent != nullptr);
 
         auto* sibling = node->sibling();
-        auto sibling_color = sibling ? sibling->color : Node::Color::BLACK;
-        auto sibling_left_child_color = sibling ? sibling->left_child_color() : Node::Color::BLACK;
-        auto sibling_right_child_color = sibling ? sibling->right_child_color() : Node::Color::BLACK;
+        auto sibling_color = sibling ? sibling->color : ValueNode::Color::BLACK;
+        auto sibling_left_child_color = sibling ? sibling->left_child_color() : ValueNode::Color::BLACK;
+        auto sibling_right_child_color = sibling ? sibling->right_child_color() : ValueNode::Color::BLACK;
         auto parent = node->parent;
 
+        // CASE 2
         if (parent->is_black() &&
-            sibling_color == Node::Color::RED &&
-            sibling_left_child_color == Node::Color::BLACK &&
-            sibling_right_child_color == Node::Color::BLACK) { // black parent, red sibling, both children are black
+            sibling_color == ValueNode::Color::RED &&
+            sibling_left_child_color == ValueNode::Color::BLACK &&
+            sibling_right_child_color == ValueNode::Color::BLACK) { // black parent, red sibling, both children are black
 
-            parent->color = Node::Color::RED;
-            sibling->color = Node::Color::BLACK;
+            parent->color = ValueNode::Color::RED;
+            sibling->color = ValueNode::Color::BLACK;
 
             if (node->is_left_child())
                 rotate_left(parent);
@@ -449,82 +620,91 @@ private:
             return;
         }
 
+        // CASE 3
         if (parent->is_black() &&
-            sibling_color == Node::Color::RED &&
-            sibling_left_child_color == Node::Color::BLACK &&
-            sibling_right_child_color == Node::Color::BLACK) { // parent, sibling and both children are black
+            sibling_color == ValueNode::Color::BLACK &&
+            sibling_left_child_color == ValueNode::Color::BLACK &&
+            sibling_right_child_color == ValueNode::Color::BLACK) { // parent, sibling and both children are black
 
-            sibling->color = Node::Color::RED;
-            node->color = Node::Color::BLACK;
+            if (sibling)
+                sibling->color = ValueNode::Color::RED;
+            node->color = ValueNode::Color::BLACK;
 
             fix_double_black(parent);
 
             return;
         }
 
+        // CASE 4
         if (parent->is_red() &&
-            sibling_color == Node::Color::BLACK &&
-            sibling_left_child_color == Node::Color::BLACK &&
-            sibling_right_child_color == Node::Color::BLACK) { // parent is red, sibling and both children are black
+            sibling_color == ValueNode::Color::BLACK &&
+            sibling_left_child_color == ValueNode::Color::BLACK &&
+            sibling_right_child_color == ValueNode::Color::BLACK) { // parent is red, sibling and both children are black
+
+            parent->color = ValueNode::Color::BLACK;
 
             if (sibling)
-                sibling->color = Node::Color::RED;
-            node->color = Node::Color::BLACK;
+                sibling->color = ValueNode::Color::RED;
+
+            node->color = ValueNode::Color::BLACK;
 
             return;
         }
 
+        // CASE 5 (node is on the left)
         if (node->is_left_child() &&
-            sibling_color == Node::Color::BLACK &&
-            sibling_left_child_color == Node::Color::RED &&
-            sibling_right_child_color == Node::Color::BLACK) { // black sibling, red left child, black right child
+            sibling_color == ValueNode::Color::BLACK &&
+            sibling_left_child_color == ValueNode::Color::RED &&
+            sibling_right_child_color == ValueNode::Color::BLACK) { // black sibling, red left child, black right child
 
-            sibling->color = Node::Color::RED;
-            sibling->left->color = Node::Color::BLACK;
+            sibling->color = ValueNode::Color::RED;
+            sibling->left->color = ValueNode::Color::BLACK;
 
-            rotate_right(parent);
+            rotate_right(sibling);
 
             fix_double_black(node);
 
             return;
         }
 
+        // CASE 5 (node is on the right)
         if (node->is_right_child() &&
-            sibling_color == Node::Color::BLACK &&
-            sibling_left_child_color == Node::Color::BLACK &&
-            sibling_right_child_color == Node::Color::RED) { // black sibling, black left child, red right child
+            sibling_color == ValueNode::Color::BLACK &&
+            sibling_left_child_color == ValueNode::Color::BLACK &&
+            sibling_right_child_color == ValueNode::Color::RED) { // black sibling, black left child, red right child
 
-            sibling->color = Node::Color::RED;
-            sibling->right->color = Node::Color::BLACK;
+            sibling->color = ValueNode::Color::RED;
+            sibling->right->color = ValueNode::Color::BLACK;
 
-            rotate_left(parent);
+            rotate_left(sibling);
 
             fix_double_black(node);
 
             return;
         }
 
+        // CASE 6 (node is on the left)
         if (node->is_left_child() &&
-            sibling_color == Node::Color::BLACK &&
-            sibling_right_child_color == Node::Color::RED) { // black sibling, red right child
+            sibling_color == ValueNode::Color::BLACK &&
+            sibling_right_child_color == ValueNode::Color::RED) { // black sibling, red right child
 
-            sibling->color = Node::Color::RED;
-            parent->color = Node::Color::BLACK;
-            sibling->right->color = Node::Color::BLACK;
-            node->color = Node::Color::BLACK;
+            parent->color = ValueNode::Color::BLACK;
+            sibling->right->color = ValueNode::Color::BLACK;
+            node->color = ValueNode::Color::BLACK;
 
             rotate_left(parent);
 
             return;
         }
 
+        // CASE 6 (node is on the right)
         if (node->is_right_child() &&
-            sibling_color == Node::Color::BLACK &&
-            sibling_left_child_color == Node::Color::RED) { // black sibling, red left child
+            sibling_color == ValueNode::Color::BLACK &&
+            sibling_left_child_color == ValueNode::Color::RED) { // black sibling, red left child
 
-            parent->color = Node::Color::BLACK;
-            sibling->left->color = Node::Color::BLACK;
-            node->color = Node::Color::BLACK;
+            parent->color = ValueNode::Color::BLACK;
+            sibling->left->color = ValueNode::Color::BLACK;
+            node->color = ValueNode::Color::BLACK;
 
             rotate_right(parent);
 
@@ -532,9 +712,9 @@ private:
         }
     }
 
-    void fix_insertion_violations_if_needed(Node* node)
+    void fix_insertion_violations_if_needed(ValueNode* node)
     {
-        while (node && node != m_root) {
+        while (!node->is_null() && node != m_root) {
             if (node->parent->is_black() || node->is_black())
                 return;
 
@@ -549,44 +729,44 @@ private:
         }
     }
 
-    void color_filp(Node* violating_node)
+    void color_filp(ValueNode* violating_node)
     {
         auto* grandparent = violating_node->grandparent();
 
         if (grandparent != m_root)
-            grandparent->color = Node::Color::RED;
+            grandparent->color = ValueNode::Color::RED;
 
-        grandparent->left->color = Node::Color::BLACK;
-        grandparent->right->color = Node::Color::BLACK;
+        grandparent->left->color = ValueNode::Color::BLACK;
+        grandparent->right->color = ValueNode::Color::BLACK;
     }
 
-    void rotate(Node* violating_node)
+    void rotate(ValueNode* violating_node)
     {
         switch (violating_node->position_with_respect_to_grandparent())
         {
-            case Node::Position::LEFT_RIGHT: // left-right rotation
+            case ValueNode::Position::LEFT_RIGHT: // left-right rotation
                 rotate_left(violating_node->parent);
                 violating_node = violating_node->left;
                 [[fallthrough]];
-            case Node::Position::LEFT_LEFT: { // right rotation
+            case ValueNode::Position::LEFT_LEFT: { // right rotation
                 auto* grandparent = violating_node->grandparent();
-                grandparent->color = Node::Color::RED;
-                violating_node->parent->color = Node::Color::BLACK;
-                violating_node->color = Node::Color::RED;
+                grandparent->color = ValueNode::Color::RED;
+                violating_node->parent->color = ValueNode::Color::BLACK;
+                violating_node->color = ValueNode::Color::RED;
 
                 rotate_right(grandparent);
 
                 return;
             }
-            case Node::Position::RIGHT_LEFT: // right-left rotation
+            case ValueNode::Position::RIGHT_LEFT: // right-left rotation
                 rotate_right(violating_node->parent);
                 violating_node = violating_node->right;
                 [[fallthrough]];
-            case Node::Position::RIGHT_RIGHT: { // left rotation
+            case ValueNode::Position::RIGHT_RIGHT: { // left rotation
                 auto* grandparent = violating_node->grandparent();
-                grandparent->color = Node::Color::RED;
-                violating_node->parent->color = Node::Color::BLACK;
-                violating_node->color = Node::Color::RED;
+                grandparent->color = ValueNode::Color::RED;
+                violating_node->parent->color = ValueNode::Color::BLACK;
+                violating_node->color = ValueNode::Color::RED;
 
                 rotate_left(grandparent);
 
@@ -595,7 +775,7 @@ private:
         }
     }
 
-    void rotate_left(Node* node)
+    void rotate_left(ValueNode* node)
     {
         auto* parent = node->parent;
         auto* right_child = node->right;
@@ -607,7 +787,7 @@ private:
 
         right_child->parent = parent;
 
-        if (parent) {
+        if (parent != super_root_as_value_node()) {
             if (node->is_left_child())
                 parent->left = right_child;
             else
@@ -620,7 +800,7 @@ private:
         node->parent = right_child;
     }
 
-    void rotate_right(Node* node)
+    void rotate_right(ValueNode* node)
     {
         auto* parent = node->parent;
         auto* left_child = node->left;
@@ -632,7 +812,7 @@ private:
 
         left_child->parent = parent;
 
-        if (parent) {
+        if (parent != super_root_as_value_node()) {
             if (node->is_left_child())
                 parent->left = left_child;
             else
@@ -645,7 +825,8 @@ private:
         node->parent = left_child;
     }
 
-    static Node* inorder_successor_of(Node* node)
+    template <typename ValueNodeT>
+    static ValueNodeT inorder_successor_of(ValueNodeT node)
     {
         if (node->right) {
             node = node->right;
@@ -659,7 +840,7 @@ private:
 
         auto* parent = node->parent;
 
-        while (parent && node->is_right_child()) {
+        while (!parent->is_null() && node->is_right_child()) {
             node = parent;
             parent = node->parent;
         }
@@ -667,7 +848,8 @@ private:
         return parent;
     }
 
-    static Node* inorder_predecessor_of(Node* node)
+    template <typename ValueNodeT>
+    static ValueNodeT inorder_predecessor_of(ValueNodeT node)
     {
         if (node->left) {
             node = node->left;
@@ -681,7 +863,7 @@ private:
 
         auto* parent = node->parent;
 
-        while (parent && node->is_left_child()) {
+        while (!parent->is_null() && node->is_left_child()) {
             node = parent;
             parent = node->parent;
         }
@@ -690,7 +872,8 @@ private:
     }
 
 private:
-    Node*  m_root { nullptr };
+    ValueNode* m_root { nullptr };
+    Node<ValueNode> m_super_root;
     size_t m_size { 0 };
 };
 
