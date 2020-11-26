@@ -31,7 +31,7 @@ public:
         NodeBase* m_next { nullptr };
     };
 
-    class Node : public NodeBase {
+    class Node final : public NodeBase {
     public:
         template <typename U>
         Node(U&& value, NodeBase* previous = nullptr, NodeBase* next = nullptr)

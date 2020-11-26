@@ -13,14 +13,21 @@ public:
 
     RedBlackTree() = default;
 
-    // TODO: RedBlackTree(const RedBlackTree& other)
-    // TODO: RedBlackTree& operator=(const RedBlackTree& other)
-    // We could use a simple approach where we just iterate
-    // over other and call add() for each element.
-    // However, since we already now the entire final tree
-    // structure this could be heavily optimized by recreating
-    // the other tree 1 : 1. That sounds like something that's
-    // a lot harder to implement tho.
+    RedBlackTree(const RedBlackTree& other)
+    {
+        become(other);
+    }
+
+    RedBlackTree& operator=(const RedBlackTree& other)
+    {
+        if (this == &other)
+            return *this;
+
+        clear();
+        become(other);
+
+        return *this;
+    }
 
     RedBlackTree(RedBlackTree&& other)
         : m_root(other.m_root), m_size(other.m_size)
@@ -41,7 +48,7 @@ public:
     }
 
     template <typename ValueNodeT>
-    class Node {
+    struct Node {
     public:
         ValueNodeT* parent { nullptr };
         ValueNodeT* left { nullptr };
@@ -104,9 +111,11 @@ public:
         }
 
         bool is_null() const { return parent == nullptr; }
+
+        virtual ~Node() = default;
     };
 
-    struct ValueNode : public Node<ValueNode> {
+    struct ValueNode final : public Node<ValueNode> {
         template <typename... Args>
         ValueNode(Args&&... args)
             : value(forward<Args>(args)...)
@@ -184,6 +193,11 @@ public:
             decrement();
 
             return old;
+        }
+
+        const T* operator->() const
+        {
+            return &m_node->value;
         }
 
         bool operator==(const Iterator& other) const
@@ -288,10 +302,14 @@ public:
         if (!node)
             return;
 
-        if (node == left_most_node())
+        if (node == m_root && size() == 1) {
+            m_super_root.left = nullptr;
+            m_super_root.right = nullptr;
+        } else if (node == left_most_node()) {
             super_root_as_value_node()->left = inorder_successor_of(node);
-        else if (node == right_most_node())
+        } else if (node == right_most_node()) {
             super_root_as_value_node()->right = inorder_predecessor_of(node);
+        }
 
         remove_node(node);
     }
@@ -345,6 +363,10 @@ public:
             return;
 
         recursive_clear_all(m_root);
+
+        m_super_root.left = nullptr;
+        m_super_root.right = nullptr;
+
         m_root = nullptr;
         m_size = 0;
     }
@@ -368,6 +390,41 @@ private:
     ValueNode* right_most_node() const
     {
         return empty() ? super_root_as_value_node() : super_root_as_value_node()->right;
+    }
+
+    void become(const RedBlackTree& other)
+    {
+        if (other.empty())
+            return;
+
+        m_root = new ValueNode(*const_cast<const ValueNode*>(other.m_root));
+        m_root->parent = super_root_as_value_node();
+        m_size = other.m_size;
+
+        if (other.m_root->left)
+            recursive_copy_all(m_root, other.m_root->left);
+        if (other.m_root->right)
+            recursive_copy_all(m_root, other.m_root->right);
+
+        m_super_root.left = find_node(other.m_super_root.left->value);
+        m_super_root.right = find_node(other.m_super_root.right->value);
+    }
+
+    void recursive_copy_all(ValueNode* new_parent, ValueNode* node_to_be_copied)
+    {
+        auto* child = new ValueNode(*const_cast<const ValueNode*>(node_to_be_copied));
+
+        if (node_to_be_copied->is_left_child())
+            new_parent->left = child;
+        else
+            new_parent->right = child;
+
+        child->parent = new_parent;
+
+        if (node_to_be_copied->left)
+            recursive_copy_all(child, node_to_be_copied->left);
+        if (node_to_be_copied->right)
+            recursive_copy_all(child, node_to_be_copied->right);
     }
 
     void recursive_clear_all(ValueNode* node)
