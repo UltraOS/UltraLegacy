@@ -1,3 +1,21 @@
+#include <type_traits>
+#include <string>
+
+template <typename ColorT>
+std::enable_if_t<std::is_enum_v<ColorT> && std::is_same_v<decltype(ColorT::BLACK), decltype(ColorT::RED)>, std::string>
+serialize(ColorT color)
+{
+    switch (color)
+    {
+    case ColorT::RED:
+        return "RED";
+    case ColorT::BLACK:
+        return "BLACK";
+    default:
+        return "UNKNOWN";
+    }
+}
+
 #include "TestRunner.h"
 
 #define ASSERT(x) if (!(x)) throw FailedAssertion(#x, __FILE__, __LINE__)
@@ -31,10 +49,44 @@ void verify_tree_structure(const TreeT& tree)
     if (tree.empty())
         return;
 
+    Assert::that(tree.m_root->parent).is_equal(tree.super_root_as_value_node());
+
     if (tree.m_root->left)
         recursive_verify_one(tree.m_root, tree.m_root->left);
     if (tree.m_root->right)
         recursive_verify_one(tree.m_root, tree.m_root->right);
+}
+
+template <typename TreeNodeT>
+void recursive_verify_nodes(TreeNodeT left, TreeNodeT right)
+{
+    Assert::that(left).is_not_null();
+    Assert::that(right).is_not_null();
+
+    Assert::that(left->value).is_equal(right->value);
+    Assert::that(left->color).is_equal(right->color);
+
+    if (left->left)
+        recursive_verify_nodes(left->left, right->left);
+    if (left->right)
+        recursive_verify_nodes(left->right, right->right);
+}
+
+template <typename TreeT>
+void verify_trees_are_equal(const TreeT& left, const TreeT& right)
+{
+    Assert::that(left.size()).is_equal(right.size());
+
+    if (left.empty())
+        return;
+
+    Assert::that(left.m_root->value).is_equal(right.m_root->value);
+    Assert::that(left.m_root->color).is_equal(right.m_root->color);
+
+    if (left.m_root->left)
+        recursive_verify_nodes(left.m_root->left, right.m_root->left);
+    if (left.m_root->right)
+        recursive_verify_nodes(left.m_root->right, right.m_root->right);
 }
 
 TEST(Add) {
@@ -92,6 +144,46 @@ TEST(Destructor) {
     }
 
     Assert::that(items_deleted_counter).is_equal(test_size);
+}
+
+TEST(CopyConstructor) {
+    constexpr size_t test_size = 100;
+
+    kernel::RedBlackTree<size_t> original_tree;
+
+    for (size_t i = 0; i < test_size; ++i)
+        original_tree.add(i);
+
+    kernel::RedBlackTree<size_t> new_tree(original_tree);
+
+    Assert::that(new_tree.size()).is_equal(original_tree.size());
+
+    for (size_t i = 0; i < test_size; ++i)
+        Assert::that(new_tree.contains(i)).is_true();
+
+    verify_tree_structure(new_tree);
+    verify_trees_are_equal(original_tree, new_tree);
+}
+
+TEST(CopyAssignment) {
+    constexpr size_t test_size = 109;
+
+    kernel::RedBlackTree<size_t> original_tree;
+    kernel::RedBlackTree<size_t> new_tree;
+    new_tree.add(1);
+
+    for (size_t i = 0; i < test_size; ++i)
+        original_tree.add(i);
+
+    new_tree = original_tree;
+
+    Assert::that(new_tree.size()).is_equal(original_tree.size());
+
+    for (size_t i = 0; i < test_size; ++i)
+        Assert::that(new_tree.contains(i)).is_true();
+
+    verify_tree_structure(new_tree);
+    verify_trees_are_equal(original_tree, new_tree);
 }
 
 TEST(MoveConstructor) {
@@ -159,7 +251,7 @@ TEST(IteratorPostIncrement) {
 
     Assert::that(*(itr++)).is_equal(1);
     Assert::that(*(itr++)).is_equal(2);
-    Assert::that(itr == tree.end()).is_true();
+    Assert::that(itr).is_equal(tree.end());
 }
 
 TEST(IteratorPreIncrement) {
@@ -174,7 +266,7 @@ TEST(IteratorPreIncrement) {
     Assert::that(*itr).is_equal(1);
     Assert::that(*(++itr)).is_equal(2);
     Assert::that(*(++itr)).is_equal(3);
-    Assert::that(++itr == tree.end()).is_true();
+    Assert::that(++itr).is_equal(tree.end());
 }
 
 TEST(IteratorPostDecrement) {
@@ -186,10 +278,10 @@ TEST(IteratorPostDecrement) {
 
     kernel::RedBlackTree<size_t>::Iterator itr = tree.end();
 
-    Assert::that(itr-- == tree.end()).is_true();
+    Assert::that(itr--).is_equal(tree.end());
     Assert::that(*(itr--)).is_equal(3);
     Assert::that(*(itr--)).is_equal(2);
-    Assert::that(itr == tree.begin()).is_true();
+    Assert::that(itr).is_equal(tree.begin());
 }
 
 TEST(IteratorPreDecrement) {
@@ -204,7 +296,7 @@ TEST(IteratorPreDecrement) {
     Assert::that(*(--itr)).is_equal(3);
     Assert::that(*(--itr)).is_equal(2);
     Assert::that(*(--itr)).is_equal(1);
-    Assert::that(itr == tree.begin()).is_true();
+    Assert::that(itr).is_equal(tree.begin());
 }
 
 TEST(LowerBound) {
@@ -223,7 +315,7 @@ TEST(LowerBound) {
     Assert::that(*itr2).is_equal(20);
 
     auto itr3 = tree.lower_bound(100);
-    Assert::that(itr3 == tree.end()).is_true();
+    Assert::that(itr3).is_equal(tree.end());
 }
 
 TEST(UpperBound) {
@@ -242,7 +334,7 @@ TEST(UpperBound) {
     Assert::that(*itr2).is_equal(20);
 
     auto itr3 = tree.upper_bound(100);
-    Assert::that(itr3 == tree.end()).is_true();
+    Assert::that(itr3).is_equal(tree.end());
 }
 
 TEST(RemovalCase4) {
@@ -270,10 +362,10 @@ TEST(RemovalCase4) {
 
     tree.remove(20);
 
-    Assert::that(tree.find_node(-10)->is_black()).is_true();
-    Assert::that(tree.find_node(10)->is_black()).is_true();
-    Assert::that(tree.find_node(30)->is_black()).is_true();
-    Assert::that(tree.find_node(38)->is_red()).is_true();
+    Assert::that(tree.find_node(-10)->color).is_equal(Color::BLACK);
+    Assert::that(tree.find_node(10)->color).is_equal(Color::BLACK);
+    Assert::that(tree.find_node(30)->color).is_equal(Color::BLACK);
+    Assert::that(tree.find_node(38)->color).is_equal(Color::RED);
 
     verify_tree_structure(tree);
 }
@@ -297,10 +389,10 @@ TEST(RemovalCase6) {
 
     tree.remove(-10);
 
-    Assert::that(tree.find_node(10)->is_black()).is_true();
-    Assert::that(tree.find_node(30)->is_black()).is_true();
-    Assert::that(tree.find_node(25)->is_red()).is_true();
-    Assert::that(tree.find_node(40)->is_black()).is_true();
+    Assert::that(tree.find_node(10)->color).is_equal(Color::BLACK);
+    Assert::that(tree.find_node(30)->color).is_equal(Color::BLACK);
+    Assert::that(tree.find_node(25)->color).is_equal(Color::RED);
+    Assert::that(tree.find_node(40)->color).is_equal(Color::BLACK);
 
     verify_tree_structure(tree);
 }
@@ -324,8 +416,8 @@ TEST(RemovalCase3ToCase1) {
 
     tree.remove(-10);
 
-    Assert::that(tree.find_node(10)->is_black()).is_true();
-    Assert::that(tree.find_node(30)->is_red()).is_true();
+    Assert::that(tree.find_node(10)->color).is_equal(Color::BLACK);
+    Assert::that(tree.find_node(30)->color).is_equal(Color::RED);
 
     verify_tree_structure(tree);
 }
@@ -393,14 +485,14 @@ TEST(RemovalCase3ToCase5ToCase6) {
     tree.remove(-40);
 
     Assert::that(tree.m_root->parent).is_equal(tree.super_root_as_value_node());
-    Assert::that(tree.find_node(30)->is_black()).is_true();
-    Assert::that(tree.find_node(10)->is_black()).is_true();
-    Assert::that(tree.find_node(-30)->is_black()).is_true();
-    Assert::that(tree.find_node(15)->is_black()).is_true();
-    Assert::that(tree.find_node(-20)->is_red()).is_true();
-    Assert::that(tree.find_node(50)->is_black()).is_true();
-    Assert::that(tree.find_node(40)->is_black()).is_true();
-    Assert::that(tree.find_node(70)->is_black()).is_true();
+    Assert::that(tree.find_node(30)->color).is_equal(Color::BLACK);
+    Assert::that(tree.find_node(10)->color).is_equal(Color::BLACK);
+    Assert::that(tree.find_node(-30)->color).is_equal(Color::BLACK);
+    Assert::that(tree.find_node(15)->color).is_equal(Color::BLACK);
+    Assert::that(tree.find_node(-20)->color).is_equal(Color::RED);
+    Assert::that(tree.find_node(50)->color).is_equal(Color::BLACK);
+    Assert::that(tree.find_node(40)->color).is_equal(Color::BLACK);
+    Assert::that(tree.find_node(70)->color).is_equal(Color::BLACK);
 
     verify_tree_structure(tree);
 }
@@ -468,14 +560,14 @@ TEST(RemovalCase2ToCase4) {
     tree.remove(10);
 
     Assert::that(tree.m_root->parent).is_equal(tree.super_root_as_value_node());
-    Assert::that(tree.find_node(20)->is_black()).is_true();
-    Assert::that(tree.find_node(-10)->is_black()).is_true();
-    Assert::that(tree.find_node(-20)->is_black()).is_true();
-    Assert::that(tree.find_node(-5)->is_black()).is_true();
-    Assert::that(tree.find_node(60)->is_black()).is_true();
-    Assert::that(tree.find_node(40)->is_black()).is_true();
-    Assert::that(tree.find_node(50)->is_red()).is_true();
-    Assert::that(tree.find_node(80)->is_black()).is_true();
+    Assert::that(tree.find_node(20)->color).is_equal(Color::BLACK);
+    Assert::that(tree.find_node(-10)->color).is_equal(Color::BLACK);
+    Assert::that(tree.find_node(-20)->color).is_equal(Color::BLACK);
+    Assert::that(tree.find_node(-5)->color).is_equal(Color::BLACK);
+    Assert::that(tree.find_node(60)->color).is_equal(Color::BLACK);
+    Assert::that(tree.find_node(40)->color).is_equal(Color::BLACK);
+    Assert::that(tree.find_node(50)->color).is_equal(Color::RED);
+    Assert::that(tree.find_node(80)->color).is_equal(Color::BLACK);
 
     verify_tree_structure(tree);
 }
@@ -496,7 +588,7 @@ TEST(SuccessorIsChildOfRootRemoval) {
     tree.remove(1);
 
     verify_tree_structure(tree);
-    Assert::that(tree.find_node(2)->is_black()).is_true();
+    Assert::that(tree.find_node(2)->color).is_equal(Color::BLACK);
 }
 
 TEST(LotsOfRemoves) {
