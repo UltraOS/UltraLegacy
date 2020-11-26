@@ -256,10 +256,19 @@ inline std::enable_if_t<std::is_integral_v<T>, std::string> to_hex_string(T valu
 }
 
 template <typename T>
-inline std::enable_if_t<std::is_pointer_v<T> || std::is_null_pointer_v<T>, std::string> to_hex_string(T ptr)
+std::enable_if_t<std::is_integral_v<T>, std::string> serialize(T value)
+{
+    return std::to_string(value);
+}
+
+template <typename T>
+std::enable_if_t<std::is_pointer_v<T>, std::string> serialize(T ptr)
 {
     return to_hex_string<size_t>(reinterpret_cast<size_t>(ptr));
 }
+
+template<typename T>
+using try_serialize = decltype(serialize(std::declval<T>()));
 
 class Assert {
 public:
@@ -270,22 +279,55 @@ public:
 
         void is_equal(const T& other) {
             if (m_value != other)
-                throw FailedAssertion(std::to_string(m_value) + " != " + std::to_string(other), m_file, m_line);
+                throw FailedAssertion("<unserializable> != <unserializable>", m_file, m_line);
         }
 
         void is_not_equal(const T& other) {
             if (m_value == other)
-                throw FailedAssertion(std::to_string(m_value) + " == " + std::to_string(other), m_file, m_line);
+                throw FailedAssertion("<unserializable> == <unserializable>", m_file, m_line);
         }
 
         void is_less_than(const T& other) {
             if (m_value > other)
-                throw FailedAssertion(m_value + " > " + other, m_file, m_line);
+                throw FailedAssertion("<unserializable> > <unserializable>", m_file, m_line);
         }
 
         void is_greater_than(const T& other) {
             if (m_value < other)
-                throw FailedAssertion(m_value + " < " + other, m_file, m_line);
+                throw FailedAssertion("<unserializable> < <unserializable>", m_file, m_line);
+        }
+
+    private:
+        T m_value;
+
+        std::string m_file;
+        size_t      m_line;
+    };
+
+    template<typename T>
+    class Asserter<T, typename std::enable_if<std::is_same_v<std::string, try_serialize<T>> &&
+                      !std::is_pointer_v<T> && !std::is_same_v<T, bool>>::type> {
+    public:
+        Asserter(T value, std::string_view file, size_t line) : m_value(value), m_file(file), m_line(line) { }
+
+        void is_equal(const T& other) {
+            if (m_value != other)
+                throw FailedAssertion(serialize(m_value) + " != " + serialize(other), m_file, m_line);
+        }
+
+        void is_not_equal(const T& other) {
+            if (m_value == other)
+                throw FailedAssertion(serialize(m_value) + " == " + serialize(other), m_file, m_line);
+        }
+
+        void is_less_than(const T& other) {
+            if (m_value > other)
+                throw FailedAssertion(serialize(m_value) + " > " + serialize(other), m_file, m_line);
+        }
+
+        void is_greater_than(const T& other) {
+            if (m_value < other)
+                throw FailedAssertion(serialize(m_value) + " < " + serialize(other), m_file, m_line);
         }
 
     private:
@@ -304,22 +346,22 @@ public:
 
         void is_equal(const T& other) {
             if (m_value != other)
-                throw FailedAssertion(to_hex_string(m_value) + " != " + to_hex_string(other), m_file, m_line);
+                throw FailedAssertion(serialize(m_value) + " != " + serialize(other), m_file, m_line);
         }
 
         void is_not_equal(const T& other) {
             if (m_value == other)
-                throw FailedAssertion(to_hex_string(m_value) + " == " + to_hex_string(other), m_file, m_line);
+                throw FailedAssertion(serialize(m_value) + " == " + serialize(other), m_file, m_line);
         }
 
         void is_null() {
             if (m_value != nullptr)
-                throw FailedAssertion(to_hex_string(m_value) + " != nullptr", m_file, m_line);
+                throw FailedAssertion(serialize(m_value) + " != nullptr", m_file, m_line);
         }
 
         void is_not_null() {
             if (m_value == nullptr)
-                throw FailedAssertion(to_hex_string(m_value) + " == nullptr", m_file, m_line);
+                throw FailedAssertion(serialize(m_value) + " == nullptr", m_file, m_line);
         }
 
     private:

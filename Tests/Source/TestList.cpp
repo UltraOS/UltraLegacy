@@ -76,10 +76,7 @@ TEST(SpliceSingleEndToBegin) {
     Assert::that(*(itr++)).is_equal(4);
     Assert::that(*(itr++)).is_equal(1);
 
-    // TODO: this should be usable within the asserter?
-    bool is_end = itr == list.end();
-
-    Assert::that(is_end).is_true();
+    Assert::that(itr).is_equal(list.end());
 }
 
 TEST(SpliceSingleBeginToEnd) {
@@ -103,10 +100,7 @@ TEST(SpliceSingleBeginToEnd) {
     Assert::that(*(itr++)).is_equal(3);
     Assert::that(*(itr++)).is_equal(2);
 
-    // TODO: this should be usable within the asserter?
-    bool is_end = itr == list.end();
-
-    Assert::that(is_end).is_true();
+    Assert::that(itr).is_equal(list.end());
 }
 
 TEST(MultipleSpliceFront) {
@@ -133,8 +127,5 @@ TEST(MultipleSpliceFront) {
     Assert::that(*(itr++)).is_equal(1);
     Assert::that(*(itr++)).is_equal(2);
 
-    // TODO: this should be usable within the asserter?
-    bool is_end = itr == list_1.end();
-
-    Assert::that(is_end).is_true();
+    Assert::that(itr).is_equal(list_1.end());
 }
