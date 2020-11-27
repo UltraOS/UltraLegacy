@@ -2,6 +2,7 @@
 
 #include "Common/Types.h"
 #include "Common/Utilities.h"
+#include "Core/Runtime.h"
 
 namespace kernel {
 
@@ -23,7 +24,6 @@ public:
         if (this == &other)
             return *this;
 
-        clear();
         become(other);
 
         return *this;
@@ -79,6 +79,8 @@ public:
             if (!grandparent)
                 return nullptr;
 
+            ASSERT(parent != nullptr);
+
             if (parent->is_left_child())
                 return grandparent->right;
 
@@ -96,6 +98,8 @@ public:
         {
             bool left_child = is_left_child();
 
+            ASSERT(parent != nullptr);
+
             if (parent->is_left_child())
                 return left_child ? Position::LEFT_LEFT : Position::LEFT_RIGHT;
             else
@@ -104,6 +108,8 @@ public:
 
         ValueNodeT* sibling()
         {
+            ASSERT(parent != nullptr);
+
             if (is_left_child())
                 return parent->right;
             else
@@ -159,12 +165,14 @@ public:
 
         const T& operator*() const
         {
-            // TODO: ASSERT(m_node)
+            ASSERT(m_node && !m_node->is_null());
             return m_node->value;
         }
 
         Iterator& operator++()
         {
+            ASSERT(m_node && !m_node->is_null());
+
             m_node = inorder_successor_of(m_node);
 
             return *this;
@@ -172,6 +180,8 @@ public:
 
         Iterator operator++(int)
         {
+            ASSERT(m_node && !m_node->is_null());
+
             Iterator old(m_node);
 
             m_node = inorder_successor_of(m_node);
@@ -181,6 +191,10 @@ public:
 
         Iterator& operator--()
         {
+            // This should technically check that node is not equal begin(),
+            // but i'm not sure how we can verify that from here
+            ASSERT(m_node != nullptr);
+
             decrement();
 
             return *this;
@@ -188,6 +202,10 @@ public:
 
         Iterator operator--(int)
         {
+            // This should technically check that node is not equal begin(),
+            // but i'm not sure how we can verify that from here
+            ASSERT(m_node != nullptr);
+
             Iterator old(m_node);
 
             decrement();
@@ -197,24 +215,26 @@ public:
 
         const T* operator->() const
         {
+            ASSERT(m_node && !m_node->is_null());
+
             return &m_node->value;
         }
 
         bool operator==(const Iterator& other) const
         {
-            // TODO: assert owner == other.owner
             return m_node == other.m_node;
         }
 
         bool operator!=(const Iterator& other) const
         {
-            // TODO: assert owner == other.owner
             return m_node != other.m_node;
         }
 
     private:
         void decrement()
         {
+            ASSERT(m_node != nullptr);
+
             if (m_node->is_null()) {
                 m_node = m_node->right;
             } else {
@@ -286,8 +306,10 @@ public:
 
     const T& get(const T& value)
     {
-        // TODO: assert(find_node)
-        return find_node(value)->value;
+        auto* node = find_node(value);
+        ASSERT(node != nullptr);
+
+        return node->value;
     }
 
     bool contains(const T& value)
@@ -384,16 +406,18 @@ private:
 
     ValueNode* left_most_node() const
     {
-        return empty() ? super_root_as_value_node() : super_root_as_value_node()->left;
+        return empty() ? super_root_as_value_node() : m_super_root.left;
     }
 
     ValueNode* right_most_node() const
     {
-        return empty() ? super_root_as_value_node() : super_root_as_value_node()->right;
+        return empty() ? super_root_as_value_node() : m_super_root.right;
     }
 
     void become(const RedBlackTree& other)
     {
+        clear();
+
         if (other.empty())
             return;
 
@@ -429,6 +453,8 @@ private:
 
     void recursive_clear_all(ValueNode* node)
     {
+        ASSERT(node != nullptr);
+
         if (node->left == nullptr && node->right == nullptr) {
             delete node;
             return;
@@ -767,6 +793,8 @@ private:
 
             return;
         }
+
+        ASSERT(!"Bug! Couldn't match a case for node :(");
     }
 
     void fix_insertion_violations_if_needed(ValueNode* node)
@@ -789,6 +817,8 @@ private:
     void color_filp(ValueNode* violating_node)
     {
         auto* grandparent = violating_node->grandparent();
+
+        ASSERT(grandparent != nullptr);
 
         if (grandparent != m_root)
             grandparent->color = ValueNode::Color::RED;
@@ -829,11 +859,15 @@ private:
 
                 return;
             }
+            default:
+                ASSERT_NEVER_REACHED();
         }
     }
 
     void rotate_left(ValueNode* node)
     {
+        ASSERT(node != nullptr);
+
         auto* parent = node->parent;
         auto* right_child = node->right;
 
@@ -859,6 +893,8 @@ private:
 
     void rotate_right(ValueNode* node)
     {
+        ASSERT(node != nullptr);
+
         auto* parent = node->parent;
         auto* left_child = node->left;
 
@@ -885,6 +921,8 @@ private:
     template <typename ValueNodeT>
     static ValueNodeT inorder_successor_of(ValueNodeT node)
     {
+        ASSERT(node != nullptr);
+
         if (node->right) {
             node = node->right;
 
@@ -908,6 +946,8 @@ private:
     template <typename ValueNodeT>
     static ValueNodeT inorder_predecessor_of(ValueNodeT node)
     {
+        ASSERT(node != nullptr);
+
         if (node->left) {
             node = node->left;
 
