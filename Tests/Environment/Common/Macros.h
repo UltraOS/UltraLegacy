@@ -1,6 +1,5 @@
 #pragma once
 
-#define ASSERT(x)
 #define hang()
 
 #define KB (1024ull)

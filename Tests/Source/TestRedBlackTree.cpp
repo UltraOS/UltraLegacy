@@ -18,8 +18,6 @@ serialize(ColorT color)
 
 #include "TestRunner.h"
 
-#define ASSERT(x) if (!(x)) throw FailedAssertion(#x, __FILE__, __LINE__)
-
 // Important to be able to verify the tree structure
 #define private public
 #include "Common/RedBlackTree.h"
@@ -194,7 +192,7 @@ TEST(MoveConstructor) {
     for (size_t i = 0; i < test_size; ++i)
         original_tree.add(i);
 
-    kernel::RedBlackTree<size_t> new_tree(kernel::move(original_tree));
+    kernel::RedBlackTree<size_t> new_tree(move(original_tree));
 
     Assert::that(original_tree.size()).is_equal(0);
     Assert::that(new_tree.size()).is_equal(test_size);
@@ -209,7 +207,7 @@ TEST(MoveAssignment) {
     for (size_t i = 0; i < test_size; ++i)
         original_tree.add(i);
 
-    new_tree = kernel::move(original_tree);
+    new_tree = move(original_tree);
 
     Assert::that(original_tree.size()).is_equal(0);
     Assert::that(new_tree.size()).is_equal(test_size);

@@ -1,4 +1,6 @@
+#define FailedAssertion(ignored1, ignored2, ignored3) "FIXME :)"
 #include "Common/DynamicArray.h"
+#undef FailedAssertion
 
 #include "TestRunner.h"
 

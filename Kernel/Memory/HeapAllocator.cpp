@@ -1,6 +1,7 @@
 #include "Common/Lock.h"
 #include "Common/Logger.h"
 #include "Common/Memory.h"
+#include "Core/Runtime.h"
 
 #include "HeapAllocator.h"
 #include "MemoryManager.h"

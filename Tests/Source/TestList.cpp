@@ -1,5 +1,7 @@
 #include "Common/Macros.h" // koenig lookup
+#define FailedAssertion(ignored1, ignored2, ignored3) "FIXME :)"
 #include "Common/List.h"
+#undef FailedAssertion
 
 #include "TestRunner.h"
 
