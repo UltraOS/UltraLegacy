@@ -3,6 +3,9 @@
 #include "Common/DynamicArray.h"
 #include "Common/Logger.h"
 #include "Common/Macros.h"
+#include "Common/String.h"
+#include "Common/Lock.h"
+#include "Common/Types.h"
 
 namespace kernel {
 
