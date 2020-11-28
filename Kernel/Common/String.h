@@ -472,7 +472,18 @@ public:
     }
 
     template <typename T>
-    StackStringBuilder& operator<<(T value)
+    using enable_if_default_serializable_t = typename
+        enable_if<is_same_v<T, Address32>   ||
+                  is_same_v<T, Address64>   ||
+                  is_integral_v<T>          ||
+                  is_pointer_v<T>           ||
+                  is_same_v<T, const char*> ||
+                  is_same_v<T, StringView>  ||
+                  is_same_v<T, format>      ||
+                  is_same_v<T, bool>, StackStringBuilder&>::type;
+
+    template <typename T>
+    enable_if_default_serializable_t<T> operator<<(T value)
     {
         if constexpr (is_same_v<T, format>) {
             set_format(value);
