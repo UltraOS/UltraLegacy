@@ -12,3 +12,4 @@
 #define forward ::kernel::forward
 
 #define MAKE_STATIC(x) x() = delete;
+#define MAKE_NONCOPYABLE(x) x(const x&) = delete;

@@ -6,6 +6,7 @@ bin/
 Project/
 Scripts/vhc
 Tests/Environment/Memory/HeapAllocator.*
+Tests/Environment/Memory/VirtualAllocator.*
 Tests/Environment/Common/Types.h
 Tests/Environment/Common/DynamicArray.h
 Tests/Environment/Common/String.h

@@ -35,6 +35,8 @@ endfunction(KERNEL_FILE)
 
 KERNEL_FILE(PATH "Memory" FILE "HeapAllocator.cpp")
 KERNEL_FILE(PATH "Memory" FILE "HeapAllocator.h")
+KERNEL_FILE(PATH "Memory" FILE "VirtualAllocator.cpp")
+KERNEL_FILE(PATH "Memory" FILE "VirtualAllocator.h")
 KERNEL_FILE(PATH "Common" FILE "Types.h")
 KERNEL_FILE(PATH "Common" FILE "DynamicArray.h")
 KERNEL_FILE(PATH "Common" FILE "String.h")
