@@ -6,13 +6,16 @@
 
 namespace kernel {
 
-template <typename T>
+template <typename T, typename Compare = Less<T>>
 class RedBlackTree
 {
 public:
     using element_type = T;
 
-    RedBlackTree() = default;
+    RedBlackTree(Compare comparator = Compare())
+            : m_comparator(move(comparator))
+    {
+    }
 
     RedBlackTree(const RedBlackTree& other)
     {
@@ -30,7 +33,7 @@ public:
     }
 
     RedBlackTree(RedBlackTree&& other)
-        : m_root(other.m_root), m_size(other.m_size)
+        : m_root(other.m_root), m_size(other.m_size), m_comparator(move(other.m_comparator))
     {
         other.m_root = nullptr;
         other.m_size = 0;
@@ -43,6 +46,7 @@ public:
 
         swap(m_root, other.m_root);
         swap(m_size, other.m_size);
+        swap(m_comparator, other.m_comparator);
 
         return *this;
     }
@@ -273,12 +277,12 @@ public:
 
         if (m_super_root.left == nullptr)
             m_super_root.left = new_node;
-        else if (new_node->value < m_super_root.left->value)
+        else if (m_comparator(new_node->value, m_super_root.left->value))
             m_super_root.left = new_node;
 
         if (m_super_root.right == nullptr)
             m_super_root.right = new_node;
-        else if (m_super_root.right->value < new_node->value)
+        else if (m_comparator(m_super_root.right->value, new_node->value))
             m_super_root.right = new_node;
 
         if (m_root == nullptr) {
@@ -292,7 +296,7 @@ public:
         auto* current = m_root;
 
         for (;;) {
-            if (current->value < new_node->value) {
+            if (m_comparator(current->value, new_node->value)) {
                 if (current->right == nullptr) {
                     current->right = new_node;
                     new_node->parent = current;
@@ -380,7 +384,7 @@ public:
         ValueNode* result = super_root_as_value_node();
 
         while (node) {
-            if (node->value < value) {
+            if (m_comparator(node->value, value)) {
                 node = node->right;
             } else {
                 result = node;
@@ -400,7 +404,7 @@ public:
         ValueNode* result = super_root_as_value_node();
 
         while (node) {
-            if (value < node->value) {
+            if (m_comparator(value, node->value)) {
                 result = node;
                 node = node->left;
             } else {
@@ -456,6 +460,7 @@ private:
         m_root = new ValueNode(*const_cast<const ValueNode*>(other.m_root));
         m_root->parent = super_root_as_value_node();
         m_size = other.m_size;
+        m_comparator = other.m_comparator;
 
         if (other.m_root->left)
             recursive_copy_all(m_root, other.m_root->left);
@@ -510,9 +515,9 @@ private:
         auto* current_node = m_root;
 
         while (current_node) {
-            if (current_node->value < value) {
+            if (m_comparator(current_node->value, value)) {
                 current_node = current_node->right;
-            } else if (value < current_node->value) {
+            } else if (m_comparator(value, current_node->value)) {
                 current_node = current_node->left;
             } else {
                 return current_node;
@@ -1003,6 +1008,7 @@ private:
 private:
     ValueNode* m_root { nullptr };
     Node<ValueNode> m_super_root;
+    Compare m_comparator;
     size_t m_size { 0 };
 };
 
