@@ -471,6 +471,7 @@ public:
         m_format = new_format;
     }
 
+    // clang-format off
     template <typename T>
     using enable_if_default_serializable_t = typename
         enable_if<is_same_v<T, Address32>   ||
@@ -481,6 +482,7 @@ public:
                   is_same_v<T, StringView>  ||
                   is_same_v<T, format>      ||
                   is_same_v<T, bool>, StackStringBuilder&>::type;
+    // clang-format on
 
     template <typename T>
     enable_if_default_serializable_t<T> operator<<(T value)

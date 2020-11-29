@@ -7,13 +7,12 @@
 namespace kernel {
 
 template <typename T, typename Compare = Less<T>>
-class RedBlackTree
-{
+class RedBlackTree {
 public:
     using element_type = T;
 
     RedBlackTree(Compare comparator = Compare())
-            : m_comparator(move(comparator))
+        : m_comparator(move(comparator))
     {
     }
 
@@ -33,7 +32,9 @@ public:
     }
 
     RedBlackTree(RedBlackTree&& other)
-        : m_root(other.m_root), m_size(other.m_size), m_comparator(move(other.m_comparator))
+        : m_root(other.m_root)
+        , m_size(other.m_size)
+        , m_comparator(move(other.m_comparator))
     {
         other.m_root = nullptr;
         other.m_size = 0;
@@ -168,7 +169,10 @@ public:
         friend class RedBlackTree;
 
         Iterator() { }
-        Iterator(const ValueNode* node) : m_node(node) { }
+        Iterator(const ValueNode* node)
+            : m_node(node)
+        {
+        }
 
         const T& operator*() const
         {
@@ -599,13 +603,13 @@ private:
         auto* node_parent = node->parent;
         auto* node_right = node->right;
         auto* node_left = node->left;
-        auto  node_color = node->color;
+        auto node_color = node->color;
         bool node_is_left_child = node->is_left_child();
 
         auto* successor_parent = successor->parent;
         auto* successor_right = successor->right;
         auto* successor_left = successor->left;
-        auto  successor_color = successor->color;
+        auto successor_color = successor->color;
         bool successor_is_left_child = successor->is_left_child();
 
         if (successor_parent == node) {
@@ -705,6 +709,7 @@ private:
         fix_double_black(child);
     }
 
+    // clang-format off
     void fix_double_black(ValueNode* node)
     {
         // CASE 1
@@ -833,6 +838,7 @@ private:
 
         ASSERT(!"Bug! Couldn't match a case for node :(");
     }
+    // clang-format on
 
     void fix_insertion_violations_if_needed(ValueNode* node)
     {
@@ -866,38 +872,37 @@ private:
 
     void rotate(ValueNode* violating_node)
     {
-        switch (violating_node->position_with_respect_to_grandparent())
-        {
-            case ValueNode::Position::LEFT_RIGHT: // left-right rotation
-                rotate_left(violating_node->parent);
-                violating_node = violating_node->left;
-                [[fallthrough]];
-            case ValueNode::Position::LEFT_LEFT: { // right rotation
-                auto* grandparent = violating_node->grandparent();
-                grandparent->color = ValueNode::Color::RED;
-                violating_node->parent->color = ValueNode::Color::BLACK;
-                violating_node->color = ValueNode::Color::RED;
+        switch (violating_node->position_with_respect_to_grandparent()) {
+        case ValueNode::Position::LEFT_RIGHT: // left-right rotation
+            rotate_left(violating_node->parent);
+            violating_node = violating_node->left;
+            [[fallthrough]];
+        case ValueNode::Position::LEFT_LEFT: { // right rotation
+            auto* grandparent = violating_node->grandparent();
+            grandparent->color = ValueNode::Color::RED;
+            violating_node->parent->color = ValueNode::Color::BLACK;
+            violating_node->color = ValueNode::Color::RED;
 
-                rotate_right(grandparent);
+            rotate_right(grandparent);
 
-                return;
-            }
-            case ValueNode::Position::RIGHT_LEFT: // right-left rotation
-                rotate_right(violating_node->parent);
-                violating_node = violating_node->right;
-                [[fallthrough]];
-            case ValueNode::Position::RIGHT_RIGHT: { // left rotation
-                auto* grandparent = violating_node->grandparent();
-                grandparent->color = ValueNode::Color::RED;
-                violating_node->parent->color = ValueNode::Color::BLACK;
-                violating_node->color = ValueNode::Color::RED;
+            return;
+        }
+        case ValueNode::Position::RIGHT_LEFT: // right-left rotation
+            rotate_right(violating_node->parent);
+            violating_node = violating_node->right;
+            [[fallthrough]];
+        case ValueNode::Position::RIGHT_RIGHT: { // left rotation
+            auto* grandparent = violating_node->grandparent();
+            grandparent->color = ValueNode::Color::RED;
+            violating_node->parent->color = ValueNode::Color::BLACK;
+            violating_node->color = ValueNode::Color::RED;
 
-                rotate_left(grandparent);
+            rotate_left(grandparent);
 
-                return;
-            }
-            default:
-                ASSERT_NEVER_REACHED();
+            return;
+        }
+        default:
+            ASSERT_NEVER_REACHED();
         }
     }
 
