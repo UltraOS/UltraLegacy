@@ -60,4 +60,20 @@ bit_cast(From value)
     return to;
 }
 // clang-format on
+
+template <typename T>
+struct Less {
+    constexpr bool operator()(const T& l, const T& r) const
+    {
+        return l < r;
+    }
+};
+
+template <typename T>
+struct Greater {
+    constexpr bool operator()(const T& l, const T& r) const
+    {
+        return l > r;
+    }
+};
 }
