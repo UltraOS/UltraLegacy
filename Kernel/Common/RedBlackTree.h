@@ -161,7 +161,10 @@ public:
 
     class Iterator {
     public:
-        Iterator(const ValueNode* node) : m_node(node) {}
+        friend class RedBlackTree;
+
+        Iterator() { }
+        Iterator(const ValueNode* node) : m_node(node) { }
 
         const T& operator*() const
         {
@@ -243,7 +246,7 @@ public:
         }
 
     private:
-        const ValueNode* m_node;
+        const ValueNode* m_node { nullptr };
     };
 
     Iterator begin() const
@@ -253,8 +256,18 @@ public:
 
     Iterator end() const { return Iterator(super_root_as_value_node()); }
 
+    void push(const T& value)
+    {
+        emplace(value);
+    }
+
+    void push(T&& value)
+    {
+        emplace(move(value));
+    }
+
     template <typename... Args>
-    void add(Args&&... args)
+    void emplace(Args&&... args)
     {
         auto* new_node = new ValueNode(forward<Args>(args)...);
 
@@ -317,27 +330,46 @@ public:
         return find_node(value) != nullptr;
     }
 
-    void remove(const T& value)
+    void remove(Iterator iterator)
     {
-        auto* node = find_node(value);
+        auto* node = const_cast<ValueNode*>(iterator.m_node);
 
-        if (!node)
-            return;
+        ASSERT(node && node != super_root_as_value_node());
 
         if (node == m_root && size() == 1) {
             m_super_root.left = nullptr;
             m_super_root.right = nullptr;
         } else if (node == left_most_node()) {
-            super_root_as_value_node()->left = inorder_successor_of(node);
+            m_super_root.left = inorder_successor_of(node);
         } else if (node == right_most_node()) {
-            super_root_as_value_node()->right = inorder_predecessor_of(node);
+            m_super_root.right = inorder_predecessor_of(node);
         }
 
         remove_node(node);
     }
 
+    void remove(const T& value)
+    {
+        auto node = find(value);
+
+        if (node == end())
+            return;
+
+        remove(node);
+    }
+
     size_t size() const { return m_size; }
     bool empty() const { return m_size == 0; }
+
+    Iterator find(const T& value)
+    {
+        auto* node = find_node(value);
+
+        if (!node)
+            node = super_root_as_value_node();
+
+        return { node };
+    }
 
     Iterator lower_bound(const T& value)
     {
