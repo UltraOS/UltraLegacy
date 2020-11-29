@@ -110,7 +110,7 @@ TEST(Emplace) {
 struct ComparableDeletable : Deletable {
     ComparableDeletable(size_t& counter) : Deletable(counter) {}
 
-    bool operator<(const ComparableDeletable&) { return rand() % 10 > 5; }
+    bool operator<(const ComparableDeletable&) const { return rand() % 10 > 5; }
 };
 
 TEST(Clear) {
@@ -634,4 +634,26 @@ TEST(RemoveWithIterator) {
     tree.remove(itr);
 
     Assert::that(tree.empty()).is_true();
+}
+
+TEST(GreaterCompare) {
+    kernel::RedBlackTree<int, kernel::Greater<int>> tree;
+
+    for (int i = 0; i < 100; ++i)
+        tree.push(i);
+
+    for (int i = 0; i < 100; ++i)
+        Assert::that(tree.contains(i)).is_true();
+
+    Assert::that(*tree.begin()).is_equal(99);
+    Assert::that(*(--tree.end())).is_equal(0);
+    Assert::that(tree.m_super_root.left->value).is_equal(99);
+    Assert::that(tree.m_super_root.right->value).is_equal(0);
+
+    int expected = 99;
+    for (const auto& elem : tree) {
+        Assert::that(elem).is_equal(expected--);
+    }
+
+    Assert::that(expected).is_equal(-1);
 }
