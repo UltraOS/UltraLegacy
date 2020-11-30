@@ -657,3 +657,10 @@ TEST(GreaterCompare) {
 
     Assert::that(expected).is_equal(-1);
 }
+
+TEST(ReturnedIterator) {
+    kernel::RedBlackTree<int> tree;
+
+    Assert::that(*tree.emplace(1)).is_equal(1);
+    Assert::that(*tree.push(2)).is_equal(2);
+}
