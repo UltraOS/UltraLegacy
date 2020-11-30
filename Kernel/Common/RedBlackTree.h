@@ -264,18 +264,18 @@ public:
 
     Iterator end() const { return Iterator(super_root_as_value_node()); }
 
-    void push(const T& value)
+    Iterator push(const T& value)
     {
-        emplace(value);
+        return emplace(value);
     }
 
-    void push(T&& value)
+    Iterator push(T&& value)
     {
-        emplace(move(value));
+        return emplace(move(value));
     }
 
     template <typename... Args>
-    void emplace(Args&&... args)
+    Iterator emplace(Args&&... args)
     {
         auto* new_node = new ValueNode(forward<Args>(args)...);
 
@@ -294,7 +294,7 @@ public:
             m_root->parent = super_root_as_value_node();
             m_root->color = ValueNode::Color::BLACK;
             m_size = 1;
-            return;
+            return Iterator(new_node);
         }
 
         auto* current = m_root;
@@ -323,6 +323,8 @@ public:
 
         fix_insertion_violations_if_needed(new_node);
         ++m_size;
+
+        return Iterator(new_node);
     }
 
     const T& get(const T& value)
