@@ -167,6 +167,10 @@ private:
                     std::cout << "\u001b[31mFAILED!\u001b[0m " << ex.what() << std::endl;
                     std::cout << "Terminating..." << std::endl;
                     exit(-1);
+                } catch (...) {
+                    std::cout << "\u001b[31mFAILED!\u001b[0m " << "<unknown exception>" << std::endl;
+                    std::cout << "Terminating..." << std::endl;
+                    exit(-1);
                 }
             }
         }
@@ -178,12 +182,12 @@ private:
 
             try {
                 test->run();
-            }
-            catch (const FailedAssertion& ex) {
+            } catch (const FailedAssertion& ex) {
                 failure_reason = build_error_message(ex);
-            }
-            catch (const std::exception& ex) {
+            } catch (const std::exception& ex) {
                 failure_reason = ex.what();
+            } catch (...) {
+                failure_reason = "<unknown exception>";
             }
 
             if (failure_reason.empty()) {
