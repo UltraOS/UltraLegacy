@@ -131,13 +131,21 @@ public:
 
         std::cout << std::endl << "Results => "
                   << s_pass_count << " passed / "
+                  << s_skip_count << " skipped / "
                   << s_fail_count << " failed (" << s_pass_count << "/"
-                  << s_ran_count << ")" << std::endl;
+                  << s_ran_count + s_skip_count << ")" << std::endl;
 
         return static_cast<int>(s_fail_count);
     }
 
 private:
+    static constexpr std::string_view pass_string = "\u001b[32mPASSED\u001b[0m ";
+    static constexpr std::string_view skip_string = "\u001b[33mSKIPPED\u001b[0m ";
+    static constexpr std::string_view fail_string = "\u001b[31mFAILED\u001b[0m ";
+
+    static constexpr std::string_view fixture_pass_string = "\u001b[32mOK\u001b[0m ";
+    static constexpr std::string_view fixture_fail_string = fail_string;
+
     static void run_all()
     {
         for (auto& subject : s_tests) {
@@ -152,26 +160,35 @@ private:
         std::cout << "Running tests for \"" << subject_name << "\" (" << tests.size() << " tests)" << std::endl;
 
         if (s_fixtures.count(subject_name)) {
+            bool fixture_failed = true;
+
             for (auto fixture : s_fixtures[subject_name]) {
+                fixture_failed = true;
                 try {
                     std::cout << "---- Running fixture \"" << fixture->name() << "\"... ";
                     fixture->run();
-                    std::cout << "\u001b[32mOK\u001b[0m" << std::endl;
-                }
-                catch (const FailedAssertion& ex) {
-                    std::cout << "\u001b[31mFAILED!\u001b[0m " << build_error_message(ex) << std::endl;
-                    std::cout << "Terminating..." << std::endl;
-                    exit(-1);
-                }
-                catch (const std::exception& ex) {
-                    std::cout << "\u001b[31mFAILED!\u001b[0m " << ex.what() << std::endl;
-                    std::cout << "Terminating..." << std::endl;
-                    exit(-1);
+                    fixture_failed = false;
+                    std::cout << fixture_pass_string << std::endl;
+                } catch (const FailedAssertion& ex) {
+                    std::cout << fixture_fail_string << build_error_message(ex) << std::endl;
+                    break;
+                } catch (const std::exception& ex) {
+                    std::cout << fixture_fail_string << ex.what() << std::endl;
+                    break;
                 } catch (...) {
-                    std::cout << "\u001b[31mFAILED!\u001b[0m " << "<unknown exception>" << std::endl;
-                    std::cout << "Terminating..." << std::endl;
-                    exit(-1);
+                    std::cout << fixture_fail_string << "<unknown exception>" << std::endl;
+                    break;
                 }
+            }
+
+            if (fixture_failed) {
+                for (auto test : tests) {
+                    std::cout << "---- Running test \"" << test->name() << "\"... " << skip_string << std::endl;
+                    s_skip_count++;
+                }
+
+                std::cout << std::endl;
+                return;
             }
         }
 
@@ -191,11 +208,10 @@ private:
             }
 
             if (failure_reason.empty()) {
-                std::cout << "\u001b[32mPASSED!\u001b[0m" << std::endl;
+                std::cout << pass_string << std::endl;
                 ++s_pass_count;
-            }
-            else {
-                std::cout << "\u001b[31mFAILED!\u001b[0m" << " (" << failure_reason << ")" << std::endl;
+            } else {
+                std::cout << fail_string << " (" << failure_reason << ")" << std::endl;
                 ++s_fail_count;
             }
 
@@ -234,6 +250,7 @@ private:
     inline static std::unordered_map<std::string_view, std::vector<Fixture*>> s_fixtures;
     inline static size_t s_ran_count;
     inline static size_t s_pass_count;
+    inline static size_t s_skip_count;
     inline static size_t s_fail_count;
 };
 
