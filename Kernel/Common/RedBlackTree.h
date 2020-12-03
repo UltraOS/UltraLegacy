@@ -381,7 +381,7 @@ public:
         return { node };
     }
 
-    Iterator lower_bound(const T& value)
+    Iterator lower_bound(const T& value) const
     {
         if (empty())
             return Iterator(super_root_as_value_node());
@@ -401,7 +401,7 @@ public:
         return Iterator(result);
     }
 
-    Iterator upper_bound(const T& value)
+    Iterator upper_bound(const T& value) const
     {
         if (m_root == nullptr)
             return Iterator(super_root_as_value_node());
