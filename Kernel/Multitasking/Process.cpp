@@ -80,7 +80,7 @@ Process::Process(Address entrypoint, size_t stack_size, bool is_supervisor)
 {
     if (is_user()) {
         auto& kernel_allocator = AddressSpace::of_kernel().allocator();
-        auto stack_range = kernel_allocator.allocate_range(default_kernel_stack_size);
+        auto stack_range = kernel_allocator.allocate(default_kernel_stack_size);
         MemoryManager::the().force_preallocate(stack_range, true);
 
         m_address_space = RefPtr<AddressSpace>::create(MemoryManager::the().allocate_page());
@@ -88,13 +88,13 @@ Process::Process(Address entrypoint, size_t stack_size, bool is_supervisor)
 
         auto main_thread = Thread::create_user_thread(
             *m_address_space,
-            user_allocator.allocate_range(stack_size).end(),
+            user_allocator.allocate(stack_size).end(),
             stack_range.end(),
             entrypoint);
         m_threads.emplace(main_thread);
     } else {
         auto& kernel_allocator = AddressSpace::of_kernel().allocator();
-        auto stack_range = kernel_allocator.allocate_range(stack_size);
+        auto stack_range = kernel_allocator.allocate(stack_size);
         MemoryManager::the().force_preallocate(stack_range, true);
         auto main_thread = Thread::create_supervisor_thread(stack_range.end(), entrypoint);
 

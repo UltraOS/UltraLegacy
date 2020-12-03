@@ -197,9 +197,13 @@ void DemoTTY::execute_command()
         write("uptime - get current uptime\n"_sv);
         write("kheap - get current kernel heap usage stats\n"_sv);
         write("memory-map - physical RAM memory map as reported by BIOS\n"_sv);
+        write("vmdump - get kernel address space virtual memory dump\n"_sv);
         write("video-mode - get current video mode information\n"_sv);
         write("cpu - get CPU information\n"_sv);
         write("clear - clear the terminal screen\n"_sv);
+    } else if (m_current_command == "vmdump"_sv) {
+        write("\nVirtual memory dump:\n");
+        write(AddressSpace::of_kernel().allocator().debug_dump().to_view());
     } else if (m_current_command.empty()) {
         write("\n");
     } else {

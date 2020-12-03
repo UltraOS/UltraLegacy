@@ -22,7 +22,7 @@ GenericVideoDevice::GenericVideoDevice(const VideoMode& video_mode)
 
     log() << "GenericVideoDevice: allocating " << aligned_bytes_to_allocate << " bytes for the framebuffer...";
 
-    auto range = AddressSpace::of_kernel().allocator().allocate_range(aligned_bytes_to_allocate);
+    auto range = AddressSpace::of_kernel().allocator().allocate(aligned_bytes_to_allocate);
 
     size_t page_index = 0;
     for (Address current_address = range.begin(); current_address < range.end(); current_address += Page::size) {

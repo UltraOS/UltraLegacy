@@ -17,7 +17,7 @@ LAPIC::Timer* LAPIC::s_timer;
 void LAPIC::set_base_address(Address physical_base)
 {
 #ifdef ULTRA_32
-    s_base = AddressSpace::of_kernel().allocator().allocate_range(4096).begin();
+    s_base = AddressSpace::of_kernel().allocator().allocate(4096).begin();
 
     AddressSpace::of_kernel().map_page(s_base, physical_base);
 #elif defined(ULTRA_64)
@@ -200,7 +200,7 @@ void LAPIC::start_processor(u8 id)
 
     // TODO: add a literal allocate_stack() function
     // allocate the initial AP stack
-    auto ap_stack = AddressSpace::of_kernel().allocator().allocate_range(Process::default_kernel_stack_size);
+    auto ap_stack = AddressSpace::of_kernel().allocator().allocate(Process::default_kernel_stack_size);
     *MemoryManager::physical_to_virtual(address_of_stack).as_pointer<ptr_t>() = ap_stack.end();
     MemoryManager::the().force_preallocate(ap_stack, true);
 

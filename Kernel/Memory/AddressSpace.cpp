@@ -89,11 +89,11 @@ void AddressSpace::inititalize()
 #endif
 
     s_of_kernel->flush_all();
-    s_of_kernel->allocator().set_range(MemoryManager::kernel_usable_base, MemoryManager::kernel_usable_length);
+    s_of_kernel->allocator().reset_with(MemoryManager::kernel_usable_base, MemoryManager::kernel_usable_length);
 
 #ifdef ULTRA_32
     // allocate a quickmap range
-    auto range = s_of_kernel->allocator().allocate_range(Page::size);
+    auto range = s_of_kernel->allocator().allocate(Page::size);
     MemoryManager::the().set_quickmap_range(range);
 #endif
 }

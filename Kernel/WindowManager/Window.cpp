@@ -33,7 +33,7 @@ Window::Window(Thread& owner, Style style, const Rect& window_rect, RefPtr<Theme
     auto full_window_rect = full_rect();
     auto pages_needed = ceiling_divide(full_window_rect.width() * full_window_rect.height() * sizeof(u32), Page::size);
 
-    auto bitmap_range = AddressSpace::current().allocator().allocate_range(pages_needed * Page::size);
+    auto bitmap_range = AddressSpace::current().allocator().allocate(pages_needed * Page::size);
     auto bitmap = bitmap_range.as_pointer<void>();
 
     MemoryManager::the().force_preallocate(bitmap_range);
