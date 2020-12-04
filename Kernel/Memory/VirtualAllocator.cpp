@@ -61,22 +61,25 @@ bool VirtualAllocator::is_allocated(Address address) const
     return range != m_allocated_ranges.end() && range->contains(address);
 }
 
-void VirtualAllocator::merge_ranges_if_possible(RangeIterator range_before, RangeIterator range_after, Range new_range)
+void VirtualAllocator::merge_and_emplace(RangeIterator before, RangeIterator after, Range new_range)
 {
-    if (range_after != m_allocated_ranges.end() && range_after->begin() == new_range.end() && range_before->end() == new_range.begin()) {
-        auto merged_range = Range::from_two_pointers(range_before->begin(), range_after->end());
-        m_allocated_ranges.remove(range_before);
-        m_allocated_ranges.remove(range_after);
+    bool before_mergeable = before != m_allocated_ranges.end() && before->end() == new_range.begin();
+    bool after_mergeable = after != m_allocated_ranges.end() && after->begin() == new_range.end();
+
+    if (before_mergeable && after_mergeable) {
+        auto merged_range = Range::from_two_pointers(before->begin(), after->end());
+        m_allocated_ranges.remove(before);
+        m_allocated_ranges.remove(after);
         m_allocated_ranges.emplace(merged_range);
-    } else if (range_before->end() == new_range.begin()) {
-        auto merged_range = Range::from_two_pointers(range_before->begin(), new_range.end());
-        m_allocated_ranges.remove(range_before);
+    } else if (before_mergeable) {
+        auto merged_range = Range::from_two_pointers(before->begin(), new_range.end());
+        m_allocated_ranges.remove(before);
         m_allocated_ranges.emplace(merged_range);
-    } else if (range_before->begin() == new_range.end()) {
-        auto merged_range = Range::from_two_pointers(new_range.begin(), range_before->end());
-        m_allocated_ranges.remove(range_before);
+    } else if (after_mergeable) {
+        auto merged_range = Range::from_two_pointers(new_range.begin(), after->end());
+        m_allocated_ranges.remove(after);
         m_allocated_ranges.emplace(merged_range);
-    } else {
+    } else { // entirely new range, cannot merge anything :(
         m_allocated_ranges.emplace(new_range);
     }
 }
@@ -98,23 +101,25 @@ VirtualAllocator::Range VirtualAllocator::allocate(size_t length, size_t alignme
         runtime::panic(error_string.data());
     };
 
-    length = Page::round_up(length);
-    auto aligned_length = length + alignment;
+    auto rounded_up_length = Page::round_up(length);
+
+    if (rounded_up_length < length) {
+        StackStringBuilder error_string;
+        error_string << "VirtualAllocator: Length overflow with length=" << length << ", alignment=" << alignment;
+        runtime::panic(error_string.data());
+    }
+
+    length = rounded_up_length;
 
     Range allocated_range;
 
     if (m_allocated_ranges.empty()) {
-        allocated_range = m_base_range;
-        bool is_aligned = allocated_range.is_aligned_to(alignment);
+        allocated_range = m_base_range.aligned_to(alignment);
 
         // FIXME: any failure to allocate is considered fatal for now.
-        if (is_aligned && m_base_range.length() < length) {
+        if (!allocated_range || allocated_range.length() < length)
             fail_on_allocation(length, alignment);
-        } else if (!is_aligned && m_base_range.length() < aligned_length) {
-            fail_on_allocation(length, alignment);
-        }
-
-        allocated_range.align_to(alignment);
+        
         allocated_range.set_length(length);
         m_allocated_ranges.emplace(allocated_range);
         return allocated_range;
@@ -126,10 +131,9 @@ VirtualAllocator::Range VirtualAllocator::allocate(size_t length, size_t alignme
     auto gap_begin = m_base_range.begin();
 
     for (range_after = m_allocated_ranges.begin(); range_after != m_allocated_ranges.end(); ++range_after) {
-        auto potential_range = Range::from_two_pointers(gap_begin, range_after->begin());
-        bool is_aligned = potential_range.is_aligned_to(alignment);
+        auto potential_range = Range::from_two_pointers(gap_begin, range_after->begin()).aligned_to(alignment);
 
-        if ((is_aligned && potential_range.length() < length) || (!is_aligned && potential_range.length() < aligned_length)) {
+        if (!potential_range || potential_range.length() < length) {
             range_before = range_after;
             gap_begin = range_after->end();
             continue;
@@ -140,22 +144,17 @@ VirtualAllocator::Range VirtualAllocator::allocate(size_t length, size_t alignme
     }
 
     if (allocated_range.empty()) {
-        auto potential_range = Range::from_two_pointers(gap_begin, m_base_range.end());
-        bool is_aligned = potential_range.is_aligned_to(alignment);
+        auto potential_range = Range::from_two_pointers(gap_begin, m_base_range.end()).aligned_to(alignment);
 
-        if ((is_aligned && potential_range.length() < length) || (!is_aligned && potential_range.length() < aligned_length)) {
+        if (!potential_range || potential_range.length() < length)
             fail_on_allocation(length, alignment);
-        }
 
         range_before = --m_allocated_ranges.end();
         allocated_range = potential_range;
         allocated_range.set_length(length);
-        allocated_range.align_to(alignment);
     }
 
-    allocated_range.align_to(alignment);
-
-    merge_ranges_if_possible(range_before, range_after, allocated_range);
+    merge_and_emplace(range_before, range_after, allocated_range);
 
 #ifdef VIRTUAL_ALLOCATOR_DEBUG
     log() << "VirtualAllocator: allocating a new range " << allocated_range;
@@ -203,10 +202,10 @@ VirtualAllocator::Range VirtualAllocator::allocate(Range range)
     if (range_after != m_allocated_ranges.end() && range_after->contains(range.end() - 1))
         fail_on_allocated_range(range);
 
-    if (it->begin() == range.begin() || it->contains(range.begin()))
+    if (it != m_allocated_ranges.end() && (it->begin() == range.begin() || it->contains(range.begin())))
         fail_on_allocated_range(range);
 
-    merge_ranges_if_possible(it, range_after, range);
+    merge_and_emplace(it, range_after, range);
 
     return range;
 }
@@ -249,7 +248,7 @@ void VirtualAllocator::deallocate(const Range& range)
     if (it == m_allocated_ranges.end() || it->begin() != range.begin())
         --it;
 
-    if (!it->contains(range))
+    if (it == m_allocated_ranges.end() || !it->contains(range))
         fail_on_unknown_range(range);
 
     auto range_before = it->clipped_with_end(range.begin());

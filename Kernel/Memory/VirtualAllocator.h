@@ -23,10 +23,13 @@ public:
             : m_begin(start)
             , m_end(start + length)
         {
+            ASSERT(m_begin <= m_end);
         }
 
         static Range from_two_pointers(Address begin, Address end)
         {
+            ASSERT(begin <= end);
+
             Range r;
             r.m_begin = begin;
             r.m_end = end;
@@ -131,11 +134,26 @@ public:
 
         void align_to(size_t alignment)
         {
-            auto alignment_overhead = m_begin % alignment;
+            auto remainder = m_begin % alignment;
+            auto aligned_begin = remainder ? Address(m_begin + (alignment - remainder)) : m_begin;
 
-            ASSERT(m_begin + alignment_overhead < m_end);
+            ASSERT(aligned_begin < m_end);
+            ASSERT(aligned_begin >= m_begin);
 
-            m_begin = m_begin + alignment_overhead;
+            m_begin = aligned_begin;
+        }
+
+        Range aligned_to(size_t alignment)
+        {
+            auto remainder = m_begin % alignment;
+            auto aligned_begin = remainder ? Address(m_begin + (alignment - remainder)) : m_begin;
+
+            // Overflow or not enough length to handle alignment
+            if (aligned_begin < m_begin || aligned_begin >= m_end) {
+                return {};
+            }
+
+            return Range::from_two_pointers(aligned_begin, m_end);
         }
 
         template <typename StreamT>
@@ -170,7 +188,7 @@ public:
     String debug_dump() const;
 
 private:
-    void merge_ranges_if_possible(RangeIterator before, RangeIterator after, Range new_range);
+    void merge_and_emplace(RangeIterator before, RangeIterator after, Range new_range);
 
 private:
     Range m_base_range;
