@@ -61,7 +61,7 @@ public:
 
         bool is_left_child() const
         {
-            if (!parent || (parent->left == this))
+            if (!parent || parent->is_null() || parent->left == this)
                 return true;
 
             return false;
@@ -71,7 +71,7 @@ public:
 
         ValueNodeT* grandparent() const
         {
-            if (!parent)
+            if (!parent || parent->is_null())
                 return nullptr;
 
             return parent->parent;
@@ -479,6 +479,11 @@ private:
 
     void recursive_copy_all(ValueNode* new_parent, ValueNode* node_to_be_copied)
     {
+        ASSERT(new_parent != nullptr);
+        ASSERT(node_to_be_copied != nullptr);
+        ASSERT(!new_parent->is_null());
+        ASSERT(!node_to_be_copied->is_null());
+
         auto* child = new ValueNode(*const_cast<const ValueNode*>(node_to_be_copied));
 
         if (node_to_be_copied->is_left_child())
@@ -497,6 +502,7 @@ private:
     void recursive_clear_all(ValueNode* node)
     {
         ASSERT(node != nullptr);
+        ASSERT(!node->is_null());
 
         if (node->left == nullptr && node->right == nullptr) {
             delete node;
@@ -537,6 +543,8 @@ private:
     {
         if (node == nullptr)
             return;
+
+        ASSERT(!node->is_null());
 
         if (!(node->left && node->right)) { // leaf or root or 1 child
             auto* child = node->left ? node->left : node->right;
@@ -602,6 +610,11 @@ private:
 
     void swap_node_with_successor(ValueNode* node, ValueNode* successor)
     {
+        ASSERT(node != nullptr);
+        ASSERT(!node->is_null());
+        ASSERT(successor != nullptr);
+        ASSERT(!successor->is_null());
+
         auto* node_parent = node->parent;
         auto* node_right = node->right;
         auto* node_left = node->left;
@@ -714,6 +727,9 @@ private:
     // clang-format off
     void fix_double_black(ValueNode* node)
     {
+        ASSERT(node != nullptr);
+        ASSERT(!node->is_null());
+
         // CASE 1
         if (node == m_root) {
             node->color = ValueNode::Color::BLACK;
@@ -844,6 +860,9 @@ private:
 
     void fix_insertion_violations_if_needed(ValueNode* node)
     {
+        ASSERT(node != nullptr);
+        ASSERT(!node->is_null());
+
         while (!node->is_null() && node != m_root) {
             if (node->parent->is_black() || node->is_black())
                 return;
@@ -861,6 +880,9 @@ private:
 
     void color_filp(ValueNode* violating_node)
     {
+        ASSERT(violating_node != nullptr);
+        ASSERT(!violating_node->is_null());
+
         auto* grandparent = violating_node->grandparent();
 
         ASSERT(grandparent != nullptr);
@@ -874,6 +896,9 @@ private:
 
     void rotate(ValueNode* violating_node)
     {
+        ASSERT(violating_node != nullptr);
+        ASSERT(!violating_node->is_null());
+
         switch (violating_node->position_with_respect_to_grandparent()) {
         case ValueNode::Position::LEFT_RIGHT: // left-right rotation
             rotate_left(violating_node->parent);
@@ -911,6 +936,7 @@ private:
     void rotate_left(ValueNode* node)
     {
         ASSERT(node != nullptr);
+        ASSERT(!node->is_null());
 
         auto* parent = node->parent;
         auto* right_child = node->right;
@@ -938,6 +964,7 @@ private:
     void rotate_right(ValueNode* node)
     {
         ASSERT(node != nullptr);
+        ASSERT(!node->is_null());
 
         auto* parent = node->parent;
         auto* left_child = node->left;
@@ -966,6 +993,7 @@ private:
     static ValueNodeT inorder_successor_of(ValueNodeT node)
     {
         ASSERT(node != nullptr);
+        ASSERT(!node->is_null());
 
         if (node->right) {
             node = node->right;
@@ -991,6 +1019,7 @@ private:
     static ValueNodeT inorder_predecessor_of(ValueNodeT node)
     {
         ASSERT(node != nullptr);
+        ASSERT(!node->is_null());
 
         if (node->left) {
             node = node->left;
