@@ -15,7 +15,7 @@
 #include <string_view>
 #include <string>
 #include <stdexcept>
-#include <unordered_map>
+#include <map>
 #include <vector>
 
 template <size_t Size>
@@ -246,8 +246,8 @@ private:
     }
 
 private:
-    inline static std::unordered_map<std::string_view, std::vector<Test*>> s_tests;
-    inline static std::unordered_map<std::string_view, std::vector<Fixture*>> s_fixtures;
+    inline static std::map<std::string_view, std::vector<Test*>> s_tests;
+    inline static std::map<std::string_view, std::vector<Fixture*>> s_fixtures;
     inline static size_t s_ran_count;
     inline static size_t s_pass_count;
     inline static size_t s_skip_count;
