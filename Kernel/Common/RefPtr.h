@@ -8,6 +8,82 @@
 namespace kernel {
 
 template <typename T>
+class RefCounterBase {
+public:
+    virtual void destroy() = 0;
+    virtual T* get() = 0;
+
+    void decrement()
+    {
+        if (--m_counter == 0) {
+            destroy();
+        }
+    }
+
+    void increment()
+    {
+        ++m_counter;
+    }
+
+    size_t reference_count() const
+    {
+        return m_counter;
+    }
+
+    virtual ~RefCounterBase() = default;
+
+private:
+    Atomic<size_t> m_counter { 1 };
+};
+
+template <typename T>
+class OwningRefCounter : public RefCounterBase<T> {
+public:
+    template <typename... Args>
+    explicit OwningRefCounter(Args&& ... args)
+    {
+        new (m_value) T(forward<Args>(args)...);
+    }
+
+    void destroy() override
+    {
+        get()->~T();
+        delete this;
+    }
+
+    T* get() override
+    {
+       return reinterpret_cast<T*>(m_value);
+    }
+
+private:
+    alignas(T) u8 m_value[sizeof(T)];
+};
+
+template <typename T>
+class NonOwningRefCounter : public RefCounterBase<T> {
+public:
+    explicit NonOwningRefCounter(T* ptr)
+        : m_ptr(ptr)
+    {
+    }
+
+    void destroy() override
+    {
+        delete m_ptr;
+        delete this;
+    }
+
+    T* get() override
+    {
+        return m_ptr;
+    }
+
+private:
+    T* m_ptr;
+};
+
+template <typename T>
 class RefPtr {
 public:
     RefPtr() { }
@@ -15,12 +91,14 @@ public:
     template <typename... Args>
     static RefPtr create(Args&&... args)
     {
-        return RefPtr(new T(forward<Args>(args)...));
+        auto* ref_counter = new OwningRefCounter<T>(forward<Args>(args)...);
+
+        return RefPtr(ref_counter);
     }
 
     RefPtr(T* ptr)
         : m_ptr(ptr)
-        , m_ref_count(new Atomic<size_t>(1))
+        , m_ref_count(new NonOwningRefCounter(m_ptr))
     {
     }
 
@@ -42,7 +120,7 @@ public:
         decrement();
 
         m_ptr = ptr;
-        m_ref_count = new Atomic<size_t>(1);
+        m_ref_count = new NonOwningRefCounter<T>(ptr);
     }
 
     T& operator*() const
@@ -92,38 +170,42 @@ public:
 
     bool is_null() const { return get() == nullptr; }
 
-    operator bool() const { return get(); }
+    explicit operator bool() const { return get(); }
 
     size_t reference_count() const
     {
         ASSERT(m_ref_count != nullptr);
-        return *m_ref_count;
+        return m_ref_count->reference_count();
     }
 
-    ~RefPtr() { decrement(); }
+    ~RefPtr()
+    {
+         decrement();
+    }
 
 private:
-    void increment()
+    explicit RefPtr(RefCounterBase<T>* ref_counter)
     {
-        if (!get())
-            return;
+        ASSERT(ref_counter != nullptr);
 
-        ++(*m_ref_count);
+        m_ptr = ref_counter->get();
+        m_ref_count = ref_counter;
     }
 
     void decrement()
     {
-        if (!get())
-            return;
-
-        if (--(*m_ref_count) == 0) {
-            delete m_ptr;
-            delete m_ref_count;
-        }
+        if (m_ref_count)
+            m_ref_count->decrement();
     }
 
+    void increment()
+    {
+        if (m_ref_count)
+            m_ref_count->increment();
+    }
+    
 private:
     T* m_ptr { nullptr };
-    Atomic<size_t>* m_ref_count { nullptr };
+    RefCounterBase<T>* m_ref_count { nullptr };
 };
 }
