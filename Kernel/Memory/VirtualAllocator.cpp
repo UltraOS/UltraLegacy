@@ -55,10 +55,14 @@ bool VirtualAllocator::is_allocated(Address address) const
 
     auto range = m_allocated_ranges.lower_bound(Range::create_empty_at(address));
 
-    if (range == m_allocated_ranges.end() || range->begin() != address)
-        --range;
+    if (range == m_allocated_ranges.end() || range->begin() != address) {
+        if (range == m_allocated_ranges.begin())
+            return false;
 
-    return range != m_allocated_ranges.end() && range->contains(address);
+        --range;
+    }
+
+    return range->contains(address);
 }
 
 void VirtualAllocator::merge_and_emplace(RangeIterator before, RangeIterator after, Range new_range)
@@ -191,13 +195,18 @@ VirtualAllocator::Range VirtualAllocator::allocate(Range range)
     }
 
     auto it = m_allocated_ranges.lower_bound(range);
-
-    if (it == m_allocated_ranges.end() || it->begin() != range.begin())
-        --it;
-
-    // TODO: implement advance(iterator, by)?
     auto range_after = it;
-    ++range_after;
+
+    if (it == m_allocated_ranges.end() || it->begin() != range.begin()) {
+        if (it != m_allocated_ranges.begin()) {
+            --it;
+        } else {
+            range_after = it;
+            it = m_allocated_ranges.end();
+        }
+    } else {
+        ++range_after;
+    }
 
     if (range_after != m_allocated_ranges.end() && range_after->contains(range.end() - 1))
         fail_on_allocated_range(range);
@@ -245,8 +254,12 @@ void VirtualAllocator::deallocate(const Range& range)
 
     auto it = m_allocated_ranges.lower_bound(range);
 
-    if (it == m_allocated_ranges.end() || it->begin() != range.begin())
-        --it;
+    if (it == m_allocated_ranges.end() || it->begin() != range.begin()) {
+        if (it == m_allocated_ranges.begin())
+            fail_on_unknown_range(range);
+        else
+            --it;
+    }
 
     if (it == m_allocated_ranges.end() || !it->contains(range))
         fail_on_unknown_range(range);

@@ -78,14 +78,14 @@ public:
 
         Range clipped_with_begin(Address address) const
         {
-            ASSERT(contains(address));
+            ASSERT(contains(address) || address == end());
 
             return from_two_pointers(address, m_end);
         }
 
         Range clipped_with_end(Address address) const
         {
-            ASSERT(contains(address ? static_cast<Address>(address - 1) : address));
+            ASSERT(contains(address) || address == end());
 
             return from_two_pointers(m_begin, address);
         }
