@@ -142,6 +142,20 @@ TEST(RangeAlign) {
     Assert::that(range9).is_equal({ as_ptr_t(0x0), 2 * Page::size });
 }
 
+TEST(RangeContains) {
+    using Range = kernel::VirtualAllocator::Range;
+
+    // 0x1000 - 0x2000 range
+    auto range = Range(as_ptr_t(0x1000), 0x1000);
+
+    Assert::that(range.contains(as_ptr_t(0x1000))).is_true();
+    Assert::that(range.contains(0x2000 - 1)).is_true();
+    Assert::that(range.contains(0x2000)).is_false();
+    Assert::that(range.contains(range)).is_true();
+    Assert::that(range.contains(Range::from_two_pointers(range.begin(), range.end() + 1))).is_false();
+    Assert::that(range.contains(Range::from_two_pointers(range.begin() - 1, range.end()))).is_false();
+}
+
 TEST(SizedAllocations) {
     using Range = kernel::VirtualAllocator::Range;
 
@@ -240,6 +254,44 @@ TEST(SizedMergeCase1) {
     Assert::that(*allocator.m_allocated_ranges.begin()).is_equal({ as_ptr_t(0x0000), 0x3000 });
 }
 
+TEST(SizedMergeCase2) {
+    using Range = kernel::VirtualAllocator::Range;
+
+    kernel::VirtualAllocator allocator(as_ptr_t(0), 0x3000);
+
+    Range right_side = { 0x2000, 0x1000 };
+    Assert::that(allocator.allocate(right_side)).is_equal(right_side);
+    Assert::that(allocator.m_allocated_ranges.size()).is_equal(1);
+    Assert::that(*allocator.m_allocated_ranges.begin()).is_equal(right_side);
+
+    Range middle = { 0x1000, 0x1000 };
+    Assert::that(allocator.allocate(middle)).is_equal(middle);
+    Assert::that(allocator.m_allocated_ranges.size()).is_equal(1);
+    Assert::that(*allocator.m_allocated_ranges.begin()).is_equal(Range::from_two_pointers(middle.begin(), right_side.end()));
+
+    Range left_side = { as_ptr_t(0x0), 0x1000 };
+    Assert::that(allocator.allocate(left_side)).is_equal(left_side);
+    Assert::that(allocator.m_allocated_ranges.size()).is_equal(1);
+    Assert::that(*allocator.m_allocated_ranges.begin()).is_equal(Range::from_two_pointers(left_side.begin(), right_side.end()));
+}
+
+TEST(SizedMergeCase3) {
+    using Range = kernel::VirtualAllocator::Range;
+
+    kernel::VirtualAllocator allocator(as_ptr_t(0), 0x3000);
+
+    Range right_side = { 0x2000, 0x1000 };
+    Assert::that(allocator.allocate(right_side)).is_equal(right_side);
+    Assert::that(allocator.m_allocated_ranges.size()).is_equal(1);
+    Assert::that(*allocator.m_allocated_ranges.begin()).is_equal(right_side);
+
+    Range left_side = { as_ptr_t(0x0), 0x1000 };
+    Assert::that(allocator.allocate(left_side)).is_equal(left_side);
+    Assert::that(allocator.m_allocated_ranges.size()).is_equal(2);
+    Assert::that(*allocator.m_allocated_ranges.begin()).is_equal(left_side);
+    Assert::that(*(++allocator.m_allocated_ranges.begin())).is_equal(right_side);
+}
+
 TEST(AlignedAllocations) {
     using Range = kernel::VirtualAllocator::Range;
     using Page = kernel::Page;
@@ -252,11 +304,83 @@ TEST(AlignedAllocations) {
     Assert::that(range).is_equal({ Page::huge_size, Page::size });
 
     // Now that we allocate a page aligned to huge page we have something like this
-    // 0x1000 -> huge page ... huge page + page -> huge_page * 2
+    // page -> huge page ... huge page + page -> huge_page * 2
 
     // Allocate the entire lower range, aka 0x1000 - huge page
     auto range2 = allocator.allocate(Page::size * (Page::huge_size / Page::size) - Page::size);
 
     Assert::that(allocator.m_allocated_ranges.size()).is_equal(1);
-    Assert::that(*allocator.m_allocated_ranges.begin()).is_equal({ 0x1000, Page::huge_size });
+    Assert::that(*allocator.m_allocated_ranges.begin()).is_equal({ Page::size, Page::huge_size });
+}
+
+TEST(DeallocationsCase1) {
+    using Range = kernel::VirtualAllocator::Range;
+    using Page = kernel::Page;
+
+    // 0 - 3 pages range
+    kernel::VirtualAllocator allocator(as_ptr_t(0), Page::size * 3);
+
+    // allocate the entire thing
+    allocator.allocate(Page::size * 3);
+    Assert::that(allocator.m_allocated_ranges.size()).is_equal(1);
+    Assert::that(*allocator.m_allocated_ranges.begin()).is_equal({ as_ptr_t(0), Page::size * 3 });
+
+    // free left side
+    allocator.deallocate({ as_ptr_t(0), Page::size });
+    Assert::that(allocator.m_allocated_ranges.size()).is_equal(1);
+    Assert::that(*allocator.m_allocated_ranges.begin()).is_equal({ Page::size, Page::size * 2 });
+}
+
+TEST(DeallocationsCase2) {
+    using Range = kernel::VirtualAllocator::Range;
+    using Page = kernel::Page;
+
+    // 0 - 3 pages range
+    kernel::VirtualAllocator allocator(as_ptr_t(0), Page::size * 3);
+
+    // allocate the entire thing
+    allocator.allocate(Page::size * 3);
+    Assert::that(allocator.m_allocated_ranges.size()).is_equal(1);
+    Assert::that(*allocator.m_allocated_ranges.begin()).is_equal({ as_ptr_t(0), Page::size * 3 });
+
+    // free right side
+    allocator.deallocate({ Page::size * 2, Page::size });
+    Assert::that(allocator.m_allocated_ranges.size()).is_equal(1);
+    Assert::that(*allocator.m_allocated_ranges.begin()).is_equal({ as_ptr_t(0), Page::size * 2 });
+}
+
+TEST(DeallocationsCase3) {
+    using Range = kernel::VirtualAllocator::Range;
+    using Page = kernel::Page;
+
+    // 0 - 3 pages range
+    kernel::VirtualAllocator allocator(as_ptr_t(0), Page::size * 3);
+
+    // allocate the entire thing
+    allocator.allocate(Page::size * 3);
+    Assert::that(allocator.m_allocated_ranges.size()).is_equal(1);
+    Assert::that(*allocator.m_allocated_ranges.begin()).is_equal({ as_ptr_t(0), Page::size * 3 });
+
+    // free middle
+    allocator.deallocate({ Page::size, Page::size });
+    Assert::that(allocator.m_allocated_ranges.size()).is_equal(2);
+    Assert::that(*allocator.m_allocated_ranges.begin()).is_equal({ as_ptr_t(0), Page::size });
+    Assert::that(*(++allocator.m_allocated_ranges.begin())).is_equal({ Page::size * 2 , Page::size });
+}
+
+TEST(DeallocationsCase4) {
+    using Range = kernel::VirtualAllocator::Range;
+    using Page = kernel::Page;
+
+    // 0 - 3 pages range
+    kernel::VirtualAllocator allocator(as_ptr_t(0), Page::size * 3);
+
+    // allocate the entire thing
+    allocator.allocate(Page::size * 3);
+    Assert::that(allocator.m_allocated_ranges.size()).is_equal(1);
+    Assert::that(*allocator.m_allocated_ranges.begin()).is_equal({ as_ptr_t(0), Page::size * 3 });
+
+    // free the entire thing
+    allocator.deallocate({ as_ptr_t(0), Page::size * 3 });
+    Assert::that(allocator.m_allocated_ranges.size()).is_equal(0);
 }
