@@ -103,9 +103,6 @@ public:
 
     Logger& operator<<(StringView string)
     {
-        if (m_format == format::as_address)
-            return this->operator<<(reinterpret_cast<const void*>(string.data()));
-
         write(string);
 
         return *this;

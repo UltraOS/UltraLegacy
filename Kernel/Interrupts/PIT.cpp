@@ -18,7 +18,7 @@ PIT::PIT()
 void PIT::set_frequency(u32 ticks_per_second)
 {
     if (ticks_per_second > max_frequency()) {
-        StackStringBuilder error_string;
+        String error_string;
         error_string << "PIT: Cannot set the timer to frequency " << ticks_per_second;
         runtime::panic(error_string.data());
     }
@@ -28,7 +28,7 @@ void PIT::set_frequency(u32 ticks_per_second)
     u32 divisor = max_frequency() / ticks_per_second;
 
     if (divisor > 0xFFFF) {
-        StackStringBuilder error_string;
+        String error_string;
         error_string << "Timer: divisor is too big (" << divisor << ")";
         runtime::panic(error_string.data());
     }
@@ -73,10 +73,8 @@ void PIT::nano_delay(u32 ns)
     u32 ticks = max_frequency() * (ns / static_cast<float>(Time::nanoseconds_in_second));
 
     if (ticks > 0xFFFF) {
-        StackStringBuilder error_string;
-        error_string << "PIT: cannot sleep for more than 0xFFFF ticks (got ";
-        error_string.append_hex(ticks);
-        error_string << ")";
+        String error_string;
+        error_string << "PIT: cannot sleep for more than 0xFFFF ticks (got " << format::as_hex << ticks << ")";
         runtime::panic(error_string.data());
     }
 

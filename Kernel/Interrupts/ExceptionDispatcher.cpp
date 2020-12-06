@@ -43,7 +43,7 @@ void ExceptionDispatcher::exception_handler(RegisterState* registers)
         exception_number = 21; // security exception is 21st in the array
 
     if (s_handlers[exception_number] == nullptr) {
-        StackStringBuilder error_string;
+        String error_string;
 
         error_string << "An exception has occured: " << s_exception_messages[exception_number] << " ("
                      << exception_number << ")";

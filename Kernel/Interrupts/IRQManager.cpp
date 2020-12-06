@@ -68,7 +68,7 @@ void IRQManager::irq_handler(RegisterState* registers)
     }
 
     if (!has_subscriber(request_number)) {
-        StackStringBuilder error_string;
+        String error_string;
         error_string << "IRQManager: Unexpected IRQ " << request_number << " with no receiver!";
         runtime::panic(error_string.data());
     }
@@ -80,7 +80,7 @@ void IRQManager::irq_handler(RegisterState* registers)
 void IRQManager::register_irq_handler(IRQHandler& handler)
 {
     if (handler.irq_index() >= entry_count) {
-        StackStringBuilder error_string;
+        String error_string;
         error_string << "IRQManager: tried to register out of bounds handler " << handler.irq_index();
         runtime::panic(error_string.data());
     }
@@ -91,7 +91,7 @@ void IRQManager::register_irq_handler(IRQHandler& handler)
 void IRQManager::unregister_irq_handler(IRQHandler& handler)
 {
     if (handler.irq_index() >= entry_count || !s_handlers[handler.irq_index()]) {
-        StackStringBuilder error_string;
+        String error_string;
         error_string << "IRQManager: tried to unregister non-existant handler " << handler.irq_index();
         runtime::panic(error_string.data());
     }

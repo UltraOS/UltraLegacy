@@ -41,7 +41,7 @@ void PS2Controller::discover_all_devices()
     auto controller_test_result = read_data();
 
     if (controller_test_result != controller_test_passed) {
-        StackStringBuilder error_string;
+        String error_string;
         error_string << "PS2Controller: self test failed, expected: 0x55 received: " << controller_test_result;
         runtime::panic(error_string.data());
     }
@@ -193,15 +193,12 @@ bool PS2Controller::reset_device(Channel channel)
         return false;
     } else {
         if (response_bytes != 0) {
-            StackStringBuilder error_string;
-            error_string << "PS2Controller: Device " << static_cast<u8>(channel);
-            error_string << " is present but responded with unknown sequence -> ";
-            error_string.append_hex(device_response[0]);
-            error_string += '-';
-            error_string.append_hex(device_response[1]);
-            error_string += '-';
-            error_string.append_hex(device_response[2]);
-            error_string << " (" << response_bytes << " bytes)";
+            String error_string;
+            error_string << "PS2Controller: Device " << static_cast<u8>(channel)
+                         << " is present but responded with unknown sequence -> "
+                         << format::as_hex << device_response[0]
+                         << '-' << device_response[1] << '-' << device_response[2]
+                         << format::as_dec << " (" << response_bytes << " bytes)";
             runtime::panic(error_string.data());
         }
 
@@ -246,10 +243,10 @@ bool PS2Controller::should_resend()
     if (data == resend_command)
         return true;
 
-    StackStringBuilder string;
-    string += "PS2Controller: unexpected data instead of ACK/resend -> ";
-    string.append_hex(data);
-    runtime::panic(string.data());
+    String error_string;
+    error_string << "PS2Controller: unexpected data instead of ACK/resend -> ";
+    error_string << format::as_hex << data;
+    runtime::panic(error_string.data());
 }
 
 void PS2Controller::send_command_to_device(Channel channel, DeviceCommand command, bool should_expect_ack)

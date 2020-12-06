@@ -96,7 +96,7 @@ CPU::LocalData& CPU::current()
             return processor;
     }
 
-    StackStringBuilder error_string;
+    String error_string;
     error_string << "CPU: Couldn't find the local data for cpu " << this_cpu;
     runtime::panic(error_string.data());
 }

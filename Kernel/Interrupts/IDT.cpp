@@ -21,7 +21,7 @@ IDT& IDT::the()
 IDT& IDT::register_isr(u16 index, attributes attrs, isr handler)
 {
     if (!handler) {
-        StackStringBuilder error_string;
+        String error_string;
         error_string << "IDT: Tried to register an invalid (NULL) isr at index " << index;
         runtime::panic(error_string.data());
     }

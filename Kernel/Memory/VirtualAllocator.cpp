@@ -15,21 +15,11 @@ String VirtualAllocator::debug_dump() const
 {
     LockGuard lock_guard(m_lock);
 
-    char number_buffer[21] {};
-
     String dump;
-    dump += "Ranges total: ";
-
-    to_string(m_allocated_ranges.size(), number_buffer, 21);
-    dump += number_buffer;
-    dump += "\n";
+    dump << "Ranges total: " << m_allocated_ranges.size() << "\n";
 
     for (const auto& range : m_allocated_ranges) {
-        StackStringBuilder<64> range_str;
-        range_str << range;
-
-        dump += range_str.as_view();
-        dump += "\n";
+        dump << range << "\n";
     }
 
     return dump;
@@ -100,7 +90,7 @@ VirtualAllocator::Range VirtualAllocator::allocate(size_t length, size_t alignme
     ASSERT((alignment & ~Page::alignment_mask) == 0);
 
     auto fail_on_allocation = [](size_t length, size_t alignment) {
-        StackStringBuilder error_string;
+        String error_string;
         error_string << "VirtualAllocator: failed to allocate " << length << " (aligned at " << alignment << ")!";
         runtime::panic(error_string.data());
     };
@@ -108,7 +98,7 @@ VirtualAllocator::Range VirtualAllocator::allocate(size_t length, size_t alignme
     auto rounded_up_length = Page::round_up(length);
 
     if (rounded_up_length < length) {
-        StackStringBuilder error_string;
+        String error_string;
         error_string << "VirtualAllocator: Length overflow with length=" << length << ", alignment=" << alignment;
         runtime::panic(error_string.data());
     }
@@ -179,7 +169,7 @@ VirtualAllocator::Range VirtualAllocator::allocate(Range range)
     ASSERT(contains(range));
 
     auto fail_on_allocated_range = [](Range range) {
-        StackStringBuilder error_string;
+        String error_string;
         error_string << "VirtualAllocator: Couldn't allocate range ( " << range << " )";
         runtime::panic(error_string.data());
     };
@@ -238,13 +228,13 @@ void VirtualAllocator::deallocate(const Range& range)
     LockGuard lock_guard(m_lock);
 
     if (!contains(range)) {
-        StackStringBuilder error_string;
+        String error_string;
         error_string << "VirtualAllocator: range " << range << " doesn't belong to this allocator!";
         runtime::panic(error_string.data());
     }
 
     auto fail_on_unknown_range = [](const Range& range) {
-        StackStringBuilder error_string;
+        String error_string;
         error_string << "VirtualAllocator: range " << range << " wasn't found as allocated!";
         runtime::panic(error_string.data());
     };

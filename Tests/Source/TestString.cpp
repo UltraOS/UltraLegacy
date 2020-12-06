@@ -30,12 +30,14 @@ TEST(Append) {
     Assert::that(test.c_string()).is_equal("H");
     test.append("E");
     Assert::that(test.c_string()).is_equal("HE");
-    test.append("L", 1);
+    test.append("L");
     Assert::that(test.c_string()).is_equal("HEL");
     test.append("LO");
     Assert::that(test.c_string()).is_equal("HELLO");
-    test.append(" WORLD, NON SSO!!");
-    Assert::that(test.c_string()).is_equal("HELLO WORLD, NON SSO!!");
+
+    test << " WORLD " << kernel::format::as_hex << 0xDEADBEEF << kernel::format::as_dec << 123;
+
+    Assert::that(test.c_string()).is_equal("HELLO WORLD 0xDEADBEEF123");
 }
 
 TEST(CopyOwnership) {
@@ -112,7 +114,7 @@ TEST(StackStringBuilder) {
     kernel::StackStringBuilder builder;
     builder += 123;
     builder += "456";
-    builder.append_hex(0xDEADBEEF);
+    builder << kernel::format::as_hex << 0xDEADBEEF;
     builder.append("test");
     builder.append(true);
     builder.append('!');

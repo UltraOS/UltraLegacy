@@ -56,7 +56,7 @@ u8 PS2Mouse::bytes_in_packet() const
     case SubType::FIVE_BUTTONS:
         return 4;
     default: {
-        StackStringBuilder error_string;
+        String error_string;
         error_string << "PS2Mouse: Unknown sub type " << static_cast<u8>(sub_type());
         runtime::panic(error_string.data());
     }

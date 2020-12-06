@@ -143,7 +143,7 @@ void DemoTTY::execute_command()
         write({ buffer, to_string(seconds_since_boot, buffer, 21) });
         write(" seconds\n");
     } else if (m_current_command == "kheap"_sv) {
-        StackStringBuilder string;
+        String string;
 
         string << "\nKHeap stats:\n";
 
@@ -159,37 +159,38 @@ void DemoTTY::execute_command()
         string << "Calls to allocate: " << stats.calls_to_allocate << '\n';
         string << "Calls to free: " << stats.calls_to_free << '\n';
 
-        write(string.as_view());
+        write(string.to_view());
     } else if (m_current_command == "memory-map"_sv) {
         auto& map = MemoryManager::the().memory_map();
         write("\nPhysical memory map: ");
 
         for (auto& entry : map) {
             write("\n"_sv);
-            StackStringBuilder<128> range_str;
+            String range_str;
             range_str << format::as_hex << "base: " << entry.base_address;
             range_str << format::as_dec << "\nlength: " << entry.length / KB << " KB";
             range_str << "\ntype: " << entry.type_as_string();
-            write(range_str.as_view());
+            write(range_str.to_view());
             write("\n"_sv);
         }
     } else if (m_current_command == "video-mode"_sv) {
         write("\nVideo mode information:\n"_sv);
 
         auto info = VideoDevice::the().mode();
-        StackStringBuilder<128> info_string;
+        String info_string;
         info_string << "Resolution: " << info.width << "x" << info.height << " @ " << info.bpp << " bpp";
         info_string << "\nDevice: \"" << VideoDevice::the().name() << '\"';
-        write(info_string.as_view());
+        write(info_string.to_view());
         write("\n"_sv);
     } else if (m_current_command == "cpu"_sv) {
         write("\nCPU information:\n"_sv);
 
-        StackStringBuilder<128> info_string;
+        String info_string;
         info_string << "Supports SMP: " << CPU::supports_smp();
         info_string << "\nCores: " << CPU::processor_count();
         info_string << "\nAlive cores: " << CPU::alive_processor_count();
-        write(info_string.as_view());
+        info_string << "\nCurrent core: " << CPU::current().id();
+        write(info_string.to_view());
         write("\n"_sv);
     } else if (m_current_command == "help"_sv) {
         write("\nWelcome to UltraOS demo terminal.\n"_sv);

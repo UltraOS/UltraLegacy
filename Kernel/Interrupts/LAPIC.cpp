@@ -249,7 +249,7 @@ void LAPIC::start_processor(u8 id)
         *ap_acknowledegd = true;
 
     } else {
-        StackStringBuilder error_string;
+        String error_string;
         error_string << "LAPIC: Application processor " << id << " failed to start after 2 SIPIs";
         runtime::panic(error_string.data());
     }

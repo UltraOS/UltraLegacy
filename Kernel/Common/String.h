@@ -11,12 +11,60 @@ namespace kernel {
 enum class format {
     as_dec,
     as_hex,
-    as_address, // force format char* as address
 };
 
 class StringView;
 
-class String {
+class StringBuilderBase {
+public:
+    // clang-format off
+    template <typename T, typename Self>
+    using enable_if_default_serializable_t = typename
+        enable_if<is_same_v<T, Address32>   ||
+                  is_same_v<T, Address64>   ||
+                  is_integral_v<T>          ||
+                  is_pointer_v<T>           ||
+                  is_same_v<T, const char*> ||
+                  is_same_v<T, StringView>  ||
+                  is_same_v<T, format>      ||
+                  is_same_v<T, bool>, Self&>::type;
+    // clang-format on
+
+    void set_format(format new_format)
+    {
+        m_format = new_format;
+    }
+
+    void append(StringView string);
+    void append(const char* string);
+    void append(char c);
+    void append(bool value);
+
+    template <typename T>
+    enable_if_t<is_arithmetic_v<T>> append(T number);
+
+    void append(Address address)
+    {
+        auto last_format = m_format;
+        set_format(format::as_hex);
+        append(static_cast<ptr_t>(address));
+        set_format(last_format);
+    }
+
+    template <typename T>
+    enable_if_t<is_pointer_v<T>> append(T pointer)
+    {
+        append(Address(pointer));
+    }
+
+protected:
+    virtual void write(StringView) = 0;
+
+private:
+    format m_format { format::as_dec };
+};
+
+class String : public StringBuilderBase {
 public:
     static constexpr size_t max_small_string_size = sizeof(ptr_t) * 2 - 1;
 
@@ -96,24 +144,6 @@ public:
     [[nodiscard]] char* end() { return data() + m_size; }
     [[nodiscard]] const char* end() const { return data() + m_size; }
 
-    String& append(const String& string) { return append(string.data(), string.size()); }
-    String& append(const char* string) { return append(string, length_of(string)); }
-    String& append(char c) { return append(&c, 1); }
-    String& append(const char* string, size_t length)
-    {
-        auto required_size = size() + length;
-
-        if ((is_small() && required_size > max_small_string_size)
-            || (!is_small() && required_size > m_big_string.capacity))
-            grow_to_fit(m_size + length + 1);
-
-        m_size += length;
-        copy_memory(string, end() - length, length);
-        *end() = '\0';
-
-        return *this;
-    }
-
     void pop_back()
     {
         if (m_size == 0)
@@ -135,23 +165,49 @@ public:
 
     [[nodiscard]] bool empty() const { return m_size == 0; }
 
+    using StringBuilderBase::append;
+    void append(const String& other);
+
     String operator+(const String& other)
     {
         String str = *this;
+        str.append(other);
 
-        return str.append(other);
+        return str;
+    }
+
+    String& operator+=(const String& string)
+    {
+        append(string);
+        return *this;
     }
 
     String operator+(const char* string)
     {
         String str = *this;
+        str.append(string);
 
-        return str.append(string);
+        return str;
     }
 
-    String& operator+=(const String& other) { return append(other); }
+    template <typename T>
+    enable_if_default_serializable_t<T, String> operator+=(T value)
+    {
+        append(value);
+        return *this;
+    }
 
-    String& operator+=(const char* string) { return append(string); }
+    template <typename T>
+    enable_if_default_serializable_t<T, String> operator<<(T value)
+    {
+        if constexpr (is_same_v<T, format>) {
+            set_format(value);
+        } else {
+            append(value);
+        }
+
+        return *this;
+    }
 
     [[nodiscard]] bool equals(const StringView& string) const;
 
@@ -195,6 +251,8 @@ public:
     }
 
 private:
+    void write(StringView string) override;
+
     void construct_from(const char* string, size_t length)
     {
         if (length <= max_small_string_size) {
@@ -349,7 +407,7 @@ private:
 
 inline constexpr StringView operator""_sv(const char* string, size_t size)
 {
-    return StringView(string, size);
+    return { string, size };
 }
 
 inline String::String(StringView string)
@@ -374,123 +432,90 @@ inline bool String::equals(const StringView& string) const
     return string.equals(to_view());
 }
 
+inline void StringBuilderBase::append(StringView string)
+{
+    write(string);
+}
+
+inline void StringBuilderBase::append(const char* string)
+{
+    append(StringView(string));
+}
+
+inline void StringBuilderBase::append(char c)
+{
+    append(StringView(&c, 1));
+}
+
+template <typename T>
+enable_if_t<is_arithmetic_v<T>> StringBuilderBase::append(T number)
+{
+    static constexpr size_t buffer_size = 32;
+    char number_buffer[buffer_size];
+    size_t chars_written = 0;
+
+    if (m_format == format::as_hex) {
+        chars_written = to_hex_string(number, number_buffer, buffer_size, false);
+    }
+    else {
+        chars_written = to_string(number, number_buffer, buffer_size, false);
+    }
+
+    append(StringView(number_buffer, chars_written));
+}
+
+inline void StringBuilderBase::append(bool value)
+{
+    static constexpr StringView true_value = "true"_sv;
+    static constexpr StringView false_value = "false"_sv;
+
+    append(value ? true_value : false_value);
+}
+
+inline void String::append(const String& other)
+{
+    append(other.to_view());
+}
+
+inline void String::write(StringView string)
+{
+    auto required_size = size() + string.size();
+
+    if ((is_small() && required_size > max_small_string_size)
+        || (!is_small() && required_size > m_big_string.capacity))
+        grow_to_fit(m_size + string.size() + 1);
+
+    m_size += string.size();
+    copy_memory(string.data(), end() - string.size(), string.size());
+    *end() = '\0';
+}
+
 template <size_t buffer_size = 256>
-class StackStringBuilder {
+class StackStringBuilder : public StringBuilderBase {
 public:
     static_assert(buffer_size > 1, "Buffer size cannot be smaller than 2");
 
-    [[nodiscard]] StringView as_view() const { return StringView(m_buffer, m_current_offset); }
+    [[nodiscard]] StringView to_view() const { return StringView(m_buffer, m_current_offset); }
 
     char* data() { return m_buffer; }
-
-    size_t append(StringView string)
-    {
-        if (string.size() > size_left())
-            return 0;
-
-        copy_memory(string.data(), pointer_to_end(), string.size());
-        m_current_offset += string.size();
-        seal();
-
-        return string.size();
-    }
-
-    size_t append(const char* string) { return append(StringView(string)); }
+    const char* data() const { return m_buffer; }
 
     template <typename T>
-    enable_if_t<is_arithmetic_v<T>, size_t> append(T number)
-    {
-        size_t chars_written = 0;
-
-        if (m_format == format::as_hex) {
-            chars_written = to_hex_string(number, pointer_to_end(), size_left(), false);
-        } else {
-            chars_written = to_string(number, pointer_to_end(), size_left(), false);
-        }
-
-        m_current_offset += chars_written;
-        seal();
-
-        return chars_written;
-    }
-
-    template <typename T>
-    enable_if_t<is_arithmetic_v<T>, size_t> append_hex(T number)
-    {
-        size_t chars_written = to_hex_string(number, pointer_to_end(), size_left(), false);
-        m_current_offset += chars_written;
-        seal();
-
-        return chars_written;
-    }
-
-    size_t append(char c)
-    {
-        if (!size_left())
-            return 0;
-
-        m_buffer[m_current_offset++] = c;
-        seal();
-
-        return 1;
-    }
-
-    size_t append(bool value)
-    {
-        static constexpr StringView true_value = "true"_sv;
-        static constexpr StringView false_value = "false"_sv;
-
-        auto value_to_copy = value ? true_value : false_value;
-
-        if (size_left() < value_to_copy.size())
-            return 0;
-
-        copy_memory(value_to_copy.data(), pointer_to_end(), value_to_copy.size());
-        m_current_offset += value_to_copy.size();
-        seal();
-
-        return value_to_copy.size();
-    }
-
-    template <typename T>
-    enable_if_t<is_pointer_v<T>, size_t> append(T pointer)
-    {
-        return append_hex(reinterpret_cast<ptr_t>(pointer));
-    }
-
-    size_t append(Address address) { return append_hex(static_cast<ptr_t>(address)); }
-
-    template <typename T>
-    void operator+=(T value)
+    enable_if_default_serializable_t<T, StackStringBuilder> operator+=(T value)
     {
         append(value);
+        return *this;
     }
 
-    void set_format(format new_format)
-    {
-        m_format = new_format;
-    }
-
-    // clang-format off
     template <typename T>
-    using enable_if_default_serializable_t = typename
-        enable_if<is_same_v<T, Address32>   ||
-                  is_same_v<T, Address64>   ||
-                  is_integral_v<T>          ||
-                  is_pointer_v<T>           ||
-                  is_same_v<T, const char*> ||
-                  is_same_v<T, StringView>  ||
-                  is_same_v<T, format>      ||
-                  is_same_v<T, bool>, StackStringBuilder&>::type;
-    // clang-format on
-
-    template <typename T>
-    enable_if_default_serializable_t<T> operator<<(T value)
+    enable_if_default_serializable_t<T, StackStringBuilder> operator<<(T value)
     {
         if constexpr (is_same_v<T, format>) {
             set_format(value);
-        } else
+        } else {
             append(value);
+        }
+
         return *this;
     }
 
@@ -500,12 +525,22 @@ public:
     [[nodiscard]] size_t size_left() const { return buffer_size - m_current_offset - 1; }
 
 private:
+    void write(StringView string) override
+    {
+        size_t bytes_to_write = string.size() > size_left() ? size_left() : string.size();
+
+        if (bytes_to_write == 0)
+            return;
+
+        copy_memory(string.data(), pointer_to_end(), bytes_to_write);
+        m_current_offset += bytes_to_write;
+        seal();
+    }
+
     void seal() { m_buffer[m_current_offset] = '\0'; }
     char* pointer_to_end() { return m_buffer + m_current_offset; }
 
 private:
-    format m_format { format::as_dec };
-
     size_t m_current_offset { 0 };
     char m_buffer[buffer_size];
 };

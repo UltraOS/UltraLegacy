@@ -184,9 +184,9 @@ void* HeapAllocator::allocate(size_t bytes)
         }
     }
 
-    StackStringBuilder error_message;
-    error_message << "HeapAllocator: Out of memory! (tried to allocate " << bytes << " bytes)";
-    runtime::panic(error_message.data());
+    StackStringBuilder error_string;
+    error_string << "HeapAllocator: Out of memory! (tried to allocate " << bytes << " bytes)";
+    runtime::panic(error_string.data());
 
 #ifdef HEAP_ALLOCATOR_DEBUG
 
