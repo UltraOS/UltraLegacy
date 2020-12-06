@@ -36,7 +36,7 @@ public:
     void write(StringView string) override { Serial::write<Serial::Port::COM1>(string); }
 };
 
-class Logger {
+class Logger : public StreamingFormatter {
 public:
     static constexpr StringView info_prefix = "[\33[34mINFO\033[0m] "_sv;
     static constexpr StringView warn_prefix = "[\33[33mWARNING\033[0m] "_sv;
@@ -73,15 +73,6 @@ public:
         return *s_write_lock;
     }
 
-    void write(StringView string)
-    {
-        if (!is_initialized())
-            return;
-
-        for (auto& sink : sinks())
-            sink->write(string);
-    }
-
     Logger(bool should_lock = true)
         : m_should_unlock(should_lock)
     {
@@ -99,65 +90,25 @@ public:
         other.m_should_terminate = false;
     }
 
-    Logger& operator<<(const char* string) { return this->operator<<(StringView(string)); }
-
-    Logger& operator<<(StringView string)
-    {
-        write(string);
-
-        return *this;
-    }
-
-    Logger& operator<<(format option)
-    {
-        m_format = option;
-
-        return *this;
-    }
-
-    Logger& operator<<(bool value)
-    {
-        if (value)
-            write("true");
-        else
-            write("false");
-
-        return *this;
-    }
-
-    inline Logger& operator<<(Address addr) { return *this << addr.as_pointer<void>(); }
-
     template <typename T>
-    enable_if_t<is_arithmetic_v<T>, Logger&> operator<<(T number)
+    enable_if_default_serializable_t<T, Logger> operator<<(T value)
     {
-        constexpr size_t max_number_size = 21;
-
-        char number_as_string[max_number_size];
-
-        if (m_format == format::as_hex && to_hex_string(number, number_as_string, max_number_size))
-            write(number_as_string);
-        else if (to_string(number, number_as_string, max_number_size))
-            write(number_as_string);
-        else
-            write("<INVALID NUMBER>");
+        if constexpr (is_same_v<T, format>) {
+            set_format(value);
+        } else {
+            append(value);
+        }
 
         return *this;
     }
 
-    template <typename T>
-    enable_if_t<is_pointer_v<T>, Logger&> operator<<(T pointer)
+    void write(StringView string) override
     {
-        constexpr size_t max_number_size = 21;
+        if (!is_initialized())
+            return;
 
-        char number_as_string[max_number_size];
-
-        // pointers should always be hex
-        if (to_hex_string(reinterpret_cast<ptr_t>(pointer), number_as_string, max_number_size))
-            write(number_as_string);
-        else
-            write("<INVALID NUMBER>");
-
-        return *this;
+        for (auto& sink : sinks())
+            sink->write(string);
     }
 
     ~Logger()
@@ -174,7 +125,6 @@ public:
     }
 
 private:
-    format m_format { format::as_dec };
     bool m_should_terminate { true };
     bool m_interrupt_state { false };
     bool m_should_unlock;

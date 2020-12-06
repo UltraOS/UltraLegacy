@@ -40,7 +40,7 @@ template <typename T>
 class OwningRefCounter : public RefCounterBase<T> {
 public:
     template <typename... Args>
-    explicit OwningRefCounter(Args&& ... args)
+    explicit OwningRefCounter(Args&&... args)
     {
         new (m_value) T(forward<Args>(args)...);
     }
@@ -53,7 +53,7 @@ public:
 
     T* get() override
     {
-       return reinterpret_cast<T*>(m_value);
+        return reinterpret_cast<T*>(m_value);
     }
 
 private:
@@ -180,7 +180,7 @@ public:
 
     ~RefPtr()
     {
-         decrement();
+        decrement();
     }
 
 private:
@@ -203,7 +203,7 @@ private:
         if (m_ref_count)
             m_ref_count->increment();
     }
-    
+
 private:
     T* m_ptr { nullptr };
     RefCounterBase<T>* m_ref_count { nullptr };

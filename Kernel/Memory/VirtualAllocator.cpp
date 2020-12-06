@@ -113,7 +113,7 @@ VirtualAllocator::Range VirtualAllocator::allocate(size_t length, size_t alignme
         // FIXME: any failure to allocate is considered fatal for now.
         if (!allocated_range || allocated_range.length() < length)
             fail_on_allocation(length, alignment);
-        
+
         allocated_range.set_length(length);
         m_allocated_ranges.emplace(allocated_range);
         return allocated_range;

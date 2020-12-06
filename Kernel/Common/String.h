@@ -15,7 +15,7 @@ enum class format {
 
 class StringView;
 
-class StringBuilderBase {
+class StreamingFormatter {
 public:
     // clang-format off
     template <typename T, typename Self>
@@ -64,7 +64,7 @@ private:
     format m_format { format::as_dec };
 };
 
-class String : public StringBuilderBase {
+class String : public StreamingFormatter {
 public:
     static constexpr size_t max_small_string_size = sizeof(ptr_t) * 2 - 1;
 
@@ -165,7 +165,7 @@ public:
 
     [[nodiscard]] bool empty() const { return m_size == 0; }
 
-    using StringBuilderBase::append;
+    using StreamingFormatter::append;
     void append(const String& other);
 
     String operator+(const String& other)
@@ -432,23 +432,23 @@ inline bool String::equals(const StringView& string) const
     return string.equals(to_view());
 }
 
-inline void StringBuilderBase::append(StringView string)
+inline void StreamingFormatter::append(StringView string)
 {
     write(string);
 }
 
-inline void StringBuilderBase::append(const char* string)
+inline void StreamingFormatter::append(const char* string)
 {
     append(StringView(string));
 }
 
-inline void StringBuilderBase::append(char c)
+inline void StreamingFormatter::append(char c)
 {
     append(StringView(&c, 1));
 }
 
 template <typename T>
-enable_if_t<is_arithmetic_v<T>> StringBuilderBase::append(T number)
+enable_if_t<is_arithmetic_v<T>> StreamingFormatter::append(T number)
 {
     static constexpr size_t buffer_size = 32;
     char number_buffer[buffer_size];
@@ -456,15 +456,14 @@ enable_if_t<is_arithmetic_v<T>> StringBuilderBase::append(T number)
 
     if (m_format == format::as_hex) {
         chars_written = to_hex_string(number, number_buffer, buffer_size, false);
-    }
-    else {
+    } else {
         chars_written = to_string(number, number_buffer, buffer_size, false);
     }
 
     append(StringView(number_buffer, chars_written));
 }
 
-inline void StringBuilderBase::append(bool value)
+inline void StreamingFormatter::append(bool value)
 {
     static constexpr StringView true_value = "true"_sv;
     static constexpr StringView false_value = "false"_sv;
@@ -491,7 +490,7 @@ inline void String::write(StringView string)
 }
 
 template <size_t buffer_size = 256>
-class StackStringBuilder : public StringBuilderBase {
+class StackStringBuilder : public StreamingFormatter {
 public:
     static_assert(buffer_size > 1, "Buffer size cannot be smaller than 2");
 
