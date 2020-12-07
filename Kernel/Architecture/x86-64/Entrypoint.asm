@@ -24,10 +24,8 @@ start:
     mov rcx, section_bss_end
     sub rcx, section_bss_begin
     mov rdi, section_bss_begin
-    mov rbp, rax ; save the rax
     mov rax, 0
     rep stosb
-    mov rax, rbp
 
     ; TODO: actually check if we have one.
     ; and maybe move this out into a CPU class in C++
