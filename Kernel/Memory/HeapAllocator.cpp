@@ -66,7 +66,7 @@ void HeapAllocator::feed_block(void* ptr, size_t size, size_t chunk_size_in_byte
 
 #ifdef HEAP_ALLOCATOR_DEBUG
 
-    log() << "HeapAllocator: adding a new heap block " << bytes_to_megabytes_precise(size)
+    log() << "HeapAllocator: adding a new heap block " << bytes_to_megabytes(size)
           << "MB (actual: " << pure_size << " overhead: " << size - pure_size
           << ") Total chunk count: " << new_heap.chunk_count;
 
@@ -177,7 +177,7 @@ void* HeapAllocator::allocate(size_t bytes)
             log() << "HeapAllocator: allocating " << total_allocation_bytes << " bytes (" << chunks_needed
                   << " chunk(s)) "
                   << "at address:" << data << " Free bytes: " << total_free_bytes << " ("
-                  << bytes_to_megabytes_precise(total_free_bytes) << " MB) ";
+                  << bytes_to_megabytes(total_free_bytes) << " MB) ";
 
 #endif
             return data;
@@ -190,16 +190,16 @@ void* HeapAllocator::allocate(size_t bytes)
 
 #ifdef HEAP_ALLOCATOR_DEBUG
 
-    if (!m_heap_block)
+    if (!s_heap_block)
         error() << "HeapAllocator: main block is null!";
     else {
         size_t i = 0;
-        for (auto* heap = m_heap_block; heap; heap = heap->next) {
+        for (auto* heap = s_heap_block; heap; heap = heap->next) {
             auto size = heap->free_bytes();
 
             ++i;
             error() << "HeapAllocator: block(" << i << ") free chunks:" << heap->free_chunks << " bytes:" << size
-                    << " (" << bytes_to_megabytes_precise(size) << "MB)";
+                    << " (" << bytes_to_megabytes(size) << "MB)";
         }
     }
 

@@ -36,12 +36,12 @@ private:
         size_t free_chunks;
 
         u8* bitmap() { return reinterpret_cast<u8*>(this + 1); }
-        u8* begin() { return data; }
-        u8* end() { return begin() + chunk_count * chunk_size; }
+        u8* begin() const { return data; }
+        u8* end() const { return begin() + chunk_count * chunk_size; }
 
-        size_t which_bit(void* ptr) { return ((reinterpret_cast<u8*>(ptr) - begin()) / chunk_size) * 2; }
-        size_t free_bytes() { return free_chunks * chunk_size; }
-        bool contains(void* ptr) { return ptr <= end() && ptr >= begin(); }
+        size_t which_bit(void* ptr) const { return ((reinterpret_cast<u8*>(ptr) - begin()) / chunk_size) * 2; }
+        size_t free_bytes() const { return free_chunks * chunk_size; }
+        bool contains(void* ptr) const { return ptr <= end() && ptr >= begin(); }
     } static* s_heap_block;
 
     inline static size_t s_calls_to_allocate;
