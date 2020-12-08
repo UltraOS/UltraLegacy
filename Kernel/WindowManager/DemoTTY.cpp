@@ -88,6 +88,16 @@ void DemoTTY::tick()
         }
         case Event::Type::CHAR_TYPED: {
             auto ascii_char = static_cast<char>(event.char_typed.character);
+
+            if (ascii_char == 'c' && EventManager::the().state_of_key(VK::LEFT_CTRL) == VKState::PRESSED) {
+                write("^C\n"_sv);
+                m_current_command.clear();
+                write(command_prompt);
+                draw_cursor();
+                m_prompt_y = m_y_offset;
+                break;
+            }
+
             m_current_command.append(ascii_char);
             write({ &ascii_char, 1 });
             draw_cursor();
