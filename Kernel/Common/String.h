@@ -43,11 +43,12 @@ public:
     template <typename T>
     enable_if_t<is_arithmetic_v<T>> append(T number);
 
-    void append(Address address)
+    template <typename T>
+    void append(BasicAddress<T> address)
     {
         auto last_format = m_format;
         set_format(format::as_hex);
-        append(static_cast<ptr_t>(address));
+        append(static_cast<T>(address));
         set_format(last_format);
     }
 

@@ -73,6 +73,8 @@ class BasicAddress {
 public:
     BasicAddress() = default;
 
+    using underlying_pointer_type = SizeT;
+
     template <typename T>
     constexpr BasicAddress(T* ptr)
         : m_ptr(reinterpret_cast<ptr_t>(ptr))
