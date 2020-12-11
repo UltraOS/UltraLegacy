@@ -185,6 +185,15 @@ template <typename T>
 inline constexpr bool is_trivially_copyable_v = is_trivially_copyable<T>::value;
 // --------------------
 
+// ---- is_base_of ----
+template <typename Base, typename Derived>
+struct is_base_of : integral_constant<bool, __is_base_of(Base, Derived)> {
+};
+
+template <typename Base, typename Derived>
+inline constexpr bool is_base_of_v = is_base_of<Base, Derived>::value;
+// --------------------
+
 // ---- is_same ----
 template <typename T, typename U>
 struct is_same : false_value {
