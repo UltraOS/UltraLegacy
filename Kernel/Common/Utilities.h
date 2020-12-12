@@ -76,4 +76,45 @@ struct Greater {
         return l > r;
     }
 };
+
+template <typename T, typename Compare = Less<T>>
+T* lower_bound(T* begin, T* end, const T& value, Compare comparator = Compare())
+{
+    if (begin == end)
+        return end;
+
+    auto* lower_bound = end;
+
+    ssize_t left = 0;
+    ssize_t right = end - begin - 1;
+
+    while (left <= right) {
+        ssize_t pivot = left + (right - left) / 2;
+
+        auto& pivot_value = begin[pivot];
+
+        if (comparator(value, pivot_value)) {
+            lower_bound = &pivot_value;
+            right = pivot - 1;
+            continue;
+        }
+
+        if (comparator(pivot_value, value)) {
+            left = pivot + 1;
+            continue;
+        }
+
+        return &begin[pivot];
+    }
+
+    return lower_bound;
+}
+
+template <typename T, typename Compare = Less<T>>
+T* binary_search(T* begin, T* end, const T& value, Compare comparator = Compare())
+{
+    auto* result = lower_bound(begin, end, value, comparator);
+
+    return result == end ? result : (comparator(value, *result) ? end : result);
+}
 }
