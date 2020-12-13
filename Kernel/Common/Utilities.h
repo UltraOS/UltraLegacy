@@ -117,4 +117,44 @@ T* binary_search(T* begin, T* end, const T& value, Compare comparator = Compare(
 
     return result == end ? result : (comparator(value, *result) ? end : result);
 }
+
+template <typename T, typename Compare = Less<T>>
+void quick_sort(T* begin, T* end, Compare comparator = Compare())
+{
+    using dp_t = T*(*)(T*, T*, Compare&);
+    using dqs_t = void(*)(T*, T*, Compare&);
+
+
+    static dp_t do_partition = [](T* begin, T* end, Compare& comparator) -> T*
+    {
+        ssize_t smallest_index = -1;
+        ssize_t array_size = end - begin;
+
+        const ssize_t last_index = array_size - 1;
+
+        auto& pivot = begin[last_index];
+
+        for (ssize_t i = 0; i < last_index; ++i) {
+            if (comparator(begin[i], pivot))
+                swap(begin[++smallest_index], begin[i]);
+        }
+
+        swap(begin[++smallest_index], pivot);
+        return &begin[smallest_index];
+    };
+
+    static dqs_t do_quick_sort = [](T* begin, T* end, Compare& comparator) -> void
+    {
+        // 1 element array, doesn't make sense to sort
+        if (end - begin < 2)
+            return;
+
+        auto* pivot = do_partition(begin, end, comparator);
+
+        do_quick_sort(begin, pivot, comparator);
+        do_quick_sort(pivot + 1, end, comparator);
+    };
+
+    do_quick_sort(begin, end, comparator);
+}
 }
