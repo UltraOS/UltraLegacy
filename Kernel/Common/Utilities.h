@@ -145,7 +145,7 @@ void quick_sort(T* begin, T* end, Compare comparator = Compare())
 
     static dqs_t do_quick_sort = [](T* begin, T* end, Compare& comparator) -> void
     {
-        // 1 element array, doesn't make sense to sort
+        // 1 element or empty array, doesn't make sense to sort
         if (end - begin < 2)
             return;
 
@@ -156,5 +156,25 @@ void quick_sort(T* begin, T* end, Compare comparator = Compare())
     };
 
     do_quick_sort(begin, end, comparator);
+}
+
+
+template <typename T, typename Compare = Less<T>>
+void insertion_sort(T* begin, T* end, Compare comparator = Compare())
+{
+    // 1 element or empty array, doesn't make sense to sort
+    if (end - begin < 2)
+        return;
+
+    size_t array_size = end - begin;
+
+    for (size_t i = 0; i < array_size; ++i) {
+        auto j = i;
+
+        while (j > 0 && comparator(begin[j], begin[j - 1])) {
+            swap(begin[j], begin[j - 1]);
+            --j;
+        }
+    }
 }
 }
