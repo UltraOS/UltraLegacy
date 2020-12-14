@@ -87,3 +87,91 @@ TEST(LowerBound) {
     Assert::that(kernel::lower_bound(array, array + 4, 4)).is_equal(array + 3);
     Assert::that(kernel::lower_bound(array, array + 4, 5)).is_equal(array + 4);
 }
+
+TEST(QuickSortLess) {
+    static constexpr int test_size = 100;
+
+    int* array = new int[test_size];
+    int* end = array + test_size;
+
+    for (int i = test_size - 1; i >= 0; --i)
+        array[abs(i - test_size + 1)] = i;
+
+    kernel::quick_sort(array, end, kernel::Less<int>());
+
+    for (int i = 0; i < test_size; ++i)
+        Assert::that(array[i]).is_equal(i);
+}
+
+TEST(QuickSortGreater) {
+    static constexpr int test_size = 100;
+
+    int* array = new int[test_size];
+    int* end = array + test_size;
+
+    for (int i = 0; i < test_size; ++i)
+        array[i] = i;
+
+    kernel::quick_sort(array, end, kernel::Greater<int>());
+
+    for (int i = test_size - 1; i >= 0; --i)
+        Assert::that(array[i]).is_equal(abs(i - test_size + 1));
+}
+
+TEST(QuickSortEdges) {
+    int array[2];
+    array[0] = 2;
+    array[1] = 1;
+
+    kernel::quick_sort(array, array + 2);
+    Assert::that(array[0]).is_equal(1);
+    Assert::that(array[1]).is_equal(2);
+
+    int one_elem_array[1] = { 1 };
+    kernel::quick_sort(one_elem_array, one_elem_array + 1);
+    Assert::that(one_elem_array[0]).is_equal(1);
+}
+
+TEST(InsertionSortLess) {
+    static constexpr int test_size = 100;
+
+    int* array = new int[test_size];
+    int* end = array + test_size;
+
+    for (int i = test_size - 1; i >= 0; --i)
+        array[abs(i - test_size + 1)] = i;
+
+    kernel::insertion_sort(array, end, kernel::Less<int>());
+
+    for (int i = 0; i < test_size; ++i)
+        Assert::that(array[i]).is_equal(i);
+}
+
+TEST(InsertionSortGreater) {
+    static constexpr int test_size = 100;
+
+    int* array = new int[test_size];
+    int* end = array + test_size;
+
+    for (int i = 0; i < test_size; ++i)
+        array[i] = i;
+
+    kernel::insertion_sort(array, end, kernel::Greater<int>());
+
+    for (int i = test_size - 1; i >= 0; --i)
+        Assert::that(array[i]).is_equal(abs(i - test_size + 1));
+}
+
+TEST(InsertionSortEdges) {
+    int array[2];
+    array[0] = 2;
+    array[1] = 1;
+
+    kernel::insertion_sort(array, array + 2);
+    Assert::that(array[0]).is_equal(1);
+    Assert::that(array[1]).is_equal(2);
+
+    int one_elem_array[1] = { 1 };
+    kernel::insertion_sort(one_elem_array, one_elem_array + 1);
+    Assert::that(one_elem_array[0]).is_equal(1);
+}
