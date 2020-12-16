@@ -30,7 +30,7 @@ public:
     const T& back() const { return m_elements[size() - 1]; }
     T& back() { return m_elements[size() - 1]; }
 
-    T* begin() { return &m_elements; }
+    T* begin() { return m_elements; }
     T* end() { return &back() + 1; }
 
 private:
