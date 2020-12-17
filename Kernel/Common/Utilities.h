@@ -158,7 +158,6 @@ void quick_sort(T* begin, T* end, Compare comparator = Compare())
     do_quick_sort(begin, end, comparator);
 }
 
-
 template <typename T, typename Compare = Less<T>>
 void insertion_sort(T* begin, T* end, Compare comparator = Compare())
 {

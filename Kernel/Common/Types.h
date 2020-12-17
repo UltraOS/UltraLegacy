@@ -91,7 +91,7 @@ public:
     {
     }
 
-    constexpr ptr_t raw() const { return m_ptr; }
+    constexpr underlying_pointer_type raw() const { return m_ptr; }
 
     template <typename T>
     constexpr T* as_pointer()
@@ -105,7 +105,7 @@ public:
         return const_cast<T*>(reinterpret_cast<const T*>(m_ptr));
     }
 
-    constexpr operator ptr_t() const { return m_ptr; }
+    constexpr operator underlying_pointer_type() const { return m_ptr; }
 
     void operator+=(size_t offset) { m_ptr += offset; }
 
