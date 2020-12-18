@@ -36,6 +36,37 @@ public:
     void write(StringView string) override { Serial::write<Serial::Port::COM1>(string); }
 };
 
+template <size_t MaxSinks>
+class StaticSinkHolder {
+public:
+    template <typename T>
+    void construct()
+    {
+        static_assert(is_base_of_v<LogSink, T>, "T must be derived from LogSink");
+        
+        // Any log sink _must_ only contain the vtable pointer and nothing else
+        static_assert(sizeof(T) == sizeof(ptr_t));
+
+        ASSERT(m_sinks != MaxSinks);
+
+        new (end()) T();
+        ++m_sinks;
+    }
+
+    LogSink* begin() { return reinterpret_cast<LogSink*>(m_storage); }
+    LogSink* end() { return begin() + m_sinks; }
+
+private:
+    size_t m_sinks { 0 };
+    alignas(sizeof(ptr_t)) u8 m_storage[sizeof(ptr_t) * MaxSinks];
+};
+
+inline constexpr size_t sink_holder_capacity = 3;
+using DefaultSinkHolder = StaticSinkHolder<sink_holder_capacity>;
+
+alignas(DefaultSinkHolder) inline static u8 sink_storage[sizeof(DefaultSinkHolder)];
+alignas(InterruptSafeSpinLock) inline static u8 lock_storage[sizeof(InterruptSafeSpinLock)];
+
 class Logger : public StreamingFormatter {
 public:
     static constexpr StringView info_prefix = "[\33[34mINFO\033[0m] "_sv;
@@ -47,19 +78,18 @@ public:
         ASSERT(s_sinks == nullptr);
         ASSERT(s_write_lock == nullptr);
 
-        s_sinks = new DynamicArray<LogSink*>(2);
+        s_sinks = new (sink_storage) DefaultSinkHolder();
+        s_write_lock = new (lock_storage) InterruptSafeSpinLock;
 
         if (E9LogSink::is_supported())
-            s_sinks->emplace(new E9LogSink());
+            s_sinks->construct<E9LogSink>();
 
-        s_sinks->emplace(new SerialSink());
-
-        s_write_lock = new InterruptSafeSpinLock;
+        s_sinks->construct<SerialSink>();
     }
 
     static bool is_initialized() { return s_sinks && s_write_lock; }
 
-    static DynamicArray<LogSink*>& sinks()
+    static StaticSinkHolder<3>& sinks()
     {
         ASSERT(s_sinks != nullptr);
 
@@ -68,8 +98,6 @@ public:
 
     static InterruptSafeSpinLock& write_lock()
     {
-        ASSERT(s_write_lock != nullptr);
-
         return *s_write_lock;
     }
 
@@ -108,7 +136,7 @@ public:
             return;
 
         for (auto& sink : sinks())
-            sink->write(string);
+            sink.write(string);
     }
 
     ~Logger()
@@ -129,7 +157,7 @@ private:
     bool m_interrupt_state { false };
     bool m_should_unlock;
 
-    static inline DynamicArray<LogSink*>* s_sinks;
+    static inline StaticSinkHolder<3>* s_sinks;
     static inline InterruptSafeSpinLock* s_write_lock;
 };
 
