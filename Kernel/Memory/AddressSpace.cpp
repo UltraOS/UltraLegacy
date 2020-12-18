@@ -12,18 +12,14 @@
 
 namespace kernel {
 
-#ifdef ULTRA_32
-// defined in Architecture/x86/Entrypoint.asm
-extern "C" u8 kernel_page_directory[AddressSpace::Table::entry_count];
-#endif
+// defined in Architecture/X/Entrypoint.asm
+extern "C" ptr_t kernel_base_table[AddressSpace::Table::entry_count];
 
 AddressSpace* AddressSpace::s_of_kernel;
 
-AddressSpace::AddressSpace() { }
-
-AddressSpace::AddressSpace(RefPtr<Page> directory_page)
-    : m_main_page(directory_page)
-    , m_allocator(MemoryManager::userspace_usable_base, MemoryManager::userspace_usable_length)
+AddressSpace::AddressSpace(RefPtr<Page> base_page)
+    : m_main_page(base_page)
+    , m_allocator(MemoryManager::userspace_usable_base, MemoryManager::userspace_usable_ceiling)
 {
     MemoryManager::the().inititalize(*this);
 }
@@ -31,40 +27,33 @@ AddressSpace::AddressSpace(RefPtr<Page> directory_page)
 void AddressSpace::inititalize()
 {
     s_of_kernel = new AddressSpace();
-
-#ifdef ULTRA_32
-    auto as_physical = MemoryManager::virtual_to_physical(&kernel_page_directory);
+    
+    auto as_physical = MemoryManager::virtual_to_physical(&kernel_base_table);
     s_of_kernel->m_main_page = RefPtr<Page>::create(as_physical);
-#elif defined(ULTRA_64)
-    s_of_kernel->m_main_page = MemoryManager::the().allocate_page();
 
+#ifdef ULTRA_64
     static constexpr size_t lower_indentity_size = 4 * GB;
 
-    for (size_t i = 0; i < lower_indentity_size / Page::huge_size; ++i)
-        s_of_kernel->map_huge_supervisor_page(
-            MemoryManager::physical_memory_base + Page::huge_size * i,
-            Page::huge_size * i);
-
     for (const auto& entry : MemoryManager::the().memory_map()) {
-        if (entry.base_address < lower_indentity_size)
+        if (entry.begin() < lower_indentity_size)
             continue; // we already have this mapped
 
         size_t base_address;
         size_t length;
 
-        if (!Page::is_huge_aligned(entry.base_address)) {
-            auto alignment_overhead = entry.base_address % Page::huge_size;
-            base_address = entry.base_address - alignment_overhead;
-            length = entry.length + alignment_overhead;
+        if (!Page::is_huge_aligned(entry.begin())) {
+            auto alignment_overhead = entry.begin() % Page::huge_size;
+            base_address = entry.begin() - alignment_overhead;
+            length = entry.length() + alignment_overhead;
 
 #ifdef ADDRESS_SPACE_DEBUG
             log() << "AddressSpace: "
-                  << " aligning the entry at " << format::as_hex << entry.base_address << "length " << entry.length
+                  << " aligning the entry at " << format::as_hex << entry.begin() << "length " << entry.length()
                   << " to " << base_address << " length " << length;
 #endif
         } else {
-            base_address = entry.base_address;
-            length = entry.length;
+            base_address = entry.begin();
+            length = entry.length();
         }
 
         auto total_pages = ceiling_divide(length, Page::huge_size);
@@ -79,22 +68,24 @@ void AddressSpace::inititalize()
                 physical_address);
         }
     }
-
-    static constexpr size_t kernel_reserved_address_space = 8 * MB;
-
-    for (size_t i = 0; i < kernel_reserved_address_space / Page::huge_size; ++i) {
-        auto physical_address = Page::huge_size * i;
-        s_of_kernel->map_huge_supervisor_page(MemoryManager::kernel_reserved_base + physical_address, physical_address);
-    }
 #endif
 
     s_of_kernel->flush_all();
-    s_of_kernel->allocator().reset_with(MemoryManager::kernel_usable_base, MemoryManager::kernel_usable_length);
+
+    //  this should be begin-end not this way :(
+    s_of_kernel->allocator().reset_with(
+            MemoryManager::the().kernel_address_space_free_base(),
+            MemoryManager::the().kernel_address_space_free_ceiling()
+    );
+
+// since the 64 bit kernel address space overlaps the kernel image + base heap we have to allocate it right away
+// FIXME: this could be nicely hidden away once we have proper memory regions with tags etc
+#ifdef ULTRA_64
+    s_of_kernel->allocator().allocate(MemoryManager::kernel_reserved_range());
+#endif
 
 #ifdef ULTRA_32
-    // allocate a quickmap range
-    auto range = s_of_kernel->allocator().allocate(Page::size);
-    MemoryManager::the().set_quickmap_range(range);
+    MemoryManager::the().set_quickmap_range({ MemoryManager::kernel_quickmap_range_base, MemoryManager::kernel_quickmap_range_size });
 #endif
 }
 
@@ -450,7 +441,7 @@ AddressSpace& AddressSpace::current()
     // this is possible in case a page fault happens before
     // Scheduler::initialize() or some other memory corruption
     // in which case the only existing address space is that of kernel
-    if (!CPU::current().current_thread()) {
+    if (!CPU::is_initialized() || !CPU::current().current_thread()) {
         warning() << "AddressSpace: current_thread == nullptr, returning kernel address space";
         return AddressSpace::of_kernel();
     }

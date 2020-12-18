@@ -38,7 +38,7 @@ public:
     };
 #endif
 
-    AddressSpace(RefPtr<Page> directory_page);
+    explicit AddressSpace(RefPtr<Page> directory_page);
 
     static void inititalize();
     static AddressSpace& of_kernel();
@@ -91,7 +91,7 @@ public:
     void flush_at(Address virtual_address);
 
 private:
-    AddressSpace();
+    AddressSpace() = default;
 
     void map_supervisor_page_directory_entry(size_t index, Address physical_address);
     void map_supervisor_page_directory_entry(size_t index, const Page& physical_address);
