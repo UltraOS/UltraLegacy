@@ -1,10 +1,12 @@
 #pragma once
 
 #include "Common/DynamicArray.h"
+#include "Common/DynamicBitArray.h"
 #include "Common/RefPtr.h"
 #include "Core/Registers.h"
+#include "Core/Boot.h"
+#include "MemoryMap.h"
 #include "Page.h"
-#include "PhysicalMemory.h"
 #include "VirtualAllocator.h"
 
 namespace kernel {
@@ -14,45 +16,75 @@ class AddressSpace;
 class PageFault;
 
 class MemoryManager {
-    MAKE_SINGLETON(MemoryManager, const MemoryMap&);
+    MAKE_SINGLETON(MemoryManager);
 
 public:
-    // TODO: redo most of these constants, they're completely incorrect for x86-64
-    static constexpr size_t page_directory_entry_count = 1024;
-    static constexpr size_t page_table_entry_count = 1024;
-    static constexpr size_t page_table_address_space = page_table_entry_count * Page::size;
-
 #ifdef ULTRA_32
     static constexpr Address max_memory_address = 0xFFFFFFFF;
     static constexpr Address kernel_reserved_base = 3 * GB;
     static constexpr size_t kernel_first_table_index = 768;
     static constexpr size_t kernel_last_table_index = 1022;
     static constexpr size_t recursive_entry_index = 1023;
+    static constexpr size_t kernel_quickmap_range_size = 512 * KB; // 128 quickmap slots
+    static constexpr Address userspace_usable_ceiling = kernel_reserved_base;
 #elif defined(ULTRA_64)
     static constexpr Address max_memory_address = 0xFFFFFFFFFFFFFFFF;
     static constexpr Address kernel_reserved_base = max_memory_address - 2 * GB + 1;
     static constexpr Address physical_memory_base = 0xFFFF800000000000;
+    static constexpr Address userspace_usable_ceiling = 0x0000800000000000;
+    static constexpr size_t kernel_first_table_index = 256;
+    static constexpr size_t kernel_last_table_index = 511;
+#endif
+    static constexpr size_t kernel_image_size = 3 * MB;
+    static constexpr size_t kernel_first_heap_block_size = 4 * MB;
+
+    static constexpr Address kernel_image_base = kernel_reserved_base + 1 * MB;
+    static constexpr Address kernel_reserved_ceiling = kernel_image_base + kernel_image_size;
+    static constexpr Address kernel_first_heap_block_base = kernel_reserved_ceiling;
+    static constexpr Address kernel_first_heap_block_ceiling = kernel_first_heap_block_base + kernel_first_heap_block_size;
+
+#ifdef ULTRA_32
+    static constexpr size_t kernel_quickmap_range_base = kernel_first_heap_block_ceiling;
 #endif
 
-    static constexpr size_t kernel_size = 3 * MB;
-    static constexpr size_t kernel_heap_initial_size = page_table_address_space;
-    static constexpr Address kernel_base_address = kernel_reserved_base + 1 * MB;
-    static constexpr size_t kernel_pre_reserved_size = kernel_base_address - kernel_reserved_base;
-    static constexpr size_t kernel_reserved_binary = kernel_pre_reserved_size + kernel_size;
-    static constexpr size_t kernel_reserved_size = kernel_reserved_binary + kernel_heap_initial_size;
-    static constexpr Address kernel_ceiling = max_memory_address - page_table_address_space + 1;
-    static constexpr Address kernel_usable_base = kernel_reserved_base + kernel_reserved_size;
-    static constexpr size_t kernel_usable_length = kernel_ceiling - kernel_usable_base;
-    static constexpr Address kernel_end_address = kernel_base_address + kernel_size;
-    static constexpr Address kernel_heap_begin = kernel_end_address;
+    static constexpr size_t kernel_reserved_size = kernel_reserved_ceiling - kernel_reserved_base;
+
+    static Range kernel_reserved_range()
+    {
+        return Range::from_two_pointers(
+                kernel_reserved_base,
+                kernel_image_base + kernel_image_size + kernel_first_heap_block_size
+#ifdef ULTRA_32
+                + kernel_quickmap_range_size
+#endif
+        );
+    }
+    
+
+    Address kernel_address_space_free_base() const
+    {
+#ifdef ULTRA_32
+        return kernel_reserved_range().end();
+#elif defined(ULTRA_64)
+        // 64 bit kernel's free base depends on the highest physical address in the memory map,
+        // because we have to have direct access to all physical memory via 'physical_memory_base + physaddr'.
+        // Since we always direct map the first 4 physical gigabytes we pick the maximum of the two
+        auto rounded_up_physical = Page::round_up(m_memory_map.highest_address());
+        return max(physical_to_virtual(rounded_up_physical), physical_to_virtual(4 * GB));
+#endif
+    }
+
+    static Address kernel_address_space_free_ceiling();
 
     static constexpr Address userspace_base = static_cast<ptr_t>(0x00000000);
     static constexpr size_t userspace_reserved = 1 * MB;
     static constexpr Address userspace_usable_base = userspace_base + userspace_reserved;
-    static constexpr Address userspace_usable_ceiling = kernel_reserved_base;
     static constexpr size_t userspace_usable_length = userspace_usable_ceiling - userspace_usable_base;
 
-    static void inititalize(const MemoryMap& memory_map);
+    // Reserves kernel image from the memory map & initializes the heap
+    static void early_initialize(LoaderContext*);
+
+    static void inititalize();
 
     static void handle_page_fault(const RegisterState&, const PageFault&);
 
@@ -64,7 +96,7 @@ public:
     void free_page(Page& page);
 
 #ifdef ULTRA_32
-    void set_quickmap_range(const VirtualAllocator::Range& range);
+    void set_quickmap_range(const Range& range);
 
     static constexpr Address physical_to_virtual(Address physical_address)
     {
@@ -75,7 +107,7 @@ public:
 
     static constexpr Address virtual_to_physical(Address virtual_address)
     {
-        ASSERT(virtual_address > kernel_reserved_base && virtual_address < kernel_end_address);
+        ASSERT(virtual_address >= kernel_reserved_base && virtual_address < kernel_reserved_ceiling);
 
         return virtual_address - kernel_reserved_base;
     }
@@ -98,28 +130,26 @@ public:
 
     const MemoryMap& memory_map() const
     {
-        ASSERT(m_memory_map != nullptr);
-
-        return *m_memory_map;
+        return m_memory_map;
     }
 
-    void force_preallocate(const VirtualAllocator::Range& range, bool should_zero = false);
+    void force_preallocate(const Range& range, bool should_zero = false);
 
 private:
 // Not needed for 64 bit as we have all the phys memory mapped
 #ifdef ULTRA_32
     u8* quickmap_page(const Page&);
     u8* quickmap_page(Address);
-    void unquickmap_page();
+    void unquickmap_page(Address);
 
     class ScopedPageMapping {
     public:
-        ScopedPageMapping(Address physical_address)
+        explicit ScopedPageMapping(Address physical_address)
         {
             m_pointer = MemoryManager::the().quickmap_page(physical_address);
         }
 
-        ~ScopedPageMapping() { MemoryManager::the().unquickmap_page(); }
+        ~ScopedPageMapping() { MemoryManager::the().unquickmap_page(raw()); }
 
         Address raw() { return m_pointer; }
 
@@ -137,10 +167,12 @@ private:
 
     DynamicArray<PhysicalRegion> m_physical_regions;
 
-    const MemoryMap* m_memory_map;
+    MemoryMap m_memory_map;
 
 #ifdef ULTRA_32
-    VirtualAllocator::Range m_quickmap_range;
+    InterruptSafeSpinLock m_quickmap_lock;
+    Range m_quickmap_range;
+    DynamicBitArray m_quickmap_slots;
 #endif
 };
 }

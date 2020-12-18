@@ -9,6 +9,7 @@
 #include "MemoryManager.h"
 #include "Page.h"
 #include "PhysicalRegion.h"
+#include "BootAllocator.h"
 
 // #define MEMORY_MANAGER_DEBUG
 
@@ -16,96 +17,93 @@ namespace kernel {
 
 MemoryManager* MemoryManager::s_instance;
 
-MemoryManager::MemoryManager(const MemoryMap& memory_map)
+Address MemoryManager::kernel_address_space_free_ceiling()
 {
-    m_memory_map = &memory_map;
+#ifdef ULTRA_32
+    // recursive paging table is the last table in the address space
+    return max_memory_address - 4 * MB;
+#elif defined(ULTRA_64)
+    return max_memory_address;
+#endif
+}
+
+#ifdef ULTRA_32
+extern "C" ptr_t kernel_heap_table[1024];
+#else
+extern "C" ptr_t kernel_pdt[512];
+#endif
+
+void MemoryManager::early_initialize(LoaderContext* loader_context)
+{
+    BootAllocator::initialize(MemoryMap::generate_from(loader_context));
+
+    // reserve the physical memory range that contains the kernel image
+    BootAllocator::the().reserve_at(
+            Address64(virtual_to_physical(kernel_image_base)),
+            kernel_image_size / Page::size,
+            BootAllocator::Tag::KERNEL_IMAGE
+    );
+
+    // allocate the initial kernel heap block
+    auto heap_physical_base =
+            BootAllocator::the().reserve_contiguous(
+                    kernel_first_heap_block_size / Page::size,
+                    1 * MB,
+                    Address64(max_memory_address),
+                    BootAllocator::Tag::HEAP_BLOCK
+            );
+
+#ifdef ULTRA_32
+    auto table = new (kernel_heap_table) AddressSpace::PT;
+    for (ptr_t i = 0; i < 1024; ++i)
+        table->entry_at(i).set_physical_address(heap_physical_base + ((i * Page::size))).make_supervisor_present();
+#else
+    auto table = new (kernel_pdt) AddressSpace::PDT;
+    for (ptr_t i = 0; i < 2; ++i) {
+        auto& entry = table->entry_at(2 + i);
+        entry.set_physical_address(heap_physical_base + ((i * Page::huge_size))).make_supervisor_present();
+        entry.set_huge(true);
+    }
+#endif
+    HeapAllocator::initialize();
+}
+
+MemoryManager::MemoryManager()
+{
+    // That's it, we no longer need the boot allocator, we can take it from here
+    m_memory_map = BootAllocator::the().release();
 
     u64 total_free_memory = 0;
 
-    for (const auto& entry : memory_map) {
+    for (const auto& entry : m_memory_map) {
         log() << entry;
 
         if (entry.is_reserved())
             continue;
 
-        auto base_address = entry.base_address;
-        auto length = entry.length;
+        if (entry.begin() < 1 * MB)
+            continue;
 
-        if (base_address < kernel_reserved_size) {
-            if ((base_address + length) < kernel_reserved_size) {
-#ifdef MEMORY_MANAGER_DEBUG
-                log() << "MemoryManager: skipping a lower memory region at " << format::as_hex << base_address;
-#endif
-
-                continue;
-            } else {
-#ifdef MEMORY_MANAGER_DEBUG
-                log() << "MemoryManager: trimming a low memory region at " << format::as_hex << base_address;
-#endif
-
-                auto trim_overhead = kernel_reserved_size - base_address;
-                base_address += trim_overhead;
-                length -= trim_overhead;
-
-#ifdef MEMORY_MANAGER_DEBUG
-                log() << "MemoryManager: trimmed region:" << format::as_hex << base_address;
-#endif
-            }
-        }
+        auto potential_range = entry;
 
 #ifdef ULTRA_32
-        if (base_address > max_memory_address) {
+        if (potential_range.begin() > max_memory_address) {
 #ifdef MEMORY_MANAGER_DEBUG
-            log() << "MemoryManager: skipping a higher memory region at " << format::as_hex << base_address;
+            log() << "MemoryManager: skipping a higher memory region at " << format::as_hex << potential_range.begin();
 #endif
 
             continue;
-        } else if ((base_address + length) > max_memory_address) {
+        } else if (potential_range.end() > max_memory_address) {
 #ifdef MEMORY_MANAGER_DEBUG
-            log() << "MemoryManager: trimming a big region (outside of 4GB) at" << format::as_hex << base_address
-                  << " length:" << length;
+            log() << "MemoryManager: trimming a big region (outside of 4GB) at" << format::as_hex << potential_range.begin()
+                  << " potential_range.length:" << potential_range.length();
 #endif
 
-            length -= (base_address + length) - max_memory_address;
+            potential_range.set_length(potential_range.end() - max_memory_address);
         }
 #endif
 
-        if (!Page::is_aligned(base_address)) {
-#ifdef MEMORY_MANAGER_DEBUG
-            log() << "MemoryManager: got an unaligned memory map entry " << format::as_hex << base_address
-                  << " size:" << length;
-#endif
-
-            auto alignment_overhead = Page::size - (base_address % Page::size);
-
-            base_address += alignment_overhead;
-            length -= alignment_overhead;
-
-#ifdef MEMORY_MANAGER_DEBUG
-            log() << "MemoryManager: aligned address:" << format::as_hex << base_address << " size:" << length;
-#endif
-        }
-        if (!Page::is_aligned(length)) {
-#ifdef MEMORY_MANAGER_DEBUG
-            log() << "MemoryManager: got an unaligned memory map entry length" << length;
-#endif
-
-            length -= length % Page::size;
-
-#ifdef MEMORY_MANAGER_DEBUG
-            log() << "MemoryManager: aligned length at " << length;
-#endif
-        }
-        if (length < Page::size) {
-
-#ifdef MEMORY_MANAGER_DEBUG
-            log() << "MemoryManager: length is too small, skipping the entry (" << length << " < " << Page::size << ")";
-#endif
-
-            continue;
-        }
-
-        auto& this_region = m_physical_regions.emplace(base_address, length);
+        auto& this_region = m_physical_regions.emplace(Address(potential_range.begin().raw()), potential_range.length());
 
 #ifdef MEMORY_MANAGER_DEBUG
         log() << "MemoryManager: A new physical region -> " << this_region;
@@ -113,23 +111,34 @@ MemoryManager::MemoryManager(const MemoryMap& memory_map)
 
         total_free_memory += this_region.free_page_count() * Page::size;
     }
-
-#ifdef MEMORY_MANAGER_DEBUG
-    log() << "MemoryManager: Total free memory: " << bytes_to_megabytes(total_free_memory) << " MB ("
+    
+    log() << "MemoryManager: Total free physical memory: " << bytes_to_megabytes(total_free_memory) << " MB ("
           << total_free_memory / Page::size << " pages) ";
-#endif
 }
 
 #ifdef ULTRA_32
 u8* MemoryManager::quickmap_page(Address physical_address)
 {
+    LockGuard lock_guard(m_quickmap_lock);
+
+    auto slot = m_quickmap_slots.find_range(1, false);
+    m_quickmap_slots.set_bit(slot, true);
+
+    // TODO: this can technically be replaced with sleep(...) or some other mechanism
+    // to wait for an available slot, as well as just allocating a page-sized range from the
+    // virtual allocator.
+    if (slot == -1)
+        runtime::panic("Out of quickmap slots!");
+
+    Address virtual_address = m_quickmap_range.begin() + slot * Page::size;
+
 #ifdef MEMORY_MANAGER_DEBUG
-    log() << "MemoryManager: quickmapping vaddr " << m_quickmap_range.begin() << " to " << physical_address;
+    log() << "MemoryManager: quickmapping vaddr " << virtual_address << " to " << physical_address;
 #endif
 
-    AddressSpace::current().map_page(m_quickmap_range.begin(), physical_address);
+    AddressSpace::current().map_page(virtual_address, physical_address);
 
-    return m_quickmap_range.as_pointer<u8>();
+    return virtual_address.as_pointer<u8>();
 }
 
 u8* MemoryManager::quickmap_page(const Page& page)
@@ -137,9 +146,17 @@ u8* MemoryManager::quickmap_page(const Page& page)
     return quickmap_page(page.address());
 }
 
-void MemoryManager::unquickmap_page()
+void MemoryManager::unquickmap_page(Address virtual_address)
 {
-    AddressSpace::current().unmap_page(m_quickmap_range.begin());
+    ASSERT(virtual_address >= m_quickmap_range.begin());
+
+    auto slot = (virtual_address - m_quickmap_range.begin()) / Page::size;
+
+    AddressSpace::current().unmap_page(virtual_address);
+
+    LockGuard lock_guard(m_quickmap_lock);
+    ASSERT(m_quickmap_slots.bit_at(slot) == true);
+    m_quickmap_slots.set_bit(slot, false);
 }
 #endif
 
@@ -155,11 +172,11 @@ RefPtr<Page> MemoryManager::allocate_page(bool should_zero)
 
         ASSERT(page);
 
+        if (should_zero) {
 #ifdef MEMORY_MANAGER_DEBUG
-        log() << "MemoryManager: zeroing the page at physaddr " << page->address();
+            log() << "MemoryManager: zeroing the page at physaddr " << page->address();
 #endif
 
-        if (should_zero) {
 #ifdef ULTRA_32
             ScopedPageMapping mapping(page->address());
 
@@ -219,49 +236,44 @@ void MemoryManager::inititalize(AddressSpace& directory)
     LockGuard lock_guard(m_lock);
 #ifdef ULTRA_32
     // map the directory's physical page somewhere temporarily
-    ScopedPageMapping mapping(directory.physical_address());
+    ScopedPageMapping new_directory_mapping(directory.physical_address());
+    ScopedPageMapping current_directory_mapping(AddressSpace::current().physical_address());
 
 #ifdef MEMORY_MANAGER_DEBUG
     log() << "MemoryManager: Setting up kernel mappings for the directory at physaddr " << directory.physical_address();
 #endif
-
-    // copy the kernel mappings
-    // TODO: this assumes that all kernel tables are contiguous
-    //       so it could backfire later.
-    for (size_t i = kernel_first_table_index; i <= kernel_last_table_index; ++i) {
-        auto& entry = AddressSpace::current().entry_at(i);
-
-        if (!entry.is_present())
-            break;
-
-        directory.entry_at(i, mapping.raw()) = entry;
-    }
-
-    // TODO: remove this later when removing ring 3 tests
-    directory.entry_at(0, mapping.raw()) = AddressSpace::current().entry_at(0);
+    auto byte_offset = kernel_first_table_index * AddressSpace::Table::entry_size;
+    auto bytes_to_copy = (kernel_last_table_index - kernel_first_table_index + 1) * AddressSpace::Table::entry_size;
+    copy_memory(current_directory_mapping.raw().as_pointer<u8>() + byte_offset,
+                new_directory_mapping.raw().as_pointer<u8>() + byte_offset, bytes_to_copy);
 
     // create the recursive mapping
-    directory.entry_at(recursive_entry_index, mapping.raw())
-        .set_physical_address(directory.physical_address())
-        .make_supervisor_present();
-#elif defined(ULTRA_64)
-    static constexpr size_t kernel_pdpts[] = { 256, 511 };
+    directory.entry_at(recursive_entry_index, new_directory_mapping.raw())
+            .set_physical_address(directory.physical_address())
+            .make_supervisor_present();
 
-    for (auto pdpt_index : kernel_pdpts) {
-        auto& entry = AddressSpace::of_kernel().entry_at(pdpt_index);
-        directory.entry_at(pdpt_index) = entry;
-    }
+    // TODO: remove this later when removing ring 3 tests
+    directory.entry_at(0, new_directory_mapping.raw()) = AddressSpace::current().entry_at(0);
+#elif defined(ULTRA_64)
+    auto byte_offset = kernel_first_table_index * AddressSpace::Table::entry_size;
+    auto bytes_to_copy = (kernel_last_table_index - kernel_first_table_index + 1) * AddressSpace::Table::entry_size;
+
+    auto* new_directory = physical_to_virtual(directory.physical_address()).as_pointer<u8>();
+    auto* cur_directory = physical_to_virtual(AddressSpace::current().physical_address()).as_pointer<u8>();
+
+    copy_memory(cur_directory + byte_offset, new_directory + byte_offset, bytes_to_copy);
 #endif
 }
 
 #ifdef ULTRA_32
-void MemoryManager::set_quickmap_range(const VirtualAllocator::Range& range)
+void MemoryManager::set_quickmap_range(const Range& range)
 {
     m_quickmap_range = range;
+    m_quickmap_slots.set_size(range.length() / Page::size);
 }
 #endif
 
-void MemoryManager::force_preallocate(const VirtualAllocator::Range& range, bool should_zero)
+void MemoryManager::force_preallocate(const Range& range, bool should_zero)
 {
     ASSERT_PAGE_ALIGNED(range.begin());
 
@@ -281,8 +293,9 @@ MemoryManager& MemoryManager::the()
     return *s_instance;
 }
 
-void MemoryManager::inititalize(const MemoryMap& memory_map)
+void MemoryManager::inititalize()
 {
-    s_instance = new MemoryManager(memory_map);
+    ASSERT(s_instance == nullptr);
+    s_instance = new MemoryManager();
 }
 }

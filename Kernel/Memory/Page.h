@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Common/Types.h"
+#include "Common/Macros.h"
 #include "Core/Runtime.h"
 
 namespace kernel {
