@@ -25,10 +25,6 @@ namespace kernel::runtime {
 // clang-format off
 void ensure_loaded_correctly()
 {
-    // Global constructors are not yet called so we cannot use log()
-    // instead, just create a temporary logger here
-    E9LogSink e9s;
-
     if (magic_string[0]  == 'M' &&
         magic_string[1]  == 'A' &&
         magic_string[2]  == 'G' &&
@@ -42,15 +38,9 @@ void ensure_loaded_correctly()
         magic_string[10] == 'E' &&
         magic_string[11] == 'N' &&
         magic_string[12] == 'T') {
-        if (e9s.is_supported())  {
-            e9s.write(Logger::info_prefix);
-            e9s.write("Runtime: Magic test passed!\n");
-        }
+        log() << "Runtime: Magic test passed!";
     } else {
-        if (e9s.is_supported())  {
-            e9s.write(Logger::error_prefix);
-            e9s.write("Runtime: Magic test failed!\n");
-        }
+        error() << "Runtime: Magic test failed!";
         hang();
     }
 }
@@ -243,23 +233,37 @@ inline size_t dump_backtrace(ptr_t* into, size_t max_depth)
     if (InterruptController::is_initialized())
         IPICommunicator::hang_all_cores();
 
-    if (!VideoDevice::is_ready())
-        hang();
+    Rect surface_rect;
+    Point center;
+    Rect exception_rect;
+    Point offset;
+    bool can_draw = VideoDevice::is_ready();
 
-    auto& surface = VideoDevice::the().surface();
-    Rect surface_rect(0, 0, surface.width(), surface.height());
-    auto center = surface_rect.center();
-    Rect exception_rect(0, 0, center.x(), center.y());
-    Point offset = exception_rect.center();
+    if (can_draw) {
+        auto& surface = VideoDevice::the().surface();
+        surface_rect = { 0, 0, surface.width(), surface.height() };
+        center = surface_rect.center();
+        exception_rect = { 0, 0, center.x(), center.y() };
+        offset = exception_rect.center();
+    }
+
     auto initial_x = 10;
 
-    Painter p(&surface);
-    p.fill_rect(surface_rect, screen_color);
+    alignas(Painter) u8 optional_painter[sizeof(Painter)];
+
+    if (can_draw)
+        new (optional_painter) Painter(&VideoDevice::the().surface());
+
+    #define TRY_PAINT(what) \
+        if (can_draw)       \
+            reinterpret_cast<Painter*>(optional_painter)->what
+
+    TRY_PAINT(fill_rect(surface_rect, screen_color));
 
     Point panic_offset(offset.x() + offset.x() / 2 + (panic_message.size() / 2 * Painter::font_width), offset.y() - 40);
 
     for (char c : panic_message) {
-        p.draw_char(panic_offset, c, font_color, Color::transparent());
+        TRY_PAINT(draw_char(panic_offset, c, font_color, Color::transparent()));
         panic_offset.first() += Painter::font_width;
     }
 
@@ -276,7 +280,7 @@ inline size_t dump_backtrace(ptr_t* into, size_t max_depth)
                 continue;
             }
 
-            p.draw_char(offset, c, font_color, Color::transparent());
+            TRY_PAINT(draw_char(offset, c, font_color, Color::transparent()));
             offset.first() += Painter::font_width;
         }
     };
