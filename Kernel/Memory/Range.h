@@ -11,8 +11,8 @@ public:
     BasicRange() = default;
 
     BasicRange(AddrT start, size_t length)
-            : m_begin(start)
-            , m_end(start + length)
+        : m_begin(start)
+        , m_end(start + length)
     {
         ASSERT(m_begin <= m_end);
     }
@@ -57,6 +57,16 @@ public:
         m_end = m_begin + length;
     }
 
+    void set_begin(AddrT begin)
+    {
+        m_begin = begin;
+    }
+
+    void set_end(AddrT end)
+    {
+        m_end = end;
+    }
+
     bool contains(AddrT address) const
     {
         return address >= begin() && address < end();
@@ -65,6 +75,14 @@ public:
     bool contains(const BasicRange& other) const
     {
         return contains(other.begin()) && other.end() <= end();
+    }
+
+    bool overlaps(const BasicRange& other) const
+    {
+        if (empty() || other.empty())
+            return false;
+
+        return contains(other.begin()) || other.contains(begin());
     }
 
     BasicRange clipped_with_begin(AddrT address) const
@@ -81,10 +99,24 @@ public:
         return from_two_pointers(m_begin, address);
     }
 
-    void reset_with(AddrT start, size_t length)
+    void reset_with(AddrT begin, size_t length)
     {
-        m_begin = start;
-        m_end = start + length;
+        m_begin = begin;
+        m_end = begin + length;
+    }
+
+    void reset_with(BasicRange range)
+    {
+        m_begin = range.m_begin;
+        m_end = range.m_end;
+    }
+
+    void reset_with_two_pointers(AddrT begin, AddrT end)
+    {
+        ASSERT(begin <= end);
+
+        m_begin = begin;
+        m_end = end;
     }
 
     template <typename T>
@@ -134,7 +166,7 @@ public:
         m_begin = aligned_begin;
     }
 
-    BasicRange aligned_to(size_t alignment)
+    BasicRange aligned_to(size_t alignment) const
     {
         auto remainder = m_begin % alignment;
         auto aligned_begin = remainder ? AddrT(m_begin + (alignment - remainder)) : m_begin;
