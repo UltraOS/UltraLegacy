@@ -1,19 +1,19 @@
 #pragma once
 
-#include "Memory/PhysicalMemory.h"
+#include "Memory/MemoryMap.h"
+#include "Drivers/Video/VideoMode.h"
 
 namespace kernel {
 
-struct PACKED VideoMode {
-    u32 width;
-    u32 height;
-    u32 pitch;
-    u32 bpp;
-    ptr_t framebuffer;
+struct PACKED LoaderContext {
+    enum class Type : ptr_t {
+        BIOS = 1,
+    } type;
 };
 
-struct Context {
-    VideoMode video_mode;
-    MemoryMap memory_map;
+struct PACKED BIOSContext : public LoaderContext {
+    VBEVideoMode video_mode;
+    E820MemoryMap memory_map;
 };
+
 }

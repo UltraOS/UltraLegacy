@@ -1,4 +1,4 @@
-%define KERNEL_ENTRYPOINT _ZN6kernel3runEPNS_7ContextE
+%define KERNEL_ENTRYPOINT _ZN6kernel3runEPNS_13LoaderContextE
 
 extern KERNEL_ENTRYPOINT
 
@@ -19,8 +19,6 @@ EM_BIT:         equ (1 << 2)
 TS_BIT:         equ (1 << 3)
 GLOBAL_BIT:     equ (1 << 7)
 
-HEAP_ENTRY_COUNT: equ 1024 ; 4MB of kernel heap
-
 WRITE_PROTECT: equ (0b1 << 16)
 PAGING:        equ (0b1 << 31)
 
@@ -31,38 +29,50 @@ section .bss
 ; it simply ignores this if it's a macro
 align 4096
 
-global kernel_page_directory
-kernel_page_directory:
+global kernel_base_table
+kernel_base_table:
     resb PAGE_SIZE
 
 global kernel_page_table
 kernel_page_table:
     resb PAGE_SIZE
 
+global kernel_heap_table
 kernel_heap_table:
     resb PAGE_SIZE
 
+; FIXME: this doesnt have to be global?
+global kernel_quickmap_table
 kernel_quickmap_table:
     resb PAGE_SIZE
 
-; Current memory layout (physical)
+global memory_map_entries_buffer
+memory_map_entries_buffer:
+    resb PAGE_SIZE
+
+; Physical memory layout
 ; 0MB -> 1MB unused (bootloader and bios stuff)
 ; 1MB -> 4MB kernel
-; 4MB -> 8MB kernel heap
-; 8MB -> 4GB unsued
+; 4MB -> 4GB unused (4 MB -> 8MB range is likely the initial kernel heap block)
 
-; Current memory layout (virtual)
+; Virtual memory layout
 ; 0x00000000 -> 0xBFFFFFFF user space
-; 0xC0000000 -> 0xC0100000 unused (vga memory is here somewhere)
-; 0xC0100000 -> 0xC03FFFFF kernel
-; 0xC0400000 -> 0xC07FFFFF kernel heap
-; 0xC0800000 -> 0xFFBFFFFF unused
+; 0xC0000000 -> 0xC0100000 unused (direct mapping of the first MB)
+; 0xC0100000 -> 0xC03FFFFF kernel (direct mapping of 1MB -> 4MB)
+; 0xC0400000 -> 0xC07FFFFF first kernel heap block
+; 0xC0800000 -> 0xC087FFFF kernel quick-map range (used by the MM to access random physical memory)
+; 0xC0880000 -> 0xFFBFFFFF kernel address space free for allocation for any kernel thread
 ; 0xFFC00000 -> 0xFFFFFFFF reserved for recursive paging
 
 section .entry
 
 extern section_bss_begin
 extern section_bss_end
+
+; set_directory_entry_to(pd_index, phys_addr)
+%macro set_directory_entry 2
+mov [TO_PHYSICAL(kernel_base_table + %1 * ENTRY_SIZE)], dword (TO_PHYSICAL(%2) + (PRESENT | READWRITE))
+%endmacro
 
 global start
 start:
@@ -75,17 +85,21 @@ start:
     rep stosb
     mov eax, ebp
 
-    ; TODO: actually check if we have one.
-    ; and maybe move this out into a CPU class in C++
+    ; initialize the FPU
+    ; TODO: actually check if we have one, and maybe move this out into a CPU class in C++.
     mov edx, cr0
     and edx, ~(EM_BIT | TS_BIT)
     mov cr0, edx
-    fninit ; initialize the FPU
+    fninit
 
+    ; enable the global bit
     mov ecx, cr4
     or  ecx, GLOBAL_BIT
     mov cr4, ecx
 
+    ; set up a direct + identity mapping for the kernel page table
+    ; e.g virtual 0x00000000 points to physical 0x00000000
+    ; and virtual 0xC0000000 points to physical 0x00000000
     mov edi, TO_PHYSICAL(kernel_page_table)
     mov esi, 0x00000000
     mov ecx, ENTRY_COUNT
@@ -102,39 +116,22 @@ start:
         cmp ecx, 0
         jg map_one
 
-    ; TODO: make sure we actually have this much RAM free
-    mov edi, TO_PHYSICAL(kernel_heap_table)
-    mov esi, TO_PHYSICAL(KERNEL_ORIGIN + KERNEL_SIZE)
-    mov ecx, HEAP_ENTRY_COUNT
-
-    map_one_more:
-        mov edx, esi
-        or  edx, (PRESENT | READWRITE | GLOBAL_PAGE)
-        mov [edi], edx
-
-        add esi, PAGE_SIZE
-        add edi, ENTRY_SIZE
-        sub ecx, 1
-
-        cmp ecx, 0
-        jg map_one_more
-
     ; identity mapping to enable paging
-    mov [TO_PHYSICAL(kernel_page_directory)], dword (TO_PHYSICAL(kernel_page_table) + (PRESENT | READWRITE))
+    set_directory_entry 0, kernel_page_table
 
-    ; actual mapping
-    mov [TO_PHYSICAL(kernel_page_directory + 768 * ENTRY_SIZE)], dword (TO_PHYSICAL(kernel_page_table) + (PRESENT | READWRITE))
+    ; the kernel image direct mapping
+    set_directory_entry 768, kernel_page_table
 
     ; kernel heap
-    mov [TO_PHYSICAL(kernel_page_directory + 769 * ENTRY_SIZE)], dword (TO_PHYSICAL(kernel_heap_table) + (PRESENT | READWRITE))
+    set_directory_entry 769, kernel_heap_table
 
     ; kernel quickmap table
-    mov [TO_PHYSICAL(kernel_page_directory + 770 * ENTRY_SIZE)], dword (TO_PHYSICAL(kernel_quickmap_table) + (PRESENT | READWRITE))
+   set_directory_entry 770, kernel_quickmap_table
 
     ; recursive paging mapping
-    mov [TO_PHYSICAL(kernel_page_directory + 1023 * ENTRY_SIZE)], dword (TO_PHYSICAL(kernel_page_directory) + (PRESENT | READWRITE))
+    set_directory_entry 1023, kernel_base_table
 
-    mov ecx, TO_PHYSICAL(kernel_page_directory)
+    mov ecx, TO_PHYSICAL(kernel_base_table)
     mov cr3, ecx
 
     mov ecx, cr0
@@ -146,7 +143,7 @@ start:
 
     higher_half:
         ; remove the identity mapping here
-        mov [kernel_page_directory], dword 0x00000000
+        mov [kernel_base_table], dword 0x00000000
 
         ; flush TLB
         mov ecx, cr3

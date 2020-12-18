@@ -1,7 +1,7 @@
 #pragma once
 
+#include "VideoMode.h"
 #include "Core/Boot.h"
-
 #include "Drivers/Device.h"
 #include "WindowManager/Bitmap.h"
 
@@ -15,7 +15,7 @@ public:
 
     virtual const VideoMode& mode() const = 0;
 
-    static void discover_and_setup(const VideoMode&);
+    static void discover_and_setup(LoaderContext*);
 
     virtual Surface& surface() const = 0;
 

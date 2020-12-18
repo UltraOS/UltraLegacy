@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Core/Boot.h"
+#include "VideoMode.h"
 #include "VideoDevice.h"
 
 namespace kernel {

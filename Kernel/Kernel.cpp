@@ -17,7 +17,7 @@
 #include "Memory/AddressSpace.h"
 #include "Memory/HeapAllocator.h"
 #include "Memory/MemoryManager.h"
-#include "Memory/PhysicalMemory.h"
+#include "Memory/MemoryMap.h"
 #include "Multitasking/Scheduler.h"
 #include "Multitasking/Sleep.h"
 #include "Time/RTC.h"
@@ -31,15 +31,15 @@ namespace kernel {
 [[noreturn]] void userland_process();
 [[noreturn]] void process_with_windows();
 
-void run(Context* context)
+void run(LoaderContext* context)
 {
-    runtime::ensure_loaded_correctly();
-
-    HeapAllocator::initialize();
-
     Logger::initialize();
-
+    runtime::ensure_loaded_correctly();
     runtime::parse_kernel_symbols();
+
+    // Generates native memory map, initializes BootAllocator, initializes kernel heap
+    MemoryManager::early_initialize(context);
+    
     runtime::init_global_objects();
 
     GDT::the().create_basic_descriptors();
@@ -53,14 +53,14 @@ void run(Context* context)
     IDT::the().install();
 
     // Memory-related stuff
-    MemoryManager::inititalize(context->memory_map);
+    MemoryManager::inititalize();
     AddressSpace::inititalize();
 
     InterruptController::discover_and_setup();
     Timer::discover_and_setup();
     CPU::initialize();
 
-    VideoDevice::discover_and_setup(context->video_mode);
+    VideoDevice::discover_and_setup(context);
 
     Scheduler::inititalize();
 

@@ -50,7 +50,7 @@ application_processor_entrypoint:
 
 BITS 32
 
-extern kernel_page_directory
+extern kernel_base_table
 extern kernel_page_table
 
     protected:
@@ -63,9 +63,9 @@ extern kernel_page_table
 
     paging:
         ; identity mapping to enable paging
-        mov [TO_PHYSICAL(kernel_page_directory)], dword (TO_PHYSICAL(kernel_page_table) + (PRESENT | READWRITE))
+        mov [TO_PHYSICAL(kernel_base_table)], dword (TO_PHYSICAL(kernel_page_table) + (PRESENT | READWRITE))
 
-        mov ecx, TO_PHYSICAL(kernel_page_directory)
+        mov ecx, TO_PHYSICAL(kernel_base_table)
         mov cr3, ecx
 
         mov ecx, cr0
@@ -80,7 +80,7 @@ extern kernel_page_table
         mov esp, [STACK]
 
         ; remove the identity mapping here
-        mov [kernel_page_directory], dword 0x00000000
+        mov [kernel_base_table], dword 0x00000000
 
         ; flush TLB
         mov ecx, cr3

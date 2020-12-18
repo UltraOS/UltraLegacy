@@ -388,7 +388,15 @@ vbe_mode_info:
     .off_screen_mem_size:  dw 0
     .reserved_1: times 206 db 0
 
+BIOS_CONTEXT_TYPE: equ 1
+
 context:
+    %ifdef ULTRA_32
+    .type: dd BIOS_CONTEXT_TYPE
+    %elifdef ULTRA_64
+    .type: dq BIOS_CONTEXT_TYPE
+    %endif
+
     video_mode:
         .width:  dd 0
         .height: dd 0
