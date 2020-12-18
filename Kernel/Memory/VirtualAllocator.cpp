@@ -6,8 +6,8 @@
 
 namespace kernel {
 
-VirtualAllocator::VirtualAllocator(Address base, size_t length)
-    : m_base_range(base, length)
+VirtualAllocator::VirtualAllocator(Address begin, Address end)
+    : m_base_range(begin, end - begin)
 {
 }
 
@@ -16,6 +16,7 @@ String VirtualAllocator::debug_dump() const
     LockGuard lock_guard(m_lock);
 
     String dump;
+    dump << "Base range: " << m_base_range.begin() << " -> " << m_base_range.end() << "\n";
     dump << "Ranges total: " << m_allocated_ranges.size() << "\n";
 
     for (const auto& range : m_allocated_ranges) {
@@ -25,11 +26,11 @@ String VirtualAllocator::debug_dump() const
     return dump;
 }
 
-void VirtualAllocator::reset_with(Address base, size_t length)
+void VirtualAllocator::reset_with(Address begin, Address end)
 {
     LockGuard lock_guard(m_lock);
 
-    m_base_range.reset_with(base, length);
+    m_base_range.reset_with_two_pointers(begin, end);
     m_allocated_ranges.clear();
 }
 
@@ -78,7 +79,7 @@ void VirtualAllocator::merge_and_emplace(RangeIterator before, RangeIterator aft
     }
 }
 
-VirtualAllocator::Range VirtualAllocator::allocate(size_t length, size_t alignment)
+Range VirtualAllocator::allocate(size_t length, size_t alignment)
 {
     LockGuard lock_guard(m_lock);
 
@@ -102,6 +103,10 @@ VirtualAllocator::Range VirtualAllocator::allocate(size_t length, size_t alignme
         error_string << "VirtualAllocator: Length overflow with length=" << length << ", alignment=" << alignment;
         runtime::panic(error_string.data());
     }
+
+#ifdef VIRTUAL_ALLOCATOR_DEBUG
+    log() << "VirtualAllocator: trying to allocate length=" << rounded_up_length << ", alignment=" << alignment;
+#endif
 
     length = rounded_up_length;
 
@@ -134,6 +139,7 @@ VirtualAllocator::Range VirtualAllocator::allocate(size_t length, size_t alignme
         }
 
         allocated_range = potential_range;
+        allocated_range.set_length(length);
         break;
     }
 
@@ -157,7 +163,7 @@ VirtualAllocator::Range VirtualAllocator::allocate(size_t length, size_t alignme
     return allocated_range;
 }
 
-VirtualAllocator::Range VirtualAllocator::allocate(Range range)
+Range VirtualAllocator::allocate(Range range)
 {
 #ifdef VIRTUAL_ALLOCATOR_DEBUG
     log() << "VirtualAllocator: trying to allocate range " << range;
