@@ -13,20 +13,26 @@
 namespace kernel {
 
 HeapAllocator::HeapBlockHeader* HeapAllocator::s_heap_block;
-InterruptSafeSpinLock HeapAllocator::s_lock;
+
+alignas(InterruptSafeSpinLock) static u8 heap_lock_storage[sizeof(InterruptSafeSpinLock)];
+
+InterruptSafeSpinLock& HeapAllocator::lock()
+{
+    return *reinterpret_cast<InterruptSafeSpinLock*>(heap_lock_storage);
+}
 
 void HeapAllocator::initialize()
 {
     // call the ctor manually because we haven't initialized global objects yet
-    new (&s_lock) InterruptSafeSpinLock;
+    new (heap_lock_storage) InterruptSafeSpinLock;
 
     // feed the preallocated kernel heap page
-    feed_block(MemoryManager::kernel_heap_begin.as_pointer<void>(), MemoryManager::kernel_heap_initial_size);
+    feed_block(MemoryManager::kernel_first_heap_block_base.as_pointer<void>(), MemoryManager::kernel_first_heap_block_size);
 }
 
 void HeapAllocator::feed_block(void* ptr, size_t size, size_t chunk_size_in_bytes)
 {
-    LockGuard lock_guard(s_lock);
+    LockGuard lock_guard(lock());
 
     auto& new_heap = *reinterpret_cast<HeapBlockHeader*>(ptr);
 
@@ -82,7 +88,7 @@ void* HeapAllocator::allocate(size_t bytes)
         return nullptr;
     }
 
-    LockGuard lock_guard(s_lock);
+    LockGuard lock_guard(lock());
 
     s_calls_to_allocate++;
 
@@ -186,6 +192,7 @@ void* HeapAllocator::allocate(size_t bytes)
 
     StackStringBuilder error_string;
     error_string << "HeapAllocator: Out of memory! (tried to allocate " << bytes << " bytes)";
+    error_string << " " << s_calls_to_allocate << " " << s_heap_block->free_bytes() << " " << s_heap_block->chunk_size * s_heap_block->chunk_count;
     runtime::panic(error_string.data());
 
 #ifdef HEAP_ALLOCATOR_DEBUG
@@ -216,7 +223,7 @@ void HeapAllocator::free(void* ptr)
         return;
     }
 
-    LockGuard lock_guard(s_lock);
+    LockGuard lock_guard(lock());
 
     s_calls_to_free++;
 
@@ -285,7 +292,7 @@ HeapAllocator::Stats HeapAllocator::stats()
 {
     ASSERT(s_heap_block != nullptr);
 
-    LockGuard lock_guard(s_lock);
+    LockGuard lock_guard(lock());
 
     Stats stats {};
 

@@ -28,6 +28,8 @@ public:
     static Stats stats();
 
 private:
+    static InterruptSafeSpinLock& lock();
+
     struct HeapBlockHeader {
         HeapBlockHeader* next;
         u8* data;
@@ -46,7 +48,5 @@ private:
 
     inline static size_t s_calls_to_allocate;
     inline static size_t s_calls_to_free;
-
-    static InterruptSafeSpinLock s_lock;
 };
 }
