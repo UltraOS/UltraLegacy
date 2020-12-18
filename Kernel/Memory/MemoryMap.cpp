@@ -12,38 +12,37 @@ extern "C" u8 memory_map_entries_buffer[memory_map_entries_buffer_size];
 
 void MemoryMap::copy_aligned_from(E820MemoryMap& e820)
 {
-for (auto& dirty_entry : e820) {
+    for (auto& dirty_entry : e820) {
 #ifdef MEMORY_MAP_DEBUG
-    log() << "MemoryMap: Considering entry at " << format::as_hex
-        << dirty_entry.base_address << " size: " << dirty_entry.length;
+        log() << "MemoryMap: Considering entry at " << format::as_hex
+              << dirty_entry.base_address << " size: " << dirty_entry.length;
 #endif
 
-    PhysicalRange new_range(
-        dirty_entry.base_address,
-        dirty_entry.length,
-        static_cast<PhysicalRange::Type>(dirty_entry.type)
-    );
+        PhysicalRange new_range(
+            dirty_entry.base_address,
+            dirty_entry.length,
+            static_cast<PhysicalRange::Type>(dirty_entry.type));
 
-    // don't try to align reserved physical ranges, we're not gonna use them anyways
-    if (new_range.type != PhysicalRange::Type::FREE) {
+        // don't try to align reserved physical ranges, we're not gonna use them anyways
+        if (new_range.type != PhysicalRange::Type::FREE) {
+            emplace_range(move(new_range));
+            continue;
+        }
+
+        new_range = new_range.aligned_to(Page::size);
+
+        if (new_range.empty() || new_range.length() < Page::size) {
+#ifdef MEMORY_MAP_DEBUG
+            log() << "MemoryMap: Skipped physical range " << format::as_hex
+                  << dirty_entry.base_address << " of size " << dirty_entry.length;
+#endif
+            continue;
+        }
+
+        new_range.set_length(Page::round_down(new_range.length()));
+
         emplace_range(move(new_range));
-        continue;
     }
-
-    new_range = new_range.aligned_to(Page::size);
-
-    if (new_range.empty() || new_range.length() < Page::size) {
-#ifdef MEMORY_MAP_DEBUG
-        log() << "MemoryMap: Skipped physical range " << format::as_hex
-            << dirty_entry.base_address << " of size " << dirty_entry.length;
-#endif
-        continue;
-    }
-
-    new_range.set_length(Page::round_down(new_range.length()));
-
-    emplace_range(move(new_range));
-}
 }
 
 void MemoryMap::sort_by_address()
@@ -116,8 +115,7 @@ void MemoryMap::correct_overlapping_ranges(size_t hint)
 {
     ASSERT(m_entry_count != 0);
 
-    auto trivially_mergeable = [](const PhysicalRange& l, const PhysicalRange& r)
-    {
+    auto trivially_mergeable = [](const PhysicalRange& l, const PhysicalRange& r) {
         return l.end() == r.begin() && l.type == r.type;
     };
 
@@ -131,7 +129,7 @@ void MemoryMap::correct_overlapping_ranges(size_t hint)
 
             auto new_ranges = m_entries[i].shatter_against(m_entries[i + 1]);
 
-            bool is_valid_range[3]{};
+            bool is_valid_range[3] {};
             for (size_t j = 0; j < 3; ++j) {
                 if (new_ranges[j].is_free()) {
                     new_ranges[j] = new_ranges[j].aligned_to(Page::size);
@@ -158,7 +156,8 @@ void MemoryMap::correct_overlapping_ranges(size_t hint)
             if (j == i) {
                 StackStringBuilder error_message;
                 error_message << "MemoryMap: error while correcting ranges, couldn't merge:\n"
-                    << m_entries[i] << "\nwith\n" << m_entries[i + 1];
+                              << m_entries[i] << "\nwith\n"
+                              << m_entries[i + 1];
                 runtime::panic(error_message.data());
             }
 

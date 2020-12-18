@@ -1,8 +1,8 @@
 #pragma once
 
-#include "Common/Types.h"
 #include "Common/Macros.h"
 #include "Common/String.h"
+#include "Common/Types.h"
 #include "MemoryMap.h"
 
 namespace kernel {
@@ -21,8 +21,7 @@ public:
 
     static constexpr StringView tag_to_string(Tag tag)
     {
-        switch (tag)
-        {
+        switch (tag) {
         case Tag::GENERIC:
             return "generic"_sv;
         case Tag::KERNEL_IMAGE:
@@ -50,16 +49,16 @@ private:
         using NativeType = MemoryMap::PhysicalRange::Type;
 
         switch (tag) {
-            case Tag::GENERIC:
-                return NativeType::GENERIC_BOOTALLOC_RESERVED;
-            case Tag::KERNEL_IMAGE:
-                return NativeType::KERNEL_IMAGE;
-            case Tag::KERNEL_MODULE:
-                return NativeType::KERNEL_MODULE;
-            case Tag::HEAP_BLOCK:
-                return NativeType::INITIAL_HEAP_BLOCK;
-            default:
-                ASSERT_NEVER_REACHED();
+        case Tag::GENERIC:
+            return NativeType::GENERIC_BOOTALLOC_RESERVED;
+        case Tag::KERNEL_IMAGE:
+            return NativeType::KERNEL_IMAGE;
+        case Tag::KERNEL_MODULE:
+            return NativeType::KERNEL_MODULE;
+        case Tag::HEAP_BLOCK:
+            return NativeType::INITIAL_HEAP_BLOCK;
+        default:
+            ASSERT_NEVER_REACHED();
         }
     }
 

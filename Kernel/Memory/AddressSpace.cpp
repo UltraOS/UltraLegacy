@@ -27,7 +27,7 @@ AddressSpace::AddressSpace(RefPtr<Page> base_page)
 void AddressSpace::inititalize()
 {
     s_of_kernel = new AddressSpace();
-    
+
     auto as_physical = MemoryManager::virtual_to_physical(&kernel_base_table);
     s_of_kernel->m_main_page = RefPtr<Page>::create(as_physical);
 
@@ -74,9 +74,8 @@ void AddressSpace::inititalize()
 
     //  this should be begin-end not this way :(
     s_of_kernel->allocator().reset_with(
-            MemoryManager::the().kernel_address_space_free_base(),
-            MemoryManager::the().kernel_address_space_free_ceiling()
-    );
+        MemoryManager::the().kernel_address_space_free_base(),
+        MemoryManager::the().kernel_address_space_free_ceiling());
 
 // since the 64 bit kernel address space overlaps the kernel image + base heap we have to allocate it right away
 // FIXME: this could be nicely hidden away once we have proper memory regions with tags etc

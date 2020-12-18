@@ -2,10 +2,10 @@
 
 #include "Common/Logger.h"
 #include "Common/Macros.h"
-#include "Common/Types.h"
 #include "Common/Pair.h"
-#include "Common/String.h"
 #include "Common/StaticArray.h"
+#include "Common/String.h"
+#include "Common/Types.h"
 #include "Range.h"
 
 namespace kernel {
@@ -59,8 +59,10 @@ struct MemoryMap {
         PhysicalRange() = default;
 
         PhysicalRange(Address64 start, size_t length, Type type = Type::RESERVED)
-            : LongRange(start, length), type(type)
-        {}
+            : LongRange(start, length)
+            , type(type)
+        {
+        }
 
         bool is_free() const
         {
@@ -72,28 +74,29 @@ struct MemoryMap {
             return !is_free();
         }
 
-        StringView type_as_string() const {
+        StringView type_as_string() const
+        {
             switch (type) {
-                case Type::FREE:
-                    return "free"_sv;
-                case Type::RESERVED:
-                    return "reserved"_sv;
-                case Type::RECLAIMABLE:
-                    return "reclaimable"_sv;
-                case Type::NON_VOLATILE:
-                    return "ACPI non-volatile"_sv;
-                case Type::BAD:
-                    return "bad"_sv;
-                case Type::KERNEL_IMAGE:
-                    return "kernel image"_sv;
-                case Type::KERNEL_MODULE:
-                    return "kernel module"_sv;
-                case Type::INITIAL_HEAP_BLOCK:
-                    return "initial heap block"_sv;
-                case Type::GENERIC_BOOTALLOC_RESERVED:
-                    return "generic boot allocator reserved";
-                default:
-                    return "unknown"_sv;
+            case Type::FREE:
+                return "free"_sv;
+            case Type::RESERVED:
+                return "reserved"_sv;
+            case Type::RECLAIMABLE:
+                return "reclaimable"_sv;
+            case Type::NON_VOLATILE:
+                return "ACPI non-volatile"_sv;
+            case Type::BAD:
+                return "bad"_sv;
+            case Type::KERNEL_IMAGE:
+                return "kernel image"_sv;
+            case Type::KERNEL_MODULE:
+                return "kernel module"_sv;
+            case Type::INITIAL_HEAP_BLOCK:
+                return "initial heap block"_sv;
+            case Type::GENERIC_BOOTALLOC_RESERVED:
+                return "generic boot allocator reserved";
+            default:
+                return "unknown"_sv;
             }
         }
 
@@ -131,8 +134,9 @@ struct MemoryMap {
             return phys_range;
         }
 
-        template<typename LoggerT>
-        friend LoggerT& operator<<(LoggerT&& logger, const PhysicalRange& range) {
+        template <typename LoggerT>
+        friend LoggerT& operator<<(LoggerT&& logger, const PhysicalRange& range)
+        {
             logger << "PhysicalRange: start:" << format::as_hex << range.begin() << " size:" << range.length()
                    << " type: " << range.type_as_string();
 
@@ -151,7 +155,7 @@ struct MemoryMap {
         // since entries are sorted in ascending order we can afford to do this
         return m_entries[m_entry_count - 1].end();
     }
-    
+
     PhysicalRange* begin() const { return m_entries; }
     PhysicalRange* end() const { return m_entries + m_entry_count; }
 
@@ -188,7 +192,7 @@ struct MemoryMap {
 
         at(index) = PhysicalRange(forward<Args>(args)...);
     }
-    
+
     void erase_range_at(size_t index);
 
     void set_range_buffer(u8* buffer, size_t size)

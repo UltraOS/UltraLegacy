@@ -43,7 +43,7 @@ public:
     void construct()
     {
         static_assert(is_base_of_v<LogSink, T>, "T must be derived from LogSink");
-        
+
         // Any log sink _must_ only contain the vtable pointer and nothing else
         static_assert(sizeof(T) == sizeof(ptr_t));
 

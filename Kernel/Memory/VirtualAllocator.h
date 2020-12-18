@@ -7,8 +7,8 @@
 #include "Common/String.h"
 #include "Common/Types.h"
 
-#include "Range.h"
 #include "Page.h"
+#include "Range.h"
 
 namespace kernel {
 

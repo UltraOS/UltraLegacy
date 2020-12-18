@@ -121,12 +121,10 @@ T* binary_search(T* begin, T* end, const T& value, Compare comparator = Compare(
 template <typename T, typename Compare = Less<T>>
 void quick_sort(T* begin, T* end, Compare comparator = Compare())
 {
-    using dp_t = T*(*)(T*, T*, Compare&);
-    using dqs_t = void(*)(T*, T*, Compare&);
+    using dp_t = T* (*)(T*, T*, Compare&);
+    using dqs_t = void (*)(T*, T*, Compare&);
 
-
-    static dp_t do_partition = [](T* begin, T* end, Compare& comparator) -> T*
-    {
+    static dp_t do_partition = [](T* begin, T* end, Compare& comparator) -> T* {
         ssize_t smallest_index = -1;
         ssize_t array_size = end - begin;
 
@@ -143,8 +141,7 @@ void quick_sort(T* begin, T* end, Compare comparator = Compare())
         return &begin[smallest_index];
     };
 
-    static dqs_t do_quick_sort = [](T* begin, T* end, Compare& comparator) -> void
-    {
+    static dqs_t do_quick_sort = [](T* begin, T* end, Compare& comparator) -> void {
         // 1 element or empty array, doesn't make sense to sort
         if (end - begin < 2)
             return;

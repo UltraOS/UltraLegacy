@@ -6,10 +6,10 @@
 #include "Multitasking/Scheduler.h"
 
 #include "AddressSpace.h"
+#include "BootAllocator.h"
 #include "MemoryManager.h"
 #include "Page.h"
 #include "PhysicalRegion.h"
-#include "BootAllocator.h"
 
 // #define MEMORY_MANAGER_DEBUG
 
@@ -39,19 +39,16 @@ void MemoryManager::early_initialize(LoaderContext* loader_context)
 
     // reserve the physical memory range that contains the kernel image
     BootAllocator::the().reserve_at(
-            Address64(virtual_to_physical(kernel_image_base)),
-            kernel_image_size / Page::size,
-            BootAllocator::Tag::KERNEL_IMAGE
-    );
+        Address64(virtual_to_physical(kernel_image_base)),
+        kernel_image_size / Page::size,
+        BootAllocator::Tag::KERNEL_IMAGE);
 
     // allocate the initial kernel heap block
-    auto heap_physical_base =
-            BootAllocator::the().reserve_contiguous(
-                    kernel_first_heap_block_size / Page::size,
-                    1 * MB,
-                    Address64(max_memory_address),
-                    BootAllocator::Tag::HEAP_BLOCK
-            );
+    auto heap_physical_base = BootAllocator::the().reserve_contiguous(
+        kernel_first_heap_block_size / Page::size,
+        1 * MB,
+        Address64(max_memory_address),
+        BootAllocator::Tag::HEAP_BLOCK);
 
 #ifdef ULTRA_32
     auto table = new (kernel_heap_table) AddressSpace::PT;
@@ -111,7 +108,7 @@ MemoryManager::MemoryManager()
 
         total_free_memory += this_region.free_page_count() * Page::size;
     }
-    
+
     log() << "MemoryManager: Total free physical memory: " << bytes_to_megabytes(total_free_memory) << " MB ("
           << total_free_memory / Page::size << " pages) ";
 }
@@ -245,12 +242,12 @@ void MemoryManager::inititalize(AddressSpace& directory)
     auto byte_offset = kernel_first_table_index * AddressSpace::Table::entry_size;
     auto bytes_to_copy = (kernel_last_table_index - kernel_first_table_index + 1) * AddressSpace::Table::entry_size;
     copy_memory(current_directory_mapping.raw().as_pointer<u8>() + byte_offset,
-                new_directory_mapping.raw().as_pointer<u8>() + byte_offset, bytes_to_copy);
+        new_directory_mapping.raw().as_pointer<u8>() + byte_offset, bytes_to_copy);
 
     // create the recursive mapping
     directory.entry_at(recursive_entry_index, new_directory_mapping.raw())
-            .set_physical_address(directory.physical_address())
-            .make_supervisor_present();
+        .set_physical_address(directory.physical_address())
+        .make_supervisor_present();
 
     // TODO: remove this later when removing ring 3 tests
     directory.entry_at(0, new_directory_mapping.raw()) = AddressSpace::current().entry_at(0);

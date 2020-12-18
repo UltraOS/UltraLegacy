@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Memory/MemoryMap.h"
 #include "Drivers/Video/VideoMode.h"
+#include "Memory/MemoryMap.h"
 
 namespace kernel {
 

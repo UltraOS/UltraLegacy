@@ -254,9 +254,9 @@ inline size_t dump_backtrace(ptr_t* into, size_t max_depth)
     if (can_draw)
         new (optional_painter) Painter(&VideoDevice::the().surface());
 
-    #define TRY_PAINT(what) \
-        if (can_draw)       \
-            reinterpret_cast<Painter*>(optional_painter)->what
+#define TRY_PAINT(what) \
+    if (can_draw)       \
+    reinterpret_cast<Painter*>(optional_painter)->what
 
     TRY_PAINT(fill_rect(surface_rect, screen_color));
 

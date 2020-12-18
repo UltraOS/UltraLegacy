@@ -12,7 +12,7 @@ void VideoDevice::discover_and_setup(LoaderContext* context)
     ASSERT(context->type == LoaderContext::Type::BIOS);
 
     auto* bios_context = static_cast<BIOSContext*>(context);
-    
+
     s_device = new GenericVideoDevice(static_cast<VideoMode&>(bios_context->video_mode));
 }
 }

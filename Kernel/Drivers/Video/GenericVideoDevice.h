@@ -1,7 +1,7 @@
 #pragma once
 
-#include "VideoMode.h"
 #include "VideoDevice.h"
+#include "VideoMode.h"
 
 namespace kernel {
 

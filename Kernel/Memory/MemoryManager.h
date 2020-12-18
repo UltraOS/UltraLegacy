@@ -3,8 +3,8 @@
 #include "Common/DynamicArray.h"
 #include "Common/DynamicBitArray.h"
 #include "Common/RefPtr.h"
-#include "Core/Registers.h"
 #include "Core/Boot.h"
+#include "Core/Registers.h"
 #include "MemoryMap.h"
 #include "Page.h"
 #include "VirtualAllocator.h"
@@ -52,14 +52,13 @@ public:
     static Range kernel_reserved_range()
     {
         return Range::from_two_pointers(
-                kernel_reserved_base,
-                kernel_image_base + kernel_image_size + kernel_first_heap_block_size
+            kernel_reserved_base,
+            kernel_image_base + kernel_image_size + kernel_first_heap_block_size
 #ifdef ULTRA_32
                 + kernel_quickmap_range_size
 #endif
         );
     }
-    
 
     Address kernel_address_space_free_base() const
     {

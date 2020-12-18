@@ -1,8 +1,8 @@
 #pragma once
 
-#include "VideoMode.h"
 #include "Core/Boot.h"
 #include "Drivers/Device.h"
+#include "VideoMode.h"
 #include "WindowManager/Bitmap.h"
 
 namespace kernel {

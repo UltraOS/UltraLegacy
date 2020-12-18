@@ -39,7 +39,7 @@ void run(LoaderContext* context)
 
     // Generates native memory map, initializes BootAllocator, initializes kernel heap
     MemoryManager::early_initialize(context);
-    
+
     runtime::init_global_objects();
 
     GDT::the().create_basic_descriptors();

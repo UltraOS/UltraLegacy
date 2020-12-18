@@ -233,6 +233,9 @@ void VirtualAllocator::deallocate(const Range& range)
 
     LockGuard lock_guard(m_lock);
 
+    ASSERT(Page::is_aligned(range.begin()));
+    ASSERT(Page::is_aligned(range.length()));
+
     if (!contains(range)) {
         String error_string;
         error_string << "VirtualAllocator: range " << range << " doesn't belong to this allocator!";
