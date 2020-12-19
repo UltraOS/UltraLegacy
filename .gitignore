@@ -7,9 +7,13 @@ Project/
 Scripts/vhc
 Tests/Environment/Memory/HeapAllocator.*
 Tests/Environment/Memory/VirtualAllocator.*
+Tests/Environment/Memory/MemoryMap.*
+Tests/Environment/Memory/BootAllocator.*
 Tests/Environment/Memory/Page.h
+Tests/Environment/Memory/Range.h
 Tests/Environment/Common/Types.h
 Tests/Environment/Common/DynamicArray.h
+Tests/Environment/Common/StaticArray.h
 Tests/Environment/Common/String.h
 Tests/Environment/Common/Memory.h
 Tests/Environment/Common/Traits.h
@@ -18,6 +22,9 @@ Tests/Environment/Common/Conversions.h
 Tests/Environment/Common/List.h
 Tests/Environment/Common/RedBlackTree.h
 Tests/Environment/Common/RefPtr.h
+Tests/Environment/Common/Pair.h
+Tests/Environment/Core/Boot.h
+Tests/Environment/Drivers/Video/VideoMode.h
 .idea/
 *.o
 *.bin

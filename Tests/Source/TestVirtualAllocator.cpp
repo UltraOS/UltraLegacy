@@ -61,103 +61,8 @@ TEST(PageRoundDown) {
     Assert::that(Page::round_down(Page::size)).is_equal(Page::size);
 }
 
-TEST(RangeClipping) {
-    using Range = kernel::VirtualAllocator::Range;
-
-    Range base(as_ptr_t(0x0000), 0x1000);
-
-    Assert::that(base.clipped_with_begin(0x100)).is_equal(Range::from_two_pointers(as_ptr_t(0x100), 0x1000));
-    Assert::that(base.clipped_with_begin(as_ptr_t(0x000))).is_equal(base);
-    Assert::that(base.clipped_with_end(0x200)).is_equal({ as_ptr_t(0x0), 0x200 });
-    Assert::that(base.clipped_with_end(0x1000)).is_equal(base);
-}
-
-TEST(RangeAlign) {
-    using Range = kernel::VirtualAllocator::Range;
-    using Page = kernel::Page;
-
-    // 0x0001 - 0x1000 range
-    auto range1 = Range(0x1, Page::size);
-
-    Assert::that(range1.is_aligned_to(Page::size)).is_false();
-    Assert::that(range1.aligned_to(Page::size)).is_equal({ Page::size, 1 });
-
-    // 0x0001 - 0x2000 range
-    auto range2 = Range(0x1, 2 * Page::size);
-
-    Assert::that(range2.is_aligned_to(Page::size)).is_false();
-    Assert::that(range2.aligned_to(Page::size)).is_equal({ Page::size, Page::size + 1 });
-
-    // 0x0000 - 0x2000 range
-    auto range3 = Range(as_ptr_t(0x0), 2 * Page::size);
-
-    Assert::that(range3.is_aligned_to(Page::size)).is_true();
-    Assert::that(range3.aligned_to(Page::size)).is_equal(range3);
-
-    // 0x0000 - 0x0000 range
-    auto range4 = Range(as_ptr_t(0x0), 0x0);
-
-    Assert::that(range4.is_aligned_to(Page::size)).is_true();
-    Assert::that(range4.aligned_to(Page::size)).is_equal(range4);
-
-    // 0x0001 - HUGE_PAGE_SIZE * 2 range
-    auto range5 = Range(0x1, Page::huge_size * 2);
-
-    Assert::that(range5.is_aligned_to(Page::huge_size)).is_false();
-    Assert::that(range5.aligned_to(Page::huge_size)).is_equal({ Page::huge_size, Page::huge_size + 1 });
-
-    // overflow test
-    if constexpr (sizeof(void*) == 4) {
-        auto range6 = Range(0xFFFFFFF0, 0xF);
-
-        Assert::that(range6.is_aligned_to(Page::size)).is_false();
-
-        // Should return an empty range as this alignment would cause overflow
-        Assert::that(range6.aligned_to(Page::size)).is_equal({});
-    } else {
-        auto range6 = Range(0xFFFFFFFFFFFFFFF0, 0xF);
-
-        Assert::that(range6.is_aligned_to(Page::size)).is_false();
-
-        // Should return an empty range as this alignment would cause overflow
-        Assert::that(range6.aligned_to(Page::size)).is_equal({});
-    }
-
-    // 0x0001 - 0x0F00 range
-    auto range7 = Range(as_ptr_t(0x1), 0x0F00);
-
-    Assert::that(range7.is_aligned_to(Page::size)).is_false();
-
-    // Not enough length to handle alignment
-    Assert::that(range7.aligned_to(Page::size)).is_equal({});
-
-    // 0x0001 - 2 pages range
-    auto range8 = Range(0x1, 2 * Page::size);
-    range8.align_to(Page::size);
-    Assert::that(range8).is_equal({ Page::size, Page::size + 1 });
-
-    // 0x0000 - 2 pages range (no alignment needed)
-    auto range9 = Range(as_ptr_t(0x0), 2 * Page::size);
-    range9.align_to(Page::size);
-    Assert::that(range9).is_equal({ as_ptr_t(0x0), 2 * Page::size });
-}
-
-TEST(RangeContains) {
-    using Range = kernel::VirtualAllocator::Range;
-
-    // 0x1000 - 0x2000 range
-    auto range = Range(as_ptr_t(0x1000), 0x1000);
-
-    Assert::that(range.contains(as_ptr_t(0x1000))).is_true();
-    Assert::that(range.contains(0x2000 - 1)).is_true();
-    Assert::that(range.contains(0x2000)).is_false();
-    Assert::that(range.contains(range)).is_true();
-    Assert::that(range.contains(Range::from_two_pointers(range.begin(), range.end() + 1))).is_false();
-    Assert::that(range.contains(Range::from_two_pointers(range.begin() - 1, range.end()))).is_false();
-}
-
 TEST(SizedAllocations) {
-    using Range = kernel::VirtualAllocator::Range;
+    using Range = kernel::Range;
 
     kernel::VirtualAllocator allocator(as_ptr_t(0x0000) , 0x2000);
 
@@ -178,7 +83,7 @@ TEST(SizedAllocations) {
 }
 
 TEST(SpecificAllocations) {
-    using Range = kernel::VirtualAllocator::Range;
+    using Range = kernel::Range;
 
     kernel::VirtualAllocator allocator(as_ptr_t(0x0000), 0x3000);
 
@@ -200,7 +105,7 @@ TEST(SpecificAllocations) {
 }
 
 TEST(TripleMergeSpecific) {
-    using Range = kernel::VirtualAllocator::Range;
+    using Range = kernel::Range;
 
     kernel::VirtualAllocator allocator(as_ptr_t(0x0000), 0x3000);
 
@@ -227,7 +132,7 @@ TEST(SizedMergeCase1) {
     // allocate 0x1000 - 0x2000
     // gets merged into 0x0000 - 0x3000
 
-    using Range = kernel::VirtualAllocator::Range;
+    using Range = kernel::Range;
 
     kernel::VirtualAllocator allocator(as_ptr_t(0), 0x3000);
 
@@ -255,7 +160,7 @@ TEST(SizedMergeCase1) {
 }
 
 TEST(SizedMergeCase2) {
-    using Range = kernel::VirtualAllocator::Range;
+    using Range = kernel::Range;
 
     kernel::VirtualAllocator allocator(as_ptr_t(0), 0x3000);
 
@@ -276,7 +181,7 @@ TEST(SizedMergeCase2) {
 }
 
 TEST(SizedMergeCase3) {
-    using Range = kernel::VirtualAllocator::Range;
+    using Range = kernel::Range;
 
     kernel::VirtualAllocator allocator(as_ptr_t(0), 0x3000);
 
@@ -293,7 +198,7 @@ TEST(SizedMergeCase3) {
 }
 
 TEST(AlignedAllocations) {
-    using Range = kernel::VirtualAllocator::Range;
+    using Range = kernel::Range;
     using Page = kernel::Page;
 
     // 0x1000 - 2 huge pages range
@@ -314,7 +219,7 @@ TEST(AlignedAllocations) {
 }
 
 TEST(DeallocationsCase1) {
-    using Range = kernel::VirtualAllocator::Range;
+    using Range = kernel::Range;
     using Page = kernel::Page;
 
     // 0 - 3 pages range
@@ -332,7 +237,7 @@ TEST(DeallocationsCase1) {
 }
 
 TEST(DeallocationsCase2) {
-    using Range = kernel::VirtualAllocator::Range;
+    using Range = kernel::Range;
     using Page = kernel::Page;
 
     // 0 - 3 pages range
@@ -350,7 +255,7 @@ TEST(DeallocationsCase2) {
 }
 
 TEST(DeallocationsCase3) {
-    using Range = kernel::VirtualAllocator::Range;
+    using Range = kernel::Range;
     using Page = kernel::Page;
 
     // 0 - 3 pages range
@@ -369,7 +274,7 @@ TEST(DeallocationsCase3) {
 }
 
 TEST(DeallocationsCase4) {
-    using Range = kernel::VirtualAllocator::Range;
+    using Range = kernel::Range;
     using Page = kernel::Page;
 
     // 0 - 3 pages range
