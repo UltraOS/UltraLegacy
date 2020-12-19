@@ -181,7 +181,12 @@ struct MemoryMap {
     template <typename... Args>
     void emplace_range_at(size_t index, Args&&... args)
     {
-        ASSERT(index < m_entry_count);
+        ASSERT(index <= m_entry_count);
+
+        if (index == m_entry_count) {
+            emplace_range(forward<Args>(args)...);
+            return;
+        }
 
         if (m_entry_count >= m_capacity)
             warning() << "MemoryMap: Expanding past reserved capacity (" << m_capacity << ") entry count -> " << m_entry_count;
