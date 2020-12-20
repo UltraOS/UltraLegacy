@@ -37,12 +37,9 @@ global kernel_page_table
 kernel_page_table:
     resb PAGE_SIZE
 
-global kernel_heap_table
 kernel_heap_table:
     resb PAGE_SIZE
 
-; FIXME: this doesnt have to be global?
-global kernel_quickmap_table
 kernel_quickmap_table:
     resb PAGE_SIZE
 
@@ -53,7 +50,7 @@ memory_map_entries_buffer:
 ; Physical memory layout
 ; 0MB -> 1MB unused (bootloader and bios stuff)
 ; 1MB -> 4MB kernel
-; 4MB -> 4GB unused (4 MB -> 8MB range is likely the initial kernel heap block)
+; 4MB -> 4GB generic free memory  (4 MB -> 8MB range is likely the initial kernel heap block)
 
 ; Virtual memory layout
 ; 0x00000000 -> 0xBFFFFFFF user space

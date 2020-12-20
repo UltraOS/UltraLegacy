@@ -51,7 +51,7 @@ void MemoryManager::early_initialize(LoaderContext* loader_context)
         auto offset = Page::size * i;
         AddressSpace::early_map_page(kernel_first_heap_block_base + offset, heap_physical_base + offset);
     }
-#else
+#elif defined(ULTRA_64)
     auto pages_to_reserve = ceiling_divide(kernel_first_heap_block_size, Page::huge_size);
 
     for (size_t i = 0; i < pages_to_reserve; ++i) {

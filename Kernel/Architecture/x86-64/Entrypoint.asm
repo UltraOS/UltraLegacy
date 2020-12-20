@@ -46,13 +46,27 @@ direct_map_pdt_gb3:
 kernel_pdpt:
     resb PAGE_SIZE
 
-global kernel_pdt
 kernel_pdt:
     resb PAGE_SIZE
 
 global memory_map_entries_buffer
 memory_map_entries_buffer:
     resb PAGE_SIZE
+
+; Physical memory layout
+; 0MB -> 1MB unused (bootloader and bios stuff)
+; 1MB -> 4MB kernel
+; 4MB -> MAX PHYS ADDRESS generic free memory (4 MB -> 8MB range is likely the initial kernel heap block)
+
+; Virtual memory layout
+; 0x0000000000000000 -> 0x00007FFFFFFFFFFF user space
+; 0xFFFF800000000000 -> MAX PHYS ADDRESS (direct mapping of the entire physical memory map)
+; MAX PHYS ADDRESS   -> 0xFFFFFFFFFFFFFFFF kernel address space free for allocation for any kernel thread
+;
+; vvv A small hole in the above range, where we keep the kernel and a few other things
+; 0xFFFFFFFF80000000 -> 0xFFFFFFFF800FFFFF unused (direct mapping of the first MB)
+; 0xFFFFFFFF80100000 -> 0xFFFF8000003FFFFF kernel (direct mapping of 1MB -> 4MB)
+; 0xFFFFFFFF80400000 -> 0xFFFF8000007FFFFF first kernel heap block
 
 section .entry
 
