@@ -44,20 +44,28 @@ public:
     static AddressSpace& of_kernel();
     static AddressSpace& current();
 
-// clang-format off
 #ifdef ULTRA_32
-    PT&   pt_at(size_t index);
+    PT& pt_at(size_t index);
+    static PT& kernel_pt_at(size_t index);
 #elif defined(ULTRA_64)
     PDPT& pdpt_at(size_t index);
+    static PDPT& kernel_pdpt_at(size_t index);
 #endif
-    // clang-format on
 
     Entry& entry_at(size_t index);
+    static Entry& kernel_entry_at(size_t index);
 
     VirtualAllocator& allocator();
     Address physical_address();
 
     void store_physical_page(RefPtr<Page> page);
+
+    // Maps a page into the kernel address space
+    // Expects all paging structures to be present and valid
+    static void early_map_page(Address virtual_address, Address physical_address);
+#ifdef ULTRA_64
+    static void early_map_huge_page(Address virtual_address, Address physical_address);
+#endif
 
     void map_page(Address virtual_address, Address physical_address, bool is_supervisor = true);
 
@@ -104,6 +112,8 @@ private:
 #ifdef ULTRA_32
     Entry& entry_at(size_t index, Address virtual_base);
 #endif
+
+    static Address active_directory_address();
 
 private:
     DynamicArray<RefPtr<Page>> m_physical_pages;

@@ -27,12 +27,6 @@ Address MemoryManager::kernel_address_space_free_ceiling()
 #endif
 }
 
-#ifdef ULTRA_32
-extern "C" ptr_t kernel_heap_table[1024];
-#else
-extern "C" ptr_t kernel_pdt[512];
-#endif
-
 void MemoryManager::early_initialize(LoaderContext* loader_context)
 {
     BootAllocator::initialize(MemoryMap::generate_from(loader_context));
@@ -45,23 +39,29 @@ void MemoryManager::early_initialize(LoaderContext* loader_context)
 
     // allocate the initial kernel heap block
     auto heap_physical_base = BootAllocator::the().reserve_contiguous(
-        kernel_first_heap_block_size / Page::size,
+        ceiling_divide(kernel_first_heap_block_size, Page::size),
         1 * MB,
         Address64(max_memory_address),
         BootAllocator::Tag::HEAP_BLOCK);
 
 #ifdef ULTRA_32
-    auto table = new (kernel_heap_table) AddressSpace::PT;
-    for (ptr_t i = 0; i < 1024; ++i)
-        table->entry_at(i).set_physical_address(heap_physical_base + ((i * Page::size))).make_supervisor_present();
+    auto pages_to_reserve = ceiling_divide(kernel_first_heap_block_size, Page::size);
+
+    for (size_t i = 0; i < pages_to_reserve; ++i) {
+        auto offset = Page::size * i;
+        AddressSpace::early_map_page(kernel_first_heap_block_base + offset, heap_physical_base + offset);
+    }
 #else
-    auto table = new (kernel_pdt) AddressSpace::PDT;
-    for (ptr_t i = 0; i < 2; ++i) {
-        auto& entry = table->entry_at(2 + i);
-        entry.set_physical_address(heap_physical_base + ((i * Page::huge_size))).make_supervisor_present();
-        entry.set_huge(true);
+    auto pages_to_reserve = ceiling_divide(kernel_first_heap_block_size, Page::huge_size);
+
+    for (size_t i = 0; i < pages_to_reserve; ++i) {
+        auto offset = Page::huge_size * i;
+        AddressSpace::early_map_huge_page(
+            kernel_first_heap_block_base + offset,
+            heap_physical_base + offset);
     }
 #endif
+
     HeapAllocator::initialize();
 }
 

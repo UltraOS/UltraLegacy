@@ -126,6 +126,48 @@ Quad<size_t, size_t, size_t, size_t> AddressSpace::virtual_address_as_paging_ind
 // clang-format on
 #endif
 
+void AddressSpace::early_map_page(Address virtual_address, Address physical_address)
+{
+    ASSERT_PAGE_ALIGNED(virtual_address);
+    auto indices = virtual_address_as_paging_indices(virtual_address);
+#ifdef ULTRA_32
+    ASSERT(kernel_entry_at(indices.first()).is_present());
+
+    kernel_pt_at(indices.first()).entry_at(indices.second()).set_physical_address(physical_address).make_supervisor_present();
+
+#elif defined(ULTRA_64)
+    ASSERT(kernel_entry_at(indices.first()).is_present());
+    ASSERT(kernel_pdpt_at(indices.first()).entry_at(indices.second()).is_present());
+    ASSERT(kernel_pdpt_at(indices.first()).pdt_at(indices.second()).entry_at(indices.third()).is_present());
+
+    kernel_pdpt_at(indices.first())
+        .pdt_at(indices.second())
+        .pt_at(indices.third())
+        .entry_at(indices.fourth())
+        .set_physical_address(physical_address)
+        .make_supervisor_present();
+#endif
+}
+
+#ifdef ULTRA_64
+void AddressSpace::early_map_huge_page(Address virtual_address, Address physical_address)
+{
+    ASSERT_HUGE_PAGE_ALIGNED(virtual_address);
+    auto indices = virtual_address_as_paging_indices(virtual_address);
+
+    ASSERT(kernel_entry_at(indices.first()).is_present());
+    ASSERT(kernel_pdpt_at(indices.first()).entry_at(indices.second()).is_present());
+
+    auto& entry = kernel_pdpt_at(indices.first())
+                      .pdt_at(indices.second())
+                      .entry_at(indices.third());
+
+    entry.set_physical_address(physical_address);
+    entry.make_supervisor_present();
+    entry.set_huge(true);
+}
+#endif
+
 #ifdef ULTRA_32
 void AddressSpace::map_page(Address virtual_address, Address physical_address, bool is_supervisor)
 {
@@ -399,14 +441,19 @@ AddressSpace& AddressSpace::of_kernel()
     return *s_of_kernel;
 }
 
-bool AddressSpace::is_active()
+Address AddressSpace::active_directory_address()
 {
     ptr_t active_directory_ptr;
 
     asm("mov %%cr3, %0"
         : "=a"(active_directory_ptr));
 
-    return physical_address() == active_directory_ptr;
+    return active_directory_ptr;
+}
+
+bool AddressSpace::is_active()
+{
+    return physical_address() == active_directory_address();
 }
 
 void AddressSpace::make_active()
@@ -461,6 +508,13 @@ AddressSpace::PT& AddressSpace::pt_at(size_t index)
     return *reinterpret_cast<PT*>(recursive_table_base + Table::size * index);
 }
 
+AddressSpace::PT& AddressSpace::kernel_pt_at(size_t index)
+{
+    ASSERT(active_directory_address() == MemoryManager::virtual_to_physical(kernel_base_table));
+
+    return *reinterpret_cast<PT*>(recursive_table_base + Table::size * index);
+}
+
 AddressSpace::Entry& AddressSpace::entry_at(size_t index, Address virtual_base)
 {
     return *reinterpret_cast<AddressSpace::Entry*>(virtual_base + index * Table::entry_size);
@@ -469,6 +523,11 @@ AddressSpace::Entry& AddressSpace::entry_at(size_t index, Address virtual_base)
 AddressSpace::PDPT& AddressSpace::pdpt_at(size_t index)
 {
     return *Address(MemoryManager::physical_memory_base + entry_at(index).physical_address()).as_pointer<PDPT>();
+}
+
+AddressSpace::PDPT& AddressSpace::kernel_pdpt_at(size_t index)
+{
+    return *Address(MemoryManager::physical_memory_base + kernel_entry_at(index).physical_address()).as_pointer<PDPT>();
 }
 #endif
 
@@ -480,6 +539,18 @@ AddressSpace::Entry& AddressSpace::entry_at(size_t index)
     return *reinterpret_cast<Entry*>(recursive_directory_base + Table::entry_size * index);
 #elif defined(ULTRA_64)
     return *Address(MemoryManager::physical_memory_base + physical_address() + Table::entry_size * index)
+                .as_pointer<Entry>();
+#endif
+}
+
+AddressSpace::Entry& AddressSpace::kernel_entry_at(size_t index)
+{
+#ifdef ULTRA_32
+    ASSERT(active_directory_address() == MemoryManager::virtual_to_physical(kernel_base_table));
+
+    return *reinterpret_cast<Entry*>(recursive_directory_base + Table::entry_size * index);
+#elif defined(ULTRA_64)
+    return *Address(MemoryManager::physical_memory_base + MemoryManager::virtual_to_physical(kernel_base_table) + Table::entry_size * index)
                 .as_pointer<Entry>();
 #endif
 }
