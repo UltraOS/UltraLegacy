@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 
 if (NOT ARCH)
-    set(ARCH "32")
+    set(ARCH "64")
 elseif ((NOT ARCH MATCHES "32") AND (NOT ARCH MATCHES "64"))
     message(FATAL_ERROR "Unknown architechture ${ARCH}")
 endif ()
