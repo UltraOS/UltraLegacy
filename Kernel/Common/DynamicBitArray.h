@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Pair.h"
 #include "DynamicArray.h"
 #include "Macros.h"
 #include "Math.h"
@@ -8,13 +9,53 @@ namespace kernel {
 
 class DynamicBitArray {
 public:
-    DynamicBitArray() { }
+    using storage_unit_type = ptr_t;
+    static constexpr size_t bits_per_unit = sizeof(storage_unit_type) * 8;
 
-    DynamicBitArray(size_t initial_size) { set_size(initial_size); }
+    DynamicBitArray() = default;
+
+    explicit DynamicBitArray(size_t initial_size)
+    {
+        set_size(initial_size);
+    }
 
     size_t size() const { return m_bit_count; }
 
-    ssize_t find_range(size_t length, bool of_value)
+    // checks sizeof(void*) * 8 bits at a time
+    ssize_t find_bit(bool of_value, size_t hint = 0) const
+    {
+        ASSERT(hint < m_bit_count);
+
+        auto start = hint / bits_per_unit;
+        auto end = ceiling_divide(m_bit_count, bits_per_unit);
+
+        // TODO: numeric_limits<storage_unit_type>::max();
+        auto bad_mask = of_value ? 0 : static_cast<storage_unit_type>(-1);
+
+        for (size_t pass = 0; pass < 2; ++pass) {
+            for (size_t index_of_unit = start; index_of_unit < end; ++index_of_unit) {
+                if (m_bits[index_of_unit] == bad_mask)
+                    continue;
+
+                auto unit_value = of_value ? m_bits[index_of_unit] : ~m_bits[index_of_unit];
+                auto target_bit = __builtin_ffsl(unit_value) - 1 + index_of_unit * bits_per_unit;
+
+                // looks like the bit we found is outside of our size
+                if (target_bit >= m_bit_count)
+                    break;
+
+                return target_bit;
+            }
+
+            // hint failed so reset start to zero and do one more pass
+            end = start;
+            start = 0;
+        }
+
+        return -1;
+    }
+
+    ssize_t find_range(size_t length, bool of_value) const
     {
         size_t contiguous_bits = 0;
         ssize_t first_bit = -1;
@@ -43,31 +84,33 @@ public:
     {
         m_bit_count = bit_count;
 
-        auto bytes_needed = ceiling_divide<size_t>(m_bit_count, 8);
+        auto units_needed = ceiling_divide<size_t>(m_bit_count, bits_per_unit);
 
-        if (m_bits.size() < bytes_needed)
-            m_bits.expand_to(bytes_needed);
+        if (m_bits.size() < units_needed)
+            m_bits.expand_to(units_needed);
     }
 
-    void set_bit(size_t at_index, bool to)
+    void set_bit(size_t index, bool to)
     {
-        ASSERT(at_index < m_bit_count);
+        ASSERT(index < m_bit_count);
 
-        auto& byte = m_bits[byte_of_bit(at_index)];
+        auto location = location_of_bit(index);
+
+        auto& unit = m_bits[location.first()];
 
         if (to)
-            byte |= bit_as_mask(index_of_bit(at_index));
+            unit |= bit_as_mask(location.second());
         else
-            byte &= ~bit_as_mask(index_of_bit(at_index));
+            unit &= ~bit_as_mask(location.second());
     }
 
-    void set_range_to(size_t at_index, size_t count, size_t number)
+    void set_range_to_number(size_t at_index, size_t count, size_t number)
     {
         ASSERT(at_index + count <= m_bit_count);
-        ASSERT(number <= ((static_cast<decltype(number)>(1) << count) - 1));
+        ASSERT(count == 64 || number <= ((static_cast<storage_unit_type>(1) << count) - 1));
 
         for (size_t i = 0; i < count; ++i)
-            set_bit(at_index + i, ((1 << i) & number) >> i);
+            set_bit(at_index + i, ((static_cast<storage_unit_type>(1) << i) & number) >> i);
     }
 
     void set_range_to(size_t at_index, size_t count, bool value)
@@ -78,11 +121,13 @@ public:
             set_bit(at_index + i, value);
     }
 
-    bool bit_at(size_t index)
+    [[nodiscard]] bool bit_at(size_t index) const
     {
-        auto& byte = m_bits[byte_of_bit(index)];
+        auto location = location_of_bit(index);
 
-        return byte & bit_as_mask(index_of_bit(index));
+        auto& unit = m_bits[location.first()];
+
+        return unit & bit_as_mask(location.second());
     }
 
     size_t range_as_number(size_t index, size_t length)
@@ -92,20 +137,24 @@ public:
         size_t number = 0;
 
         for (size_t i = 0; i < length; ++i)
-            number |= bit_at(index + i) << i;
+            number |= static_cast<storage_unit_type>(bit_at(index + i)) << i;
 
         return number;
     }
 
 private:
-    size_t byte_of_bit(size_t bit) { return bit / 8; }
+    static Pair<size_t, size_t> location_of_bit(size_t bit)
+    {
+        return make_pair(bit / bits_per_unit, bit % bits_per_unit);
+    }
 
-    size_t index_of_bit(size_t bit_index) { return bit_index - byte_of_bit(bit_index) * 8; }
-
-    u8 bit_as_mask(size_t bit) { return 1 << bit; }
+    static constexpr storage_unit_type bit_as_mask(size_t bit)
+    {
+        return static_cast<storage_unit_type>(1) << bit;
+    }
 
 private:
     size_t m_bit_count { 0 };
-    DynamicArray<u8> m_bits;
+    DynamicArray<storage_unit_type> m_bits;
 };
 }
