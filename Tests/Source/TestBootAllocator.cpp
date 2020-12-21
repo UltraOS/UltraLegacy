@@ -4,6 +4,11 @@
 #include "Memory/BootAllocator.h"
 #include "Memory/BootAllocator.cpp"
 
+template <typename T>
+constexpr auto as_ptr_t(T number) {
+    return static_cast<kernel::ptr_t>(number);
+}
+
 // I haven't written a ReserveAt test because both reserve_contiguous & reserve_at use one single function
 // That said maybe I should write one later? Just can't think of a separate test case for that for now.
 // Anyways, this test looks good enough and covers most (if not all?) edge cases.
@@ -17,7 +22,7 @@ TEST(ReserveContiguous) {
     auto* range_buffer = new uint8_t[buffer_size];
     map.set_range_buffer(range_buffer, buffer_size);
 
-    map.emplace_range(0x0000ull, 0x1000, RangeType::GENERIC_BOOTALLOC_RESERVED);
+    map.emplace_range(as_ptr_t(0x0000), 0x1000, RangeType::GENERIC_BOOTALLOC_RESERVED);
     map.emplace_range(0x1000ull, 0x1000, RangeType::FREE); // gets backwards merged with previous
 
     map.emplace_range(0x4000ull, 0x1000, RangeType::RESERVED);
@@ -46,7 +51,7 @@ TEST(ReserveContiguous) {
 
     Assert::that(ba.m_memory_map.entry_count()).is_equal(15);
 
-    Assert::that(ba.m_memory_map.at(0)).is_equal(Range(0x0000ull, 0x2000, RangeType::GENERIC_BOOTALLOC_RESERVED));
+    Assert::that(ba.m_memory_map.at(0)).is_equal(Range(as_ptr_t(0x0000), 0x2000, RangeType::GENERIC_BOOTALLOC_RESERVED));
     Assert::that(ba.m_memory_map.at(1)).is_equal(Range(0x4000ull, 0x1000, RangeType::RESERVED));
     Assert::that(ba.m_memory_map.at(2)).is_equal(Range(0x5000ull, 0x1000, RangeType::GENERIC_BOOTALLOC_RESERVED));
     Assert::that(ba.m_memory_map.at(3)).is_equal(Range(0x6000ull, 0x1000, RangeType::BAD));

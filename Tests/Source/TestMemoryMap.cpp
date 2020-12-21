@@ -18,14 +18,15 @@ std::enable_if_t<std::is_same_v<typename RangeT::Type, decltype(RangeT::Type::FR
 
 #include "TestRunner.h"
 
-extern "C" uint8_t* memory_map_entries_buffer = nullptr;
+extern "C" uint8_t memory_map_entries_buffer[4096] = {};
 
 #define private public
 #include "Memory/MemoryMap.h"
 #include "Memory/MemoryMap.cpp"
 
-FIXTURE(EntriesBuffer) {
-    memory_map_entries_buffer = new uint8_t[4096 * 2];
+template <typename T>
+constexpr auto as_ptr_t(T number) {
+    return static_cast<kernel::ptr_t>(number);
 }
 
 TEST(ShatterCase1) {
@@ -33,14 +34,14 @@ TEST(ShatterCase1) {
     using Range = kernel::MemoryMap::PhysicalRange;
     using RangeType = kernel::MemoryMap::PhysicalRange::Type;
 
-    auto r = Range(0x0000ull, 0x1000, RangeType::FREE);
+    auto r = Range(as_ptr_t(0x0000), 0x1000, RangeType::FREE);
     auto r1 = Range(0x500ull, 0x1000, RangeType::FREE);
 
     Assert::that(r.overlaps(r1)).is_true();
 
     auto ranges = r.shatter_against(r1);
 
-    Assert::that(ranges[0]).is_equal(Range(0x0000ull, 0x1500, RangeType::FREE));
+    Assert::that(ranges[0]).is_equal(Range(as_ptr_t(0x0000), 0x1500, RangeType::FREE));
 }
 
 TEST(ShatterCase2) {
@@ -48,14 +49,14 @@ TEST(ShatterCase2) {
     using Range = kernel::MemoryMap::PhysicalRange;
     using RangeType = kernel::MemoryMap::PhysicalRange::Type;
 
-    auto r = Range(0x0000ull, 0x1000, RangeType::FREE);
+    auto r = Range(as_ptr_t(0x0000), 0x1000, RangeType::FREE);
     auto r1 = Range(0x500ull, 0x1000, RangeType::BAD);
 
     Assert::that(r.overlaps(r1)).is_true();
 
     auto ranges = r.shatter_against(r1);
 
-    Assert::that(ranges[0]).is_equal(Range(0x0000ull, 0x500, RangeType::FREE));
+    Assert::that(ranges[0]).is_equal(Range(as_ptr_t(0x0000), 0x500, RangeType::FREE));
     Assert::that(ranges[1]).is_equal(Range(0x500ull, 0x1000, RangeType::BAD));
 }
 
@@ -64,14 +65,14 @@ TEST(ShatterCase3) {
     using Range = kernel::MemoryMap::PhysicalRange;
     using RangeType = kernel::MemoryMap::PhysicalRange::Type;
 
-    auto r = Range(0x0000ull, 0x1000, RangeType::BAD);
+    auto r = Range(as_ptr_t(0x0000), 0x1000, RangeType::BAD);
     auto r1 = Range(0x500ull, 0x1000, RangeType::FREE);
 
     Assert::that(r.overlaps(r1)).is_true();
 
     auto ranges = r.shatter_against(r1);
 
-    Assert::that(ranges[0]).is_equal(Range(0x0000ull, 0x1000, RangeType::BAD));
+    Assert::that(ranges[0]).is_equal(Range(as_ptr_t(0x0000), 0x1000, RangeType::BAD));
     Assert::that(ranges[1]).is_equal(Range(0x1000ull, 0x500, RangeType::FREE));
 }
 
@@ -80,15 +81,15 @@ TEST(ShatterCase4) {
     using Range = kernel::MemoryMap::PhysicalRange;
     using RangeType = kernel::MemoryMap::PhysicalRange::Type;
 
-    auto r = Range(0x0000ull, 0x1000, RangeType::FREE);
-    auto r1 = Range(0x0000ull, 0x1000, RangeType::BAD);
+    auto r = Range(as_ptr_t(0x0000), 0x1000, RangeType::FREE);
+    auto r1 = Range(as_ptr_t(0x0000), 0x1000, RangeType::BAD);
 
     Assert::that(r.overlaps(r1)).is_true();
 
     auto ranges = r.shatter_against(r1);
 
-    Assert::that(ranges[0]).is_equal(Range(0x0000ull, 0, RangeType::FREE));
-    Assert::that(ranges[1]).is_equal(Range(0x0000ull, 0x1000, RangeType::BAD));
+    Assert::that(ranges[0]).is_equal(Range(as_ptr_t(0x0000), 0, RangeType::FREE));
+    Assert::that(ranges[1]).is_equal(Range(as_ptr_t(0x0000), 0x1000, RangeType::BAD));
 }
 
 TEST(ShatterCase5) {
@@ -96,14 +97,14 @@ TEST(ShatterCase5) {
     using Range = kernel::MemoryMap::PhysicalRange;
     using RangeType = kernel::MemoryMap::PhysicalRange::Type;
 
-    auto r = Range(0x0000ull, 0x1000, RangeType::BAD);
-    auto r1 = Range(0x0000ull, 0x1000, RangeType::FREE);
+    auto r = Range(as_ptr_t(0x0000), 0x1000, RangeType::BAD);
+    auto r1 = Range(as_ptr_t(0x0000), 0x1000, RangeType::FREE);
 
     Assert::that(r.overlaps(r1)).is_true();
 
     auto ranges = r.shatter_against(r1);
 
-    Assert::that(ranges[0]).is_equal(Range(0x0000ull, 0x1000, RangeType::BAD));
+    Assert::that(ranges[0]).is_equal(Range(as_ptr_t(0x0000), 0x1000, RangeType::BAD));
     Assert::that(ranges[1]).is_equal(Range(0x1000ull, 0, RangeType::FREE));
 }
 
@@ -112,14 +113,14 @@ TEST(ShatterCase6) {
     using Range = kernel::MemoryMap::PhysicalRange;
     using RangeType = kernel::MemoryMap::PhysicalRange::Type;
 
-    auto r = Range(0x0000ull, 0x3000, RangeType::FREE);
+    auto r = Range(as_ptr_t(0x0000), 0x3000, RangeType::FREE);
     auto r1 = Range(0x1000ull, 0x1000, RangeType::FREE);
 
     Assert::that(r.overlaps(r1)).is_true();
 
     auto ranges = r.shatter_against(r1);
 
-    Assert::that(ranges[0]).is_equal(Range(0x0000ull, 0x3000, RangeType::FREE));
+    Assert::that(ranges[0]).is_equal(Range(as_ptr_t(0x0000), 0x3000, RangeType::FREE));
     Assert::that(ranges[1]).is_equal({});
 }
 
@@ -128,14 +129,14 @@ TEST(ShatterCase7) {
     using Range = kernel::MemoryMap::PhysicalRange;
     using RangeType = kernel::MemoryMap::PhysicalRange::Type;
 
-    auto r = Range(0x0000ull, 0x3000, RangeType::FREE);
+    auto r = Range(as_ptr_t(0x0000), 0x3000, RangeType::FREE);
     auto r1 = Range(0x1000ull, 0x1000, RangeType::RESERVED);
 
     Assert::that(r.overlaps(r1)).is_true();
 
     auto ranges = r.shatter_against(r1);
 
-    Assert::that(ranges[0]).is_equal(Range(0x0000ull, 0x1000, RangeType::FREE));
+    Assert::that(ranges[0]).is_equal(Range(as_ptr_t(0x0000), 0x1000, RangeType::FREE));
     Assert::that(ranges[1]).is_equal(Range(0x1000ull, 0x1000, RangeType::RESERVED));
     Assert::that(ranges[2]).is_equal(Range(0x2000ull, 0x1000, RangeType::FREE));
 }
@@ -222,14 +223,14 @@ TEST(SortByAddress) {
 
     clean_map.emplace_range(0x5000ull, 0x1000, RangeType::FREE);
     clean_map.emplace_range(0x3000ull, 0x1000, RangeType::RESERVED);
-    clean_map.emplace_range(0x0000ull, 0xF000, RangeType::FREE);
+    clean_map.emplace_range(as_ptr_t(0x0000), 0xF000, RangeType::FREE);
     clean_map.emplace_range(0x4000ull, 0x1000, RangeType::FREE);
     clean_map.emplace_range(0x1000ull, 0x1000, RangeType::FREE);
     clean_map.emplace_range(0x2000ull, 0x1000, RangeType::BAD);
 
     clean_map.sort_by_address();
 
-    Assert::that(clean_map.at(0)).is_equal({ 0x0000ull, 0xF000, RangeType::FREE });
+    Assert::that(clean_map.at(0)).is_equal({ as_ptr_t(0x0000), 0xF000, RangeType::FREE });
     Assert::that(clean_map.at(1)).is_equal({ 0x1000ull, 0x1000, RangeType::FREE });
     Assert::that(clean_map.at(2)).is_equal({ 0x2000ull, 0x1000, RangeType::BAD });
     Assert::that(clean_map.at(3)).is_equal({ 0x3000ull, 0x1000, RangeType::RESERVED });
@@ -249,7 +250,7 @@ TEST(EraseAt) {
     auto* range_buffer = new uint8_t[buffer_size];
     clean_map.set_range_buffer(range_buffer, buffer_size);
 
-    clean_map.emplace_range(0x0000ull, 0x1000, RangeType::RECLAIMABLE);
+    clean_map.emplace_range(as_ptr_t(0x0000), 0x1000, RangeType::RECLAIMABLE);
     clean_map.emplace_range(0x1000ull, 0x1000, RangeType::FREE);
     clean_map.emplace_range(0x2000ull, 0x1000, RangeType::RESERVED);
     clean_map.emplace_range(0x3000ull, 0x1000, RangeType::BAD);
@@ -259,7 +260,7 @@ TEST(EraseAt) {
     clean_map.erase_range_at(1);
 
     Assert::that(clean_map.entry_count()).is_equal(3);
-    Assert::that(clean_map.at(0)).is_equal({ 0x0000ull, 0x1000, RangeType::RECLAIMABLE });
+    Assert::that(clean_map.at(0)).is_equal({ as_ptr_t(0x0000), 0x1000, RangeType::RECLAIMABLE });
     Assert::that(clean_map.at(1)).is_equal({ 0x2000ull, 0x1000, RangeType::RESERVED });
     Assert::that(clean_map.at(2)).is_equal({ 0x3000ull, 0x1000, RangeType::BAD });
 
@@ -302,10 +303,10 @@ TEST(EmplaceAt) {
     Assert::that(clean_map.at(1)).is_equal({ 0x2000ull, 0x1000, RangeType::RESERVED });
     Assert::that(clean_map.at(2)).is_equal({ 0x3000ull, 0x1000, RangeType::BAD });
 
-    clean_map.emplace_range_at(0, 0x0000ull, 0x1000, RangeType::RECLAIMABLE);
- 
+    clean_map.emplace_range_at(0, as_ptr_t(0x0000), 0x1000, RangeType::RECLAIMABLE);
+
     Assert::that(clean_map.entry_count()).is_equal(4);
-    Assert::that(clean_map.at(0)).is_equal({ 0x0000ull, 0x1000, RangeType::RECLAIMABLE });
+    Assert::that(clean_map.at(0)).is_equal({ as_ptr_t(0x0000), 0x1000, RangeType::RECLAIMABLE });
     Assert::that(clean_map.at(1)).is_equal({ 0x1000ull, 0x1000, RangeType::FREE });
     Assert::that(clean_map.at(2)).is_equal({ 0x2000ull, 0x1000, RangeType::RESERVED });
     Assert::that(clean_map.at(3)).is_equal({ 0x3000ull, 0x1000, RangeType::BAD });
@@ -324,7 +325,7 @@ TEST(CorrectOverlapping) {
     clean_map.set_range_buffer(range_buffer, buffer_size);
 
     // these 4 should get merged into 0x0000 - 0x4000
-    clean_map.emplace_range(0x0000ull, 0x2000, RangeType::FREE);
+    clean_map.emplace_range(as_ptr_t(0x0000), 0x2000, RangeType::FREE);
     clean_map.emplace_range(0x1000ull, 0x2000, RangeType::FREE);
     clean_map.emplace_range(0x2000ull, 0x1000, RangeType::FREE);
     clean_map.emplace_range(0x2000ull, 0x2000, RangeType::FREE);
@@ -377,7 +378,7 @@ TEST(CorrectOverlapping) {
 
     Assert::that(clean_map.entry_count()).is_equal(15);
 
-    Assert::that(clean_map.at(0)).is_equal({  0x0000ull,  0x4000, RangeType::FREE     });
+    Assert::that(clean_map.at(0)).is_equal({  as_ptr_t(0x0000),  0x4000, RangeType::FREE     });
     Assert::that(clean_map.at(1)).is_equal({  0x5000ull,  0x2000, RangeType::FREE     });
     Assert::that(clean_map.at(2)).is_equal({  0x7000ull,  0x500,  RangeType::BAD      });
     Assert::that(clean_map.at(3)).is_equal({  0x8000ull,  0x1000, RangeType::FREE     });
