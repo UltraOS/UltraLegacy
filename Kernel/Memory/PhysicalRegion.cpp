@@ -27,12 +27,18 @@ size_t PhysicalRegion::physical_address_as_bit(Address address)
 
 RefPtr<Page> PhysicalRegion::allocate_page()
 {
-    auto index = m_allocation_map.find_range(1, false);
+    auto index = m_allocation_map.find_bit(false, m_next_hint);
 
     if (index == -1) {
         warning() << "PhysicalRegion: Failed to allocate a physical page (Out of pages)!";
         return {};
     }
+
+    m_next_hint = static_cast<size_t>(index + 1);
+
+    // reset hint in case we got the last index
+    if (m_next_hint == m_allocation_map.size())
+        m_next_hint = 0;
 
     m_allocation_map.set_bit(index, true);
     --m_free_pages;

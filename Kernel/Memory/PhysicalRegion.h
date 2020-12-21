@@ -37,6 +37,7 @@ private:
 private:
     Address m_starting_address { nullptr };
     size_t m_free_pages { 0 };
+    size_t m_next_hint { 0 };
     DynamicBitArray m_allocation_map;
 };
 }
