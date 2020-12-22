@@ -120,3 +120,31 @@ TEST(Contains) {
     Assert::that(range.contains(Range::from_two_pointers(range.begin(), range.end() + 1))).is_false();
     Assert::that(range.contains(Range::from_two_pointers(range.begin() - 1, range.end()))).is_false();
 }
+
+TEST(ConstrainedBy) {
+    using Range = kernel::Range;
+
+    // empty range
+    auto range1 = Range::from_two_pointers(as_ptr_t(0x0000), as_ptr_t(0x0000));
+    Assert::that(range1.constrained_by(as_ptr_t(0x1000), 0x2000)).is_equal(range1);
+
+    // range under the lower constraint
+    auto range2 = Range::from_two_pointers(as_ptr_t(0x500), 0x1100);
+    Assert::that(range2.constrained_by(as_ptr_t(0x1000), 0x2000)).is_equal(Range::from_two_pointers(0x1000, 0x1100));
+
+    // range above the upper constraint
+    auto range3 = Range::from_two_pointers(as_ptr_t(0x1000), 0x3000);
+    Assert::that(range3.constrained_by(as_ptr_t(0x1000), 0x2000)).is_equal(Range::from_two_pointers(0x1000, 0x2000));
+
+    // range under the constraint (uncorrectable)
+    auto range4 = Range::from_two_pointers(as_ptr_t(0x100), 0xFFF);
+    Assert::that(range4.constrained_by(as_ptr_t(0x1000), 0x2000)).is_equal(Range::from_two_pointers(0xFFF, 0xFFF));
+
+    // range above the constraint (uncorrectable)
+    auto range5 = Range::from_two_pointers(as_ptr_t(0x3000), 0x4000);
+    Assert::that(range5.constrained_by(as_ptr_t(0x1000), 0x2000)).is_equal(Range::from_two_pointers(0x3000, 0x3000));
+
+    // range is both above and under the two constraints
+    auto range6 = Range::from_two_pointers(as_ptr_t(0x500), 0x2500);
+    Assert::that(range6.constrained_by(as_ptr_t(0x1000), 0x2000)).is_equal(Range::from_two_pointers(0x1000, 0x2000));
+}

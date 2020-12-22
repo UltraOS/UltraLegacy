@@ -124,6 +124,15 @@ struct MemoryMap {
             return new_range;
         }
 
+        PhysicalRange constrained_by(Address64 lowest, Address64 highest) const
+        {
+            PhysicalRange new_range {};
+            new_range.reset_with(BasicRange::constrained_by(lowest, highest));
+            new_range.type = type;
+
+            return new_range;
+        }
+
         static PhysicalRange create_empty_at(Address64 address)
         {
             auto range = BasicRange::create_empty_at(address);
@@ -137,7 +146,7 @@ struct MemoryMap {
         template <typename LoggerT>
         friend LoggerT& operator<<(LoggerT&& logger, const PhysicalRange& range)
         {
-            logger << "PhysicalRange: start:" << format::as_hex << range.begin() << " size:" << range.length()
+            logger << "begin:" << format::as_hex << range.begin() << " end:" << range.end() << " size:" << range.length()
                    << " type: " << range.type_as_string();
 
             return logger;

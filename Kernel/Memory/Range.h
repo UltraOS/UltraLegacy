@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Common/Types.h"
+#include "Common/Utilities.h"
 #include "Core/Runtime.h"
 
 namespace kernel {
@@ -99,6 +100,37 @@ public:
         return from_two_pointers(m_begin, address);
     }
 
+    BasicRange constrained_by(AddrT lowest, AddrT highest) const
+    {
+        ASSERT(lowest < highest);
+
+        if (empty())
+            return *this;
+
+        BasicRange new_range = *this;
+
+        // nothing we can do
+        if (m_begin > highest)
+            return from_two_pointers(m_begin, m_begin);
+
+        // same as above
+        if (m_end < lowest)
+            return from_two_pointers(m_end, m_end);
+
+
+        if (m_begin < lowest) {
+            auto bytes_under = lowest - m_begin;
+            new_range.set_begin(min(AddrT(m_begin + bytes_under), m_end));
+        }
+
+        if (m_end > highest) {
+            auto bytes_over = m_end - highest;
+            new_range.set_end(max(AddrT(m_end - bytes_over), m_begin));
+        }
+
+        return new_range;
+    }
+
     void reset_with(AddrT begin, size_t length)
     {
         m_begin = begin;
@@ -176,13 +208,13 @@ public:
             return {};
         }
 
-        return BasicRange::from_two_pointers(aligned_begin, m_end);
+        return from_two_pointers(aligned_begin, m_end);
     }
 
     template <typename StreamT>
     friend StreamT& operator<<(StreamT&& logger, const BasicRange& range)
     {
-        logger << "start:" << range.begin() << " end:" << range.end() << " length:" << range.length();
+        logger << "begin:" << range.begin() << " end:" << range.end() << " length:" << range.length();
 
         return logger;
     }
