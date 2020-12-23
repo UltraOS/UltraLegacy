@@ -201,6 +201,7 @@ void LAPIC::start_processor(u8 id)
     // TODO: add a literal allocate_stack() function
     // allocate the initial AP stack
     auto ap_stack = AddressSpace::of_kernel().allocator().allocate(Process::default_kernel_stack_size);
+
     *MemoryManager::physical_to_virtual(address_of_stack).as_pointer<ptr_t>() = ap_stack.end();
     MemoryManager::the().force_preallocate(ap_stack, true);
 

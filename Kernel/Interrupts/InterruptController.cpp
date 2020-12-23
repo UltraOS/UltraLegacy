@@ -16,21 +16,20 @@ void InterruptController::discover_and_setup()
 
     auto* floating_pointer = MP::find_floating_pointer_table();
 
-    if (floating_pointer) {
-        log() << "InterruptController: Found the floating pointer table at "
-              << MemoryManager::virtual_to_physical(floating_pointer);
-
-        MP::parse_configuration_table(floating_pointer);
-
-        log() << "InteruptController: Initializing LAPIC and IOAPIC...";
-
-        s_instance = new APIC;
-
+    if (!floating_pointer) {
+        log() << "InterruptController: No APIC support detected, reverting to PIC";
+        s_instance = new PIC;
         return;
     }
 
-    log() << "InterruptController: No APIC support detected, reverting to PIC";
-    s_instance = new PIC;
+    log() << "InterruptController: Found the floating pointer table at "
+          << MemoryManager::virtual_to_physical(floating_pointer);
+
+    MP::parse_configuration_table(floating_pointer);
+
+    log() << "InteruptController: Initializing LAPIC and IOAPIC...";
+
+    s_instance = new APIC;
 }
 
 InterruptController& InterruptController::the()

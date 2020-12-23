@@ -30,7 +30,9 @@ void APIC::enable_irq(u8 index)
         }
     }
 
-    ASSERT(false);
+    String error_string;
+    error_string << "Couldn't find an irq source for " << index;
+    runtime::panic(error_string.data());
 }
 
 void APIC::disable_irq(u8 index)
