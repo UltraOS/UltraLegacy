@@ -56,6 +56,7 @@ KERNEL_FILE(PATH "Common" FILE "Conversions.h")
 KERNEL_FILE(PATH "Common" FILE "List.h")
 KERNEL_FILE(PATH "Common" FILE "RedBlackTree.h")
 KERNEL_FILE(PATH "Common" FILE "RefPtr.h")
+KERNEL_FILE(PATH "Common" FILE "UniquePtr.h")
 KERNEL_FILE(PATH "Common" FILE "Pair.h")
 KERNEL_FILE(PATH "Core"   FILE "Boot.h")
 
