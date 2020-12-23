@@ -136,13 +136,14 @@ u8* MemoryManager::quickmap_page(Address physical_address)
     LockGuard lock_guard(m_quickmap_lock);
 
     auto slot = m_quickmap_slots.find_bit(false);
-    m_quickmap_slots.set_bit(slot, true);
 
-    // TODO: this can technically be replaced with sleep(...) or some other mechanism
-    // to wait for an available slot, as well as just allocating a page-sized range from the
+    // TODO: this can technically be replaced with some other mechanism to wait
+    // for an available slot, as well as just allocating a page-sized range from the
     // virtual allocator.
     if (slot == -1)
         runtime::panic("Out of quickmap slots!");
+
+    m_quickmap_slots.set_bit(slot, true);
 
     Address virtual_address = m_quickmap_range.begin() + slot * Page::size;
 
