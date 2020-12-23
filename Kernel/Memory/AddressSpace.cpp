@@ -34,35 +34,29 @@ void AddressSpace::inititalize()
 #ifdef ULTRA_64
     static constexpr size_t lower_indentity_size = 4 * GB;
 
-    for (const auto& entry : MemoryManager::the().memory_map()) {
-        if (entry.begin() < lower_indentity_size)
-            continue; // we already have this mapped
+    auto& memory_map = MemoryManager::the().memory_map();
+    auto lowest_to_map = lower_bound(
+            memory_map.begin(), memory_map.end(),
+            MemoryMap::PhysicalRange::create_empty_at(lower_indentity_size));
 
-        size_t base_address;
-        size_t length;
+    if (lowest_to_map == memory_map.end() ||
+       (lowest_to_map != memory_map.begin() && lowest_to_map->begin() != lower_indentity_size))
+        --lowest_to_map;
 
-        if (!Page::is_huge_aligned(entry.begin())) {
-            auto alignment_overhead = entry.begin() % Page::huge_size;
-            base_address = entry.begin() - alignment_overhead;
-            length = entry.length() + alignment_overhead;
+    for (auto current_range = lowest_to_map; current_range != memory_map.end(); ++current_range) {
+        auto range = current_range->constrained_by(lower_indentity_size, MemoryManager::max_memory_address);
 
-#ifdef ADDRESS_SPACE_DEBUG
-            log() << "AddressSpace: "
-                  << " aligning the entry at " << format::as_hex << entry.begin() << "length " << entry.length()
-                  << " to " << base_address << " length " << length;
+        if (range.empty())
+            continue;
+
+        range.set_begin(Page::round_down_huge(range.begin()));
+        auto pages_to_map = ceiling_divide(range.length(), Page::huge_size);
+
+#ifndef ADDRESS_SPACE_DEBUG
+        log() << "AddressSpace: Mapping " << pages_to_map << " pages at " << format::as_hex << range.begin();
 #endif
-        } else {
-            base_address = entry.begin();
-            length = entry.length();
-        }
-
-        auto total_pages = ceiling_divide(length, Page::huge_size);
-
-#ifdef ADDRESS_SPACE_DEBUG
-        log() << "AddressSpace: Mapping " << total_pages << " pages at " << format::as_hex << base_address;
-#endif
-        for (size_t i = 0; i < total_pages; ++i) {
-            auto physical_address = base_address + Page::huge_size * i;
+        for (size_t i = 0; i < pages_to_map; ++i) {
+            auto physical_address = range.begin() + Page::huge_size * i;
             s_of_kernel->map_huge_supervisor_page(
                 MemoryManager::physical_to_virtual(physical_address),
                 physical_address);
@@ -71,8 +65,6 @@ void AddressSpace::inititalize()
 #endif
 
     s_of_kernel->flush_all();
-
-    //  this should be begin-end not this way :(
     s_of_kernel->allocator().reset_with(
         MemoryManager::the().kernel_address_space_free_base(),
         MemoryManager::the().kernel_address_space_free_ceiling());
