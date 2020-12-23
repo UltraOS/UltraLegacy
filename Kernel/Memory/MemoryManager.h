@@ -132,6 +132,22 @@ public:
         return m_memory_map;
     }
 
+    static const LoaderContext* loader_context()
+    {
+        return s_loader_context;
+    }
+
+    struct PhysicalStats {
+        size_t total_bytes;
+        size_t free_bytes;
+    };
+
+    [[nodiscard]] PhysicalStats physical_stats() const
+    {
+        LockGuard lock_guard(m_lock);
+        return { m_initial_physical_bytes, m_free_physical_bytes };
+    }
+
     void force_preallocate(const Range& range, bool should_zero = false);
 
 private:
@@ -161,12 +177,16 @@ private:
 
 private:
     static MemoryManager* s_instance;
+    static LoaderContext* s_loader_context;
 
-    RecursiveInterruptSafeSpinLock m_lock;
+    mutable RecursiveInterruptSafeSpinLock m_lock;
 
     DynamicArray<PhysicalRegion> m_physical_regions;
 
     MemoryMap m_memory_map;
+
+    size_t m_initial_physical_bytes { 0 };
+    size_t m_free_physical_bytes { 0 };
 
 #ifdef ULTRA_32
     InterruptSafeSpinLock m_quickmap_lock;

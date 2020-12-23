@@ -11,11 +11,12 @@
 #include "Page.h"
 #include "PhysicalRegion.h"
 
-// #define MEMORY_MANAGER_DEBUG
+#define MEMORY_MANAGER_DEBUG
 
 namespace kernel {
 
 MemoryManager* MemoryManager::s_instance;
+LoaderContext* MemoryManager::s_loader_context;
 
 Address MemoryManager::kernel_address_space_free_ceiling()
 {
@@ -23,12 +24,14 @@ Address MemoryManager::kernel_address_space_free_ceiling()
     // recursive paging table is the last table in the address space
     return max_memory_address - 4 * MB;
 #elif defined(ULTRA_64)
-    return max_memory_address;
+    return Page::round_down(max_memory_address);
 #endif
 }
 
 void MemoryManager::early_initialize(LoaderContext* loader_context)
 {
+    s_loader_context = loader_context;
+
     BootAllocator::initialize(MemoryMap::generate_from(loader_context));
 
     // reserve the physical memory range that contains the kernel image
@@ -70,47 +73,61 @@ MemoryManager::MemoryManager()
     // That's it, we no longer need the boot allocator, we can take it from here
     m_memory_map = BootAllocator::the().release();
 
-    u64 total_free_memory = 0;
+    static constexpr size_t minimum_viable_range_length = Page::size * 3;
+    static constexpr Address64 lowest_allowed_physical_address = 1 * MB;
+    static constexpr Address64 highest_allowed_physical_address = Page::round_down(max_memory_address.raw());
 
-    for (const auto& entry : m_memory_map) {
-        log() << entry;
-
-        if (entry.is_reserved())
-            continue;
-
-        if (entry.begin() < 1 * MB)
-            continue;
-
-        auto potential_range = entry;
-
-#ifdef ULTRA_32
-        if (potential_range.begin() > max_memory_address) {
 #ifdef MEMORY_MANAGER_DEBUG
-            log() << "MemoryManager: skipping a higher memory region at " << format::as_hex << potential_range.begin();
+    log() << "MemoryManager: constraining physical ranges by "
+          << lowest_allowed_physical_address << " -> "
+          <<  highest_allowed_physical_address;
 #endif
 
+    auto first_viable_range = lower_bound(
+            m_memory_map.begin(),
+            m_memory_map.end(),
+            MemoryMap::PhysicalRange::create_empty_at(lowest_allowed_physical_address));
+
+    if (first_viable_range == m_memory_map.end() ||
+        (first_viable_range != m_memory_map.begin() && first_viable_range->begin() != lowest_allowed_physical_address))
+        --first_viable_range;
+
+    for (auto range = first_viable_range; range != m_memory_map.end(); ++range) {
+        if (range->is_reserved())
             continue;
-        } else if (potential_range.end() > max_memory_address) {
+
+        if (range->length() < minimum_viable_range_length)
+            continue;
+
+        auto potential_range = range->constrained_by(
+                lowest_allowed_physical_address,
+                highest_allowed_physical_address
+        );
+
 #ifdef MEMORY_MANAGER_DEBUG
-            log() << "MemoryManager: trimming a big region (outside of 4GB) at" << format::as_hex << potential_range.begin()
-                  << " potential_range.length:" << potential_range.length();
+        log() << "MemoryManager: Transformed range\n       "
+              << *range << "\n       into\n       " << potential_range << "\n";
 #endif
 
-            potential_range.set_length(potential_range.end() - max_memory_address);
-        }
-#endif
+        if (potential_range.length() < Page::size)
+            continue;
 
         auto& this_region = m_physical_regions.emplace(Address(potential_range.begin().raw()), potential_range.length());
 
 #ifdef MEMORY_MANAGER_DEBUG
-        log() << "MemoryManager: A new physical region -> " << this_region;
+        log() << "MemoryManager: New physical region: " << this_region;
 #endif
 
-        total_free_memory += this_region.free_page_count() * Page::size;
+        m_initial_physical_bytes += this_region.free_page_count() * Page::size;
     }
 
-    log() << "MemoryManager: Total free physical memory: " << bytes_to_megabytes(total_free_memory) << " MB ("
-          << total_free_memory / Page::size << " pages) ";
+    log() << "MemoryManager: Total free physical memory: "
+          << bytes_to_megabytes(m_initial_physical_bytes) << " MB ("
+          << m_initial_physical_bytes / Page::size << " pages) ";
+
+    m_free_physical_bytes = m_initial_physical_bytes;
+    m_initial_physical_bytes += kernel_image_size;
+    m_initial_physical_bytes += kernel_first_heap_block_size;
 }
 
 #ifdef ULTRA_32
@@ -118,7 +135,7 @@ u8* MemoryManager::quickmap_page(Address physical_address)
 {
     LockGuard lock_guard(m_quickmap_lock);
 
-    auto slot = m_quickmap_slots.find_range(1, false);
+    auto slot = m_quickmap_slots.find_bit(false);
     m_quickmap_slots.set_bit(slot, true);
 
     // TODO: this can technically be replaced with sleep(...) or some other mechanism
@@ -129,7 +146,7 @@ u8* MemoryManager::quickmap_page(Address physical_address)
 
     Address virtual_address = m_quickmap_range.begin() + slot * Page::size;
 
-#ifdef MEMORY_MANAGER_DEBUG
+#ifdef MEMORY_MANAGER_SUPER_DEBUG
     log() << "MemoryManager: quickmapping vaddr " << virtual_address << " to " << physical_address;
 #endif
 
@@ -161,6 +178,8 @@ RefPtr<Page> MemoryManager::allocate_page(bool should_zero)
 {
     LockGuard lock_guard(m_lock);
 
+    m_free_physical_bytes -= Page::size;
+
     for (auto& region : m_physical_regions) {
         if (!region.has_free_pages())
             continue;
@@ -170,7 +189,7 @@ RefPtr<Page> MemoryManager::allocate_page(bool should_zero)
         ASSERT(page);
 
         if (should_zero) {
-#ifdef MEMORY_MANAGER_DEBUG
+#ifdef MEMORY_MANAGER_SUPER_DEBUG
             log() << "MemoryManager: zeroing the page at physaddr " << page->address();
 #endif
 
@@ -193,6 +212,8 @@ RefPtr<Page> MemoryManager::allocate_page(bool should_zero)
 void MemoryManager::free_page(Page& page)
 {
     LockGuard lock_guard(m_lock);
+
+    m_free_physical_bytes += Page::size;
 
     for (auto& region : m_physical_regions) {
         if (region.contains(page)) {

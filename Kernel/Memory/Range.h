@@ -99,7 +99,7 @@ public:
 
         return from_two_pointers(m_begin, address);
     }
-
+    
     BasicRange constrained_by(AddrT lowest, AddrT highest) const
     {
         ASSERT(lowest < highest);
