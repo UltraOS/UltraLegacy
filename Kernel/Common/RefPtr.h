@@ -208,4 +208,40 @@ private:
     T* m_ptr { nullptr };
     RefCounterBase<T>* m_ref_count { nullptr };
 };
+
+template <typename T>
+bool operator<(const RefPtr<T>& l, const RefPtr<T>& r)
+{
+    return l.get() < r.get();
+}
+
+template <typename T>
+bool operator<=(const RefPtr<T>& l, const RefPtr<T>& r)
+{
+    return l.get() <= r.get();
+}
+
+template <typename T>
+bool operator>(const RefPtr<T>& l, const RefPtr<T>& r)
+{
+    return l.get() > r.get();
+}
+
+template <typename T>
+bool operator>=(const RefPtr<T>& l, const RefPtr<T>& r)
+{
+    return l.get() >= r.get();
+}
+
+template <typename T>
+bool operator==(const RefPtr<T>& l, const RefPtr<T>& r)
+{
+    return l.get() == r.get();
+}
+
+template <typename T>
+bool operator!=(const RefPtr<T>& l, const RefPtr<T>& r)
+{
+    return l.get() != r.get();
+}
 }

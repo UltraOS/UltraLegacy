@@ -34,6 +34,12 @@ public:
         return *this;
     }
 
+    [[nodiscard]] T& operator*() const
+    {
+        ASSERT(m_ptr != nullptr);
+        return *m_ptr;
+    }
+
     [[nodiscard]] T* get() const
     {
         return m_ptr;
@@ -64,5 +70,41 @@ public:
 private:
     T* m_ptr { nullptr };
 };
+
+template <typename T>
+bool operator<(const UniquePtr<T>& l, const UniquePtr<T>& r)
+{
+    return l.get() < r.get();
+}
+
+template <typename T>
+bool operator<=(const UniquePtr<T>& l, const UniquePtr<T>& r)
+{
+    return l.get() <= r.get();
+}
+
+template <typename T>
+bool operator>(const UniquePtr<T>& l, const UniquePtr<T>& r)
+{
+    return l.get() > r.get();
+}
+
+template <typename T>
+bool operator>=(const UniquePtr<T>& l, const UniquePtr<T>& r)
+{
+    return l.get() >= r.get();
+}
+
+template <typename T>
+bool operator==(const UniquePtr<T>& l, const UniquePtr<T>& r)
+{
+    return l.get() == r.get();
+}
+
+template <typename T>
+bool operator!=(const UniquePtr<T>& l, const UniquePtr<T>& r)
+{
+    return l.get() != r.get();
+}
 
 }
