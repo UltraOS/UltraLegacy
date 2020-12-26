@@ -2,6 +2,7 @@
 
 #include "Memory.h"
 #include "Traits.h"
+#include "Core/Runtime.h"
 
 namespace kernel {
 
@@ -61,11 +62,22 @@ bit_cast(From value)
 }
 // clang-format on
 
-template <typename T>
+template <typename T = void>
 struct Less {
     constexpr bool operator()(const T& l, const T& r) const
     {
         return l < r;
+    }
+};
+
+template <>
+struct Less<void> {
+    using is_transparent = void;
+
+    template <typename L, typename R>
+    constexpr auto operator()(L&& l, R&& r) const -> decltype(static_cast<L&&>(l) < static_cast<R&&>(r))
+    {
+        return static_cast<L&&>(l) < static_cast<R&&>(r);
     }
 };
 
@@ -77,9 +89,22 @@ struct Greater {
     }
 };
 
-template <typename T, typename Compare = Less<T>>
-T* lower_bound(T* begin, T* end, const T& value, Compare comparator = Compare())
+template <>
+struct Greater<void> {
+    using is_transparent = void;
+
+    template <typename L, typename R>
+    constexpr auto operator()(L&& l, const R&& r) const -> decltype(static_cast<L&&>(l) > static_cast<R&&>(r))
+    {
+        return static_cast<L&&>(l) > static_cast<R&&>(r);
+    }
+};
+
+template <typename T, typename U, typename Comparator = Less<>>
+T* lower_bound(T* begin, T* end, const U& key, Comparator comparator = Comparator())
 {
+    ASSERT(begin <= end);
+
     if (begin == end)
         return end;
 
@@ -93,13 +118,13 @@ T* lower_bound(T* begin, T* end, const T& value, Compare comparator = Compare())
 
         auto& pivot_value = begin[pivot];
 
-        if (comparator(value, pivot_value)) {
+        if (comparator(key, pivot_value)) {
             lower_bound = &pivot_value;
             right = pivot - 1;
             continue;
         }
 
-        if (comparator(pivot_value, value)) {
+        if (comparator(pivot_value, key)) {
             left = pivot + 1;
             continue;
         }
@@ -110,21 +135,23 @@ T* lower_bound(T* begin, T* end, const T& value, Compare comparator = Compare())
     return lower_bound;
 }
 
-template <typename T, typename Compare = Less<T>>
-T* binary_search(T* begin, T* end, const T& value, Compare comparator = Compare())
+template <typename T, typename U, typename Comparator = Less<>>
+T* binary_search(T* begin, T* end, const U& value, Comparator comparator = Comparator())
 {
     auto* result = lower_bound(begin, end, value, comparator);
 
     return result == end ? result : (comparator(value, *result) ? end : result);
 }
 
-template <typename T, typename Compare = Less<T>>
-void quick_sort(T* begin, T* end, Compare comparator = Compare())
+template <typename T, typename Comparator = Less<T>>
+void quick_sort(T* begin, T* end, Comparator comparator = Comparator())
 {
-    using dp_t = T* (*)(T*, T*, Compare&);
-    using dqs_t = void (*)(T*, T*, Compare&);
+    ASSERT(begin <= end);
 
-    static dp_t do_partition = [](T* begin, T* end, Compare& comparator) -> T* {
+    using dp_t = T* (*)(T*, T*, Comparator&);
+    using dqs_t = void (*)(T*, T*, Comparator&);
+
+    static dp_t do_partition = [](T* begin, T* end, Comparator& comparator) -> T* {
         ssize_t smallest_index = -1;
         ssize_t array_size = end - begin;
 
@@ -141,7 +168,7 @@ void quick_sort(T* begin, T* end, Compare comparator = Compare())
         return &begin[smallest_index];
     };
 
-    static dqs_t do_quick_sort = [](T* begin, T* end, Compare& comparator) -> void {
+    static dqs_t do_quick_sort = [](T* begin, T* end, Comparator& comparator) -> void {
         // 1 element or empty array, doesn't make sense to sort
         if (end - begin < 2)
             return;
@@ -155,9 +182,11 @@ void quick_sort(T* begin, T* end, Compare comparator = Compare())
     do_quick_sort(begin, end, comparator);
 }
 
-template <typename T, typename Compare = Less<T>>
-void insertion_sort(T* begin, T* end, Compare comparator = Compare())
+template <typename T, typename Comparator = Less<T>>
+void insertion_sort(T* begin, T* end, Comparator comparator = Comparator())
 {
+    ASSERT(begin <= end);
+
     // 1 element or empty array, doesn't make sense to sort
     if (end - begin < 2)
         return;
