@@ -210,6 +210,12 @@ public:
         return *this;
     }
 
+    String& operator<<(const String& string)
+    {
+        append(string);
+        return *this;
+    }
+
     [[nodiscard]] bool equals(const StringView& string) const;
 
     [[nodiscard]] bool equals(const String& other) const
@@ -331,6 +337,8 @@ private:
 
 class StringView {
 public:
+    StringView() = default;
+
     StringView(const char* string)
         : m_string(string)
         , m_size(String::length_of(string))
@@ -402,8 +410,8 @@ public:
     }
 
 private:
-    const char* m_string;
-    size_t m_size;
+    const char* m_string { nullptr };
+    size_t m_size { 0 };
 };
 
 inline constexpr StringView operator""_sv(const char* string, size_t size)
