@@ -147,7 +147,7 @@ void Scheduler::pick_next()
 
     } else if (current_thread == next_thread || next_thread->is_running()) {
         s_lock.unlock(interrupt_state);
-        return;
+        switch_task(current_thread->control_block());
     }
 
     current_thread->deactivate();
