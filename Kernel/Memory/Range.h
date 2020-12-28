@@ -214,9 +214,19 @@ public:
     template <typename StreamT>
     friend StreamT& operator<<(StreamT&& logger, const BasicRange& range)
     {
-        logger << "begin:" << range.begin() << " end:" << range.end() << " length:" << range.length();
+        logger << range.begin() << " -> " << range.end() << " length: " << range.length();
 
         return logger;
+    }
+
+    friend bool operator<(const BasicRange& l, AddrT r)
+    {
+        return l.begin() < r;
+    }
+
+    friend bool operator<(AddrT l, const BasicRange& r)
+    {
+        return l < r.begin();
     }
 
 private:
