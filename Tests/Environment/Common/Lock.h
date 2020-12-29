@@ -15,4 +15,7 @@ class LockGuard
 public:
     explicit LockGuard(const T&) {}
 };
+
+#define LOCK_GUARD(x) (void)x
+
 }

@@ -1,8 +1,8 @@
 #pragma once
 
+#include "Core/Runtime.h"
 #include "Memory.h"
 #include "Traits.h"
-#include "Core/Runtime.h"
 
 namespace kernel {
 

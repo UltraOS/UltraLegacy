@@ -1,9 +1,9 @@
 #pragma once
 
-#include "Pair.h"
 #include "DynamicArray.h"
 #include "Macros.h"
 #include "Math.h"
+#include "Pair.h"
 
 namespace kernel {
 

@@ -101,15 +101,23 @@ CPU::LocalData& CPU::current()
     runtime::panic(error_string.data());
 }
 
+u32 CPU::current_id()
+{
+    if (is_initialized())
+        return current().id();
+
+    return 0;
+}
+
 void CPU::ap_entrypoint()
 {
     GDT::the().install();
-    CPU::current().set_tss(new TSS);
     IDT::the().install();
     PAT::the().synchronize();
     LAPIC::initialize_for_this_processor();
     LAPIC::timer().initialize_for_this_processor();
     Process::inititalize_for_this_processor();
+    CPU::current().set_tss(new TSS);
 
     ++s_alive_counter;
 

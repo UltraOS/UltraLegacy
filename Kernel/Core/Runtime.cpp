@@ -51,110 +51,69 @@ void init_global_objects()
         (*ctor)();
 }
 // clang-format on
+void KernelSymbolTable::parse_all()
+{
+    static constexpr auto ksyms_begin_magic = "KSYMS"_sv;
+    static constexpr auto ksyms_end_magic = "SMYSK"_sv;
 
-class KernelSymbolTable {
-public:
-    static constexpr size_t max_symbols = 1024;
-    static constexpr Address physical_symbols_base = 0x45000;
+    auto* current_offset = MemoryManager::physical_to_virtual(physical_symbols_base).as_pointer<char>();
 
-    class Symbol {
-    public:
-        Symbol() = default;
+    if (StringView(current_offset, ksyms_begin_magic.size()) != ksyms_begin_magic) {
+        warning() << "SymbolTable: invalid symbol base magic, kernel symbols won't be available";
+        return;
+    }
+    current_offset += ksyms_begin_magic.size();
 
-        Symbol(ptr_t address, char* name)
-            : m_address(address)
-            , m_name(name)
-        {
+    while (StringView(current_offset, ksyms_end_magic.size()) != ksyms_end_magic) {
+        if (s_symbol_count == max_symbols) {
+            warning() << "SymbolTable: reached the maximum amount of symbols, not all symbols will be available";
+            break;
         }
 
-        ptr_t address() const { return m_address; }
-        const char* name() const { return m_name; }
+        ptr_t base_of_this_symbol = *reinterpret_cast<ptr_t*>(current_offset);
+        current_offset += sizeof(ptr_t);
 
-        friend bool operator<(ptr_t address, const Symbol& symbol) { return address < symbol.address(); }
+        s_symbols[s_symbol_count++] = Symbol(base_of_this_symbol, current_offset);
 
-    private:
-        ptr_t m_address { 0 };
-        char* m_name { nullptr };
-    };
-
-    static bool symbols_available() { return s_symbol_count > 0; }
-
-    static void parse_all()
-    {
-        static constexpr auto ksyms_begin_magic = "KSYMS"_sv;
-        static constexpr auto ksyms_end_magic = "SMYSK"_sv;
-
-        auto* current_offset = MemoryManager::physical_to_virtual(physical_symbols_base).as_pointer<char>();
-
-        if (StringView(current_offset, ksyms_begin_magic.size()) != ksyms_begin_magic) {
-            warning() << "SymbolTable: invalid symbol base magic, kernel symbols won't be available";
-            return;
-        }
-        current_offset += ksyms_begin_magic.size();
-
-        while (StringView(current_offset, ksyms_end_magic.size()) != ksyms_end_magic) {
-            if (s_symbol_count == max_symbols) {
-                warning() << "SymbolTable: reached the maximum amount of symbols, not all symbols will be available";
-                break;
-            }
-
-            ptr_t base_of_this_symbol = *reinterpret_cast<ptr_t*>(current_offset);
-            current_offset += sizeof(ptr_t);
-
-            s_symbols[s_symbol_count++] = Symbol(base_of_this_symbol, current_offset);
-
-            current_offset += String::length_of(current_offset) + 1;
-        }
-
-        if (!symbols_available())
-            return;
-
-        s_symbols_begin = s_symbols[0].address();
-        s_symbols_end = s_symbols[s_symbol_count - 1].address();
-
-        log() << "KernelSymbolTable: successfully parsed kernel symbols, " << s_symbol_count << " available.";
+        current_offset += String::length_of(current_offset) + 1;
     }
 
-    static bool is_address_within_symbol_table(ptr_t address)
-    {
-        // Add 500 to the last symbol to compensate for the possibility
-        // of this address being the last symbol in the table
-        return address > s_symbols_begin && address < (s_symbols_end + 500);
+    if (!symbols_available())
+        return;
+
+    s_symbols_begin = s_symbols[0].address();
+    s_symbols_end = s_symbols[s_symbol_count - 1].address();
+
+    log() << "KernelSymbolTable: successfully parsed kernel symbols, " << s_symbol_count << " available.";
+}
+
+bool KernelSymbolTable::is_address_within_symbol_table(ptr_t address)
+{
+    // Add 500 to the last symbol to compensate for the possibility
+    // of this address being the last symbol in the table
+    return address > s_symbols_begin && address < (s_symbols_end + 500);
+}
+
+const KernelSymbolTable::Symbol* KernelSymbolTable::find_symbol(ptr_t address)
+{
+    if (!symbols_available())
+        return nullptr;
+
+    if (!is_address_within_symbol_table(address))
+        return nullptr;
+
+    for (size_t i = 0; i < s_symbol_count - 1; ++i) {
+        if (address < s_symbols[i + 1])
+            return &s_symbols[i];
     }
 
-    static const Symbol* find_symbol(ptr_t address)
-    {
-        if (!symbols_available())
-            return nullptr;
-
-        if (!is_address_within_symbol_table(address))
-            return nullptr;
-
-        for (size_t i = 0; i < s_symbol_count - 1; ++i) {
-            if (address < s_symbols[i + 1])
-                return &s_symbols[i];
-        }
-
-        return &s_symbols[s_symbol_count - 1];
-    }
-
-private:
-    static ptr_t s_symbols_begin;
-    static ptr_t s_symbols_end;
-
-    static size_t s_symbol_count;
-    static Symbol s_symbols[max_symbols];
-};
+    return &s_symbols[s_symbol_count - 1];
+}
 
 ptr_t KernelSymbolTable::s_symbols_begin;
 ptr_t KernelSymbolTable::s_symbols_end;
 size_t KernelSymbolTable::s_symbol_count;
 KernelSymbolTable::Symbol KernelSymbolTable::s_symbols[max_symbols];
-
-void parse_kernel_symbols()
-{
-    KernelSymbolTable::parse_all();
-}
 
 void on_assertion_failed(const char* message, const char* file, const char* function, u32 line)
 {
@@ -170,21 +129,6 @@ void on_assertion_failed(const char* message, const char* file, const char* func
 
     panic(formatted_message.data());
 }
-ALWAYS_INLINE inline Address base_pointer();
-inline Address base_pointer()
-{
-    Address base_pointer;
-
-#ifdef ULTRA_32
-    asm("mov %%ebp, %0"
-        : "=a"(base_pointer));
-#elif defined(ULTRA_64)
-    asm("mov %%rbp, %0"
-        : "=a"(base_pointer));
-#endif
-
-    return base_pointer;
-}
 
 size_t dump_backtrace(ptr_t* into, size_t max_depth, Address base_pointer)
 {
@@ -193,7 +137,7 @@ size_t dump_backtrace(ptr_t* into, size_t max_depth, Address base_pointer)
     auto is_address_valid = [](Address adr) -> bool {
         // this doesn't actually guarantee that we won't crash here
         // TODO: figure out a way to make this safer?
-        return adr > MemoryManager::kernel_reserved_base;
+        return adr >= MemoryManager::kernel_address_space_base;
     };
 
     // We have to make sure that base pointer is valid before retrieving the instruction pointer
@@ -204,12 +148,6 @@ size_t dump_backtrace(ptr_t* into, size_t max_depth, Address base_pointer)
     }
 
     return current_depth;
-}
-
-ALWAYS_INLINE inline size_t dump_backtrace(ptr_t* into, size_t max_depth);
-inline size_t dump_backtrace(ptr_t* into, size_t max_depth)
-{
-    return dump_backtrace(into, max_depth, base_pointer());
 }
 
 [[noreturn]] void panic(const char* reason, const RegisterState* registers)

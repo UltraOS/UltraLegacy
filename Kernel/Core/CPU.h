@@ -84,6 +84,8 @@ public:
 
     static LocalData& current();
 
+    static u32 current_id();
+
 private:
     static void ap_entrypoint() USED;
 
