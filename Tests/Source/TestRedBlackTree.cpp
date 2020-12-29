@@ -664,3 +664,45 @@ TEST(ReturnedIterator) {
     Assert::that(*tree.emplace(1)).is_equal(1);
     Assert::that(*tree.push(2)).is_equal(2);
 }
+
+#include "Common/UniquePtr.h"
+
+struct HelloWorld {
+    HelloWorld(int x) : x(x) {}
+
+    int x;
+
+    friend bool operator<(const kernel::UniquePtr<HelloWorld>& l, int r)
+    {
+        return l->x < r;
+    }
+
+    friend bool operator<(int l, const kernel::UniquePtr<HelloWorld>& r)
+    {
+        return l < r->x;
+    }
+
+    friend bool operator<(const kernel::UniquePtr<HelloWorld>& l, const kernel::UniquePtr<HelloWorld>& r)
+    {
+        return l->x < r->x;
+    }
+};
+
+TEST(TransparentComparator) {
+    kernel::RedBlackTree<kernel::UniquePtr<HelloWorld>, kernel::Less<>> transparent_tree;
+
+    transparent_tree.emplace(kernel::UniquePtr<HelloWorld>::create(5));
+    transparent_tree.emplace(kernel::UniquePtr<HelloWorld>::create(3));
+    transparent_tree.emplace(kernel::UniquePtr<HelloWorld>::create(2));
+    transparent_tree.emplace(kernel::UniquePtr<HelloWorld>::create(1));
+    transparent_tree.emplace(kernel::UniquePtr<HelloWorld>::create(4));
+
+    int expected_number = 1;
+    for (auto& elem : transparent_tree)
+        Assert::that(elem->x).is_equal(expected_number++);
+
+    auto number_3 = transparent_tree.find(3);
+    Assert::that(number_3).is_not_equal(transparent_tree.end());
+    Assert::that(number_3->get()->x).is_equal(3);
+
+}
