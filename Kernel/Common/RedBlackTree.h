@@ -6,12 +6,12 @@
 
 namespace kernel {
 
-template <typename T, typename Compare = Less<T>>
+template <typename T, typename Comparator = Less<T>>
 class RedBlackTree {
 public:
     using element_type = T;
 
-    RedBlackTree(Compare comparator = Compare())
+    RedBlackTree(Comparator comparator = Comparator())
         : m_comparator(move(comparator))
     {
     }
@@ -330,14 +330,14 @@ public:
     const T& get(const T& value)
     {
         auto* node = find_node(value);
-        ASSERT(node != nullptr);
+        ASSERT(node != super_root_as_value_node());
 
         return node->value;
     }
 
     bool contains(const T& value)
     {
-        return find_node(value) != nullptr;
+        return find_node(value) != super_root_as_value_node();
     }
 
     void remove(Iterator iterator)
@@ -371,54 +371,37 @@ public:
     size_t size() const { return m_size; }
     bool empty() const { return m_size == 0; }
 
-    Iterator find(const T& value)
+    template <typename Key, typename = typename Comparator::is_transparent>
+    Iterator find(const Key& key) const
     {
-        auto* node = find_node(value);
-
-        if (!node)
-            node = super_root_as_value_node();
-
-        return { node };
+        return { find_node(key) };
     }
 
-    Iterator lower_bound(const T& value) const
+    Iterator find(const T& key) const
     {
-        if (empty())
-            return Iterator(super_root_as_value_node());
-
-        ValueNode* node = m_root;
-        ValueNode* result = super_root_as_value_node();
-
-        while (node) {
-            if (m_comparator(node->value, value)) {
-                node = node->right;
-            } else {
-                result = node;
-                node = node->left;
-            }
-        }
-
-        return Iterator(result);
+        return { find_node(key) };
     }
 
-    Iterator upper_bound(const T& value) const
+    template <typename Key, typename = typename Comparator::is_transparent>
+    Iterator lower_bound(const Key& key) const
     {
-        if (m_root == nullptr)
-            return Iterator(super_root_as_value_node());
+        return { lower_bound_node(key) };
+    }
 
-        ValueNode* node = m_root;
-        ValueNode* result = super_root_as_value_node();
+    Iterator lower_bound(const T& key) const
+    {
+        return { lower_bound_node(key) };
+    }
 
-        while (node) {
-            if (m_comparator(value, node->value)) {
-                result = node;
-                node = node->left;
-            } else {
-                node = node->right;
-            }
-        }
+    template <typename Key, typename = typename Comparator::is_transparent>
+    Iterator upper_bound(const Key& key) const
+    {
+        return { upper_bound_node(key) };
+    }
 
-        return Iterator(result);
+    Iterator upper_bound(const T& key) const
+    {
+        return { upper_bound_node(key) };
     }
 
     void clear()
@@ -475,6 +458,9 @@ private:
 
         m_super_root.left = find_node(other.m_super_root.left->value);
         m_super_root.right = find_node(other.m_super_root.right->value);
+
+        ASSERT(m_super_root.left != super_root_as_value_node());
+        ASSERT(m_super_root.right != super_root_as_value_node());
     }
 
     void recursive_copy_all(ValueNode* new_parent, ValueNode* node_to_be_copied)
@@ -518,25 +504,67 @@ private:
         delete node;
     }
 
-    template <typename V>
-    ValueNode* find_node(const V& value)
+    template <typename Key>
+    ValueNode* upper_bound_node(const Key& key) const
+    {
+        if (m_root == nullptr)
+            return super_root_as_value_node();
+
+        ValueNode* node = m_root;
+        ValueNode* result = super_root_as_value_node();
+
+        while (node) {
+            if (m_comparator(key, node->value)) {
+                result = node;
+                node = node->left;
+            } else {
+                node = node->right;
+            }
+        }
+
+        return result;
+    }
+
+    template <typename Key>
+    ValueNode* lower_bound_node(const Key& key) const
     {
         if (empty())
-            return nullptr;
+            return super_root_as_value_node();
+
+        ValueNode* node = m_root;
+        ValueNode* result = super_root_as_value_node();
+
+        while (node) {
+            if (m_comparator(node->value, key)) {
+                node = node->right;
+            } else {
+                result = node;
+                node = node->left;
+            }
+        }
+
+        return result;
+    }
+
+    template <typename Key>
+    ValueNode* find_node(const Key& key) const
+    {
+        if (empty())
+            return super_root_as_value_node();
 
         auto* current_node = m_root;
 
         while (current_node) {
-            if (m_comparator(current_node->value, value)) {
+            if (m_comparator(current_node->value, key)) {
                 current_node = current_node->right;
-            } else if (m_comparator(value, current_node->value)) {
+            } else if (m_comparator(key, current_node->value)) {
                 current_node = current_node->left;
             } else {
                 return current_node;
             }
         }
 
-        return nullptr;
+        return super_root_as_value_node();
     }
 
     void remove_node(ValueNode* node)
@@ -1044,7 +1072,7 @@ private:
 private:
     ValueNode* m_root { nullptr };
     Node<ValueNode> m_super_root;
-    Compare m_comparator;
+    Comparator m_comparator;
     size_t m_size { 0 };
 };
 
