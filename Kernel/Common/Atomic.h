@@ -16,7 +16,6 @@ enum class MemoryOrder : decltype(__ATOMIC_RELAXED) {
 
 template <typename T>
 class Atomic {
-    MAKE_NONCOPYABLE(Atomic);
     MAKE_NONMOVABLE(Atomic);
 
 public:
@@ -60,6 +59,7 @@ public:
     }
 
     T operator+=(T value) ALWAYS_INLINE { return fetch_add(value) + value; };
+    T operator-=(T value) ALWAYS_INLINE { return fetch_subtract(value) - value; };
 
     T operator++() ALWAYS_INLINE { return fetch_add(1) + 1; }
 
@@ -75,6 +75,13 @@ public:
     {
         store(value);
         return value;
+    }
+
+    Atomic& operator=(const Atomic& other) ALWAYS_INLINE
+    {
+        store(other.load());
+
+        return *this;
     }
 
 private:
