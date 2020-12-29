@@ -23,7 +23,6 @@ BootAllocator& BootAllocator::the()
     return *reinterpret_cast<BootAllocator*>(instance_storage);
 }
 
-// TODO: handle overflows and invalid limits
 Address64 BootAllocator::reserve_contiguous(size_t page_count, Address64 lower_limit, Address64 upper_limit, Tag tag)
 {
     ASSERT(m_did_release == false);
@@ -64,7 +63,7 @@ Address64 BootAllocator::reserve_contiguous(size_t page_count, Address64 lower_l
         return true;
     };
 
-    auto picked_range = lower_bound(m_memory_map.begin(), m_memory_map.end(), MemoryMap::PhysicalRange::create_empty_at(lower_limit));
+    auto picked_range = lower_bound(m_memory_map.begin(), m_memory_map.end(), lower_limit);
 
     if (picked_range == m_memory_map.end() || picked_range->begin() != lower_limit) {
         if (picked_range == m_memory_map.begin())

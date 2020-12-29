@@ -1,5 +1,8 @@
 #pragma once
+
 #include "Common/DynamicArray.h"
+#include "Common/RedBlackTree.h"
+#include "Memory/VirtualRegion.h"
 #include "Thread.h"
 
 namespace kernel {
@@ -37,6 +40,7 @@ private:
 
 private:
     u32 m_process_id { 0 };
+    RedBlackTree<RefPtr<VirtualRegion>, Less<>> m_virtual_regions;
     RefPtr<AddressSpace> m_address_space;
     bool m_is_supervisor { false };
     DynamicArray<RefPtr<Thread>> m_threads;

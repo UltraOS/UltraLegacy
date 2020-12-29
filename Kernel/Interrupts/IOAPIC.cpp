@@ -9,9 +9,9 @@ u8 IOAPIC::s_cached_redirection_entry_count;
 void IOAPIC::set_base_address(Address physical_base)
 {
 #ifdef ULTRA_32
-    s_base = AddressSpace::of_kernel().allocator().allocate(8).begin();
-
-    AddressSpace::of_kernel().map_page(s_base, physical_base);
+    auto region = MemoryManager::the().allocate_kernel_non_owning("IOAPIC"_sv, Range(physical_base, 8));
+    region->make_eternal();
+    s_base = region->virtual_range().begin();
 #elif defined(ULTRA_64)
     s_base = MemoryManager::physical_to_virtual(physical_base);
 #endif

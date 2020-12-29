@@ -95,6 +95,7 @@ private:
 
     String m_title;
 
+    RefPtr<VirtualRegion> m_surface_region;
     RefPtr<Theme> m_theme;
 
     Style m_style;

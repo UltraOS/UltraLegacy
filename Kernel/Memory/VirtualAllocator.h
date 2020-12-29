@@ -16,7 +16,7 @@ class VirtualAllocator {
     MAKE_NONCOPYABLE(VirtualAllocator);
 
 public:
-    using RangeIterator = RedBlackTree<Range>::Iterator;
+    using RangeIterator = RedBlackTree<Range, Less<>>::Iterator;
 
     VirtualAllocator() = default;
     VirtualAllocator(Address begin, Address end);
@@ -42,7 +42,7 @@ private:
 private:
     Range m_base_range;
 
-    RedBlackTree<Range> m_allocated_ranges;
+    RedBlackTree<Range, Less<>> m_allocated_ranges;
 
     mutable InterruptSafeSpinLock m_lock;
 };

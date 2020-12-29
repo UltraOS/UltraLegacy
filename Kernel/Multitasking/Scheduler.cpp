@@ -17,14 +17,14 @@ Scheduler* Scheduler::s_instance;
 
 void Scheduler::inititalize()
 {
-    Thread::initialize();
     s_instance = new Scheduler();
     Process::inititalize_for_this_processor();
+    Thread::initialize();
 }
 
 void Scheduler::enqueue_thread(Thread& thread)
 {
-    LockGuard lock_guard(s_lock);
+    LOCK_GUARD(s_lock);
 
     ++s_thread_count;
 
@@ -42,7 +42,7 @@ void Scheduler::enqueue_thread(Thread& thread)
 
 void Scheduler::dequeue_thread(Thread& thread)
 {
-    LockGuard lock_guard(s_lock);
+    LOCK_GUARD(s_lock);
 
     --s_thread_count;
 
@@ -55,7 +55,7 @@ void Scheduler::dequeue_thread(Thread& thread)
 
 void Scheduler::enqueue_sleeping_thread(Thread& thread)
 {
-    LockGuard lock_guard(s_lock);
+    LOCK_GUARD(s_lock);
 
     ASSERT(&thread != s_sleeping_threads);
 
@@ -70,7 +70,7 @@ void Scheduler::enqueue_sleeping_thread(Thread& thread)
 
 void Scheduler::register_process(RefPtr<Process> process)
 {
-    LockGuard lock_guard(s_lock);
+    LOCK_GUARD(s_lock);
 
     m_processes.emplace(process);
 
@@ -116,7 +116,7 @@ void Scheduler::pick_next()
 {
     // Cannot use LockGuard here as pick_next never returns
     bool interrupt_state = false;
-    s_lock.lock(interrupt_state);
+    s_lock.lock(interrupt_state, __FILE__, __LINE__);
 
     wake_up_ready_threads();
 

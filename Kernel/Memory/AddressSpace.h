@@ -6,6 +6,7 @@
 #include "GenericPagingTable.h"
 #include "Page.h"
 #include "VirtualAllocator.h"
+#include "VirtualRegion.h"
 
 namespace kernel {
 
@@ -38,9 +39,14 @@ public:
     };
 #endif
 
-    explicit AddressSpace(RefPtr<Page> directory_page);
+    AddressSpace();
 
     static void inititalize();
+    static bool is_initialized()
+    {
+        return s_of_kernel != nullptr;
+    }
+
     static AddressSpace& of_kernel();
     static AddressSpace& current();
 
@@ -58,31 +64,26 @@ public:
     VirtualAllocator& allocator();
     Address physical_address();
 
-    void store_physical_page(RefPtr<Page> page);
+    void store_physical_page(const Page& page)
+    {
+        m_physical_pages.append(page);
+    }
+
+    void map_page(Address virtual_address, Address physical_address, IsSupervisor = IsSupervisor::YES);
+    void map_range(Range virtual_range, Range physical_range, IsSupervisor = IsSupervisor::YES);
 
     // Maps a page into the kernel address space
     // Expects all paging structures to be present and valid
     static void early_map_page(Address virtual_address, Address physical_address);
+    static void early_map_range(Range virtual_range, Range physical_range);
 #ifdef ULTRA_64
     static void early_map_huge_page(Address virtual_address, Address physical_address);
+    static void early_map_huge_range(Range virtual_range, Range physical_range);
 #endif
 
-    void map_page(Address virtual_address, Address physical_address, bool is_supervisor = true);
-
-    void map_user_page(Address virtual_address, const Page& physical_address);
-    void map_user_page(Address virtual_address, Address physical_address);
-
-    void map_supervisor_page(Address virtual_address, const Page& physical_address);
-    void map_supervisor_page(Address virtual_address, Address physical_address);
-
 #ifdef ULTRA_64
-    void map_huge_page(Address virtual_address, Address physical_address, bool is_supervior = true);
-
-    void map_huge_user_page(Address virtual_address, const Page& physical_address);
-    void map_huge_user_page(Address virtual_address, Address physical_address);
-
-    void map_huge_supervisor_page(Address virtual_address, const Page& physical_address);
-    void map_huge_supervisor_page(Address virtual_address, Address physical_address);
+    void map_huge_page(Address virtual_address, Address physical_address, IsSupervisor = IsSupervisor::YES);
+    void map_huge_range(Range virtual_range, Range physical_range, IsSupervisor = IsSupervisor::YES);
 #endif
 
 #ifdef ULTRA_32
@@ -99,15 +100,7 @@ public:
     void flush_at(Address virtual_address);
 
 private:
-    AddressSpace() = default;
-
-    void map_supervisor_page_directory_entry(size_t index, Address physical_address);
-    void map_supervisor_page_directory_entry(size_t index, const Page& physical_address);
-
-    void map_user_page_directory_entry(size_t index, Address physical_address);
-    void map_user_page_directory_entry(size_t index, const Page& physical_address);
-
-    void map_page_directory_entry(size_t index, Address physical_address, bool is_supervior = true);
+    void map_page_directory_entry(size_t index, Address physical_address, IsSupervisor);
 
 #ifdef ULTRA_32
     Entry& entry_at(size_t index, Address virtual_base);
@@ -116,8 +109,8 @@ private:
     static Address active_directory_address();
 
 private:
-    DynamicArray<RefPtr<Page>> m_physical_pages;
-    RefPtr<Page> m_main_page;
+    DynamicArray<Page> m_physical_pages;
+    Page m_main_page;
     VirtualAllocator m_allocator;
 
     RecursiveInterruptSafeSpinLock m_lock;

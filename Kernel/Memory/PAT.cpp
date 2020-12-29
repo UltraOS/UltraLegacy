@@ -24,7 +24,7 @@ void PAT::set_entry(u8 index, MemoryType type)
         return;
     }
 
-    LockGuard lock_guard(m_lock);
+    LOCK_GUARD(m_lock);
 
     // Trying not to break strict aliasing :)
     u8 msr_as_byte_array[sizeof(m_state.upper)] {};
@@ -42,7 +42,7 @@ void PAT::synchronize()
     if (!m_is_supported)
         return;
 
-    LockGuard lock_guard(m_lock);
+    LOCK_GUARD(m_lock);
 
     m_state.write(msr_index);
 }

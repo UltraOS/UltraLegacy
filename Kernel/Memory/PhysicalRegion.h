@@ -2,8 +2,9 @@
 
 #include "Common/DynamicBitArray.h"
 #include "Common/Logger.h"
-#include "Common/RefPtr.h"
 #include "Common/Types.h"
+#include "Common/UniquePtr.h"
+#include "Range.h"
 
 namespace kernel {
 
@@ -11,23 +12,35 @@ class Page;
 
 class PhysicalRegion {
 public:
-    PhysicalRegion(Address starting_address, size_t length);
+    explicit PhysicalRegion(const Range& range);
 
-    Address starting_address() const { return m_starting_address; }
+    const Range& range() const { return m_range; }
+    Address begin() const { return m_range.begin(); }
+    Address end() const { return m_range.end(); }
+
     size_t free_page_count() const { return m_free_pages; }
     bool has_free_pages() const { return m_free_pages; }
 
-    [[nodiscard]] RefPtr<Page> allocate_page();
+    [[nodiscard]] DynamicArray<Page> allocate_pages(size_t count);
+    [[nodiscard]] Page allocate_page();
     void free_page(const Page& page);
-
-    bool contains(const Page& page);
 
     template <typename LoggerT>
     friend LoggerT& operator<<(LoggerT&& logger, const PhysicalRegion& region)
     {
-        logger << "Starting address:" << region.m_starting_address << " pages:" << region.free_page_count();
+        logger << "Range: " << region.m_range << " pages:" << region.free_page_count();
 
         return logger;
+    }
+
+    friend bool operator<(Address address, const PhysicalRegion& region)
+    {
+        return address < region.begin();
+    }
+
+    friend bool operator<(const PhysicalRegion& region, Address address)
+    {
+        return region.begin() < address;
     }
 
 private:
@@ -35,7 +48,7 @@ private:
     size_t physical_address_as_bit(Address address);
 
 private:
-    Address m_starting_address { nullptr };
+    Range m_range;
     size_t m_free_pages { 0 };
     size_t m_next_hint { 0 };
     DynamicBitArray m_allocation_map;

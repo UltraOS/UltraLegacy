@@ -64,7 +64,7 @@ void GDT::create_basic_descriptors()
         GRANULARITY_4KB | MODE_32_BIT);
 }
 
-void GDT::create_tss_descriptor(TSS* tss)
+void GDT::create_tss_descriptor(TSS& tss)
 {
     static InterruptSafeSpinLock* s_lock;
 
@@ -84,7 +84,7 @@ void GDT::create_tss_descriptor(TSS* tss)
         cached_selector = (m_active_entries - 1) * entry_size;
     }
 
-    auto base = reinterpret_cast<ptr_t>(tss);
+    auto base = reinterpret_cast<ptr_t>(&tss);
 
     cached_entry->base_lower = base & 0x0000FFFF;
     cached_entry->base_middle = (base & 0x00FF0000) >> 16;
@@ -104,7 +104,7 @@ void GDT::create_tss_descriptor(TSS* tss)
         cached_selector = (m_active_entries - 2) * entry_size;
     }
 
-    ptr_t base = reinterpret_cast<ptr_t>(tss);
+    ptr_t base = reinterpret_cast<ptr_t>(&tss);
 
     cached_entry->base_lower = base & 0x0000FFFF;
     cached_entry->base_middle = (base & 0x00FF0000) >> 16;

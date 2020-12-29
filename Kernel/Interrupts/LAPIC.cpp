@@ -1,3 +1,5 @@
+#include "Core/CPU.h"
+
 #include "Memory/MemoryManager.h"
 
 #include "Multitasking/Process.h"
@@ -17,9 +19,9 @@ LAPIC::Timer* LAPIC::s_timer;
 void LAPIC::set_base_address(Address physical_base)
 {
 #ifdef ULTRA_32
-    s_base = AddressSpace::of_kernel().allocator().allocate(4096).begin();
-
-    AddressSpace::of_kernel().map_page(s_base, physical_base);
+    auto region = MemoryManager::the().allocate_kernel_non_owning("LAPIC"_sv, Range(physical_base, Page::size));
+    region->make_eternal();
+    s_base = region->virtual_range().begin();
 #elif defined(ULTRA_64)
     s_base = MemoryManager::physical_to_virtual(physical_base);
 #endif
@@ -40,7 +42,7 @@ void LAPIC::initialize_for_this_processor()
 void LAPIC::Timer::initialize_for_this_processor()
 {
     using Timer = ::kernel::Timer;
-    LockGuard lock_guard(Timer::the().timer_lock());
+    LOCK_GUARD(Timer::the().timer_lock());
 
     static constexpr u32 divider_16 = 0b11;
     // TODO: replace with numeric_limits<u32>::max()
@@ -198,12 +200,12 @@ void LAPIC::start_processor(u8 id)
     *is_ap_alive = false;
     *ap_acknowledegd = false;
 
-    // TODO: add a literal allocate_stack() function
-    // allocate the initial AP stack
-    auto ap_stack = AddressSpace::of_kernel().allocator().allocate(Process::default_kernel_stack_size);
+    String stack_name = "core ";
+    stack_name << id << " initial stack";
 
-    *MemoryManager::physical_to_virtual(address_of_stack).as_pointer<ptr_t>() = ap_stack.end();
-    MemoryManager::the().force_preallocate(ap_stack, true);
+    auto ap_stack = MemoryManager::the().allocate_kernel_stack(stack_name.to_view());
+
+    *MemoryManager::physical_to_virtual(address_of_stack).as_pointer<ptr_t>() = ap_stack->virtual_range().end();
 
     if (!entrypoint_relocated) {
         copy_memory(reinterpret_cast<void*>(&application_processor_entrypoint),
@@ -217,7 +219,7 @@ void LAPIC::start_processor(u8 id)
     }
 
     using Timer = ::kernel::Timer;
-    LockGuard lock_guard(Timer::the().timer_lock());
+    LOCK_GUARD(Timer::the().timer_lock());
 
     send_init_to(id);
 

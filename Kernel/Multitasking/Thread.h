@@ -51,8 +51,7 @@ public:
 
     ControlBlock* control_block() { return &m_control_block; }
 
-    bool is_supervisor() const { return m_is_supervisor; }
-    bool is_user() const { return !is_supervisor(); }
+    IsSupervisor is_supervisor() const { return m_is_supervisor; }
 
     AddressSpace& address_space() { return m_address_space; }
 
@@ -89,7 +88,7 @@ private:
     Address m_initial_kernel_stack_top { nullptr };
     State m_state { State::READY };
     u64 m_wake_up_time { 0 };
-    bool m_is_supervisor { false };
+    IsSupervisor m_is_supervisor { IsSupervisor::NO };
     u8 m_exit_code { 0 };
     Thread* m_previous { nullptr };
     Thread* m_next { nullptr };

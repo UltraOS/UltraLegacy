@@ -17,50 +17,47 @@ extern "C" ptr_t kernel_base_table[AddressSpace::Table::entry_count];
 
 AddressSpace* AddressSpace::s_of_kernel;
 
-AddressSpace::AddressSpace(RefPtr<Page> base_page)
-    : m_main_page(base_page)
-    , m_allocator(MemoryManager::userspace_usable_base, MemoryManager::userspace_usable_ceiling)
+AddressSpace::AddressSpace()
+    : m_allocator(MemoryManager::userspace_usable_base, MemoryManager::userspace_usable_ceiling)
 {
-    MemoryManager::the().inititalize(*this);
+    // if is_initialized() returns false that means we're creating the kernel address space
+    // therefore we can/must skip the MM initialization step as well as page allocation
+    if (AddressSpace::is_initialized()) {
+        m_main_page = MemoryManager::the().allocate_page();
+        MemoryManager::the().inititalize(*this);
+    }
 }
 
 void AddressSpace::inititalize()
 {
     s_of_kernel = new AddressSpace();
-
-    auto as_physical = MemoryManager::virtual_to_physical(&kernel_base_table);
-    s_of_kernel->m_main_page = RefPtr<Page>::create(as_physical);
+    s_of_kernel->m_main_page = Page(MemoryManager::virtual_to_physical(&kernel_base_table));
 
 #ifdef ULTRA_64
     static constexpr size_t lower_indentity_size = 4 * GB;
 
     auto& memory_map = MemoryManager::the().memory_map();
     auto lowest_to_map = lower_bound(
-            memory_map.begin(), memory_map.end(),
-            MemoryMap::PhysicalRange::create_empty_at(lower_indentity_size));
+        memory_map.begin(), memory_map.end(),
+        lower_indentity_size);
 
-    if (lowest_to_map == memory_map.end() ||
-       (lowest_to_map != memory_map.begin() && lowest_to_map->begin() != lower_indentity_size))
+    if (lowest_to_map == memory_map.end() || (lowest_to_map != memory_map.begin() && lowest_to_map->begin() != lower_indentity_size))
         --lowest_to_map;
 
     for (auto current_range = lowest_to_map; current_range != memory_map.end(); ++current_range) {
-        auto range = current_range->constrained_by(lower_indentity_size, MemoryManager::max_memory_address);
+        auto physical_range = current_range->constrained_by(lower_indentity_size, MemoryManager::max_memory_address);
 
-        if (range.empty())
+        if (physical_range.empty())
             continue;
 
-        range.set_begin(Page::round_down_huge(range.begin()));
-        auto pages_to_map = ceiling_divide(range.length(), Page::huge_size);
+        physical_range.set_begin(Page::round_down_huge(physical_range.begin()));
+        physical_range.set_length(Page::round_up_huge(physical_range.length()));
 
-#ifndef ADDRESS_SPACE_DEBUG
-        log() << "AddressSpace: Mapping " << pages_to_map << " pages at " << format::as_hex << range.begin();
-#endif
-        for (size_t i = 0; i < pages_to_map; ++i) {
-            auto physical_address = range.begin() + Page::huge_size * i;
-            s_of_kernel->map_huge_supervisor_page(
-                MemoryManager::physical_to_virtual(physical_address),
-                physical_address);
-        }
+        auto virtual_range = Range::from_two_pointers(
+            MemoryManager::physical_to_virtual(physical_range.begin()),
+            MemoryManager::physical_to_virtual(physical_range.end()));
+
+        s_of_kernel->map_huge_range(virtual_range, physical_range);
     }
 #endif
 
@@ -69,18 +66,12 @@ void AddressSpace::inititalize()
         MemoryManager::the().kernel_address_space_free_base(),
         MemoryManager::the().kernel_address_space_free_ceiling());
 
-// since the 64 bit kernel address space overlaps the kernel image + base heap we have to allocate it right away
-// FIXME: this could be nicely hidden away once we have proper memory regions with tags etc
-#ifdef ULTRA_64
-    s_of_kernel->allocator().allocate(MemoryManager::kernel_reserved_range());
-#endif
-
 #ifdef ULTRA_32
     MemoryManager::the().set_quickmap_range({ MemoryManager::kernel_quickmap_range_base, MemoryManager::kernel_quickmap_range_size });
 #endif
 }
 
-void AddressSpace::map_page_directory_entry(size_t index, Address physical_address, bool is_supervisor)
+void AddressSpace::map_page_directory_entry(size_t index, Address physical_address, IsSupervisor is_supervisor)
 {
     ASSERT(is_active());
     ASSERT_PAGE_ALIGNED(physical_address);
@@ -92,7 +83,7 @@ void AddressSpace::map_page_directory_entry(size_t index, Address physical_addre
 
     auto& entry = entry_at(index).set_physical_address(physical_address);
 
-    if (is_supervisor)
+    if (is_supervisor == IsSupervisor::YES)
         entry.make_supervisor_present();
     else
         entry.make_user_present();
@@ -141,10 +132,27 @@ void AddressSpace::early_map_page(Address virtual_address, Address physical_addr
 #endif
 }
 
+void AddressSpace::early_map_range(Range virtual_range, Range physical_range)
+{
+    ASSERT_PAGE_ALIGNED(virtual_range.begin());
+    ASSERT_PAGE_ALIGNED(virtual_range.length());
+    ASSERT_PAGE_ALIGNED(physical_range.begin());
+    ASSERT_PAGE_ALIGNED(physical_range.length());
+
+    size_t page_count = virtual_range.length() / Page::size;
+
+    for (size_t i = 0; i < page_count; ++i) {
+        auto offset = i * Page::size;
+        early_map_page(virtual_range.begin() + offset, physical_range.begin() + offset);
+    }
+}
+
 #ifdef ULTRA_64
 void AddressSpace::early_map_huge_page(Address virtual_address, Address physical_address)
 {
     ASSERT_HUGE_PAGE_ALIGNED(virtual_address);
+    ASSERT_HUGE_PAGE_ALIGNED(physical_address);
+
     auto indices = virtual_address_as_paging_indices(virtual_address);
 
     ASSERT(kernel_entry_at(indices.first()).is_present());
@@ -158,16 +166,31 @@ void AddressSpace::early_map_huge_page(Address virtual_address, Address physical
     entry.make_supervisor_present();
     entry.set_huge(true);
 }
+
+void AddressSpace::early_map_huge_range(Range virtual_range, Range physical_range)
+{
+    ASSERT_HUGE_PAGE_ALIGNED(virtual_range.begin());
+    ASSERT_HUGE_PAGE_ALIGNED(virtual_range.length());
+    ASSERT_HUGE_PAGE_ALIGNED(physical_range.begin());
+    ASSERT_HUGE_PAGE_ALIGNED(physical_range.length());
+
+    size_t page_count = virtual_range.length() / Page::huge_size;
+
+    for (size_t i = 0; i < page_count; ++i) {
+        auto offset = i * Page::huge_size;
+        early_map_huge_page(virtual_range.begin() + offset, physical_range.begin() + offset);
+    }
+}
 #endif
 
 #ifdef ULTRA_32
-void AddressSpace::map_page(Address virtual_address, Address physical_address, bool is_supervisor)
+void AddressSpace::map_page(Address virtual_address, Address physical_address, IsSupervisor is_supervisor)
 {
     ASSERT(is_active());
     ASSERT_PAGE_ALIGNED(virtual_address);
     ASSERT_PAGE_ALIGNED(physical_address);
 
-    LockGuard lock_guard(m_lock);
+    LOCK_GUARD(m_lock);
 
     auto indices = virtual_address_as_paging_indices(virtual_address);
     auto& page_table_index = indices.first();
@@ -178,7 +201,7 @@ void AddressSpace::map_page(Address virtual_address, Address physical_address, b
         log() << "AddressSpace: tried to access a non-present table " << page_table_index << ", allocating...";
 #endif
         auto page = m_physical_pages.emplace(MemoryManager::the().allocate_page());
-        map_page_directory_entry(page_table_index, page->address(), is_supervisor);
+        map_page_directory_entry(page_table_index, page.address(), is_supervisor);
     }
 
 #ifdef ADDRESS_SPACE_DEBUG
@@ -188,17 +211,19 @@ void AddressSpace::map_page(Address virtual_address, Address physical_address, b
 #endif
     auto& entry = pt_at(page_table_index).entry_at(page_entry_index).set_physical_address(physical_address);
 
-    if (is_supervisor)
+    if (is_supervisor == IsSupervisor::YES)
         entry.make_supervisor_present();
     else
         entry.make_user_present();
 
     flush_at(virtual_address);
 }
+
 #elif defined(ULTRA_64)
-void AddressSpace::map_page(Address virtual_address, Address physical_address, bool is_supervisor)
+
+void AddressSpace::map_page(Address virtual_address, Address physical_address, IsSupervisor is_supervisor)
 {
-    LockGuard lock_guard(m_lock);
+    LOCK_GUARD(m_lock);
 
     ASSERT_PAGE_ALIGNED(virtual_address);
     ASSERT_PAGE_ALIGNED(physical_address);
@@ -216,8 +241,8 @@ void AddressSpace::map_page(Address virtual_address, Address physical_address, b
 #endif
         auto page = m_physical_pages.emplace(MemoryManager::the().allocate_page());
         auto& entry = entry_at(indices.first());
-        entry.set_physical_address(page->address());
-        if (is_supervisor)
+        entry.set_physical_address(page.address());
+        if (is_supervisor == IsSupervisor::YES)
             entry.make_supervisor_present();
         else
             entry.make_user_present();
@@ -229,8 +254,8 @@ void AddressSpace::map_page(Address virtual_address, Address physical_address, b
 #endif
         auto page = m_physical_pages.emplace(MemoryManager::the().allocate_page());
         auto& entry = pdpt_at(indices.first()).entry_at(indices.second());
-        entry.set_physical_address(page->address());
-        if (is_supervisor)
+        entry.set_physical_address(page.address());
+        if (is_supervisor == IsSupervisor::YES)
             entry.make_supervisor_present();
         else
             entry.make_user_present();
@@ -242,8 +267,8 @@ void AddressSpace::map_page(Address virtual_address, Address physical_address, b
 #endif
         auto page = m_physical_pages.emplace(MemoryManager::the().allocate_page());
         auto& entry = pdpt_at(indices.first()).pdt_at(indices.second()).entry_at(indices.third());
-        entry.set_physical_address(page->address());
-        if (is_supervisor)
+        entry.set_physical_address(page.address());
+        if (is_supervisor == IsSupervisor::YES)
             entry.make_supervisor_present();
         else
             entry.make_user_present();
@@ -254,13 +279,13 @@ void AddressSpace::map_page(Address virtual_address, Address physical_address, b
 
     page_entry.set_physical_address(physical_address);
 
-    if (is_supervisor)
+    if (is_supervisor == IsSupervisor::YES)
         page_entry.make_supervisor_present();
     else
         page_entry.make_user_present();
 }
 
-void AddressSpace::map_huge_page(Address virtual_address, Address physical_address, bool is_supervisor)
+void AddressSpace::map_huge_page(Address virtual_address, Address physical_address, IsSupervisor is_supervisor)
 {
     ASSERT_HUGE_PAGE_ALIGNED(virtual_address);
     ASSERT_HUGE_PAGE_ALIGNED(physical_address);
@@ -279,8 +304,8 @@ void AddressSpace::map_huge_page(Address virtual_address, Address physical_addre
 #endif
         auto page = m_physical_pages.emplace(MemoryManager::the().allocate_page());
         auto& entry = entry_at(indices.first());
-        entry.set_physical_address(page->address());
-        if (is_supervisor)
+        entry.set_physical_address(page.address());
+        if (is_supervisor == IsSupervisor::YES)
             entry.make_supervisor_present();
         else
             entry.make_user_present();
@@ -292,8 +317,8 @@ void AddressSpace::map_huge_page(Address virtual_address, Address physical_addre
 #endif
         auto page = m_physical_pages.emplace(MemoryManager::the().allocate_page());
         auto& entry = pdpt_at(indices.first()).entry_at(indices.second());
-        entry.set_physical_address(page->address());
-        if (is_supervisor)
+        entry.set_physical_address(page.address());
+        if (is_supervisor == IsSupervisor::YES)
             entry.make_supervisor_present();
         else
             entry.make_user_present();
@@ -303,81 +328,44 @@ void AddressSpace::map_huge_page(Address virtual_address, Address physical_addre
 
     page_entry.set_physical_address(physical_address);
 
-    if (is_supervisor)
+    if (is_supervisor == IsSupervisor::YES)
         page_entry.make_supervisor_present();
     else
         page_entry.make_user_present();
 
     page_entry.set_huge(true);
 }
-
-void AddressSpace::map_huge_user_page(Address virtual_address, const Page& physical_address)
-{
-    map_huge_page(virtual_address, physical_address.address(), false);
-}
-
-void AddressSpace::map_huge_user_page(Address virtual_address, Address physical_address)
-{
-    map_huge_page(virtual_address, physical_address, false);
-}
-
-void AddressSpace::map_huge_supervisor_page(Address virtual_address, const Page& physical_address)
-{
-    map_huge_page(virtual_address, physical_address.address(), true);
-}
-
-void AddressSpace::map_huge_supervisor_page(Address virtual_address, Address physical_address)
-{
-    map_huge_page(virtual_address, physical_address, true);
-}
 #endif
 
-void AddressSpace::map_user_page_directory_entry(size_t index, Address physical_address)
+void AddressSpace::map_range(Range virtual_range, Range physical_range, IsSupervisor is_supervisor)
 {
-    map_page_directory_entry(index, physical_address, false);
+    ASSERT_PAGE_ALIGNED(virtual_range.begin());
+    ASSERT_PAGE_ALIGNED(physical_range.begin());
+
+    size_t page_count = virtual_range.length() / Page::size;
+
+    for (size_t i = 0; i < page_count; ++i) {
+        auto offset = i * Page::size;
+        map_page(virtual_range.begin() + offset, physical_range.begin() + offset, is_supervisor);
+    }
 }
 
-void AddressSpace::map_user_page(Address virtual_address, Address physical_address)
+#ifdef ULTRA_64
+void AddressSpace::map_huge_range(Range virtual_range, Range physical_range, IsSupervisor is_supervisor)
 {
-    map_page(virtual_address, physical_address, false);
-}
+    ASSERT_HUGE_PAGE_ALIGNED(virtual_range.begin());
+    ASSERT_HUGE_PAGE_ALIGNED(virtual_range.length());
+    ASSERT_HUGE_PAGE_ALIGNED(physical_range.begin());
+    ASSERT_HUGE_PAGE_ALIGNED(physical_range.length());
 
-void AddressSpace::map_user_page_directory_entry(size_t index, const Page& physical_page)
-{
-    map_page_directory_entry(index, physical_page.address(), false);
-}
+    size_t page_count = virtual_range.length() / Page::huge_size;
 
-void AddressSpace::map_user_page(Address virtual_address, const Page& physical_page)
-{
-    map_page(virtual_address, physical_page.address(), false);
+    for (size_t i = 0; i < page_count; ++i) {
+        auto offset = i * Page::huge_size;
+        map_page(virtual_range.begin() + offset, physical_range.begin() + offset, is_supervisor);
+    }
 }
-
-void AddressSpace::map_supervisor_page_directory_entry(size_t index, Address physical_address)
-{
-    map_page_directory_entry(index, physical_address, true);
-}
-
-void AddressSpace::map_supervisor_page(Address virtual_address, Address physical_address)
-{
-    map_page(virtual_address, physical_address, true);
-}
-
-void AddressSpace::map_supervisor_page_directory_entry(size_t index, const Page& physical_page)
-{
-    map_page_directory_entry(index, physical_page.address(), true);
-}
-
-void AddressSpace::map_supervisor_page(Address virtual_address, const Page& physical_page)
-{
-    map_page(virtual_address, physical_page.address(), true);
-}
-
-void AddressSpace::store_physical_page(RefPtr<Page> page)
-{
-    LockGuard lock_guard(m_lock);
-
-    m_physical_pages.append(page);
-}
+#endif
 
 #ifdef ULTRA_32
 void AddressSpace::unmap_page(Address virtual_address)
@@ -385,7 +373,7 @@ void AddressSpace::unmap_page(Address virtual_address)
     ASSERT(is_active());
     ASSERT_PAGE_ALIGNED(virtual_address);
 
-    LockGuard lock_guard(m_lock);
+    LOCK_GUARD(m_lock);
 
     const auto indices = virtual_address_as_paging_indices(virtual_address);
     auto& page_table_index = indices.first();
@@ -403,7 +391,7 @@ void AddressSpace::unmap_page(Address virtual_address)
 {
     ASSERT_PAGE_ALIGNED(virtual_address);
 
-    LockGuard lock_guard(m_lock);
+    LOCK_GUARD(m_lock);
 
     const auto indices = virtual_address_as_paging_indices(virtual_address);
 
@@ -489,7 +477,7 @@ AddressSpace& AddressSpace::current()
 
 Address AddressSpace::physical_address()
 {
-    return m_main_page->address();
+    return m_main_page.address();
 }
 
 #ifdef ULTRA_32

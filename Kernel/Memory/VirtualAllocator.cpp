@@ -13,7 +13,7 @@ VirtualAllocator::VirtualAllocator(Address begin, Address end)
 
 String VirtualAllocator::debug_dump() const
 {
-    LockGuard lock_guard(m_lock);
+    LOCK_GUARD(m_lock);
 
     String dump;
     dump << "Base range: " << m_base_range.begin() << " -> " << m_base_range.end() << "\n";
@@ -28,7 +28,7 @@ String VirtualAllocator::debug_dump() const
 
 void VirtualAllocator::reset_with(Address begin, Address end)
 {
-    LockGuard lock_guard(m_lock);
+    LOCK_GUARD(m_lock);
 
     m_base_range.reset_with_two_pointers(begin, end);
     m_allocated_ranges.clear();
@@ -36,7 +36,7 @@ void VirtualAllocator::reset_with(Address begin, Address end)
 
 bool VirtualAllocator::is_allocated(Address address) const
 {
-    LockGuard lock_guard(m_lock);
+    LOCK_GUARD(m_lock);
 
     if (!m_base_range.contains(address))
         return false;
@@ -44,7 +44,7 @@ bool VirtualAllocator::is_allocated(Address address) const
     if (m_allocated_ranges.empty())
         return false;
 
-    auto range = m_allocated_ranges.lower_bound(Range::create_empty_at(address));
+    auto range = m_allocated_ranges.lower_bound(address);
 
     if (range == m_allocated_ranges.end() || range->begin() != address) {
         if (range == m_allocated_ranges.begin())
@@ -81,7 +81,7 @@ void VirtualAllocator::merge_and_emplace(RangeIterator before, RangeIterator aft
 
 Range VirtualAllocator::allocate(size_t length, size_t alignment)
 {
-    LockGuard lock_guard(m_lock);
+    LOCK_GUARD(m_lock);
 
     ASSERT(length != 0);
 
@@ -169,7 +169,7 @@ Range VirtualAllocator::allocate(Range range)
     log() << "VirtualAllocator: trying to allocate range " << range;
 #endif
 
-    LockGuard lock_guard(m_lock);
+    LOCK_GUARD(m_lock);
 
     ASSERT(range.empty() == false);
     ASSERT(contains(range));
@@ -231,7 +231,7 @@ void VirtualAllocator::deallocate(const Range& range)
     log() << "VirtualAllocator: deallocating range " << range;
 #endif
 
-    LockGuard lock_guard(m_lock);
+    LOCK_GUARD(m_lock);
 
     ASSERT(Page::is_aligned(range.begin()));
     ASSERT(Page::is_aligned(range.length()));

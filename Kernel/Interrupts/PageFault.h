@@ -1,5 +1,6 @@
 #include "Common/String.h"
 #include "Common/Types.h"
+#include "Memory/VirtualRegion.h"
 
 namespace kernel {
 
@@ -12,10 +13,10 @@ public:
         WRITE_PROTECTION = 3,
     };
 
-    PageFault(Address address, Address instruction_pointer, bool is_user, Type type)
+    PageFault(Address address, Address instruction_pointer, IsSupervisor is_supervisor, Type type)
         : m_address(address)
         , m_instruction_pointer(instruction_pointer)
-        , m_is_user(is_user)
+        , m_is_supervisor(is_supervisor)
         , m_type(type)
     {
     }
@@ -25,9 +26,7 @@ public:
 
     Type type() const { return m_type; }
 
-    bool is_user() const { return m_is_user; }
-
-    bool is_kernel() const { return !is_user(); }
+    IsSupervisor is_supervisor() const { return m_is_supervisor; }
 
     static StringView type_as_string(Type t)
     {
@@ -52,7 +51,7 @@ public:
         logger << "\n------> Address: " << fault.address()
                << "\n------> Instruction at: " << fault.instruction_pointer()
                << "\n------> Type   : " << type_as_string(fault.type())
-               << "\n------> Is user: " << fault.is_user();
+               << "\n------> Is supervisor: " << fault.is_supervisor();
 
         return logger;
     }
@@ -61,7 +60,7 @@ public:
 private:
     Address m_address { nullptr };
     Address m_instruction_pointer { nullptr };
-    bool m_is_user { 0 };
+    IsSupervisor m_is_supervisor { IsSupervisor::UNSPECIFIED };
     Type m_type { READ_NON_PRESENT };
 };
 }

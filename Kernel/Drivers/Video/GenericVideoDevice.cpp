@@ -2,6 +2,7 @@
 #include "Common/Logger.h"
 #include "Common/Math.h"
 #include "Memory/AddressSpace.h"
+#include "Memory/MemoryManager.h"
 #include "Memory/PAT.h"
 
 namespace kernel {
@@ -15,27 +16,16 @@ GenericVideoDevice::GenericVideoDevice(const VideoMode& video_mode)
     PAT::the().set_entry(wc_pat_index, PAT::MemoryType::WRITE_COMBINING);
 
 #ifdef ULTRA_32
-    auto bytes_to_allocate = m_mode.pitch * m_mode.height;
-    auto pages = ceiling_divide(bytes_to_allocate, Page::size);
+    auto fb_region = MemoryManager::the().allocate_kernel_non_owning("framebuffer"_sv, Range(m_mode.framebuffer, m_mode.pitch * m_mode.height));
+    auto& range = fb_region->virtual_range();
 
-    auto aligned_bytes_to_allocate = pages * Page::size;
-
-    log() << "GenericVideoDevice: allocating " << aligned_bytes_to_allocate << " bytes for the framebuffer...";
-
-    auto range = AddressSpace::of_kernel().allocator().allocate(aligned_bytes_to_allocate);
-
-    size_t page_index = 0;
     for (Address current_address = range.begin(); current_address < range.end(); current_address += Page::size) {
-        auto offset = page_index++ * Page::size;
-        AddressSpace::of_kernel().map_supervisor_page(current_address, m_mode.framebuffer + offset);
         auto indices = AddressSpace::virtual_address_as_paging_indices(current_address);
-
         AddressSpace::of_kernel().pt_at(indices.first()).entry_at(indices.second()).set_pat_index(wc_pat_index, true);
         AddressSpace::of_kernel().flush_at(current_address);
     }
 
     m_mode.framebuffer = range.begin();
-
 #else
     // TODO: align manually
     ASSERT_HUGE_PAGE_ALIGNED(m_mode.framebuffer);

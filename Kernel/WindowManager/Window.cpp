@@ -31,15 +31,16 @@ Window::Window(Thread& owner, Style style, const Rect& window_rect, RefPtr<Theme
     , m_location(window_rect.top_left())
 {
     auto full_window_rect = full_rect();
-    auto pages_needed = ceiling_divide(full_window_rect.width() * full_window_rect.height() * sizeof(u32), Page::size);
 
-    auto bitmap_range = AddressSpace::current().allocator().allocate(pages_needed * Page::size);
-    auto bitmap = bitmap_range.as_pointer<void>();
+    String surface_purpose = m_title;
+    surface_purpose << " window surface";
+    auto bytes_needed = full_window_rect.width() * full_window_rect.height() * sizeof(u32);
 
-    MemoryManager::the().force_preallocate(bitmap_range);
+    m_surface_region = MemoryManager::the().allocate_kernel_private_anywhere(surface_purpose.to_view(), bytes_needed);
+    static_cast<PrivateVirtualRegion*>(m_surface_region.get())->preallocate_range(false);
 
     m_front_surface = RefPtr<Surface>::create(
-        bitmap,
+        m_surface_region->virtual_range().begin().as_pointer<void>(),
         full_window_rect.width(),
         full_window_rect.height(),
         Surface::Format::RGBA_32_BPP);
@@ -49,19 +50,19 @@ Window::Window(Thread& owner, Style style, const Rect& window_rect, RefPtr<Theme
 
 void Window::invalidate_part_of_view_rect(const Rect& rect)
 {
-    LockGuard lock_guard(m_dirty_rect_lock);
+    LOCK_GUARD(m_dirty_rect_lock);
     m_dirty_rects.append(rect.translated(view_rect().top_left()));
 }
 
 void Window::invalidate_rect(const Rect& rect)
 {
-    LockGuard lock_guard(m_dirty_rect_lock);
+    LOCK_GUARD(m_dirty_rect_lock);
     m_dirty_rects.append(rect);
 }
 
 void Window::submit_dirty_rects()
 {
-    LockGuard lock_guard(m_dirty_rect_lock);
+    LOCK_GUARD(m_dirty_rect_lock);
 
     for (const auto& rect : m_dirty_rects) {
         Compositor::the().add_dirty_rect(rect.translated(location()));
@@ -205,7 +206,7 @@ void Window::push_window_event(const Event& event)
 {
     static constexpr size_t max_event_queue_size = 16;
 
-    LockGuard lock_guard(m_event_queue_lock);
+    LOCK_GUARD(m_event_queue_lock);
 
     if (m_event_queue.size() >= max_event_queue_size)
         return;

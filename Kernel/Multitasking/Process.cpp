@@ -13,7 +13,7 @@ InterruptSafeSpinLock Process::s_lock;
 
 RefPtr<Process> Process::create(Address entrypoint, bool autoregister, size_t stack_size)
 {
-    LockGuard lock_guard(s_lock);
+    LOCK_GUARD(s_lock);
 
     RefPtr<Process> process = new Process(entrypoint, stack_size);
 
@@ -27,7 +27,7 @@ RefPtr<Process> Process::create(Address entrypoint, bool autoregister, size_t st
 //       e.g Process::create_supervious and Thread::create_supervisor_thread
 RefPtr<Process> Process::create_supervisor(Address entrypoint, size_t stack_size)
 {
-    LockGuard lock_guard(s_lock);
+    LOCK_GUARD(s_lock);
 
     RefPtr<Process> process = new Process(entrypoint, stack_size, true);
     Scheduler::the().register_process(process);
@@ -37,7 +37,7 @@ RefPtr<Process> Process::create_supervisor(Address entrypoint, size_t stack_size
 
 void Process::inititalize_for_this_processor()
 {
-    LockGuard lock_guard(s_lock);
+    LOCK_GUARD(s_lock);
 
     // Create the initial idle proccess for this core
     RefPtr<Process> idle_process = new Process();
@@ -49,7 +49,7 @@ void Process::inititalize_for_this_processor()
     idle_process->m_address_space = &AddressSpace::of_kernel();
 
     auto idle_thread = new Thread(AddressSpace::of_kernel(), nullptr);
-    idle_thread->m_is_supervisor = true;
+    idle_thread->m_is_supervisor = IsSupervisor::YES;
     idle_thread->activate();
 
     auto* last_picked = Scheduler::last_picked();
@@ -78,26 +78,26 @@ Process::Process(Address entrypoint, size_t stack_size, bool is_supervisor)
     , m_address_space()
     , m_is_supervisor(is_supervisor)
 {
-    if (is_user()) {
-        auto& kernel_allocator = AddressSpace::of_kernel().allocator();
-        auto stack_range = kernel_allocator.allocate(default_kernel_stack_size);
-        MemoryManager::the().force_preallocate(stack_range, true);
+    String kstack_message;
+    kstack_message << "PID " << m_process_id << " kernel stack";
 
-        m_address_space = RefPtr<AddressSpace>::create(MemoryManager::the().allocate_page());
-        auto& user_allocator = m_address_space->allocator();
+    if (is_user()) {
+        String userstack_message;
+        userstack_message << "PID " << m_process_id << " user stack";
+        auto user_stack = MemoryManager::the().allocate_user_stack(userstack_message.to_view(), *m_address_space, stack_size);
+        auto kernel_stack = MemoryManager::the().allocate_kernel_stack(kstack_message.to_view());
+
+        m_address_space = RefPtr<AddressSpace>::create();
 
         auto main_thread = Thread::create_user_thread(
             *m_address_space,
-            user_allocator.allocate(stack_size).end(),
-            stack_range.end(),
+            user_stack->virtual_range().end(),
+            kernel_stack->virtual_range().end(),
             entrypoint);
         m_threads.emplace(main_thread);
     } else {
-        auto& kernel_allocator = AddressSpace::of_kernel().allocator();
-        auto stack_range = kernel_allocator.allocate(stack_size);
-        MemoryManager::the().force_preallocate(stack_range, true);
-        auto main_thread = Thread::create_supervisor_thread(stack_range.end(), entrypoint);
-
+        auto kernel_stack = MemoryManager::the().allocate_kernel_stack(kstack_message.to_view(), stack_size);
+        auto main_thread = Thread::create_supervisor_thread(kernel_stack->virtual_range().end(), entrypoint);
         m_threads.emplace(main_thread);
     }
 }

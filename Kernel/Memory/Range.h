@@ -99,7 +99,7 @@ public:
 
         return from_two_pointers(m_begin, address);
     }
-    
+
     BasicRange constrained_by(AddrT lowest, AddrT highest) const
     {
         ASSERT(lowest < highest);
@@ -116,7 +116,6 @@ public:
         // same as above
         if (m_end < lowest)
             return from_two_pointers(m_end, m_end);
-
 
         if (m_begin < lowest) {
             auto bytes_under = lowest - m_begin;

@@ -32,13 +32,22 @@ public:
 
     void install();
 
+#ifdef ULTRA_64
+    void configure_ist();
+#endif
+
     static IDT& the();
 
 private:
     struct PACKED entry {
         u16 address_1;
         u16 selector;
+#ifdef ULTRA_64
+        u8 ist_slot : 3;
+        u8 unused : 5;
+#elif defined(ULTRA_32)
         u8 unused;
+#endif
         u8 attributes;
         u16 address_2;
 
@@ -47,6 +56,12 @@ private:
         u32 reserved;
 #endif
     } m_entries[entry_count];
+
+#ifdef ULTRA_32
+    static_assert(sizeof(entry) == 8);
+#elif defined(ULTRA_64)
+    static_assert(sizeof(entry) == 16);
+#endif
 
     struct PACKED pointer {
         u16 size;

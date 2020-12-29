@@ -20,9 +20,17 @@ public:
     static constexpr ptr_t huge_alignment_mask = 0xFFFFFFFFFFFFFFFF - huge_size + 1;
 #endif
 
-    explicit Page(Address physical_address);
+    Page() = default;
 
-    Address address() const;
+    explicit Page(Address physical_address)
+        : m_physical_address(physical_address)
+    {
+    }
+
+    Address address() const
+    {
+        return m_physical_address;
+    }
 
     template <ptr_t AlignmentMask, size_t PageSize>
     static constexpr size_t round_up_custom(size_t size)
@@ -69,10 +77,8 @@ public:
         return (address % huge_size) == 0;
     }
 
-    ~Page();
-
 private:
-    Address m_physical_address;
+    Address m_physical_address { nullptr };
 };
 
 #define ASSERT_PAGE_ALIGNED(address) ASSERT(Page::is_aligned(address));

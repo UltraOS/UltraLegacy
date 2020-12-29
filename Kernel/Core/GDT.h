@@ -57,7 +57,7 @@ public:
     void install();
 
     void create_descriptor(u32 base, u32 size, access_attributes access, flag_attributes flags);
-    void create_tss_descriptor(TSS* tss);
+    void create_tss_descriptor(TSS& tss);
 
     static constexpr u16 kernel_code_selector() { return 0x8; }
     static constexpr u16 kernel_data_selector() { return 0x10; }

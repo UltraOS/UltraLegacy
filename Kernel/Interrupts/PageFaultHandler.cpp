@@ -24,7 +24,7 @@ void PageFaultHandler::handle(const RegisterState& state)
     PageFault pf(
         address_of_fault,
         state.instruction_pointer(),
-        state.error_code & user_mask,
+        (state.error_code & user_mask) ? IsSupervisor::NO : IsSupervisor::YES,
         static_cast<PageFault::Type>(state.error_code & type_mask));
 
     MemoryManager::handle_page_fault(state, pf);

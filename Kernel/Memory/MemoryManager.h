@@ -2,16 +2,21 @@
 
 #include "Common/DynamicArray.h"
 #include "Common/DynamicBitArray.h"
+#include "Common/List.h"
 #include "Common/RefPtr.h"
+#include "Common/UniquePtr.h"
 #include "Core/Boot.h"
 #include "Core/Registers.h"
 #include "MemoryMap.h"
+#include "Multitasking/Process.h"
 #include "Page.h"
+#include "PhysicalRegion.h"
+#include "PrivateVirtualRegion.h"
 #include "VirtualAllocator.h"
+#include "VirtualRegion.h"
 
 namespace kernel {
 
-class PhysicalRegion;
 class AddressSpace;
 class PageFault;
 
@@ -22,6 +27,7 @@ public:
 #ifdef ULTRA_32
     static constexpr Address max_memory_address = 0xFFFFFFFF;
     static constexpr Address kernel_reserved_base = 3 * GB;
+    static constexpr Address kernel_address_space_base = kernel_reserved_base;
     static constexpr size_t kernel_first_table_index = 768;
     static constexpr size_t kernel_last_table_index = 1022;
     static constexpr size_t recursive_entry_index = 1023;
@@ -31,6 +37,7 @@ public:
     static constexpr Address max_memory_address = 0xFFFFFFFFFFFFFFFF;
     static constexpr Address kernel_reserved_base = max_memory_address - 2 * GB + 1;
     static constexpr Address physical_memory_base = 0xFFFF800000000000;
+    static constexpr Address kernel_address_space_base = physical_memory_base;
     static constexpr Address userspace_usable_ceiling = 0x0000800000000000;
     static constexpr size_t kernel_first_table_index = 256;
     static constexpr size_t kernel_last_table_index = 511;
@@ -89,10 +96,14 @@ public:
 
     static MemoryManager& the();
 
-    void inititalize(AddressSpace& directory);
+    static bool is_initialized()
+    {
+        // this is not entirely true as theres a small window where
+        // instance is already created but not yet initialized properly
+        return s_instance != nullptr;
+    }
 
-    [[nodiscard]] RefPtr<Page> allocate_page(bool should_zero = true);
-    void free_page(Page& page);
+    void inititalize(AddressSpace& directory);
 
 #ifdef ULTRA_32
     void set_quickmap_range(const Range& range);
@@ -120,7 +131,7 @@ public:
     {
         ASSERT(virtual_address > physical_memory_base);
 
-        if (virtual_address > kernel_reserved_base)
+        if (virtual_address >= kernel_reserved_base)
             return virtual_address - kernel_reserved_base;
         else
             return virtual_address - physical_memory_base;
@@ -144,11 +155,38 @@ public:
 
     [[nodiscard]] PhysicalStats physical_stats() const
     {
-        LockGuard lock_guard(m_lock);
-        return { m_initial_physical_bytes, m_free_physical_bytes };
+        return { m_initial_physical_bytes.load(), m_free_physical_bytes.load() };
     }
 
-    void force_preallocate(const Range& range, bool should_zero = false);
+    using VR = RefPtr<VirtualRegion>;
+
+    VR allocate_user_stack(StringView purpose, AddressSpace&, size_t length = Process::default_userland_stack_size);
+    VR allocate_kernel_stack(StringView purpose, size_t length = Process::default_kernel_stack_size);
+
+    VR allocate_kernel_private(StringView purpose, const Range&);
+    VR allocate_kernel_private_anywhere(StringView purpose, size_t length, size_t alignment = Page::size);
+
+    VR allocate_user_private(StringView purpose, const Range&, AddressSpace& = AddressSpace::current());
+    VR allocate_user_private_anywhere(StringView purpose, size_t length, size_t alignment = Page::size, AddressSpace& = AddressSpace::current());
+
+    VR allocate_kernel_non_owning(StringView purpose, Range physical_range);
+    VR allocate_user_non_owning(StringView purpose, Range physical_range, AddressSpace& = AddressSpace::current());
+
+    String kernel_virtual_regions_debug_dump();
+
+private:
+    void allocate_initial_kernel_regions();
+
+    // This API is used by AddressSpace to allocate table pages
+    friend class AddressSpace;
+    [[nodiscard]] Page allocate_page(bool should_zero = true);
+    void free_page(Page& page);
+
+    friend class PrivateVirtualRegion;
+    void preallocate(PrivateVirtualRegion&, bool should_zero = true);
+
+    PhysicalRegion* physical_region_responsible_for_page(const Page&);
+    VirtualRegion* virtual_region_responsible_for_address(Address);
 
 private:
 // Not needed for 64 bit as we have all the phys memory mapped
@@ -178,18 +216,21 @@ private:
 private:
     static MemoryManager* s_instance;
     static LoaderContext* s_loader_context;
+    
+    mutable InterruptSafeSpinLock m_virtual_region_lock;
 
-    mutable RecursiveInterruptSafeSpinLock m_lock;
+    RedBlackTree<RefPtr<VirtualRegion>, Less<>> m_kernel_virtual_regions;
 
+    // sorted in ascended order therefore can be searched via lower_bound/bianry_search
     DynamicArray<PhysicalRegion> m_physical_regions;
 
     MemoryMap m_memory_map;
 
-    size_t m_initial_physical_bytes { 0 };
-    size_t m_free_physical_bytes { 0 };
+    Atomic<size_t> m_initial_physical_bytes { 0 };
+    Atomic<size_t> m_free_physical_bytes { 0 };
 
 #ifdef ULTRA_32
-    InterruptSafeSpinLock m_quickmap_lock;
+    mutable InterruptSafeSpinLock m_quickmap_lock;
     Range m_quickmap_range;
     DynamicBitArray m_quickmap_slots;
 #endif

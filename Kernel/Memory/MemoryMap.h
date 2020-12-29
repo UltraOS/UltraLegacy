@@ -218,6 +218,16 @@ struct MemoryMap {
 
     void correct_overlapping_ranges(size_t hint = 0);
 
+    friend bool operator<(const PhysicalRange& l, Address address)
+    {
+        return l.begin() < address;
+    }
+
+    friend bool operator<(Address l, const PhysicalRange& r)
+    {
+        return l < r.begin();
+    }
+
 private:
     void copy_aligned_from(E820MemoryMap&);
     void sort_by_address();

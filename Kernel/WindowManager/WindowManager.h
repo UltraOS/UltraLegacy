@@ -14,7 +14,7 @@ public:
 
     void add_window(const RefPtr<Window>& window)
     {
-        LockGuard lock_guard(window_lock());
+        LOCK_GUARD(window_lock());
         m_windows.append_front(window);
         window->set_focused();
     }

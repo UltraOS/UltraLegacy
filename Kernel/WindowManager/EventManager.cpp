@@ -12,7 +12,7 @@ EventManager EventManager::s_instance;
 
 void EventManager::dispatch_pending()
 {
-    LockGuard lock_guard(m_event_queue_lock);
+    LOCK_GUARD(m_event_queue_lock);
 
     for (auto& event : m_event_queue) {
         switch (event.type) {
@@ -69,7 +69,7 @@ void EventManager::dispatch_pending()
 
 void EventManager::push_event(const Event& event)
 {
-    LockGuard lock_guard(m_event_queue_lock);
+    LOCK_GUARD(m_event_queue_lock);
 
     if (m_event_queue.size() >= max_event_queue_size) {
         warning() << "EventManager: event queue too big, skipping event";

@@ -6,32 +6,35 @@
 
 namespace kernel {
 
-PhysicalRegion::PhysicalRegion(Address starting_address, size_t length)
-    : m_starting_address(starting_address)
-    , m_free_pages(length / Page::size)
+PhysicalRegion::PhysicalRegion(const Range& range)
+    : m_range(range)
+    , m_free_pages(range.length() / Page::size)
     , m_allocation_map(m_free_pages)
 {
+    ASSERT_PAGE_ALIGNED(Address(range.begin()));
+    ASSERT_PAGE_ALIGNED(range.length());
 }
 
 Address PhysicalRegion::bit_as_physical_address(size_t bit)
 {
-    return m_starting_address + bit * Page::size;
+    return m_range.begin() + bit * Page::size;
 }
 
 size_t PhysicalRegion::physical_address_as_bit(Address address)
 {
     ASSERT_PAGE_ALIGNED(address);
 
-    return (address - m_starting_address) / Page::size;
+    return (address - m_range.begin()) / Page::size;
 }
 
-RefPtr<Page> PhysicalRegion::allocate_page()
+Page PhysicalRegion::allocate_page()
 {
     auto index = m_allocation_map.find_bit(false, m_next_hint);
 
     if (index == -1) {
-        warning() << "PhysicalRegion: Failed to allocate a physical page (Out of pages)!";
-        return {};
+        StackStringBuilder error_string;
+        error_string << "PhysicalRegion: Failed to allocate a physical page (Out of pages)!";
+        runtime::panic(error_string.data());
     }
 
     m_next_hint = static_cast<size_t>(index + 1);
@@ -47,13 +50,7 @@ RefPtr<Page> PhysicalRegion::allocate_page()
     log() << "PhysicalRegion: allocating a page at address " << bit_as_physical_address(index);
 #endif
 
-    return RefPtr<Page>::create(bit_as_physical_address(index));
-}
-
-bool PhysicalRegion::contains(const Page& page)
-{
-    return page.address() >= m_starting_address
-        && page.address() < bit_as_physical_address(m_allocation_map.size() - 1);
+    return Page(bit_as_physical_address(index));
 }
 
 void PhysicalRegion::free_page(const Page& page)
@@ -63,7 +60,7 @@ void PhysicalRegion::free_page(const Page& page)
           << " Address:" << page.address();
 #endif
 
-    ASSERT(contains(page));
+    ASSERT(m_range.contains(page.address()));
 
     auto bit = physical_address_as_bit(page.address());
 

@@ -1,5 +1,6 @@
 #include "Core/Registers.h"
 
+#include "Interrupts/IDT.h"
 #include "Thread.h"
 
 namespace kernel {
@@ -9,6 +10,10 @@ Atomic<u32> Thread::s_next_thread_id;
 void Thread::initialize()
 {
     CPU::current().set_tss(new TSS);
+
+#ifdef ULTRA_64
+    IDT::the().configure_ist();
+#endif
 }
 
 RefPtr<Thread> Thread::create_supervisor_thread(Address kernel_stack, Address entrypoint)
@@ -21,7 +26,7 @@ RefPtr<Thread> Thread::create_supervisor_thread(Address kernel_stack, Address en
 #endif // clang-format on
 
     auto thread = new Thread(AddressSpace::of_kernel(), adjusted_stack);
-    thread->m_is_supervisor = true;
+    thread->m_is_supervisor = IsSupervisor::YES;
     thread->m_initial_kernel_stack_top = kernel_stack;
 
     auto& frame = *new (adjusted_stack.as_pointer<void>()) RegisterState;
@@ -53,7 +58,7 @@ Thread::create_user_thread(AddressSpace& page_dir, Address user_stack, Address k
     Address adjusted_stack = kernel_stack - sizeof(RegisterState);
 
     auto thread = new Thread(page_dir, adjusted_stack);
-    thread->m_is_supervisor = false;
+    thread->m_is_supervisor = IsSupervisor::YES;
     thread->m_initial_kernel_stack_top = kernel_stack;
 
     auto& frame = *new (adjusted_stack.as_pointer<void>()) RegisterState;
@@ -95,7 +100,7 @@ void Thread::activate()
 {
     m_state = State::RUNNING;
 
-    if (is_user())
+    if (is_supervisor() == IsSupervisor::NO)
         CPU::current().tss()->set_kernel_stack_pointer(m_initial_kernel_stack_top);
 
     m_address_space.make_active();
