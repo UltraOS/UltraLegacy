@@ -160,7 +160,7 @@ inline constexpr bool is_pointer_v = is_pointer<T>::value;
 
 // ---- is_trivially_constructible ----
 template <typename T>
-struct is_trivially_constructible : integral_constant<bool, __has_trivial_constructor(T)> {
+struct is_trivially_constructible : integral_constant<bool, __is_trivially_constructible(T)> {
 };
 
 template <typename T>
@@ -178,7 +178,7 @@ inline constexpr bool is_trivially_destructible_v = is_trivially_destructible<T>
 
 // ---- is_trivially_copyable ----
 template <typename T>
-struct is_trivially_copyable : integral_constant<bool, __has_trivial_copy(T)> {
+struct is_trivially_copyable : integral_constant<bool, __is_trivially_copyable(T)> {
 };
 
 template <typename T>
