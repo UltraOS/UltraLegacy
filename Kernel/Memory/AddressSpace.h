@@ -17,6 +17,8 @@ public:
 #ifdef ULTRA_32
     static constexpr Address recursive_table_base = 0xFFC00000;
     static constexpr Address recursive_directory_base = 0xFFFFF000;
+#elif defined(ULTRA_64)
+    static constexpr size_t lower_identity_size = 4 * GB;
 #endif
 
     using Entry = GenericPagingEntry;

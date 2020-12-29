@@ -34,18 +34,16 @@ void AddressSpace::inititalize()
     s_of_kernel->m_main_page = Page(MemoryManager::virtual_to_physical(&kernel_base_table));
 
 #ifdef ULTRA_64
-    static constexpr size_t lower_indentity_size = 4 * GB;
-
     auto& memory_map = MemoryManager::the().memory_map();
     auto lowest_to_map = lower_bound(
         memory_map.begin(), memory_map.end(),
-        lower_indentity_size);
+        lower_identity_size);
 
-    if (lowest_to_map == memory_map.end() || (lowest_to_map != memory_map.begin() && lowest_to_map->begin() != lower_indentity_size))
+    if (lowest_to_map == memory_map.end() || (lowest_to_map != memory_map.begin() && lowest_to_map->begin() != lower_identity_size))
         --lowest_to_map;
 
     for (auto current_range = lowest_to_map; current_range != memory_map.end(); ++current_range) {
-        auto physical_range = current_range->constrained_by(lower_indentity_size, MemoryManager::max_memory_address);
+        auto physical_range = current_range->constrained_by(lower_identity_size, MemoryManager::max_memory_address);
 
         if (physical_range.empty())
             continue;
@@ -56,6 +54,10 @@ void AddressSpace::inititalize()
         auto virtual_range = Range::from_two_pointers(
             MemoryManager::physical_to_virtual(physical_range.begin()),
             MemoryManager::physical_to_virtual(physical_range.end()));
+
+#ifdef ADDRESS_SPACE_DEBUG
+        log() << "AddressSpace: Direct mapping " << physical_range << " to " << virtual_range;
+#endif
 
         s_of_kernel->map_huge_range(virtual_range, physical_range);
     }
@@ -362,7 +364,7 @@ void AddressSpace::map_huge_range(Range virtual_range, Range physical_range, IsS
 
     for (size_t i = 0; i < page_count; ++i) {
         auto offset = i * Page::huge_size;
-        map_page(virtual_range.begin() + offset, physical_range.begin() + offset, is_supervisor);
+        map_huge_page(virtual_range.begin() + offset, physical_range.begin() + offset, is_supervisor);
     }
 }
 #endif

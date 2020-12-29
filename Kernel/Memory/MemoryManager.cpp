@@ -13,6 +13,7 @@
 #include "PhysicalRegion.h"
 
 #define MEMORY_MANAGER_DEBUG
+// #define MEMORY_MANAGER_SUPER_DEBUG
 
 namespace kernel {
 
@@ -183,7 +184,7 @@ Page MemoryManager::allocate_page(bool should_zero)
 
         if (should_zero) {
 #ifdef MEMORY_MANAGER_SUPER_DEBUG
-            log() << "MemoryManager: zeroing the page at physaddr " << page->address();
+            log() << "MemoryManager: zeroing the page at physaddr " << page.address();
 #endif
 
 #ifdef ULTRA_32
@@ -596,10 +597,23 @@ void MemoryManager::allocate_initial_kernel_regions()
     quickmap_spec.region_specifier = VirtualRegion::Specifier::ETERNAL;
     quickmap_spec.region_type = VirtualRegion::Type::NON_OWNING;
     m_kernel_virtual_regions.emplace(VirtualRegion::from_specification(quickmap_spec));
-#endif
+#elif defined(ULTRA_64)
+    Address phyiscal_end = max<Address>(m_memory_map.highest_address(), AddressSpace::lower_identity_size);
+    auto physical_memory_virtual_range = Range::from_two_pointers(physical_memory_base, physical_to_virtual(phyiscal_end));
+    auto physical_memory_physical_range = Range::from_two_pointers(
+            virtual_to_physical(physical_memory_base),
+            phyiscal_end);
 
-// Kernel image is somewhere inside our virtual address space, so let's mark it as allocated
-#ifdef ULTRA_64
+    VirtualRegion::Specification direct_map_spec {};
+    direct_map_spec.is_supervisor = IsSupervisor::YES;
+    direct_map_spec.virtual_range = physical_memory_virtual_range;
+    direct_map_spec.physical_range = physical_memory_physical_range;
+    direct_map_spec.purpose = "direct map of physical memory"_sv;
+    direct_map_spec.region_specifier = VirtualRegion::Specifier::ETERNAL;
+    direct_map_spec.region_type = VirtualRegion::Type::NON_OWNING;
+    m_kernel_virtual_regions.emplace(VirtualRegion::from_specification(direct_map_spec));
+
+    // Kernel image is somewhere inside our virtual address space, so let's mark it as allocated
     AddressSpace::of_kernel().allocator().allocate(MemoryManager::kernel_reserved_range());
 #endif
 }

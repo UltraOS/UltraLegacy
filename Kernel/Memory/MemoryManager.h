@@ -129,7 +129,7 @@ public:
 
     static constexpr Address virtual_to_physical(Address virtual_address)
     {
-        ASSERT(virtual_address > physical_memory_base);
+        ASSERT(virtual_address >= physical_memory_base);
 
         if (virtual_address >= kernel_reserved_base)
             return virtual_address - kernel_reserved_base;
@@ -221,7 +221,7 @@ private:
 
     RedBlackTree<RefPtr<VirtualRegion>, Less<>> m_kernel_virtual_regions;
 
-    // sorted in ascended order therefore can be searched via lower_bound/bianry_search
+    // sorted in ascending order therefore can be searched via lower_bound/bianry_search
     DynamicArray<UniquePtr<PhysicalRegion>> m_physical_regions;
 
     MemoryMap m_memory_map;
