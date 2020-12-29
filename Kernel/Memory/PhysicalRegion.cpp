@@ -29,6 +29,8 @@ size_t PhysicalRegion::physical_address_as_bit(Address address)
 
 Page PhysicalRegion::allocate_page()
 {
+    LOCK_GUARD(m_lock);
+
     auto index = m_allocation_map.find_bit(false, m_next_hint);
 
     if (index == -1) {
@@ -55,6 +57,8 @@ Page PhysicalRegion::allocate_page()
 
 void PhysicalRegion::free_page(const Page& page)
 {
+    LOCK_GUARD(m_lock);
+
 #ifdef PHYSICAL_REGION_DEBUG
     log() << "PhysicalRegion: deallocating a page at index " << physical_address_as_bit(page.address())
           << " Address:" << page.address();

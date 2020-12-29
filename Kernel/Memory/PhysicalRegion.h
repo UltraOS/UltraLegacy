@@ -4,6 +4,7 @@
 #include "Common/Logger.h"
 #include "Common/Types.h"
 #include "Common/UniquePtr.h"
+#include "Common/Lock.h"
 #include "Range.h"
 
 namespace kernel {
@@ -43,13 +44,26 @@ public:
         return region.begin() < address;
     }
 
+    friend bool operator<(Address address, const UniquePtr<PhysicalRegion>& region)
+    {
+        ASSERT(region);
+        return address < region->begin();
+    }
+
+    friend bool operator<(const UniquePtr<PhysicalRegion>& region, Address address)
+    {
+        ASSERT(region);
+        return region->begin() < address;
+    }
+
 private:
     Address bit_as_physical_address(size_t bit);
     size_t physical_address_as_bit(Address address);
 
 private:
+    InterruptSafeSpinLock m_lock;
     Range m_range;
-    size_t m_free_pages { 0 };
+    Atomic<size_t> m_free_pages { 0 };
     size_t m_next_hint { 0 };
     DynamicBitArray m_allocation_map;
 };

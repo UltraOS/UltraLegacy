@@ -222,7 +222,7 @@ private:
     RedBlackTree<RefPtr<VirtualRegion>, Less<>> m_kernel_virtual_regions;
 
     // sorted in ascended order therefore can be searched via lower_bound/bianry_search
-    DynamicArray<PhysicalRegion> m_physical_regions;
+    DynamicArray<UniquePtr<PhysicalRegion>> m_physical_regions;
 
     MemoryMap m_memory_map;
 
