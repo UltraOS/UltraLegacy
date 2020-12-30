@@ -102,6 +102,8 @@ public:
 
     static size_t length_of(const char* string)
     {
+        ASSERT(string != nullptr);
+
         size_t length = 0;
 
         while (*(string++))
