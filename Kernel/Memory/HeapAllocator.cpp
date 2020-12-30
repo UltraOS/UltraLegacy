@@ -7,32 +7,50 @@
 #include "HeapAllocator.h"
 #include "MemoryManager.h"
 
-// pretty sure i'll need this later
 // #define HEAP_ALLOCATOR_DEBUG
 
 namespace kernel {
 
-HeapAllocator::HeapBlockHeader* HeapAllocator::s_heap_block;
+HeapAllocator::HeapBlockHeader *HeapAllocator::s_heap_block;
 
-alignas(InterruptSafeSpinLock) static u8 heap_lock_storage[sizeof(InterruptSafeSpinLock)];
+alignas(Atomic<size_t>) static u8 heap_total_free_bytes_storage[sizeof(Atomic<size_t>)];
+alignas(InterruptSafeSpinLock) static u8 heap_allocation_lock_storage[sizeof(InterruptSafeSpinLock)];
+alignas(InterruptSafeSpinLock) static u8 heap_refill_lock_storage[sizeof(InterruptSafeSpinLock)];
 
-InterruptSafeSpinLock& HeapAllocator::lock()
+bool HeapAllocator::is_deadlocked() {
+    return allocation_lock().is_deadlocked();
+}
+
+Atomic<size_t>& HeapAllocator::total_free_bytes()
 {
-    return *reinterpret_cast<InterruptSafeSpinLock*>(heap_lock_storage);
+    return *reinterpret_cast<Atomic<size_t>*>(heap_total_free_bytes_storage);
+}
+
+InterruptSafeSpinLock& HeapAllocator::allocation_lock()
+{
+    return *reinterpret_cast<InterruptSafeSpinLock*>(heap_allocation_lock_storage);
+}
+
+InterruptSafeSpinLock& HeapAllocator::refill_lock()
+{
+    return *reinterpret_cast<InterruptSafeSpinLock*>(heap_refill_lock_storage);
 }
 
 void HeapAllocator::initialize()
 {
     // call the ctor manually because we haven't initialized global objects yet
-    new (heap_lock_storage) InterruptSafeSpinLock;
+    new (heap_total_free_bytes_storage) Atomic<size_t>;
+    new (heap_allocation_lock_storage) InterruptSafeSpinLock;
+    new (heap_refill_lock_storage) InterruptSafeSpinLock;
 
     // feed the preallocated kernel heap page
     feed_block(MemoryManager::kernel_first_heap_block_base.as_pointer<void>(), MemoryManager::kernel_first_heap_block_size);
 }
 
+// refill lock is assumed to be held by the caller
 void HeapAllocator::feed_block(void* ptr, size_t size, size_t chunk_size_in_bytes)
 {
-    LockGuard lock_guard(lock());
+    LOCK_GUARD(allocation_lock());
 
     auto& new_heap = *reinterpret_cast<HeapBlockHeader*>(ptr);
 
@@ -69,6 +87,7 @@ void HeapAllocator::feed_block(void* ptr, size_t size, size_t chunk_size_in_byte
     new_heap.chunk_count = pure_size / chunk_size_in_bytes;
     new_heap.free_chunks = new_heap.chunk_count;
     new_heap.data = new_heap.bitmap() + bitmap_bytes;
+    total_free_bytes() += new_heap.chunk_count * chunk_size_in_bytes;
 
 #ifdef HEAP_ALLOCATOR_DEBUG
 
@@ -81,14 +100,44 @@ void HeapAllocator::feed_block(void* ptr, size_t size, size_t chunk_size_in_byte
     zero_memory(new_heap.bitmap(), bitmap_bytes);
 }
 
+void HeapAllocator::refill_if_needed(size_t bytes_left)
+{
+    if (bytes_left > upper_allocation_threshold)
+        return;
+
+    log() << "HeapAllocator: bytes_left = " << bytes_left << ", refilling...";
+
+    auto region = MemoryManager::the().allocate_kernel_private_anywhere("kernel heap block"_sv, MemoryManager::kernel_first_heap_block_size);
+    static_cast<PrivateVirtualRegion*>(region.get())->preallocate_range();
+
+    auto& range = region->virtual_range();
+    feed_block(range.begin().as_pointer<void>(), range.length());
+}
+
 void* HeapAllocator::allocate(size_t bytes)
 {
-    if (bytes == 0) {
-        warning() << "HeapAllocator: looks like somebody tried to allocate 0 bytes (could be a bug?)";
-        return nullptr;
+    if ((bytes == 0) || (bytes > upper_allocation_threshold)) {
+        StackStringBuilder error_string;
+        error_string << "HeapAllocator: invalid allocation size " << bytes;
+        runtime::panic(error_string.data());
     }
 
-    LockGuard lock_guard(lock());
+    bool interrupt_state = false;
+    bool did_acquire = refill_lock().try_lock(interrupt_state);
+
+    if (did_acquire) {
+        size_t bytes_left_after_allocation = total_free_bytes();
+
+        if (bytes > bytes_left_after_allocation)
+            bytes_left_after_allocation = 0;
+        else
+            bytes_left_after_allocation -= bytes;
+
+        refill_if_needed(bytes_left_after_allocation);
+        refill_lock().unlock(interrupt_state);
+    }
+    
+    LOCK_GUARD(allocation_lock());
 
     s_calls_to_allocate++;
 
@@ -128,74 +177,70 @@ void* HeapAllocator::allocate(size_t bytes)
             }
         }
 
-        if (allocation_succeeded) {
-            auto true_index = at_bit;
+        if (!allocation_succeeded)
+            continue;
 
-            u8 this_id = 0;
-            u8 left_neighbor = 0;
-            u8 right_neighbor = 0;
+        auto true_index = at_bit;
 
-            // detect left and right neighbors
-            if (true_index) {
-                auto left = true_index - 2;
-                auto byte_index = left / 8;
-                auto bit_index = left - 8 * byte_index;
-                auto& control_byte = heap->bitmap()[byte_index];
+        u8 this_id = 0;
+        u8 left_neighbor = 0;
+        u8 right_neighbor = 0;
 
-                left_neighbor = control_byte & ((1 << (bit_index + 1)) | ((1 << bit_index)));
-                left_neighbor >>= bit_index;
-            }
-            if (true_index / 2 < heap->chunk_count) {
-                auto right = true_index + (chunks_needed * 2);
-                auto byte_index = right / 8;
-                auto bit_index = right - 8 * byte_index;
+        // detect left and right neighbors
+        if (true_index) {
+            auto left = true_index - 2;
+            auto byte_index = left / 8;
+            auto bit_index = left - 8 * byte_index;
+            auto& control_byte = heap->bitmap()[byte_index];
 
-                auto& control_byte = heap->bitmap()[byte_index];
+            left_neighbor = control_byte & ((1 << (bit_index + 1)) | ((1 << bit_index)));
+            left_neighbor >>= bit_index;
+        }
 
-                right_neighbor = control_byte & ((1 << (bit_index + 1)) | (1 << bit_index));
-                right_neighbor >>= bit_index;
-            }
+        if (true_index / 2 < heap->chunk_count) {
+            auto right = true_index + (chunks_needed * 2);
+            auto byte_index = right / 8;
+            auto bit_index = right - 8 * byte_index;
 
-            // find a unique id for this allocation
-            for (; this_id == left_neighbor || this_id == right_neighbor || !this_id; ++this_id)
-                ;
+            auto& control_byte = heap->bitmap()[byte_index];
 
-            // mark as allocated with the id
-            for (size_t i = 0; i < chunks_needed * 2; i += 2) {
-                auto true_index = at_bit + i;
-                auto byte_index = true_index / 8;
-                auto bit_index = true_index - 8 * byte_index;
+            right_neighbor = control_byte & ((1 << (bit_index + 1)) | (1 << bit_index));
+            right_neighbor >>= bit_index;
+        }
 
-                auto& control_byte = heap->bitmap()[byte_index];
+        // find a unique id for this allocation
+        for (; this_id == left_neighbor || this_id == right_neighbor || !this_id; ++this_id)
+            ;
 
-                control_byte |= this_id << bit_index;
-            }
+        // mark as allocated with the id
+        for (size_t i = 0; i < chunks_needed * 2; i += 2) {
+            auto true_index = at_bit + i;
+            auto byte_index = true_index / 8;
+            auto bit_index = true_index - 8 * byte_index;
 
-            heap->free_chunks -= chunks_needed;
+            auto& control_byte = heap->bitmap()[byte_index];
 
-            auto* data = heap->begin() + (at_bit / 2) * heap->chunk_size;
+            control_byte |= this_id << bit_index;
+        }
+
+        heap->free_chunks -= chunks_needed;
+        total_free_bytes() -= chunks_needed * heap->chunk_size;
+
+        auto* data = heap->begin() + (at_bit / 2) * heap->chunk_size;
 
 #ifdef HEAP_ALLOCATOR_DEBUG
 
-            auto total_allocation_bytes = chunks_needed * heap->chunk_size;
-            auto total_free_bytes = heap->free_bytes();
+        auto total_allocation_bytes = chunks_needed * heap->chunk_size;
+        auto total_free_bytes = heap->free_bytes();
 
-            log() << "HeapAllocator: allocating " << total_allocation_bytes << " bytes (" << chunks_needed
-                  << " chunk(s)) "
-                  << "at address:" << data << " Free bytes: " << total_free_bytes << " ("
-                  << bytes_to_megabytes(total_free_bytes) << " MB) ";
+        log() << "HeapAllocator: allocating " << total_allocation_bytes << " bytes (" << chunks_needed
+              << " chunk(s)) "
+              << "at address:" << data << " Free bytes: " << total_free_bytes << " ("
+              << bytes_to_megabytes(total_free_bytes) << " MB) ";
 
 #endif
-            return data;
-        }
+        return data;
     }
-
-    StackStringBuilder error_string;
-    error_string << "HeapAllocator: Out of memory! (tried to allocate " << bytes << " bytes)";
-    error_string << " " << s_calls_to_allocate << " " << s_heap_block->free_bytes() << " " << s_heap_block->chunk_size * s_heap_block->chunk_count;
-    runtime::panic(error_string.data());
-
-#ifdef HEAP_ALLOCATOR_DEBUG
 
     if (!s_heap_block)
         error() << "HeapAllocator: main block is null!";
@@ -210,7 +255,10 @@ void* HeapAllocator::allocate(size_t bytes)
         }
     }
 
-#endif
+    StackStringBuilder error_string;
+    error_string << "HeapAllocator: Out of memory! (tried to allocate " << bytes << " bytes)";
+    error_string << " " << s_calls_to_allocate << " " << s_heap_block->free_bytes() << " " << s_heap_block->chunk_size * s_heap_block->chunk_count;
+    runtime::panic(error_string.data());
 }
 
 void HeapAllocator::free(void* ptr)
@@ -223,7 +271,7 @@ void HeapAllocator::free(void* ptr)
         return;
     }
 
-    LockGuard lock_guard(lock());
+    LOCK_GUARD(allocation_lock());
 
     s_calls_to_free++;
 
@@ -266,6 +314,7 @@ void HeapAllocator::free(void* ptr)
             control_byte ^= scaled_id;
 
             heap->free_chunks++;
+            total_free_bytes() += heap->chunk_size;
 
 #ifdef HEAP_ALLOCATOR_DEBUG
             total_freed_chunks++;
@@ -292,7 +341,7 @@ HeapAllocator::Stats HeapAllocator::stats()
 {
     ASSERT(s_heap_block != nullptr);
 
-    LockGuard lock_guard(lock());
+    LOCK_GUARD(allocation_lock());
 
     Stats stats {};
 

@@ -7,10 +7,15 @@ namespace kernel {
 
 class InterruptSafeSpinLock;
 
+template <typename T>
+class Atomic;
+
 class HeapAllocator {
     MAKE_STATIC(HeapAllocator);
 
 public:
+    static constexpr size_t upper_allocation_threshold = 2 * MB;
+
     static void initialize();
     static void feed_block(void* ptr, size_t size, size_t chunk_size_in_bytes = 32);
 
@@ -25,10 +30,17 @@ public:
         size_t calls_to_allocate;
     };
 
+    static Atomic<size_t>& total_free_bytes();
+
     static Stats stats();
 
+    static bool is_deadlocked();
+
 private:
-    static InterruptSafeSpinLock& lock();
+    static InterruptSafeSpinLock& allocation_lock();
+    static InterruptSafeSpinLock& refill_lock();
+
+    static void refill_if_needed(size_t bytes_left);
 
     struct HeapBlockHeader {
         HeapBlockHeader* next;
