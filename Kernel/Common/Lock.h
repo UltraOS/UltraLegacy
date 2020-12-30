@@ -6,6 +6,14 @@
 namespace kernel {
 
 class DeadlockWatcher {
+public:
+    static constexpr size_t max_acquire_attempts = 10000000;
+
+    bool is_deadlocked() const ALWAYS_INLINE
+    {
+        return m_acquire_attempts >= max_acquire_attempts;
+    }
+
 protected:
     void did_acquire_lock(StringView file, size_t line, size_t core_id) ALWAYS_INLINE
     {
@@ -18,8 +26,6 @@ protected:
 
     void did_fail_to_acquire() ALWAYS_INLINE
     {
-        static constexpr size_t max_acquire_attempts = 10000000;
-
         ++m_acquire_attempts;
 
         if (m_acquire_attempts >= max_acquire_attempts)
@@ -29,6 +35,15 @@ protected:
 private:
     void did_deadlock()
     {
+        // in case the deadlock was caused by the HeapAllocator we cannot use is anymore
+        if (HeapAllocator::is_deadlocked()) {
+            StackStringBuilder error_string;
+            error_string << "HeapAllocator deadlock on cpu " << CPU::current_id()
+                         << "! Last acquired on cpu " << m_core
+                         << " at " << m_file << ":" << m_line;
+            runtime::panic(error_string.data());
+        }
+
         String deadlock_message;
 
         deadlock_message << "Deadlock on cpu " << CPU::current_id()
@@ -60,7 +75,7 @@ private:
     ptr_t m_backtrace[max_watcher_depth];
 };
 
-class SpinLock : DeadlockWatcher {
+class SpinLock : public DeadlockWatcher {
     MAKE_NONCOPYABLE(SpinLock);
 
 public:
@@ -90,11 +105,27 @@ public:
 
     void unlock() ALWAYS_INLINE { m_lock.store(unlocked, MemoryOrder::RELEASE); }
 
+    bool try_lock(const char* file = nullptr, size_t line = 0, size_t core_id = 0) ALWAYS_INLINE
+    {
+        if (!file)
+            file = "<unspecified>";
+        
+        lock_t expected = unlocked;
+        bool did_acquire = m_lock.compare_and_exchange(&expected, locked);
+
+        if (!did_acquire)
+            return false;
+
+        did_acquire_lock(file, line, core_id);
+
+        return true;
+    }
+
 private:
     Atomic<size_t> m_lock;
 };
 
-class InterruptSafeSpinLock : SpinLock {
+class InterruptSafeSpinLock : public SpinLock {
 public:
     InterruptSafeSpinLock() = default;
 
@@ -112,6 +143,21 @@ public:
 
         if (interrupt_state)
             Interrupts::enable();
+    }
+
+    bool try_lock(bool& interrupt_state, const char* file = nullptr, size_t line = 0, size_t core_id = 0) ALWAYS_INLINE
+    {
+        interrupt_state = Interrupts::are_enabled();
+        Interrupts::disable();
+
+        bool did_acquire = SpinLock::try_lock(file, line, core_id);
+
+        if (!did_acquire) {
+            if (interrupt_state)
+                Interrupts::enable();
+        }
+
+        return did_acquire;
     }
 };
 
