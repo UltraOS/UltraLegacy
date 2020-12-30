@@ -1,9 +1,13 @@
+#pragma once
+
 namespace kernel {
 
 template <typename T>
 class Atomic
 {
 public:
+    Atomic() : m_value(0) { }
+
     Atomic(T value)
         : m_value(value)
     {
@@ -18,6 +22,8 @@ public:
     {
         return m_value;
     }
+
+    T load() { return m_value; }
 
 private:
     T m_value;
