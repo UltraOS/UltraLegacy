@@ -44,7 +44,7 @@ private:
     [[nodiscard]] bool is_scrolled() const { return m_prescroll_top_y != m_scrollback_top_y; }
 
 private:
-    static constexpr Rect window_rect = { 200, 200, 600, 400 };
+    static constexpr Rect window_rect = { 200, 200, 800, 600 };
     static constexpr Color background_color = { 0x1F, 0x1B, 0x24 };
     static constexpr StringView command_prompt = "> "_sv;
 

@@ -66,7 +66,7 @@ void DemoTTY::tick()
         m_cursor_is_shown = false;
     }
 
-    LockGuard lock_guard(m_window->event_queue_lock());
+    LOCK_GUARD(m_window->event_queue_lock());
 
     for (auto& event : m_window->event_queue()) {
         switch (event.type) {
@@ -152,6 +152,15 @@ void DemoTTY::execute_command()
         auto seconds_since_boot = Timer::the().nanoseconds_since_boot() / Time::nanoseconds_in_second;
         write({ buffer, to_string(seconds_since_boot, buffer, 21) });
         write(" seconds\n");
+    } else if (m_current_command == "pm"_sv) {
+        write("\nPhysical memory stats:\n");
+        String stats;
+        auto stats_struct = MemoryManager::the().physical_stats();
+
+        stats << "Total MB: " << stats_struct.total_bytes / MB;
+        stats << "\nUsed MB: " << (stats_struct.total_bytes - stats_struct.free_bytes) / MB << "\n";
+
+        write(stats.to_view());
     } else if (m_current_command == "kheap"_sv) {
         String string;
 
@@ -170,15 +179,34 @@ void DemoTTY::execute_command()
         string << "Calls to free: " << stats.calls_to_free << '\n';
 
         write(string.to_view());
+    } else if (m_current_command == "e820"_sv) {
+        auto loader_context = MemoryManager::loader_context();
+        ASSERT(loader_context->type == LoaderContext::Type::BIOS);
+
+        auto& memory_map = reinterpret_cast<const BIOSContext*>(loader_context)->memory_map;
+
+        write("\nE820 physical memory map: ");
+
+        for (auto& entry : memory_map) {
+            write("\n"_sv);
+            String range_str;
+            range_str << format::as_hex << "base: " << format::as_hex << entry.base_address;
+            range_str << format::as_hex << "\nend:  " << format::as_hex << entry.base_address + entry.length;
+            range_str << format::as_dec << "\nlength: " << entry.length / KB << " KB";
+            range_str << "\ntype: " << static_cast<u32>(entry.type);
+            write(range_str.to_view());
+            write("\n"_sv);
+        }
     } else if (m_current_command == "memory-map"_sv) {
         auto& map = MemoryManager::the().memory_map();
-        write("\nPhysical memory map: ");
+        write("\nUltraOS physical memory map: ");
 
         for (auto& entry : map) {
             write("\n"_sv);
             String range_str;
-            range_str << format::as_hex << "base: " << entry.base_address;
-            range_str << format::as_dec << "\nlength: " << entry.length / KB << " KB";
+            range_str << "base: " << entry.begin();
+            range_str << "\nend:  " << entry.end();
+            range_str << "\nlength: " << entry.length() / KB << " KB";
             range_str << "\ntype: " << entry.type_as_string();
             write(range_str.to_view());
             write("\n"_sv);
@@ -199,7 +227,7 @@ void DemoTTY::execute_command()
         info_string << "Supports SMP: " << CPU::supports_smp();
         info_string << "\nCores: " << CPU::processor_count();
         info_string << "\nAlive cores: " << CPU::alive_processor_count();
-        info_string << "\nCurrent core: " << CPU::current().id();
+        info_string << "\nCurrent core: " << CPU::current_id();
         write(info_string.to_view());
         write("\n"_sv);
     } else if (m_current_command == "help"_sv) {
@@ -207,14 +235,21 @@ void DemoTTY::execute_command()
         write("Here's a few things you can do:\n"_sv);
         write("uptime - get current uptime\n"_sv);
         write("kheap - get current kernel heap usage stats\n"_sv);
-        write("memory-map - physical RAM memory map as reported by BIOS\n"_sv);
-        write("vmdump - get kernel address space virtual memory dump\n"_sv);
+        write("e820 - physical RAM memory map as reported by BIOS\n");
+        write("memory-map - UltraOS memory map, sorted & formatted\n"_sv);
+        write("kvm - dump kernel address space information\n"_sv);
+        write("kvr - dump all kernel virtual regions\n"_sv);
+        write ("pm - physical memory stats\n"_sv);
         write("video-mode - get current video mode information\n"_sv);
         write("cpu - get CPU information\n"_sv);
         write("clear - clear the terminal screen\n"_sv);
-    } else if (m_current_command == "vmdump"_sv) {
-        write("\nVirtual memory dump:\n");
+    } else if (m_current_command == "kvm"_sv) {
+        write("\nKernel address space virtual memory dump:\n");
         write(AddressSpace::of_kernel().allocator().debug_dump().to_view());
+    } else if (m_current_command == "kvr"_sv) {
+        write("\nKernel virtual regions dump:\n");
+        write(MemoryManager::the().kernel_virtual_regions_debug_dump().to_view());
+        write("\n");
     } else if (m_current_command.empty()) {
         write("\n");
     } else {
