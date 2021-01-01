@@ -39,16 +39,6 @@ InterruptController& InterruptController::the()
     return *s_instance;
 }
 
-Address InterruptController::find_string_in_range(Address begin, Address end, size_t step, StringView string)
-{
-    for (ptr_t pointer = begin; pointer < end; pointer += step) {
-        if (StringView(Address(pointer).as_pointer<const char>(), string.size()) == string)
-            return pointer;
-    }
-
-    return nullptr;
-}
-
 InterruptController::MP::FloatingPointer* InterruptController::MP::find_floating_pointer_table()
 {
     static constexpr auto mp_floating_pointer_signature = "_MP_"_sv;
@@ -56,35 +46,25 @@ InterruptController::MP::FloatingPointer* InterruptController::MP::find_floating
 
     static constexpr Address ebda_base = 0x80000;
     static constexpr Address ebda_end = 0x9FFFF;
-    static constexpr Address ebda_base_linear = MemoryManager::physical_to_virtual(ebda_base);
-    static constexpr Address ebda_end_linear = MemoryManager::physical_to_virtual(ebda_end);
+    auto ebda_range = Range::from_two_pointers(MemoryManager::physical_to_virtual(ebda_base), MemoryManager::physical_to_virtual(ebda_end));
 
     log() << "InterruptController: Trying to find the floating pointer table in the EBDA...";
 
-    auto address = find_string_in_range(
-        ebda_base_linear,
-        ebda_end_linear,
-        table_alignment,
-        mp_floating_pointer_signature);
+    auto string = mp_floating_pointer_signature.find_in_range(ebda_range, table_alignment);
 
-    if (address)
-        return address.as_pointer<MP::FloatingPointer>();
+    if (!string.empty())
+        return Address(string.begin()).as_pointer<FloatingPointer>();
 
     static constexpr Address bios_rom_base = 0xF0000;
     static constexpr Address bios_rom_end = 0xFFFFF;
-    static constexpr Address bios_rom_base_linear = MemoryManager::physical_to_virtual(bios_rom_base);
-    static constexpr Address bios_rom_end_linear = MemoryManager::physical_to_virtual(bios_rom_end);
+    auto bios_rom_range = Range::from_two_pointers(MemoryManager::physical_to_virtual(bios_rom_base), MemoryManager::physical_to_virtual(bios_rom_end));
 
     log() << "InterruptController: Couldn't find the floating pointer table in the EBDA, trying ROM...";
 
-    address = find_string_in_range(
-        bios_rom_base_linear,
-        bios_rom_end_linear,
-        table_alignment,
-        mp_floating_pointer_signature);
+    string = mp_floating_pointer_signature.find_in_range(bios_rom_range, table_alignment);
 
-    if (address)
-        return address.as_pointer<FloatingPointer>();
+    if (!string.empty())
+        return Address(string.begin()).as_pointer<FloatingPointer>();
 
     static constexpr Address bda_address = 0x400;
     static constexpr Address bda_address_linear = MemoryManager::physical_to_virtual(bda_address);
@@ -92,20 +72,16 @@ InterruptController::MP::FloatingPointer* InterruptController::MP::find_floating
 
     auto kilobytes_before_ebda = *Address(bda_address_linear + kilobytes_before_ebda_offset).as_pointer<u16>();
     auto last_base_kilobyte = MemoryManager::physical_to_virtual((kilobytes_before_ebda - 1) * KB);
+    auto last_base_kilobyte_range = Range(last_base_kilobyte, 1 * KB);
 
     log() << "InterruptController: Couldn't find the floating pointer table in ROM, trying last 1KB of base memory...";
 
-    address = find_string_in_range(
-        last_base_kilobyte,
-        last_base_kilobyte + 1 * KB,
-        table_alignment,
-        mp_floating_pointer_signature);
+    string = mp_floating_pointer_signature.find_in_range(last_base_kilobyte_range, table_alignment);
 
-    if (address)
-        return address.as_pointer<MP::FloatingPointer>();
+    if (!string.empty())
+        return Address(string.begin()).as_pointer<FloatingPointer>();
 
-    warning()
-        << "InterruptController: Couldn't find the floating pointer table, reverting to single core configuration.";
+    warning() << "InterruptController: Couldn't find the floating pointer table, reverting to single core configuration.";
 
     return nullptr;
 }

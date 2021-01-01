@@ -226,8 +226,6 @@ private:
         static FloatingPointer* s_floating_pointer;
     };
 
-    static Address find_string_in_range(Address begin, Address end, size_t step, StringView string);
-
 private:
     static SMPData* s_smp_data;
     static InterruptController* s_instance;
