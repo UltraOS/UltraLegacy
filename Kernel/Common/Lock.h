@@ -35,7 +35,7 @@ protected:
 private:
     void did_deadlock()
     {
-        // in case the deadlock was caused by the HeapAllocator we cannot use is anymore
+        // in case the deadlock was caused by the HeapAllocator we cannot use it anymore
         if (HeapAllocator::is_deadlocked()) {
             StackStringBuilder error_string;
             error_string << "HeapAllocator deadlock on cpu " << CPU::current_id()

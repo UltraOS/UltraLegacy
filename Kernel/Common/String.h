@@ -5,6 +5,7 @@
 #include "Macros.h"
 #include "Memory.h"
 #include "Utilities.h"
+#include "Memory/Range.h"
 
 namespace kernel {
 
@@ -341,6 +342,16 @@ class StringView {
 public:
     StringView() = default;
 
+    StringView find_in_range(const Range& range, size_t step = 1) const
+    {
+        for (auto pointer = range.begin(); pointer + size() < range.end(); pointer += step) {
+            if (StringView(Address(pointer).as_pointer<const char>(), size()).equals(*this))
+                return { pointer.as_pointer<const char>(), size() };
+        }
+
+        return { };
+    }
+
     StringView(const char* string)
         : m_string(string)
         , m_size(String::length_of(string))
@@ -370,6 +381,8 @@ public:
 
     [[nodiscard]] constexpr const char* data() const { return m_string; }
     [[nodiscard]] constexpr size_t size() const { return m_size; }
+
+    [[nodiscard]] constexpr bool empty() const { return m_size == 0; }
 
     [[nodiscard]] constexpr const char& at(size_t i) const
     {
