@@ -27,9 +27,16 @@ u32 IOAPIC::redirection_entry_count()
     return ((value & redirection_entry_mask) >> 16) - 1;
 }
 
-IOAPIC::Register IOAPIC::redirection_entry(u8 index, bool is_lower)
+void IOAPIC::RedirectionEntry::apply_redirection_to(u8 irq_index)
 {
-    return static_cast<Register>(static_cast<u32>(Register::REDIRECTION_TABLE) + (index * 2) + (is_lower ? 0 : 1));
+    u32 redirection_entry_as_u32[2];
+    copy_memory(this, redirection_entry_as_u32, sizeof(*this));
+
+    auto lower_register = static_cast<Register>(static_cast<u32>(Register::REDIRECTION_TABLE) + irq_index * 2);
+    auto higher_register = static_cast<Register>(static_cast<u32>(lower_register) + 1);
+    
+    write_register(lower_register, redirection_entry_as_u32[0]);
+    write_register(higher_register, redirection_entry_as_u32[1]);
 }
 
 void IOAPIC::map_irq(const InterruptController::IRQInfo& irq, u8 to_index)
@@ -43,10 +50,7 @@ void IOAPIC::map_irq(const InterruptController::IRQInfo& irq, u8 to_index)
     re.is_disabled = false;
     re.local_apic_id = InterruptController::smp_data().bootstrap_processor_apic_id;
 
-    volatile auto* redirection_lower = Address(&re).as_pointer<u32>();
-
-    write_register(redirection_entry(irq.redirected_irq_index, true), *redirection_lower);
-    write_register(redirection_entry(irq.redirected_irq_index, false), *(redirection_lower + 1));
+    re.apply_redirection_to(irq.redirected_irq_index);
 }
 
 void IOAPIC::select_register(Register reg)

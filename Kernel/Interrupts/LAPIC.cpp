@@ -110,11 +110,19 @@ u32 LAPIC::my_id()
     return (read_register(Register::ID) >> 24) & 0xFF;
 }
 
+void LAPIC::ICR::post()
+{
+    u32 icr_as_u32[2];
+    copy_memory(this, icr_as_u32, sizeof(*this));
+
+    write_register(Register::INTERRUPT_COMMAND_REGISTER_HIGHER, icr_as_u32[1]);
+    write_register(Register::INTERRUPT_COMMAND_REGISTER_LOWER, icr_as_u32[0]);
+}
+
 void LAPIC::send_ipi(DestinationType destination_type, u32 destination)
 {
-    if (destination_type == DestinationType::SPECIFIC && destination == invalid_destination) {
+    if (destination_type == DestinationType::SPECIFIC && destination == invalid_destination)
         runtime::panic("LAPIC: invalid destination with destination type == DEFAULT");
-    }
 
     ICR icr {};
 
@@ -126,11 +134,7 @@ void LAPIC::send_ipi(DestinationType destination_type, u32 destination)
     icr.destination_type = destination_type;
     icr.destination_id = destination;
 
-    // TODO: This breaks strict aliasing, fix
-    volatile auto* icr_pointer = Address(&icr).as_pointer<volatile u32>();
-
-    write_register(Register::INTERRUPT_COMMAND_REGISTER_HIGHER, *(icr_pointer + 1));
-    write_register(Register::INTERRUPT_COMMAND_REGISTER_LOWER, *icr_pointer);
+    icr.post();
 }
 
 void LAPIC::send_init_to(u8 id)
@@ -144,10 +148,7 @@ void LAPIC::send_init_to(u8 id)
     icr.destination_type = DestinationType::SPECIFIC;
     icr.destination_id = id;
 
-    volatile auto* icr_pointer = Address(&icr).as_pointer<volatile u32>();
-
-    write_register(Register::INTERRUPT_COMMAND_REGISTER_HIGHER, *(icr_pointer + 1));
-    write_register(Register::INTERRUPT_COMMAND_REGISTER_LOWER, *icr_pointer);
+    icr.post();
 }
 
 void LAPIC::send_startup_to(u8 id)
@@ -164,10 +165,7 @@ void LAPIC::send_startup_to(u8 id)
     icr.destination_type = DestinationType::SPECIFIC;
     icr.destination_id = id;
 
-    volatile auto* icr_pointer = Address(&icr).as_pointer<volatile u32>();
-
-    write_register(Register::INTERRUPT_COMMAND_REGISTER_HIGHER, *(icr_pointer + 1));
-    write_register(Register::INTERRUPT_COMMAND_REGISTER_LOWER, *icr_pointer);
+    icr.post();
 }
 
 // defined in Architecture/X/APTrampoline.asm

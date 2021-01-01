@@ -137,6 +137,7 @@ private:
             u8 vector_number;
             u8 entrypoint_page;
         };
+
         DeliveryMode delivery_mode : 3;
         DestinationMode destination_mode : 1;
         bool is_pending : 1;
@@ -150,6 +151,8 @@ private:
         // ICR HIGHER
         u32 reserved_4 : 24;
         u8 destination_id;
+
+        void post();
     };
 
     static constexpr size_t icr_size = 8;

@@ -28,8 +28,6 @@ public:
     static void map_irq(const InterruptController::IRQInfo& irq, u8 to_index);
 
 private:
-    static Register redirection_entry(u8, bool is_lower);
-
     static void select_register(Register);
 
     enum class DeliveryMode : u8 {
@@ -73,6 +71,8 @@ private:
         u64 reserved_1 : 38;
         u8 local_apic_id : 4;
         u8 reserved_2 : 4;
+
+        void apply_redirection_to(u8 irq_index);
     };
 
     static constexpr size_t redirection_entry_size = 8;
