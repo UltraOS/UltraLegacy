@@ -576,7 +576,14 @@ void MemoryManager::allocate_initial_kernel_regions()
     m_kernel_virtual_regions.emplace(VirtualRegion::from_specification(kernel_spec));
 
     auto kernel_heap_virtual_range = Range::from_two_pointers(kernel_first_heap_block_base, kernel_first_heap_block_ceiling);
-    Range kernel_heap_physical_range {}; // get this from somewhere lol
+
+    Range kernel_heap_physical_range {};
+    for (auto& entry : m_memory_map) {
+       if (entry.type == MemoryMap::PhysicalRange::Type::INITIAL_HEAP_BLOCK) {
+           kernel_physical_range.reset_with(Address(entry.begin()), Address(entry.end()));
+           break;
+       }
+    }
 
     VirtualRegion::Specification kheap_spec {};
     kheap_spec.is_supervisor = IsSupervisor::YES;

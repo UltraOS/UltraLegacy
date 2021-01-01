@@ -16,6 +16,7 @@ void BootAllocator::initialize(MemoryMap memory_map)
     ASSERT(is_ctored == false);
 
     new (instance_storage) BootAllocator(memory_map);
+    is_ctored = true;
 }
 
 BootAllocator& BootAllocator::the()
