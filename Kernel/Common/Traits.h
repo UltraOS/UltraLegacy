@@ -240,4 +240,13 @@ struct enable_if<true, T> {
 template <bool value, typename T = void>
 using enable_if_t = typename enable_if<value, T>::type;
 // --------------------
+
+// ---- in_place ----
+struct in_place_t {
+    explicit in_place_t() = default;
+};
+
+inline constexpr in_place_t in_place { };
+// --------------------
+
 }
