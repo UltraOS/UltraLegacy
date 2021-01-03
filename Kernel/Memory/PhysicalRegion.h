@@ -5,6 +5,7 @@
 #include "Common/Types.h"
 #include "Common/UniquePtr.h"
 #include "Common/Lock.h"
+#include "Common/Optional.h"
 #include "Range.h"
 
 namespace kernel {
@@ -22,8 +23,8 @@ public:
     size_t free_page_count() const { return m_free_pages; }
     bool has_free_pages() const { return m_free_pages; }
 
-    [[nodiscard]] DynamicArray<Page> allocate_pages(size_t count);
-    [[nodiscard]] Page allocate_page();
+    [[nodiscard]] Optional<DynamicArray<Page>> allocate_pages(size_t count);
+    [[nodiscard]] Optional<Page> allocate_page();
     void free_page(const Page& page);
 
     template <typename LoggerT>

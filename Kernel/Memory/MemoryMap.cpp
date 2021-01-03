@@ -48,7 +48,7 @@ void MemoryMap::copy_aligned_from(E820MemoryMap& e820)
 void MemoryMap::sort_by_address()
 {
     // 99% of BIOSes return a sorted memory map, which insertion sort handles at O(N)
-    // whereas quicksort would run at O(N^2).Even if it's unsorted, most E820 memory maps
+    // whereas quicksort would run at O(N^2). Even if it's unsorted, most E820 memory maps
     // only contain like 10-20 entries, so it's not a big deal.
     insertion_sort(begin(), end());
 }

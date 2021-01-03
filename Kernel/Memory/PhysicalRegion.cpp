@@ -27,32 +27,32 @@ size_t PhysicalRegion::physical_address_as_bit(Address address)
     return (address - m_range.begin()) / Page::size;
 }
 
-Page PhysicalRegion::allocate_page()
+Optional<Page> PhysicalRegion::allocate_page()
 {
     LOCK_GUARD(m_lock);
 
+    if (m_free_pages == 0)
+        return {};
+
     auto index = m_allocation_map.find_bit(false, m_next_hint);
 
-    if (index == -1) {
-        StackStringBuilder error_string;
-        error_string << "PhysicalRegion: Failed to allocate a physical page (Out of pages)!";
-        runtime::panic(error_string.data());
-    }
+    if (!index)
+        return {};
 
-    m_next_hint = static_cast<size_t>(index + 1);
+    m_next_hint = static_cast<size_t>(index.value() + 1);
 
     // reset hint in case we got the last index
     if (m_next_hint == m_allocation_map.size())
         m_next_hint = 0;
 
-    m_allocation_map.set_bit(index, true);
+    m_allocation_map.set_bit(*index, true);
     --m_free_pages;
 
 #ifdef PHYSICAL_REGION_DEBUG
     log() << "PhysicalRegion: allocating a page at address " << bit_as_physical_address(index);
 #endif
 
-    return Page(bit_as_physical_address(index));
+    return Page(bit_as_physical_address(*index));
 }
 
 void PhysicalRegion::free_page(const Page& page)

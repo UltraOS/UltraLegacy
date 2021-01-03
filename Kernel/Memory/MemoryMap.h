@@ -94,7 +94,7 @@ struct MemoryMap {
             case Type::INITIAL_HEAP_BLOCK:
                 return "initial heap block"_sv;
             case Type::GENERIC_BOOTALLOC_RESERVED:
-                return "generic boot allocator reserved";
+                return "generic boot allocator reserved"_sv;
             default:
                 return "unknown"_sv;
             }

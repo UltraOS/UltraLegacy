@@ -4,6 +4,7 @@
 #include "Macros.h"
 #include "Math.h"
 #include "Pair.h"
+#include "Optional.h"
 
 namespace kernel {
 
@@ -22,7 +23,7 @@ public:
     size_t size() const { return m_bit_count; }
 
     // checks sizeof(void*) * 8 bits at a time
-    ssize_t find_bit(bool of_value, size_t hint = 0) const
+    Optional<size_t> find_bit(bool of_value, size_t hint = 0) const
     {
         ASSERT(hint < m_bit_count);
 
@@ -52,10 +53,10 @@ public:
             start = 0;
         }
 
-        return -1;
+        return {};
     }
 
-    ssize_t find_range(size_t length, bool of_value) const
+    Optional<size_t> find_range(size_t length, bool of_value) const
     {
         size_t contiguous_bits = 0;
         ssize_t first_bit = -1;
@@ -77,7 +78,7 @@ public:
                 return first_bit;
         }
 
-        return -1;
+        return {};
     }
 
     void set_size(size_t bit_count)
@@ -130,7 +131,7 @@ public:
         return unit & bit_as_mask(location.second());
     }
 
-    size_t range_as_number(size_t index, size_t length)
+    size_t range_as_number(size_t index, size_t length) const
     {
         ASSERT(index + length <= m_bit_count);
 

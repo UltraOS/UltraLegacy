@@ -133,12 +133,12 @@ u8* MemoryManager::quickmap_page(Address physical_address)
     // TODO: this can technically be replaced with some other mechanism to wait
     // for an available slot, as well as just allocating a page-sized range from the
     // virtual allocator.
-    if (slot == -1)
+    if (!slot)
         runtime::panic("Out of quickmap slots!");
 
-    m_quickmap_slots.set_bit(slot, true);
+    m_quickmap_slots.set_bit(slot.value(), true);
 
-    Address virtual_address = m_quickmap_range.begin() + slot * Page::size;
+    Address virtual_address = m_quickmap_range.begin() + slot.value() * Page::size;
 
 #ifdef MEMORY_MANAGER_SUPER_DEBUG
     log() << "MemoryManager: quickmapping vaddr " << virtual_address << " to " << physical_address;
@@ -170,17 +170,17 @@ void MemoryManager::unquickmap_page(Address virtual_address)
 
 Page MemoryManager::allocate_page(bool should_zero)
 {
-    m_free_physical_bytes -= Page::size;
-
     for (auto& region : m_physical_regions) {
-        if (!region->has_free_pages())
-            continue;
-
         // We have to `const_cast` because RedBlackTree nodes are always const for obvious reasons.
         // However, here we know that allocating a page won't break the tree structure since
         // we don't change the value of the PhysicalRegion::range, and that's what's used for
         // sorting the ranges in the tree.
         auto page = const_cast<PhysicalRegion&>(*region).allocate_page();
+
+        if (!page)
+            continue;
+
+        m_free_physical_bytes -= Page::size;
 
         if (should_zero) {
 #ifdef MEMORY_MANAGER_SUPER_DEBUG
@@ -188,16 +188,16 @@ Page MemoryManager::allocate_page(bool should_zero)
 #endif
 
 #ifdef ULTRA_32
-            ScopedPageMapping mapping(page.address());
+            ScopedPageMapping mapping(page->address());
 
             zero_memory(mapping.as_pointer(), Page::size);
 
 #elif defined(ULTRA_64)
-            zero_memory(physical_to_virtual(page.address()).as_pointer<void>(), Page::size);
+            zero_memory(physical_to_virtual(page->address()).as_pointer<void>(), Page::size);
 #endif
         }
 
-        return page;
+        return *page;
     }
 
     runtime::panic("MemoryManager: Out of physical memory!");

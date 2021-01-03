@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/Runtime.h"
+#include "Types.h"
 #include "Traits.h"
 #include "Utilities.h"
 
@@ -206,7 +207,7 @@ private:
     }
 
 private:
-    alignas(T) uint8_t m_value[sizeof(T)];
+    alignas(T) u8 m_value[sizeof(T)];
     bool m_has_value { false };
 
 };

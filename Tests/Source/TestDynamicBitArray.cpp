@@ -54,37 +54,37 @@ TEST(FindBit) {
 
     array.set_range_to(0, 129, true);
     array.set_bit(128, false);
-    Assert::that(array.find_bit(false)).is_equal(128);
+    Assert::that(array.find_bit(false).value_or(-1)).is_equal(128);
 
     array.set_range_to(0, 129, false);
     array.set_bit(128, true);
-    Assert::that(array.find_bit(true)).is_equal(128);
+    Assert::that(array.find_bit(true).value_or(-1)).is_equal(128);
 
     array.set_range_to(0, 129, false);
-    Assert::that(array.find_bit(true)).is_equal(-1);
+    Assert::that(array.find_bit(true).value_or(-1)).is_equal(-1);
 
     array.set_range_to(0, 129, true);
-    Assert::that(array.find_bit(false)).is_equal(-1);
+    Assert::that(array.find_bit(false).value_or(-1)).is_equal(-1);
 
     // good hint
     array.set_bit(63, false);
     array.set_bit(128, false);
-    Assert::that(array.find_bit(false, 128)).is_equal(128);
+    Assert::that(array.find_bit(false, 128).value_or(-1)).is_equal(128);
 
     // bad hint
     array.set_bit(128, true);
-    Assert::that(array.find_bit(false, 128)).is_equal(63);
+    Assert::that(array.find_bit(false, 128).value_or(-1)).is_equal(63);
 
     array.set_range_to(0, 129, false);
 
     // good hint
     array.set_bit(63, true);
     array.set_bit(126, true);
-    Assert::that(array.find_bit(true, 64)).is_equal(126);
+    Assert::that(array.find_bit(true, 64).value_or(-1)).is_equal(126);
 
     // bad hint
     array.set_bit(126, false);
-    Assert::that(array.find_bit(true, 64)).is_equal(63);
+    Assert::that(array.find_bit(true, 64).value_or(-1)).is_equal(63);
 }
 
 TEST(FindRange) {
@@ -92,7 +92,7 @@ TEST(FindRange) {
 
     array.set_range_to(0, 129, true);
 
-    Assert::that(array.find_range(129, true)).is_equal(0);
-    Assert::that(array.find_range(2, false)).is_equal(-1);
-    Assert::that(array.find_range(1, false)).is_equal(129);
+    Assert::that(array.find_range(129, true).value_or(-1)).is_equal(0);
+    Assert::that(array.find_range(2, false).value_or(-1)).is_equal(-1);
+    Assert::that(array.find_range(1, false).value_or(-1)).is_equal(129);
 }
