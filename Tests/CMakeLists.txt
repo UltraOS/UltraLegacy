@@ -58,6 +58,7 @@ KERNEL_FILE(PATH "Common" FILE "RedBlackTree.h")
 KERNEL_FILE(PATH "Common" FILE "RefPtr.h")
 KERNEL_FILE(PATH "Common" FILE "UniquePtr.h")
 KERNEL_FILE(PATH "Common" FILE "Pair.h")
+KERNEL_FILE(PATH "Common" FILE "Optional.h")
 KERNEL_FILE(PATH "Core"   FILE "Boot.h")
 
 KERNEL_FILE(PATH "Drivers/Video" FILE "VideoMode.h")

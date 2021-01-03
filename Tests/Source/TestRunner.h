@@ -448,9 +448,20 @@ public:
 
 class Deletable {
 public:
-    Deletable(size_t& counter) : m_counter(counter) {}
-    ~Deletable() { m_counter++; }
+    Deletable(size_t& counter) : m_counter(&counter) {}
+    ~Deletable() { (*m_counter)++; }
 
 private:
-    size_t& m_counter;
+    size_t* m_counter;
+};
+
+struct ConstructableDeletable : public Deletable {
+    ConstructableDeletable(size_t& ctor_counter, size_t& dtor_counter)
+        : Deletable(dtor_counter), m_ctor_counter(&ctor_counter)
+    {
+        (*m_ctor_counter)++;
+    }
+
+private:
+    size_t* m_ctor_counter;
 };

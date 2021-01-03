@@ -2,17 +2,6 @@
 
 #include "Common/RefPtr.h"
 
-struct ConstructableDeletable : public Deletable {
-    ConstructableDeletable(size_t& ctor_counter, size_t& dtor_counter)
-        : Deletable(dtor_counter), m_ctor_counter(ctor_counter)
-    {
-        m_ctor_counter++;
-    }
-
-private:
-    size_t& m_ctor_counter;
-};
-
 TEST(RefPtrNonOwning) {
     size_t ctored_counter = 0;
     size_t dtored_counter = 0;
