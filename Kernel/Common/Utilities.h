@@ -100,8 +100,8 @@ struct Greater<void> {
     }
 };
 
-template <typename T, typename U, typename Comparator = Less<>>
-T* lower_bound(T* begin, T* end, const U& key, Comparator comparator = Comparator())
+template <typename ItrT, typename U, typename Comparator = Less<>>
+ItrT lower_bound(ItrT begin, ItrT end, const U& key, Comparator comparator = Comparator())
 {
     ASSERT(begin <= end);
 
@@ -135,12 +135,29 @@ T* lower_bound(T* begin, T* end, const U& key, Comparator comparator = Comparato
     return lower_bound;
 }
 
-template <typename T, typename U, typename Comparator = Less<>>
-T* binary_search(T* begin, T* end, const U& value, Comparator comparator = Comparator())
+template <typename ItrT, typename U, typename Comparator = Less<>>
+ItrT binary_search(ItrT begin, ItrT end, const U& value, Comparator comparator = Comparator())
 {
     auto* result = lower_bound(begin, end, value, comparator);
 
     return result == end ? result : (comparator(value, *result) ? end : result);
+}
+
+template <typename ItrT, typename U>
+ItrT linear_search(ItrT begin, ItrT end, const U& value)
+{
+    return linear_search(begin, end, value, [](decltype(*begin) l, const U& r) { return l == r; });
+}
+
+template <typename ItrT, typename U, typename Pred>
+ItrT linear_search(ItrT begin, ItrT end, const U& value, Pred predicate)
+{
+    for (auto itr = begin; itr < end; ++itr) {
+        if (predicate(*itr, value))
+            return itr;
+    }
+
+    return end;
 }
 
 template <typename T, typename Comparator = Less<T>>

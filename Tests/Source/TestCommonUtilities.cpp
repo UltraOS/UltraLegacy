@@ -175,3 +175,28 @@ TEST(InsertionSortEdges) {
     kernel::insertion_sort(one_elem_array, one_elem_array + 1);
     Assert::that(one_elem_array[0]).is_equal(1);
 }
+
+struct super_struct {
+    int x;
+    int y;
+
+    friend bool operator==(super_struct l, super_struct r) { return l.x == r.x; }
+};
+
+TEST(LinearSearch) {
+    std::vector<super_struct> v;
+    v.push_back({ 1, 2 });
+    v.push_back({ 2, 3 });
+    v.push_back({ 3, 4 });
+
+    auto itr = kernel::linear_search(v.begin(), v.end(), super_struct{ 2, 0 });
+    Assert::that(itr).is_not_equal(v.end());
+    Assert::that(itr->x).is_equal(2);
+
+    itr = kernel::linear_search(v.begin(), v.end(), super_struct{ 4, 0 });
+    Assert::that(itr).is_equal(v.end());
+
+    itr = kernel::linear_search(v.begin(), v.end(), 3, [](super_struct l, int r) { return l.y == r; });
+    Assert::that(itr).is_not_equal(v.end());
+    Assert::that(itr->y).is_equal(3);
+}
