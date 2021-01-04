@@ -38,7 +38,7 @@ InterruptSafeSpinLock& HeapAllocator::refill_lock()
 
 void HeapAllocator::initialize()
 {
-    // call the ctor manually because we haven't initialized global objects yet
+    // call the ctors manually because we haven't initialized global objects yet
     new (heap_total_free_bytes_storage) Atomic<size_t>;
     new (heap_allocation_lock_storage) InterruptSafeSpinLock;
     new (heap_refill_lock_storage) InterruptSafeSpinLock;
@@ -104,6 +104,14 @@ void HeapAllocator::refill_if_needed(size_t bytes_left)
 {
     if (bytes_left > upper_allocation_threshold)
         return;
+
+    if (!MemoryManager::is_initialized() || !AddressSpace::is_initialized()) {
+        if (bytes_left == 0)
+            runtime::panic("HeapAllocator: ran out of initial heap memory before MM initialization!");
+
+        warning() << "HeapAllocator: bytes_left < safe threshold before MM initialization!";
+        return;
+    }
 
     log() << "HeapAllocator: bytes_left = " << bytes_left << ", refilling...";
 
