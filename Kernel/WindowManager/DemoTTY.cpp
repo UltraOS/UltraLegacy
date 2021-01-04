@@ -49,7 +49,7 @@ void DemoTTY::run()
 void DemoTTY::tick()
 {
     static constexpr size_t cursor_blink_timeout_ns = 500 * Time::nanoseconds_in_millisecond;
-    bool cursor_should_blink = m_last_cursor_blink_time + cursor_blink_timeout_ns < Timer::the().nanoseconds_since_boot();
+    bool cursor_should_blink = m_last_cursor_blink_time + cursor_blink_timeout_ns < Timer::nanoseconds_since_boot();
 
     if (!is_scrolled()) {
         if (cursor_should_blink) {
@@ -57,7 +57,7 @@ void DemoTTY::tick()
                 m_x_offset += 1;
                 clear_characters(1, false);
                 m_cursor_is_shown = false;
-                m_last_cursor_blink_time = Timer::the().nanoseconds_since_boot();
+                m_last_cursor_blink_time = Timer::nanoseconds_since_boot();
             } else {
                 draw_cursor();
             }
@@ -149,7 +149,7 @@ void DemoTTY::execute_command()
     } else if (m_current_command == "uptime"_sv) {
         write("\nUptime: ");
         char buffer[21];
-        auto seconds_since_boot = Timer::the().nanoseconds_since_boot() / Time::nanoseconds_in_second;
+        auto seconds_since_boot = Timer::nanoseconds_since_boot() / Time::nanoseconds_in_second;
         write({ buffer, to_string(seconds_since_boot, buffer, 21) });
         write(" seconds\n");
     } else if (m_current_command == "pm"_sv) {
@@ -242,6 +242,7 @@ void DemoTTY::execute_command()
         write ("pm - physical memory stats\n"_sv);
         write("video-mode - get current video mode information\n"_sv);
         write("cpu - get CPU information\n"_sv);
+        write("timer - get the primary system timer model\n"_sv);
         write("clear - clear the terminal screen\n"_sv);
     } else if (m_current_command == "kvm"_sv) {
         write("\nKernel address space virtual memory dump:\n");
@@ -249,6 +250,10 @@ void DemoTTY::execute_command()
     } else if (m_current_command == "kvr"_sv) {
         write("\nKernel virtual regions dump:\n");
         write(MemoryManager::the().kernel_virtual_regions_debug_dump().to_view());
+        write("\n");
+    } else if (m_current_command == "timer"_sv) {
+        write("\nCurrent primary timer: ");
+        write(Timer::primary().model());
         write("\n");
     } else if (m_current_command.empty()) {
         write("\n");
@@ -438,7 +443,7 @@ void DemoTTY::draw_cursor()
     m_painter.fill_rect(to_fill, Color::white());
     m_window->invalidate_part_of_view_rect({ top_left.moved_by({ padding_x, padding_y }), 1, Painter::font_height });
 
-    m_last_cursor_blink_time = Timer::the().nanoseconds_since_boot();
+    m_last_cursor_blink_time = Timer::nanoseconds_since_boot();
     m_cursor_is_shown = true;
 }
 
