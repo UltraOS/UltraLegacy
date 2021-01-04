@@ -23,18 +23,21 @@ Timer::Timer(u16 irq_index)
         make_primary();
 }
 
-void Timer::on_event(const RegisterState& register_state, bool is_bsp, bool is_primary_timer)
+void Timer::on_tick(const RegisterState& register_state, bool is_bsp)
 {
-    if (is_bsp && is_primary_timer) {
+    if (!is_primary())
+        return;
+
+    if (is_bsp) {
         LOCK_GUARD(s_lock);
 
-        s_nanoseconds_since_boot += Time::nanoseconds_in_second / primary().current_frequency();
+        s_nanoseconds_since_boot += Time::nanoseconds_in_second / current_frequency();
 
         for (auto handler : s_transparent_handlers)
             handler();
     }
 
-    InterruptController::the().end_of_interrupt(primary().irq_index());
+    InterruptController::the().end_of_interrupt(irq_index());
     s_scheduler_handler(register_state);
 }
 

@@ -98,10 +98,10 @@ protected:
 private:
     void handle_irq(const RegisterState& registers) override
     {
-        on_event(registers, CPU::current().is_bsp(), is_primary());
+        on_tick(registers, CPU::current().is_bsp());
     }
 
-    static void on_event(const RegisterState&, bool is_bsp, bool is_primary_timer);
+    void on_tick(const RegisterState&, bool is_bsp);
 
 private:
     InterruptSafeSpinLock m_timer_specific_lock;
