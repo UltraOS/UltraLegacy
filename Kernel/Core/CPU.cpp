@@ -45,9 +45,9 @@ void CPU::initialize()
     if (supports_smp()) {
         // emplace the bsp ID
         s_processors.emplace(LAPIC::my_id());
-        LAPIC::timer().initialize_for_this_processor();
-    } else
+    } else {
         s_processors.emplace(0);
+    }
 
     ++s_alive_counter;
 }
@@ -81,6 +81,10 @@ void CPU::start_all_processors()
         while (old_alive_counter == s_alive_counter)
             ;
     }
+
+    // now LAPIC is the primary timer
+    Timer::get_specific(Timer::Type::LAPIC).make_primary();
+    Timer::primary().enable(); // enable for the BSP
 }
 
 CPU::LocalData& CPU::current()
@@ -114,8 +118,12 @@ void CPU::ap_entrypoint()
     GDT::the().install();
     IDT::the().install();
     PAT::the().synchronize();
+
     LAPIC::initialize_for_this_processor();
-    LAPIC::timer().initialize_for_this_processor();
+    auto& timer = Timer::get_specific(Timer::Type::LAPIC);
+    timer.calibrate_for_this_processor();
+    timer.enable();
+
     Process::inititalize_for_this_processor();
     CPU::current().set_tss(new TSS);
 

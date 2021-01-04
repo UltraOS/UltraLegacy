@@ -74,7 +74,7 @@ public:
     bool is_running() const { return m_state == State::RUNNING; }
     bool is_ready() const { return m_state == State::READY; }
 
-    bool should_be_woken_up() const { return m_wake_up_time <= Timer::the().nanoseconds_since_boot(); }
+    bool should_be_woken_up() const { return m_wake_up_time <= Timer::nanoseconds_since_boot(); }
 
     void set_window(Window* window) { m_window = window; }
 

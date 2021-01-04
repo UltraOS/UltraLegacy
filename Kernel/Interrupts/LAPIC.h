@@ -3,46 +3,61 @@
 #include "Common/Types.h"
 #include "IRQHandler.h"
 #include "Memory/AddressSpace.h"
+#include "Timer.h"
 
 namespace kernel {
 
 class LAPIC {
-    MAKE_STATIC(LAPIC);
+    MAKE_NONCOPYABLE(LAPIC)
+    MAKE_NONMOVABLE(LAPIC);
 
 public:
+    // replace with numeric_limits
     static constexpr u32 invalid_destination = -1;
     static constexpr u32 spurious_irq_index = 0xFF;
 
-    class Timer : IRQHandler {
-        friend class LAPIC;
-        MAKE_SINGLETON(Timer)
-            : IRQHandler(irq_number)
+    class Timer : public ::kernel::Timer {
+    public:
+        Timer()
+            : ::kernel::Timer(irq_number)
         {
         }
 
-    public:
         static constexpr u32 irq_number = 253;
         static constexpr u32 masked_bit = 1 << 16;
         static constexpr u32 periodic_mode = 1 << 17;
-        static constexpr u32 ticks_per_second = 100;
-
-        void initialize_for_this_processor();
-
-        void handle_irq(const RegisterState& registers) override;
-        void finalize_irq() override { }
+        
+        void calibrate_for_this_processor() override;
 
         void enable_irq() override;
         void disable_irq() override;
+
+        void enable() override { enable_irq(); }
+        void disable() override { disable_irq(); }
+
+        void set_frequency(u32) override
+        {
+            ASSERT(!"set_frequency() is not implemented");
+        }
+
+        void nano_delay(u32) override
+        {
+            ASSERT(!"nano_delay() is not implemented");
+        }
+
+        u32 max_frequency() const override
+        {
+            ASSERT(!"max_frequency() is not implemented");
+        }
+        
+        u32 current_frequency() const override { return default_ticks_per_second; }
+
+        bool is_per_cpu() const override { return true; }
+        StringView model() const override { return "LAPIC"_sv; }
+        Type type() const override { return Type::LAPIC; }
     };
 
 public:
-    static Timer& timer()
-    {
-        ASSERT(s_timer != nullptr);
-
-        return *s_timer;
-    }
-
     enum class Register {
         ID = 0x20,
         VERSION = 0x30,
@@ -165,6 +180,5 @@ private:
 
 private:
     static Address s_base;
-    static Timer* s_timer;
 };
 }

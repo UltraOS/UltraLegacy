@@ -1,9 +1,23 @@
 #include "Time.h"
-#include "Common/Logger.h"
+#include "Interrupts/Timer.h"
+#include "RTC.h"
+
 namespace kernel {
 
 Time::time_t Time::s_ns;
 Time::time_t Time::s_now;
+
+void Time::initialize()
+{
+    RTC::synchronize_system_clock();
+    Timer::register_handler(on_timer_tick);
+}
+
+void Time::on_timer_tick()
+{
+    s_ns += Time::nanoseconds_in_second / Timer::primary().current_frequency();
+    check_if_second_passed();
+}
 
 bool Time::is_leap_year(u16 year)
 {

@@ -17,5 +17,7 @@ public:
 
     bool is_spurious(u8 request_number) override;
     void handle_spurious_irq(u8 request_number) override;
+
+    Type type() const override { return Type::APIC; }
 };
 }

@@ -5,10 +5,10 @@
 
 namespace kernel {
 
-class PIT final : public Timer, public IRQHandler {
-    MAKE_SINGLETON_INHERITABLE(Timer, PIT);
-
+class PIT final : public Timer {
 public:
+    PIT();
+
     static constexpr u32 frequency = 1193180;
     // TODO: replace with numeric_limits<u16>::max();
     static constexpr u16 max_divisor = 0xFFFF;
@@ -28,26 +28,18 @@ public:
 
     u32 current_frequency() const override { return m_frequency; }
 
+    bool is_per_cpu() const override { return false; }
     StringView model() const override { return "PIT (8254)"_sv; };
-    bool has_internal_counter() override { return false; }
-
-    u64 nanoseconds_since_boot() override;
-    void increment_time_since_boot(u64 nanoseconds) override { m_nanoseconds_since_boot += nanoseconds; }
+    Type type() const override { return Type::PIT; }
 
     void enable() override { enable_irq(); }
     void disable() override { disable_irq(); }
 
     void nano_delay(u32 ns) override;
 
-    // don't do anything since we finalize manually
-    void finalize_irq() override { }
-
-    void handle_irq(const RegisterState& registers) override;
-
     ~PIT() { disable_irq(); }
 
 private:
-    Atomic<u64> m_nanoseconds_since_boot { 0 };
     u32 m_frequency { 0 };
 };
 }

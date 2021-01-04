@@ -20,6 +20,7 @@ void Scheduler::inititalize()
     s_instance = new Scheduler();
     Process::inititalize_for_this_processor();
     Thread::initialize();
+    Timer::register_scheduler_handler(on_tick);
 }
 
 void Scheduler::enqueue_thread(Thread& thread)

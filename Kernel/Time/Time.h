@@ -18,6 +18,8 @@ public:
 
     static constexpr u16 epoch_year = 1970;
 
+    static void initialize();
+
     enum class Month : u8 {
         January = 1,
         February,
@@ -112,11 +114,7 @@ public:
 
     static void set(u64 now) { s_now = now; }
 
-    static void increment_by(u64 ns)
-    {
-        s_ns += ns;
-        check_if_second_passed();
-    }
+    static void on_timer_tick();
 
     static time_t to_unix(const HumanReadable&);
     static HumanReadable from_unix(time_t);

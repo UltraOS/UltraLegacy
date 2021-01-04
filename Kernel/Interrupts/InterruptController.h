@@ -11,6 +11,11 @@ class InterruptController {
     MAKE_INHERITABLE_SINGLETON(InterruptController) = default;
 
 public:
+    enum class Type {
+        PIC,
+        APIC,
+    };
+
     static void discover_and_setup();
 
     static InterruptController& the();
@@ -51,6 +56,8 @@ public:
 
     virtual bool is_spurious(u8 request_number) = 0;
     virtual void handle_spurious_irq(u8 request_number) = 0;
+
+    virtual Type type() const = 0;
 
 private:
     class MP {

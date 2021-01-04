@@ -1,16 +1,13 @@
 #include "Common/Logger.h"
 #include "Core/IO.h"
-
-#include "InterruptController.h"
 #include "Memory/MemoryManager.h"
-#include "Multitasking/Scheduler.h"
 
 #include "PIT.h"
 
 namespace kernel {
 
 PIT::PIT()
-    : IRQHandler(irq_number)
+    : Timer(irq_number)
 {
     set_frequency(default_ticks_per_second);
 }
@@ -37,29 +34,6 @@ void PIT::set_frequency(u32 ticks_per_second)
 
     IO::out8<timer_data>(divisor & 0x000000FF);
     IO::out8<timer_data>((divisor & 0x0000FF00) >> 8);
-}
-
-u64 PIT::nanoseconds_since_boot()
-{
-    return m_nanoseconds_since_boot;
-}
-
-void PIT::handle_irq(const RegisterState& registers)
-{
-    // TODO: it's really annoying to have to increment a bunch of clocks in every timer.
-    //       find a way to make it better.
-    auto time_elapsed = Time::nanoseconds_in_second / current_frequency();
-
-    m_nanoseconds_since_boot += time_elapsed;
-    Time::increment_by(time_elapsed);
-
-    // do this here manually since Scheduler::on_tick is very likely to switch the task
-    InterruptController::the().end_of_interrupt(irq_index());
-
-    // TODO: make this more pretty
-    // e.g the schedulers subscribes on timer events
-    // through some kind of a global Timer class or whatever
-    Scheduler::on_tick(registers);
 }
 
 void PIT::nano_delay(u32 ns)

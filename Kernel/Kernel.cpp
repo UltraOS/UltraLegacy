@@ -62,7 +62,7 @@ void run(LoaderContext* context)
 
     CPU::start_all_processors();
 
-    RTC::synchronize_system_clock();
+    Time::initialize();
 
     WindowManager::initialize();
 

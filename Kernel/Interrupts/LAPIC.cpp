@@ -14,7 +14,6 @@
 namespace kernel {
 
 Address LAPIC::s_base;
-LAPIC::Timer* LAPIC::s_timer;
 
 void LAPIC::set_base_address(Address physical_base)
 {
@@ -34,48 +33,29 @@ void LAPIC::initialize_for_this_processor()
     static constexpr u32 enable_bit = 0b100000000;
 
     write_register(Register::SPURIOUS_INTERRUPT_VECTOR, current_value | enable_bit | spurious_irq_index);
-
-    if (!s_timer)
-        s_timer = new Timer();
 }
 
-void LAPIC::Timer::initialize_for_this_processor()
+void LAPIC::Timer::calibrate_for_this_processor()
 {
-    using Timer = ::kernel::Timer;
-    LOCK_GUARD(Timer::the().timer_lock());
+    auto& primary_timer = primary();
+
+    LOCK_GUARD(primary_timer.lock());
 
     static constexpr u32 divider_16 = 0b11;
     // TODO: replace with numeric_limits<u32>::max()
     static constexpr u32 initial_counter = 0xFFFFFFFF;
 
-    static constexpr u32 sleep_delay = Time::milliseconds_in_second / ticks_per_second;
+    static constexpr u32 sleep_delay = Time::milliseconds_in_second / default_ticks_per_second;
 
     write_register(Register::DIVIDE_CONFIGURATION, divider_16);
     write_register(Register::INITIAL_COUNT, initial_counter);
 
-    Timer::the().mili_delay(sleep_delay);
+    primary_timer.mili_delay(sleep_delay);
 
     auto total_ticks = initial_counter - read_register(Register::CURRENT_COUNT);
 
-    write_register(Register::LVT_TIMER, irq_number | periodic_mode);
+    write_register(Register::LVT_TIMER, irq_number | periodic_mode | masked_bit);
     write_register(Register::INITIAL_COUNT, total_ticks);
-}
-
-void LAPIC::Timer::handle_irq(const RegisterState& registers)
-{
-    end_of_interrupt();
-
-    if (CPU::current().is_bsp()) {
-        using Timer = ::kernel::Timer;
-
-        // If the timer doesn't have an internal counter than we have to manually increment it
-        if (!Timer::the().has_internal_counter())
-            Timer::the().increment_time_since_boot(Time::nanoseconds_in_second / ticks_per_second);
-
-        Time::increment_by(Time::nanoseconds_in_second / ticks_per_second);
-    }
-
-    Scheduler::on_tick(registers);
 }
 
 void LAPIC::Timer::enable_irq()
@@ -216,16 +196,16 @@ void LAPIC::start_processor(u8 id)
         entrypoint_relocated = true;
     }
 
-    using Timer = ::kernel::Timer;
-    LOCK_GUARD(Timer::the().timer_lock());
+    auto& timer = Timer::primary();
+    LOCK_GUARD(timer.lock());
 
     send_init_to(id);
 
-    Timer::the().mili_delay(10);
+    timer.mili_delay(10);
 
     send_startup_to(id);
 
-    Timer::the().mili_delay(1);
+    timer.mili_delay(1);
 
     if (*is_ap_alive) {
         log() << "LAPIC: Application processor " << id << " started successfully";
@@ -241,7 +221,7 @@ void LAPIC::start_processor(u8 id)
 
     // wait for 1 second
     for (size_t i = 0; i < 20; ++i)
-        Timer::the().mili_delay(50);
+        timer.mili_delay(50);
 
     if (*is_ap_alive) {
         log() << "LAPIC: Application processor " << id << " started successfully after second SIPI";
