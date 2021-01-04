@@ -123,6 +123,13 @@ public:
         return last();
     }
 
+    void erase(T* itr)
+    {
+        ASSERT(itr >= begin() && itr < end());
+
+        erase_at(itr - begin());
+    }
+
     void erase_at(size_t i)
     {
         ASSERT(i < m_size);
