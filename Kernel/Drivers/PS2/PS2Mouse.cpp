@@ -8,7 +8,20 @@ PS2Mouse::PS2Mouse(PS2Controller::Channel channel)
     : PS2Device(channel)
 {
     detect_subtype();
+    set_resolution(default_resolution);
     enable_irq();
+}
+
+void PS2Mouse::set_resolution(u8 resolution)
+{
+    static constexpr u8 maximum_resolution = 0x03;
+
+    ASSERT(resolution <= maximum_resolution);
+
+    static constexpr u8 set_resolution_command = 0xE8;
+
+    send_command(set_resolution_command);
+    send_command(resolution);
 }
 
 void PS2Mouse::set_sample_rate(u8 rate)

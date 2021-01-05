@@ -13,9 +13,12 @@ public:
         FIVE_BUTTONS = 0x04,
     };
 
+    static constexpr u8 default_resolution = 0x1;
+
     explicit PS2Mouse(PS2Controller::Channel channel);
 
-    void set_sample_rate(u8 rate);
+    void set_resolution(u8);
+    void set_sample_rate(u8);
 
     void handle_action() override;
 
