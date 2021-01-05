@@ -30,17 +30,24 @@ void WindowManager::run()
 {
     auto& self = the();
 
+    static constexpr auto nanoseconds_between_frames = Time::nanoseconds_in_second / 60;
+
+    auto next_frame_time = Timer::nanoseconds_since_boot() + nanoseconds_between_frames;
+
     for (;;) {
         // Don't hold the lock while sleeping
         {
-            LockGuard lock_guard(self.window_lock());
+            LOCK_GUARD(self.window_lock());
 
             EventManager::the().dispatch_pending();
 
             Compositor::the().compose();
         }
 
-        sleep::for_milliseconds(1000 / 100);
+        while (Timer::nanoseconds_since_boot() < next_frame_time)
+            continue;
+
+        next_frame_time = Timer::nanoseconds_since_boot() + nanoseconds_between_frames;
     }
 }
 }
