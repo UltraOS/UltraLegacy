@@ -1,8 +1,8 @@
 #include "Timer.h"
 #include "Core/CPU.h"
 #include "Core/Runtime.h"
-#include "PIT.h"
 #include "Interrupts/LAPIC.h"
+#include "PIT.h"
 
 namespace kernel {
 

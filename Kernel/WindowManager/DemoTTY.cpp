@@ -239,7 +239,7 @@ void DemoTTY::execute_command()
         write("memory-map - UltraOS memory map, sorted & formatted\n"_sv);
         write("kvm - dump kernel address space information\n"_sv);
         write("kvr - dump all kernel virtual regions\n"_sv);
-        write ("pm - physical memory stats\n"_sv);
+        write("pm - physical memory stats\n"_sv);
         write("video-mode - get current video mode information\n"_sv);
         write("cpu - get CPU information\n"_sv);
         write("timer - get the primary system timer model\n"_sv);

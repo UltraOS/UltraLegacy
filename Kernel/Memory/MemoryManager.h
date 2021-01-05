@@ -216,7 +216,7 @@ private:
 private:
     static MemoryManager* s_instance;
     static LoaderContext* s_loader_context;
-    
+
     mutable InterruptSafeSpinLock m_virtual_region_lock;
 
     RedBlackTree<RefPtr<VirtualRegion>, Less<>> m_kernel_virtual_regions;

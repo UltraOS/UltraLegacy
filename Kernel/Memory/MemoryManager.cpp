@@ -346,7 +346,7 @@ void MemoryManager::inititalize(AddressSpace& directory)
     directory.entry_at(recursive_entry_index, new_directory_mapping.raw())
         .set_physical_address(directory.physical_address())
         .make_supervisor_present();
-    
+
 #elif defined(ULTRA_64)
     auto byte_offset = kernel_first_table_index * AddressSpace::Table::entry_size;
     auto bytes_to_copy = (kernel_last_table_index - kernel_first_table_index + 1) * AddressSpace::Table::entry_size;
@@ -563,8 +563,8 @@ void MemoryManager::allocate_initial_kernel_regions()
 
     auto kernel_virtual_range = Range::from_two_pointers(kernel_reserved_base, kernel_reserved_ceiling);
     auto kernel_physical_range = Range::from_two_pointers(
-            virtual_to_physical(kernel_reserved_base),
-            virtual_to_physical(kernel_reserved_ceiling - 1) + 1);
+        virtual_to_physical(kernel_reserved_base),
+        virtual_to_physical(kernel_reserved_ceiling - 1) + 1);
 
     VirtualRegion::Specification kernel_spec {};
     kernel_spec.is_supervisor = IsSupervisor::YES;
@@ -579,10 +579,10 @@ void MemoryManager::allocate_initial_kernel_regions()
 
     Range kernel_heap_physical_range {};
     for (auto& entry : m_memory_map) {
-       if (entry.type == MemoryMap::PhysicalRange::Type::INITIAL_HEAP_BLOCK) {
-           kernel_physical_range.reset_with(Address(entry.begin()), Address(entry.end()));
-           break;
-       }
+        if (entry.type == MemoryMap::PhysicalRange::Type::INITIAL_HEAP_BLOCK) {
+            kernel_physical_range.reset_with(Address(entry.begin()), Address(entry.end()));
+            break;
+        }
     }
 
     VirtualRegion::Specification kheap_spec {};
@@ -608,8 +608,8 @@ void MemoryManager::allocate_initial_kernel_regions()
     Address phyiscal_end = max<Address>(m_memory_map.highest_address(), AddressSpace::lower_identity_size);
     auto physical_memory_virtual_range = Range::from_two_pointers(physical_memory_base, physical_to_virtual(phyiscal_end));
     auto physical_memory_physical_range = Range::from_two_pointers(
-            virtual_to_physical(physical_memory_base),
-            phyiscal_end);
+        virtual_to_physical(physical_memory_base),
+        phyiscal_end);
 
     VirtualRegion::Specification direct_map_spec {};
     direct_map_spec.is_supervisor = IsSupervisor::YES;

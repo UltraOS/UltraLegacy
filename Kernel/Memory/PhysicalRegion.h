@@ -1,11 +1,11 @@
 #pragma once
 
 #include "Common/DynamicBitArray.h"
+#include "Common/Lock.h"
 #include "Common/Logger.h"
+#include "Common/Optional.h"
 #include "Common/Types.h"
 #include "Common/UniquePtr.h"
-#include "Common/Lock.h"
-#include "Common/Optional.h"
 #include "Range.h"
 
 namespace kernel {

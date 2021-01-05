@@ -109,7 +109,7 @@ public:
     {
         if (!file)
             file = "<unspecified>";
-        
+
         lock_t expected = unlocked;
         bool did_acquire = m_lock.compare_and_exchange(&expected, locked);
 

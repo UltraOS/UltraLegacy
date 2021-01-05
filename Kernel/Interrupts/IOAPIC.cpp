@@ -34,7 +34,7 @@ void IOAPIC::RedirectionEntry::apply_redirection_to(u8 irq_index)
 
     auto lower_register = static_cast<Register>(static_cast<u32>(Register::REDIRECTION_TABLE) + irq_index * 2);
     auto higher_register = static_cast<Register>(static_cast<u32>(lower_register) + 1);
-    
+
     write_register(lower_register, redirection_entry_as_u32[0]);
     write_register(higher_register, redirection_entry_as_u32[1]);
 }

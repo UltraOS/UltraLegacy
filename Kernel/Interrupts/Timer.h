@@ -1,14 +1,13 @@
 #pragma once
 
 #include "Common/Lock.h"
+#include "Common/Logger.h"
 #include "Common/String.h"
 #include "Common/Types.h"
-#include "Common/Logger.h"
 
 #include "Interrupts/IRQHandler.h"
 
 #include "Time/Time.h"
-
 
 namespace kernel {
 
@@ -25,15 +24,15 @@ public:
 
     static constexpr u32 default_ticks_per_second = 100;
 
-    using SchedulerEventHandler = void(*)(const RegisterState&);
-    using TransparentEventHandler = void(*)();
+    using SchedulerEventHandler = void (*)(const RegisterState&);
+    using TransparentEventHandler = void (*)();
 
     static void discover_and_setup();
-    
+
     static void register_scheduler_handler(SchedulerEventHandler);
     static void register_handler(TransparentEventHandler);
     static void unregsiter_handler(TransparentEventHandler);
-    
+
     static Timer& primary();
     static Timer& get_specific(Type);
 
@@ -87,7 +86,7 @@ public:
             did_replace_timer = true;
             break;
         }
-        
+
         if (!did_replace_timer)
             runtime::panic("Failed to find a replacement for current timer, cannot run without a timer");
     }

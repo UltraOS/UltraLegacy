@@ -4,8 +4,8 @@
 #include "Core/Runtime.h"
 #include "Macros.h"
 #include "Memory.h"
-#include "Utilities.h"
 #include "Memory/Range.h"
+#include "Utilities.h"
 
 namespace kernel {
 
@@ -349,7 +349,7 @@ public:
                 return { pointer.as_pointer<const char>(), size() };
         }
 
-        return { };
+        return {};
     }
 
     StringView(const char* string)

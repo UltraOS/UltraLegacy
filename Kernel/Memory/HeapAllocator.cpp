@@ -11,13 +11,14 @@
 
 namespace kernel {
 
-HeapAllocator::HeapBlockHeader *HeapAllocator::s_heap_block;
+HeapAllocator::HeapBlockHeader* HeapAllocator::s_heap_block;
 
 alignas(Atomic<size_t>) static u8 heap_total_free_bytes_storage[sizeof(Atomic<size_t>)];
 alignas(InterruptSafeSpinLock) static u8 heap_allocation_lock_storage[sizeof(InterruptSafeSpinLock)];
 alignas(InterruptSafeSpinLock) static u8 heap_refill_lock_storage[sizeof(InterruptSafeSpinLock)];
 
-bool HeapAllocator::is_deadlocked() {
+bool HeapAllocator::is_deadlocked()
+{
     return allocation_lock().is_deadlocked();
 }
 
@@ -144,7 +145,7 @@ void* HeapAllocator::allocate(size_t bytes)
         refill_if_needed(bytes_left_after_allocation);
         refill_lock().unlock(interrupt_state);
     }
-    
+
     LOCK_GUARD(allocation_lock());
 
     s_calls_to_allocate++;

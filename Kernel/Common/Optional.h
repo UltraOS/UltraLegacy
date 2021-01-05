@@ -1,8 +1,8 @@
 #pragma once
 
 #include "Core/Runtime.h"
-#include "Types.h"
 #include "Traits.h"
+#include "Types.h"
 #include "Utilities.h"
 
 namespace kernel {
@@ -103,7 +103,7 @@ public:
     }
 
     template <typename U>
-    constexpr T value_or(U&& default_value) const &
+    constexpr T value_or(U&& default_value) const&
     {
         if (m_has_value)
             return move(*pointer());
@@ -125,7 +125,7 @@ public:
         return *pointer();
     }
 
-    constexpr const T& value() const &
+    constexpr const T& value() const&
     {
         return *pointer();
     }
@@ -135,7 +135,7 @@ public:
         return move(*pointer());
     }
 
-    constexpr const T&& value() const &&
+    constexpr const T&& value() const&&
     {
         return move(*pointer());
     }
@@ -150,7 +150,7 @@ public:
         return pointer();
     }
 
-    constexpr const T& operator*() const &
+    constexpr const T& operator*() const&
     {
         return *pointer();
     }
@@ -160,7 +160,7 @@ public:
         return *pointer();
     }
 
-    constexpr const T&& operator*() const &&
+    constexpr const T&& operator*() const&&
     {
         return move(*pointer());
     }
@@ -209,7 +209,6 @@ private:
 private:
     alignas(T) u8 m_value[sizeof(T)];
     bool m_has_value { false };
-
 };
 
 }

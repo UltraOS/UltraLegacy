@@ -3,8 +3,8 @@
 #include "DynamicArray.h"
 #include "Macros.h"
 #include "Math.h"
-#include "Pair.h"
 #include "Optional.h"
+#include "Pair.h"
 
 namespace kernel {
 

@@ -45,7 +45,7 @@ void PIT::nano_delay(u32 ns)
                      << minimum_delay_ns() << " - " << maximum_delay_ns();
         runtime::panic(error_string.data());
     }
-    
+
     u32 ticks_to_sleep = (ns / (Time::nanoseconds_in_microsecond * 10)) * ticks_in_10_microseconds;
 
     IO::out8<timer_command>(write_word);

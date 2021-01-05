@@ -26,7 +26,7 @@ public:
         static constexpr u32 irq_number = 253;
         static constexpr u32 masked_bit = 1 << 16;
         static constexpr u32 periodic_mode = 1 << 17;
-        
+
         void calibrate_for_this_processor() override;
 
         void enable_irq() override;
@@ -52,7 +52,7 @@ public:
         {
             ASSERT(!"max_frequency() is not implemented");
         }
-        
+
         u32 current_frequency() const override { return default_ticks_per_second; }
 
         bool is_per_cpu() const override { return true; }

@@ -1,9 +1,9 @@
 #pragma once
 
 #include "Common/List.h"
+#include "Common/Lock.h"
 #include "Common/RefPtr.h"
 #include "Common/String.h"
-#include "Common/Lock.h"
 #include "Range.h"
 
 namespace kernel {
