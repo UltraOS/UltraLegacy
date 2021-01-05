@@ -308,14 +308,15 @@ PS2Controller::Configuration PS2Controller::read_configuration()
     send_command(Command::READ_CONFIGURATION);
 
     auto raw_config = read_data();
-
     return bit_cast<Configuration>(raw_config);
 }
 
 void PS2Controller::write_configuration(Configuration config)
 {
     send_command(Command::WRITE_CONFIGURATION);
-    write<data_port>(*reinterpret_cast<u8*>(&config));
+
+    auto raw_config = bit_cast<u8>(config);
+    write<data_port>(raw_config);
 }
 
 void PS2Controller::send_command(Command command)
