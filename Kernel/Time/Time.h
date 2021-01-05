@@ -73,7 +73,7 @@ public:
         u8 second;
     };
 
-    constexpr StringView month_to_string(Month month)
+    static constexpr StringView month_to_string(Month month)
     {
         switch (month) {
         case Month::January:

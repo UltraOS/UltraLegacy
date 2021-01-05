@@ -87,7 +87,7 @@ void LAPIC::end_of_interrupt()
 
 u32 LAPIC::my_id()
 {
-    return (read_register(Register::ID) >> 24) & 0xFF;
+    return (read_register(Register::ID) >> 24u) & 0xFFu;
 }
 
 void LAPIC::ICR::post()

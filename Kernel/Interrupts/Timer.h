@@ -48,6 +48,9 @@ public:
 
     InterruptSafeSpinLock& lock() { return m_timer_specific_lock; }
 
+    virtual size_t minimum_delay_ns() const = 0;
+    virtual size_t maximum_delay_ns() const = 0;
+
     virtual void nano_delay(u32) = 0;
     virtual void micro_delay(u32 us) { nano_delay(us * Time::nanoseconds_in_microsecond); }
     virtual void mili_delay(u32 ms) { nano_delay(ms * Time::nanoseconds_in_millisecond); }

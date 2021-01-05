@@ -35,6 +35,9 @@ public:
         void enable() override { enable_irq(); }
         void disable() override { disable_irq(); }
 
+        size_t minimum_delay_ns() const override { return 0; }
+        size_t maximum_delay_ns() const override { return 0; }
+
         void set_frequency(u32) override
         {
             ASSERT(!"set_frequency() is not implemented");

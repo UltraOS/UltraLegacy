@@ -35,11 +35,15 @@ public:
     void enable() override { enable_irq(); }
     void disable() override { disable_irq(); }
 
+    size_t minimum_delay_ns() const override { return 10 * Time::nanoseconds_in_microsecond; }
+    size_t maximum_delay_ns() const override { return max_divisor / ticks_in_10_microseconds * 10 * Time::nanoseconds_in_microsecond; }
     void nano_delay(u32 ns) override;
 
-    ~PIT() { disable_irq(); }
+    ~PIT() override { disable_irq(); }
 
 private:
+    static constexpr u32 ticks_in_10_microseconds = 12;
+
     u32 m_frequency { 0 };
 };
 }
