@@ -131,3 +131,24 @@ TEST(MultipleSpliceFront) {
 
     Assert::that(itr).is_equal(list_1.end());
 }
+
+TEST(Erase) {
+    using kernel::List;
+
+    List<int> l;
+    l.append_back(1);
+    l.append_back(2);
+    l.append_back(3);
+
+    l.erase(++l.begin());
+    Assert::that(l.size()).is_equal(2);
+    Assert::that(l.front()).is_equal(1);
+    Assert::that(*(++l.begin())).is_equal(3);
+    Assert::that(*(--(--l.end()))).is_equal(1);
+
+    l.erase(--l.end());
+    Assert::that(l.size()).is_equal(1);
+
+    l.erase(l.begin());
+    Assert::that(l.size()).is_equal(0);
+}

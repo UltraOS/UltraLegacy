@@ -160,6 +160,19 @@ public:
         after_destionation.m_node->set_previous(source_iterator.m_node);
     }
 
+    void erase(Iterator itr)
+    {
+        ASSERT(itr != end());
+
+        auto* node = itr.m_node;
+
+        node->previous()->set_next(node->next());
+        node->next()->set_previous(node->previous());
+        delete node;
+
+        m_size--;
+    }
+
     Iterator begin() { return Iterator(m_end.next()); }
     Iterator end() { return Iterator(&m_end); }
 
@@ -170,6 +183,7 @@ public:
     const T& back() const { return as_value_node(m_end.previous())->value(); }
 
     [[nodiscard]] size_t size() const { return m_size; }
+    [[nodiscard]] bool empty() const { return size() == 0; }
 
     ~List()
     {
