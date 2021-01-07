@@ -70,6 +70,20 @@ public:
         return elems[index];
     }
 
+    [[nodiscard]] T& first()
+    {
+        ASSERT(m_size > 0);
+
+        return at(0);
+    }
+
+    [[nodiscard]] const T& first() const
+    {
+        ASSERT(m_size > 0);
+
+        return at(0);
+    }
+
     [[nodiscard]] T& last()
     {
         ASSERT(m_size != 0);
