@@ -152,3 +152,32 @@ TEST(Erase) {
     l.erase(l.begin());
     Assert::that(l.size()).is_equal(0);
 }
+
+TEST(Standalone) {
+    struct thing : public kernel::StandaloneListNode {
+        thing(int x) : x(x) {}
+
+        int x;
+    };
+
+    auto list = kernel::List<thing>();
+
+    auto t1 = thing(1);
+    auto t2 = thing(2);
+    auto t3 = thing(3);
+
+    list.insert_back(t1);
+    Assert::that(list.front().x).is_equal(1);
+
+    list.insert_front(t2);
+    Assert::that(list.front().x).is_equal(2);
+
+    list.insert_back(t3);
+    Assert::that(list.back().x).is_equal(3);
+
+    Assert::that(list.size()).is_equal(3);
+
+    Assert::that(list.pop_front().x).is_equal(2);
+    Assert::that(list.pop_back().x).is_equal(3);
+    Assert::that(list.pop_front().x).is_equal(1);
+}
