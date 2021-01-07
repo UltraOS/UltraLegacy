@@ -704,5 +704,6 @@ TEST(TransparentComparator) {
     auto number_3 = transparent_tree.find(3);
     Assert::that(number_3).is_not_equal(transparent_tree.end());
     Assert::that(number_3->get()->x).is_equal(3);
-
+    Assert::that(transparent_tree.get(3)->x).is_equal(3);
+    Assert::that(transparent_tree.contains(3)).is_true();
 }

@@ -168,7 +168,7 @@ public:
     public:
         friend class RedBlackTree;
 
-        Iterator() { }
+        Iterator() = default;
         Iterator(const ValueNode* node)
             : m_node(node)
         {
@@ -279,15 +279,32 @@ public:
     {
         auto* new_node = new ValueNode(forward<Args>(args)...);
 
-        if (m_super_root.left == nullptr)
-            m_super_root.left = new_node;
-        else if (m_comparator(new_node->value, m_super_root.left->value))
-            m_super_root.left = new_node;
+        bool smaller_than_left = false;
+        bool greater_than_right = false;
 
-        if (m_super_root.right == nullptr)
+        if (m_super_root.left == nullptr) {
+            m_super_root.left = new_node;
+            smaller_than_left = true;
+        } else if (m_comparator(new_node->value, m_super_root.left->value)) {
+            m_super_root.left = new_node;
+            smaller_than_left = true;
+        }
+
+        if (m_super_root.right == nullptr) {
             m_super_root.right = new_node;
-        else if (m_comparator(m_super_root.right->value, new_node->value))
+            greater_than_right = true;
+        } else if (m_comparator(m_super_root.right->value, new_node->value)) {
             m_super_root.right = new_node;
+            greater_than_right = true;
+        }
+
+        if (!smaller_than_left && !greater_than_right) {
+            if (!m_comparator(m_super_root.left->value, new_node->value)) // edge case, emplaced == smallest
+                m_super_root.left = new_node;
+        
+            if (!m_comparator(new_node->value, m_super_root.right->value)) // edge case, emplaced == greatest
+                m_super_root.right = new_node;
+        }
 
         if (m_root == nullptr) {
             m_root = new_node;
@@ -327,12 +344,27 @@ public:
         return Iterator(new_node);
     }
 
+    template <typename Key, typename Compare = Comparator, typename = typename Compare::is_transparent>
+    const T& get(const Key& value) const
+    {
+        auto* node = find_node(value);
+        ASSERT(node != super_root_as_value_node());
+
+        return node->value;
+    }
+
     const T& get(const T& value)
     {
         auto* node = find_node(value);
         ASSERT(node != super_root_as_value_node());
 
         return node->value;
+    }
+
+    template <typename Key, typename Compare = Comparator, typename = typename Compare::is_transparent>
+    bool contains(const Key& value) const
+    {
+        return find_node(value) != super_root_as_value_node();;
     }
 
     bool contains(const T& value)
@@ -371,7 +403,7 @@ public:
     size_t size() const { return m_size; }
     bool empty() const { return m_size == 0; }
 
-    template <typename Key, typename = typename Comparator::is_transparent>
+    template <typename Key, typename Compare = Comparator, typename = typename Compare::is_transparent>
     Iterator find(const Key& key) const
     {
         return { find_node(key) };
@@ -382,7 +414,7 @@ public:
         return { find_node(key) };
     }
 
-    template <typename Key, typename = typename Comparator::is_transparent>
+    template <typename Key, typename Compare = Comparator, typename = typename Compare::is_transparent>
     Iterator lower_bound(const Key& key) const
     {
         return { lower_bound_node(key) };
@@ -393,7 +425,7 @@ public:
         return { lower_bound_node(key) };
     }
 
-    template <typename Key, typename = typename Comparator::is_transparent>
+    template <typename Key, typename Compare = Comparator, typename = typename Compare::is_transparent>
     Iterator upper_bound(const Key& key) const
     {
         return { upper_bound_node(key) };
@@ -903,6 +935,7 @@ private:
                 rotate(node);
 
             node = grandparent;
+            ASSERT(node != nullptr);
         }
     }
 
