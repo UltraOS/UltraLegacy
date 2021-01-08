@@ -3,6 +3,7 @@
 #include "EventManager.h"
 #include "Memory/MemoryManager.h"
 #include "Multitasking/Process.h"
+#include "Multitasking/Scheduler.h"
 #include "WindowManager/WindowManager.h"
 
 namespace kernel {
@@ -14,7 +15,7 @@ void DemoTTY::initialize()
     ASSERT(s_instance == nullptr);
 
     s_instance = new DemoTTY();
-    Process::create_supervisor(&DemoTTY::run, 4 * MB);
+    Process::create_supervisor(&DemoTTY::run, "demo terminal"_sv, 4 * MB);
 }
 
 DemoTTY::DemoTTY()
@@ -41,9 +42,8 @@ DemoTTY::DemoTTY()
 
 void DemoTTY::run()
 {
-    while (true) {
+    while (true)
         the().tick();
-    }
 }
 
 void DemoTTY::tick()
@@ -228,8 +228,16 @@ void DemoTTY::execute_command()
         info_string << "\nCores: " << CPU::processor_count();
         info_string << "\nAlive cores: " << CPU::alive_processor_count();
         info_string << "\nCurrent core: " << CPU::current_id();
+
+        auto stats = Scheduler::the().stats();
+
+        info_string << "\n\nTasks per cpu:";
+        for (auto& cpu : stats.processor_to_task)
+            info_string << "\ncpu " << cpu.first() << ": " << cpu.second() << "";
+
         write(info_string.to_view());
-        write("\n"_sv);
+        write("\n");
+        
     } else if (m_current_command == "help"_sv) {
         write("\nWelcome to UltraOS demo terminal.\n"_sv);
         write("Here's a few things you can do:\n"_sv);

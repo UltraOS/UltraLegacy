@@ -30,7 +30,7 @@ namespace kernel {
 [[noreturn]] void dummy_kernel_process();
 [[noreturn]] void process_with_windows();
 
-void run(LoaderContext* context)
+[[noreturn]] void run(LoaderContext* context)
 {
     Logger::initialize();
     runtime::ensure_loaded_correctly();
@@ -66,15 +66,15 @@ void run(LoaderContext* context)
 
     WindowManager::initialize();
 
-    Interrupts::enable();
-
     PS2Controller::initialize();
 
-    Process::create_supervisor(process_with_windows);
+    Process::create_supervisor(process_with_windows, "demo window"_sv);
 
     DemoTTY::initialize();
 
-    Process::create_supervisor(dummy_kernel_process);
+    Process::create_supervisor(dummy_kernel_process, "sleeping dummy"_sv);
+
+    Interrupts::enable();
 
     for (;;)
         hlt();
@@ -94,7 +94,8 @@ void process_with_windows()
             LOCK_GUARD(window->event_queue_lock());
             window->event_queue().clear();
         }
-        sleep::for_milliseconds(10);
+        
+        sleep::for_milliseconds(100);
     }
 }
 

@@ -2,6 +2,7 @@
 
 #include "Common/Pair.h"
 #include "Common/RefPtr.h"
+#include "Common/DynamicArray.h"
 #include "GenericPagingEntry.h"
 #include "GenericPagingTable.h"
 #include "Page.h"
@@ -109,6 +110,14 @@ private:
 #endif
 
     static Address active_directory_address();
+
+    friend bool operator==(const AddressSpace& l, const AddressSpace& r) {
+        return l.m_main_page.address() == r.m_main_page.address();
+    }
+
+    friend bool operator!=(const AddressSpace& l, const AddressSpace& r) {
+        return !operator==(l, r);
+    }
 
 private:
     DynamicArray<Page> m_physical_pages;

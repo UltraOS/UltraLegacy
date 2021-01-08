@@ -10,7 +10,7 @@ section .text
 ; void Scheduler::switch_task(Thread::ControlBlock* new_task)
 global switch_task
 switch_task:
-    ; load the new task esp
+    ; load the new task rsp
     mov rsp, [rdi]
 
     popaq
@@ -29,7 +29,7 @@ save_state:
     mov  rax, cs
     push rax
 
-    push qword [rsp + 8 * 4] ; eip
+    push qword [rsp + 8 * 4] ; rip
 
     push qword 0
     push qword 0

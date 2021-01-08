@@ -6,77 +6,85 @@
 
 namespace kernel {
 
-RecursiveInterruptSafeSpinLock Scheduler::s_lock;
+InterruptSafeSpinLock Scheduler::s_queues_lock;
 
-// 1 because the first process doesn't register itself
-// TODO: fix that
-size_t Scheduler::s_thread_count = 1;
-Thread* Scheduler::s_last_picked;
-Thread* Scheduler::s_sleeping_threads;
 Scheduler* Scheduler::s_instance;
+
+Scheduler::Scheduler()
+    : m_expired_threads(new List<Thread>())
+    , m_preemtable_threads(new List<Thread>())
+{
+}
 
 void Scheduler::inititalize()
 {
     s_instance = new Scheduler();
-    Process::inititalize_for_this_processor();
+    auto& current_cpu = CPU::current();
+
+    current_cpu.set_idle_task(Process::create_idle_for_this_processor());
     Thread::initialize();
+    CPU::current().idle_task().activate();
     Timer::register_scheduler_handler(on_tick);
 }
 
-void Scheduler::enqueue_thread(Thread& thread)
+void Scheduler::sleep(u64 wake_time)
 {
-    LOCK_GUARD(s_lock);
-
-    ++s_thread_count;
-
-    ASSERT(s_last_picked != nullptr);
-    ASSERT(s_last_picked->has_next());
-    ASSERT(s_last_picked->has_previous());
-
-    auto* last_to_run = s_last_picked->previous();
-    last_to_run->set_next(&thread);
-    s_last_picked->set_previous(&thread);
-
-    thread.set_next(s_last_picked);
-    thread.set_previous(last_to_run);
+    ASSERT(!Interrupts::are_enabled());
+    
+    Thread::current()->sleep(wake_time);
+    save_state_and_schedule();
 }
 
-void Scheduler::dequeue_thread(Thread& thread)
+void Scheduler::wake_ready_threads()
 {
-    LOCK_GUARD(s_lock);
+    if (m_sleeping_threads.empty())
+        return;
 
-    --s_thread_count;
+    for (auto thread_itr = m_sleeping_threads.begin(); thread_itr != m_sleeping_threads.end();) {
+        if (!(*thread_itr)->should_be_woken_up())
+             return; // we can afford to do this since threads are sorted in wake-up time order
 
-    ASSERT(thread.has_previous());
-    ASSERT(thread.has_next());
-
-    thread.previous()->set_next(thread.next());
-    thread.next()->set_previous(thread.previous());
-}
-
-void Scheduler::enqueue_sleeping_thread(Thread& thread)
-{
-    LOCK_GUARD(s_lock);
-
-    ASSERT(&thread != s_sleeping_threads);
-
-    if (!s_sleeping_threads) {
-        s_sleeping_threads = &thread;
-        thread.set_next(nullptr);
-    } else {
-        thread.set_next(s_sleeping_threads);
-        s_sleeping_threads = &thread;
+        auto* ready_thread = *thread_itr;
+        m_sleeping_threads.remove(thread_itr++);
+        ready_thread->wake_up();
+        m_expired_threads->insert_back(*ready_thread);
     }
+}
+
+void Scheduler::exit(size_t)
+{
+    ASSERT(!"Scheduler::exit() is not yet implemented!");
+}
+
+void Scheduler::crash()
+{
+    ASSERT(!"Scheduler::crash() is not yet implemented!");
 }
 
 void Scheduler::register_process(RefPtr<Process> process)
 {
-    LOCK_GUARD(s_lock);
+    LOCK_GUARD(s_queues_lock);
+
+    ASSERT(!m_processes.contains(process->id()));
 
     m_processes.emplace(process);
 
     for (auto& thread : process->threads())
-        enqueue_thread(*thread);
+        register_thread_unchecked(thread.get());
+}
+
+void Scheduler::register_thread(Thread* thread)
+{
+    LOCK_GUARD(s_queues_lock);
+
+    ASSERT(m_processes.contains(thread->owner().id()));
+
+    register_thread_unchecked(thread);
+}
+
+void Scheduler::register_thread_unchecked(Thread* thread)
+{
+    m_expired_threads->insert_back(*thread);
 }
 
 Scheduler& Scheduler::the()
@@ -92,78 +100,62 @@ void Scheduler::yield()
     save_state_and_schedule();
 }
 
-void Scheduler::wake_up_ready_threads()
+Scheduler::Stats Scheduler::stats() const
 {
-    auto* next = s_sleeping_threads;
-    decltype(next) current = nullptr;
-    s_sleeping_threads = nullptr;
+    Stats stats_per_cpu;
 
-    while (next) {
-        current = next;
-        next = current->next();
-        ASSERT(current != next);
+    LOCK_GUARD(s_queues_lock);
 
-        if (current->should_be_woken_up()) {
-            current->wake_up();
-            enqueue_thread(*current);
-        } else
-            enqueue_sleeping_thread(*current);
-    }
+    for (auto& cpu : CPU::processors())
+        stats_per_cpu.processor_to_task.emplace(cpu.id(), cpu.current_thread()->owner().name().to_view());
+
+    return stats_per_cpu;
 }
 
-// Yes, the algorithm here is terrible
-// TODO: replace it with something more "appropriate"
+Thread* Scheduler::pick_next_thread()
+{
+    if (m_preemtable_threads->empty()) {
+        if (m_expired_threads->empty())
+            return &CPU::current().idle_task();
+
+        swap(m_preemtable_threads, m_expired_threads);
+    }
+    
+    return &m_preemtable_threads->pop_front();
+}
+
 void Scheduler::pick_next()
 {
-    // Cannot use LockGuard here as pick_next never returns
+    // Cannot use LOCK_GUARD here as switch_task never returns
     bool interrupt_state = false;
-    s_lock.lock(interrupt_state, __FILE__, __LINE__);
-
-    wake_up_ready_threads();
+    s_queues_lock.lock(interrupt_state, __FILE__, __LINE__);
 
     auto* current_thread = Thread::current();
 
-    auto* next_thread = s_last_picked->next();
+    wake_ready_threads();
 
-    for (size_t i = 0; i < s_thread_count; ++i) {
-        if (next_thread->is_ready())
-            break;
-
-        next_thread = next_thread->next();
+    // if current thread is not dead/sleeping/blocked we put it back on the expired queue
+    if (current_thread->is_running() && current_thread != &CPU::current().idle_task())
+        m_expired_threads->insert_back(*current_thread);
+    else if (current_thread->is_sleeping())
+        m_sleeping_threads.emplace(current_thread);
+    
+    auto* next_thread = pick_next_thread();
+    
+    if (current_thread != next_thread) {
+        current_thread->deactivate();
+        next_thread->activate();
     }
 
-    if (current_thread->is_sleeping()) {
-        ASSERT(current_thread != next_thread);
-        ASSERT(!next_thread->is_running());
-
-        dequeue_thread(*current_thread);
-
-        enqueue_sleeping_thread(*current_thread);
-
-    } else if (current_thread->is_dead()) {
-        ASSERT(current_thread != next_thread);
-        ASSERT(!next_thread->is_running());
-
-        dequeue_thread(*current_thread);
-
-    } else if (current_thread == next_thread || next_thread->is_running()) {
-        s_lock.unlock(interrupt_state);
-        switch_task(current_thread->control_block());
-    }
-
-    current_thread->deactivate();
-    next_thread->activate();
-    s_last_picked = next_thread;
-
-    s_lock.unlock(interrupt_state);
-
+    s_queues_lock.unlock(interrupt_state);
+    
     switch_task(next_thread->control_block());
 }
 
-void Scheduler::schedule(const RegisterState* registers)
+void Scheduler::schedule(const RegisterState* ptr)
 {
-    Thread::current()->control_block()->current_kernel_stack_top = registers;
-    pick_next();
+    Thread::current()->control_block()->current_kernel_stack_top = reinterpret_cast<ptr_t>(ptr);
+    s_instance->pick_next();
 }
 
 void Scheduler::on_tick(const RegisterState& registers)

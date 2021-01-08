@@ -17,6 +17,8 @@ SECTIONS
         *(.ctors)
         global_constructors_end = .;
 
+        *(.dtors)
+
         *(.rodata .rodata.*)
     }
 

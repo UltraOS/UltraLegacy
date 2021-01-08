@@ -24,7 +24,12 @@ void IPICommunicator::send_ipi(u8 dest)
 
 void IPICommunicator::hang_all_cores()
 {
-    if (InterruptController::the().supports_smp())
+    if (CPU::alive_processor_count() == 1) // nothing to hang, we're the only cpu alive
+        return;
+
+    // FIXME: This is terrible because not all cpus might be online, also
+    //        there can be cpus marked as unusable making this IPI call UB
+    if (InterruptController::supports_smp())
         LAPIC::send_ipi<LAPIC::DestinationType::ALL_EXCLUDING_SELF>();
 }
 

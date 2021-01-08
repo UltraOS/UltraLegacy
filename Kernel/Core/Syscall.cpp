@@ -8,13 +8,9 @@
 
 namespace kernel {
 
-void Syscall::exit(u8 code)
+void Syscall::exit(size_t code)
 {
-    log() << "Thread " << Thread::current() << " exited with code " << code;
-
-    Interrupts::ScopedDisabler d;
-    Thread::current()->exit(code);
-    Scheduler::yield();
+    Scheduler::the().exit(code);
 }
 
 void Syscall::debug_log(const char* string)

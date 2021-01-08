@@ -179,7 +179,7 @@ void LAPIC::start_processor(u8 id)
     *ap_acknowledegd = false;
 
     String stack_name = "core ";
-    stack_name << id << " initial stack";
+    stack_name << id << " idle task stack";
 
     auto ap_stack = MemoryManager::the().allocate_kernel_stack(stack_name.to_view());
 

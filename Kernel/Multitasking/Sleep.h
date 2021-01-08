@@ -17,8 +17,7 @@ inline void until(u64 time)
     if (time <= Timer::nanoseconds_since_boot())
         return;
 
-    Thread::current()->sleep(time);
-    Scheduler::yield();
+    Scheduler::the().sleep(time);
 }
 
 inline void for_nanoseconds(u64 time)

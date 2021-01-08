@@ -4,12 +4,13 @@
 #include "Interrupts/Timer.h"
 #include "Memory/AddressSpace.h"
 #include "TSS.h"
+#include "Common/List.h"
 
 namespace kernel {
 
 class Window;
 
-class Thread {
+class Thread : public StandaloneListNode {
     MAKE_NONCOPYABLE(Thread);
     MAKE_NONMOVABLE(Thread);
 
@@ -23,24 +24,15 @@ public:
         READY,
     };
 
-    struct ControlBlock {
-        Address current_kernel_stack_top;
+    struct PACKED ControlBlock {
+        ptr_t current_kernel_stack_top;
     };
 
     static void initialize();
 
-    static RefPtr<Thread> create_supervisor_thread(Address kernel_stack, Address entrypoint);
-
-    static RefPtr<Thread>
-    create_user_thread(AddressSpace& page_dir, Address user_stack, Address kernel_stack, Address entrypoint);
-
-    void set_next(Thread* thread) { m_next = thread; }
-    Thread* next() { return m_next; }
-    bool has_next() { return next(); }
-
-    void set_previous(Thread* thread) { m_previous = thread; }
-    Thread* previous() { return m_previous; }
-    bool has_previous() { return previous(); }
+    static RefPtr<Thread> create_idle(Process& owner);
+    static RefPtr<Thread> create_supervisor(Process& owner, Address kernel_stack, Address entrypoint);
+    static RefPtr<Thread> create_user(Process& owner, Address kernel_stack, Address user_stack, Address entrypoint);
 
     void activate();
     void deactivate();
@@ -53,7 +45,8 @@ public:
 
     IsSupervisor is_supervisor() const { return m_is_supervisor; }
 
-    AddressSpace& address_space() { return m_address_space; }
+    Process& owner() { return m_owner; }
+    AddressSpace& address_space();
 
     void sleep(u64 until)
     {
@@ -61,40 +54,47 @@ public:
         m_wake_up_time = until;
     }
 
-    void exit(u8 code)
-    {
-        m_state = State::DEAD;
-        m_exit_code = code;
-    }
+    void exit() { m_state = State::DEAD; }
 
-    bool is_sleeping() const { return m_state == State::BLOCKED; }
     void wake_up() { m_state = State::READY; }
+    [[nodiscard]] u64 wakeup_time() const { return m_wake_up_time; }
 
-    bool is_dead() const { return m_state == State::DEAD; }
-    bool is_running() const { return m_state == State::RUNNING; }
-    bool is_ready() const { return m_state == State::READY; }
+    [[nodiscard]] bool is_sleeping() const { return m_state == State::BLOCKED; }
+    [[nodiscard]] bool is_dead() const { return m_state == State::DEAD; }
+    [[nodiscard]] bool is_running() const { return m_state == State::RUNNING; }
+    [[nodiscard]] bool is_ready() const { return m_state == State::READY; }
 
     bool should_be_woken_up() const { return m_wake_up_time <= Timer::nanoseconds_since_boot(); }
 
     void set_window(Window* window) { m_window = window; }
 
-private:
-    Thread(AddressSpace& page_dir, Address kernel_stack);
+    class WakeTimePtrComparator {
+    public:
+        bool operator()(const Thread* l, const Thread* r) const
+        {
+            ASSERT(l != nullptr);
+            ASSERT(r != nullptr);
+            
+            return l->wakeup_time() < r->wakeup_time();
+        }
+    };
 
 private:
-    u32 m_thread_id;
-    AddressSpace& m_address_space;
-    ControlBlock m_control_block { nullptr };
+    Thread(Process& owner, Address kernel_stack, IsSupervisor);
+
+private:
+    u32 m_id { 0 };
+
+    Process& m_owner;
+
     Address m_initial_kernel_stack_top { nullptr };
+    ControlBlock m_control_block { 0 };
+    
     State m_state { State::READY };
-    u64 m_wake_up_time { 0 };
     IsSupervisor m_is_supervisor { IsSupervisor::NO };
-    u8 m_exit_code { 0 };
-    Thread* m_previous { nullptr };
-    Thread* m_next { nullptr };
+    
+    u64 m_wake_up_time { 0 };
 
-    Window* m_window;
-
-    static Atomic<u32> s_next_thread_id;
+    Window* m_window { nullptr };
 };
 }

@@ -9,7 +9,7 @@ class Syscall {
     MAKE_STATIC(Syscall);
 
 public:
-    static void exit(u8 exit_code);
+    static void exit(size_t exit_code);
     static void debug_log(const char* string);
 };
 }
