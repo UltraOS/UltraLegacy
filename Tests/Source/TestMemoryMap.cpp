@@ -18,7 +18,9 @@ std::enable_if_t<std::is_same_v<typename RangeT::Type, decltype(RangeT::Type::FR
 
 #include "TestRunner.h"
 
-extern "C" uint8_t memory_map_entries_buffer[4096] = {};
+extern "C" {
+    uint8_t memory_map_entries_buffer[4096] = {};
+}
 
 #define private public
 #include "Memory/MemoryMap.h"

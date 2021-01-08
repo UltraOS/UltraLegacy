@@ -1,6 +1,6 @@
 #include "TestRunner.h"
 
-
+#include "Core/Runtime.h"
 #include "Common/Utilities.h"
 
 TEST(BinarySearchLess) {
