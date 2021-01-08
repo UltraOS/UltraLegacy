@@ -243,6 +243,9 @@ private:
 
     void grow_by(size_t element_count)
     {
+        if (element_count == 0)
+            return;
+
         auto new_capacity = element_count + m_capacity;
 
         auto* new_data = new u8[new_capacity * sizeof(T)];

@@ -22,7 +22,7 @@ public:
     using order_t = decltype(__ATOMIC_RELAXED);
 
     Atomic() = default;
-    Atomic(T value)
+    explicit Atomic(T value)
         : m_value(value)
     {
     }

@@ -152,7 +152,7 @@ ItrT linear_search(ItrT begin, ItrT end, const U& value)
 template <typename ItrT, typename U, typename Pred>
 ItrT linear_search(ItrT begin, ItrT end, const U& value, Pred predicate)
 {
-    for (auto itr = begin; itr < end; ++itr) {
+    for (auto itr = begin; itr != end; ++itr) {
         if (predicate(*itr, value))
             return itr;
     }
