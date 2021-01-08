@@ -6,6 +6,12 @@
 
 namespace kernel {
 
+class AddressSpace
+{
+public:
+    static bool is_initialized() { return true; }
+};
+
 class VirtualRegion
 {
 public:
@@ -27,6 +33,7 @@ public:
     static constexpr Address kernel_first_heap_block_base = static_cast<ptr_t>(0);
     static constexpr Address kernel_first_heap_block_size = static_cast<ptr_t>(4 * MB);
 
+    static bool is_initialized() { return true; }
 
     RefPtr<VirtualRegion> allocate_kernel_private_anywhere(StringView, size_t size)
     {
