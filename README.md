@@ -13,10 +13,11 @@ Panic screen
 - ISTs for each core to protect against kernel stack corruptions
 - A well optimized thread-safe memory manager with support stack overflow detection, with most components covered by unit tests
 - Support for symbolicated backtraces thanks to the kernel symbol file loaded by the bootloader
-- PS/2 controller driver + keyboard & mouse
+- Support for deadlock detection for all lock types
 - Window manager
 - WC cached framebuffer for fast rendering on real hardware
 - Multicore RR preemptive O(1) scheduler
+- PS/2 controller driver + keyboard & mouse
 - Own BIOS bootloader
 - Fully modern C++17 kernel
 - Almost everything in kernel/Common is fully covered by unit tests
