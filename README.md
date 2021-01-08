@@ -1,17 +1,25 @@
 # UltraOS
 An operating system that doesn't try to be UNIX. Made completely from scratch with its own bootloader. 😊
 
-![alt-text](https://i.ibb.co/qB6McWb/desktop.png)
+Desktop
+![alt-text](https://i.ibb.co/S7PTxxH/image.png)
+
+Panic screen
+![alt-text](https://i.ibb.co/wNCc5vC/image.png)
 
 ## Current Features
 - Support for both i386 and AMD64
 - Symmetric Multiprocessing
+- ISTs for each core to protect against kernel stack corruptions
+- A well optimized thread-safe memory manager with support stack overflow detection, with most components covered by unit tests
+- Support for symbolicated backtraces thanks to the kernel symbol file loaded by the bootloader
 - PS/2 controller driver + keyboard & mouse
 - Window manager
 - WC cached framebuffer for fast rendering on real hardware
-- Multicore RR preemptive scheduler
+- Multicore RR preemptive O(1) scheduler
 - Own BIOS bootloader
 - Fully modern C++17 kernel
+- Almost everything in kernel/Common is fully covered by unit tests
 - No third party code
 
 ### Tested on modern hardware :heavy_check_mark:
