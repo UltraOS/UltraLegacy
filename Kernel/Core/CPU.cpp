@@ -1,5 +1,7 @@
 #include "GDT.h"
 
+#include "Common/Utilities.h"
+
 #include "Interrupts/IDT.h"
 #include "Interrupts/InterruptController.h"
 #include "Interrupts/LAPIC.h"
@@ -15,7 +17,13 @@
 namespace kernel {
 
 Atomic<size_t> CPU::s_alive_counter;
-DynamicArray<CPU::LocalData> CPU::s_processors;
+InterruptSafeSpinLock CPU::s_processors_lock;
+List<CPU::LocalData> CPU::s_processors;
+
+Thread& CPU::LocalData::idle_task()
+{
+    return *m_idle_process->threads().first();
+}
 
 CPU::ID::ID(u32 function)
 {
@@ -43,10 +51,9 @@ void CPU::MSR::write(u32 index)
 void CPU::initialize()
 {
     if (supports_smp()) {
-        // emplace the bsp ID
-        s_processors.emplace(LAPIC::my_id());
+        s_processors.append_back(LAPIC::my_id());
     } else {
-        s_processors.emplace(0);
+        s_processors.append_back(0);
     }
 
     ++s_alive_counter;
@@ -72,13 +79,20 @@ void CPU::start_all_processors()
     if (!InterruptController::supports_smp())
         return;
 
-    for (auto processor_id : InterruptController::smp_data().application_processor_apic_ids)
-        s_processors.emplace(processor_id);
+    // We have to do this here because otherwise we have a race condition
+    // with each cpu emplacing their local data upon entering ap_entrypoint.
+    // Locking is also not an option because CPU::current would have to use this lock
+    // as well, which would lead to recursively calling current() everywhere.
+    auto& apic_ids = InterruptController::smp_data().application_processor_apic_ids;
+    for (auto processor_id : apic_ids)
+        s_processors.append_back(processor_id);
 
     for (auto processor_id : InterruptController::smp_data().application_processor_apic_ids) {
-        size_t old_alive_counter = s_alive_counter;
         LAPIC::start_processor(processor_id);
-        while (old_alive_counter == s_alive_counter)
+
+        auto& this_processor = CPU::at_id(processor_id);
+        
+        while (!this_processor.is_online())
             ;
     }
 
@@ -87,22 +101,29 @@ void CPU::start_all_processors()
     Timer::primary().enable(); // enable for the BSP
 }
 
-CPU::LocalData& CPU::current()
+CPU::LocalData& CPU::at_id(u32 id)
 {
-    volatile u32 this_cpu;
-    if (InterruptController::is_initialized() && supports_smp())
-        this_cpu = LAPIC::my_id();
-    else
-        this_cpu = 0;
+    auto cpu = linear_search(s_processors.begin(), s_processors.end(), id,
+                             [] (const LocalData& cpu_data, u32 id_to_find)
+                             {
+                                 return cpu_data.id() == id_to_find;
+                             });
 
-    for (auto& processor : s_processors) {
-        if (processor.id() == this_cpu)
-            return processor;
+    if (cpu == s_processors.end()) {
+        String error_string;
+        error_string << "CPU: Couldn't find the local data for cpu " << id;
+        runtime::panic(error_string.data());
     }
 
-    String error_string;
-    error_string << "CPU: Couldn't find the local data for cpu " << this_cpu;
-    runtime::panic(error_string.data());
+    return *cpu;
+}
+
+CPU::LocalData& CPU::current()
+{
+    if (InterruptController::is_initialized() && supports_smp())
+        return at_id(LAPIC::my_id());
+    else
+        return at_id(0);
 }
 
 u32 CPU::current_id()
@@ -111,6 +132,14 @@ u32 CPU::current_id()
         return current().id();
 
     return 0;
+}
+
+void CPU::LocalData::bring_online()
+{
+    ASSERT(m_is_online == false);
+    ASSERT(LAPIC::my_id() == m_id);
+
+    m_is_online = true;
 }
 
 void CPU::ap_entrypoint()
@@ -123,10 +152,12 @@ void CPU::ap_entrypoint()
     auto& timer = Timer::get_specific(Timer::Type::LAPIC);
     timer.calibrate_for_this_processor();
     timer.enable();
+    
+    auto& current_cpu = CPU::current();
+    current_cpu.set_idle_task(Process::create_idle_for_this_processor());
+    current_cpu.set_tss(new TSS);
 
-    Process::inititalize_for_this_processor();
-    CPU::current().set_tss(new TSS);
-
+    current_cpu.bring_online();
     ++s_alive_counter;
 
     Interrupts::enable();
