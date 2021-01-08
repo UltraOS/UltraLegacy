@@ -11,7 +11,7 @@ Panic screen
 - Support for both i386 and AMD64
 - Symmetric Multiprocessing
 - ISTs for each core to protect against kernel stack corruptions
-- A well optimized thread-safe memory manager with support stack overflow detection, with most components covered by unit tests
+- A well optimized thread-safe memory manager with support for stack overflow detection, with most components covered by unit tests
 - Support for symbolicated backtraces thanks to the kernel symbol file loaded by the bootloader
 - Support for deadlock detection for all lock types
 - Window manager
