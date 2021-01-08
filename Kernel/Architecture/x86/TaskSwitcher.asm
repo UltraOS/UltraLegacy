@@ -23,9 +23,12 @@ switch_task:
 
 global save_state
 save_state:
+    mov eax, [esp]
+    add esp, 4 ; don't leak the return eip
+
     pushf
     push cs
-    push dword [esp + 8] ; eip
+    push eax ; eip
 
     push dword 0
     push dword 0

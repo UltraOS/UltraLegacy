@@ -19,17 +19,20 @@ switch_task:
 
 global save_state
 save_state:
+    mov rsi, [rsp]
+    add rsp, 8 ; don't leak the return RIP
     mov rax, rsp
+
     mov rdi, ss
 
-    push rdi ; rsp
-    push rax ; ss
+    push rdi ; ss
+    push rax ; rsp
     pushf
 
     mov  rax, cs
     push rax
 
-    push qword [rsp + 8 * 4] ; rip
+    push rsi ; rip
 
     push qword 0
     push qword 0
