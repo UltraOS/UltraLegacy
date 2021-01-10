@@ -1,19 +1,10 @@
 #include "Core/Registers.h"
 
 #include "Interrupts/IDT.h"
-#include "Thread.h"
 #include "Process.h"
+#include "Thread.h"
 
 namespace kernel {
-
-void Thread::initialize()
-{
-    CPU::current().set_tss(new TSS);
-
-#ifdef ULTRA_64
-    IDT::the().configure_ist();
-#endif
-}
 
 AddressSpace& Thread::address_space()
 {
@@ -120,7 +111,7 @@ void Thread::activate()
     m_state = State::RUNNING;
 
     if (is_supervisor() == IsSupervisor::NO)
-        CPU::current().tss()->set_kernel_stack_pointer(m_initial_kernel_stack_top);
+        CPU::current().tss().set_kernel_stack_pointer(m_initial_kernel_stack_top);
 
     if (m_owner.address_space() != AddressSpace::current())
         m_owner.address_space().make_active();

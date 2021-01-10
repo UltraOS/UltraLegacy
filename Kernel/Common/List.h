@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Common/Utilities.h"
 #include "Common/Traits.h"
+#include "Common/Utilities.h"
 #include "Core/Runtime.h"
 
 namespace kernel {
@@ -33,7 +33,8 @@ private:
 };
 
 template <typename T, typename = void>
-class List { };
+class List {
+};
 
 template <typename T>
 class List<T, typename enable_if<!is_base_of_v<StandaloneListNode, T>>::type> {
@@ -317,7 +318,7 @@ public:
         bool operator!=(const Iterator& itr) const { return m_node != itr.m_node; }
 
     private:
-        StandaloneListNode* m_node{ nullptr };
+        StandaloneListNode* m_node { nullptr };
     };
 
     void splice(Iterator after_destionation, List& source_list, Iterator source_iterator)
@@ -326,8 +327,7 @@ public:
             source_list.m_size--;
             m_size++;
             ASSERT(source_iterator != source_list.end());
-        }
-        else if (after_destionation == source_iterator
+        } else if (after_destionation == source_iterator
             || source_iterator.m_node->next() == after_destionation.m_node) {
             return;
         }

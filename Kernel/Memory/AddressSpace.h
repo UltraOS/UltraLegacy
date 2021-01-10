@@ -1,8 +1,8 @@
 #pragma once
 
+#include "Common/DynamicArray.h"
 #include "Common/Pair.h"
 #include "Common/RefPtr.h"
-#include "Common/DynamicArray.h"
 #include "GenericPagingEntry.h"
 #include "GenericPagingTable.h"
 #include "Page.h"
@@ -111,11 +111,13 @@ private:
 
     static Address active_directory_address();
 
-    friend bool operator==(const AddressSpace& l, const AddressSpace& r) {
+    friend bool operator==(const AddressSpace& l, const AddressSpace& r)
+    {
         return l.m_main_page.address() == r.m_main_page.address();
     }
 
-    friend bool operator!=(const AddressSpace& l, const AddressSpace& r) {
+    friend bool operator!=(const AddressSpace& l, const AddressSpace& r)
+    {
         return !operator==(l, r);
     }
 

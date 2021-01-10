@@ -301,7 +301,7 @@ public:
         if (!smaller_than_left && !greater_than_right) {
             if (!m_comparator(m_super_root.left->value, new_node->value)) // edge case, emplaced == smallest
                 m_super_root.left = new_node;
-        
+
             if (!m_comparator(new_node->value, m_super_root.right->value)) // edge case, emplaced == greatest
                 m_super_root.right = new_node;
         }
@@ -364,7 +364,7 @@ public:
     template <typename Key, typename Compare = Comparator, typename = typename Compare::is_transparent>
     bool contains(const Key& value) const
     {
-        return find_node(value) != super_root_as_value_node();;
+        return find_node(value) != super_root_as_value_node();
     }
 
     bool contains(const T& value)

@@ -1,5 +1,6 @@
 #include "Core/Runtime.h"
 
+#include "Interrupts/IDT.h"
 #include "Interrupts/Utilities.h"
 
 #include "Scheduler.h"
@@ -19,18 +20,20 @@ Scheduler::Scheduler()
 void Scheduler::inititalize()
 {
     s_instance = new Scheduler();
-    auto& current_cpu = CPU::current();
 
-    current_cpu.set_idle_task(Process::create_idle_for_this_processor());
-    Thread::initialize();
-    CPU::current().idle_task().activate();
+    Process::create_idle_for_this_processor();
+    CPU::current().set_tss(*new TSS);
+#ifdef ULTRA_64
+    IDT::the().configure_ist();
+#endif
+
     Timer::register_scheduler_handler(on_tick);
 }
 
 void Scheduler::sleep(u64 wake_time)
 {
     ASSERT(!Interrupts::are_enabled());
-    
+
     Thread::current()->sleep(wake_time);
     save_state_and_schedule();
 }
@@ -42,7 +45,7 @@ void Scheduler::wake_ready_threads()
 
     for (auto thread_itr = m_sleeping_threads.begin(); thread_itr != m_sleeping_threads.end();) {
         if (!(*thread_itr)->should_be_woken_up())
-             return; // we can afford to do this since threads are sorted in wake-up time order
+            return; // we can afford to do this since threads are sorted in wake-up time order
 
         auto* ready_thread = *thread_itr;
         m_sleeping_threads.remove(thread_itr++);
@@ -120,7 +123,7 @@ Thread* Scheduler::pick_next_thread()
 
         swap(m_preemtable_threads, m_expired_threads);
     }
-    
+
     return &m_preemtable_threads->pop_front();
 }
 
@@ -139,16 +142,16 @@ void Scheduler::pick_next()
         m_expired_threads->insert_back(*current_thread);
     else if (current_thread->is_sleeping())
         m_sleeping_threads.emplace(current_thread);
-    
+
     auto* next_thread = pick_next_thread();
-    
+
     if (current_thread != next_thread) {
         current_thread->deactivate();
         next_thread->activate();
     }
 
     s_queues_lock.unlock(interrupt_state);
-    
+
     switch_task(next_thread->control_block());
 }
 

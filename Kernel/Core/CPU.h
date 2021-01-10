@@ -2,9 +2,9 @@
 
 #include "Common/Atomic.h"
 #include "Common/List.h"
+#include "Common/RefPtr.h"
 #include "Common/String.h"
 #include "Common/Types.h"
-#include "Common/RefPtr.h"
 
 namespace kernel {
 
@@ -71,8 +71,13 @@ public:
         [[nodiscard]] Thread* current_thread() const { return m_current_thread; }
         void set_current_thread(Thread* thread) { m_current_thread = thread; }
 
-        TSS* tss() { return m_tss; }
-        void set_tss(TSS* tss) { m_tss = tss; }
+        TSS& tss()
+        {
+            ASSERT(m_tss != nullptr);
+            return *m_tss;
+        }
+
+        void set_tss(TSS& tss) { m_tss = &tss; }
 
         // bsp is always the first processor
         bool is_bsp() const { return this == &s_processors.front(); }

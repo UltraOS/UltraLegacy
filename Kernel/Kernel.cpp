@@ -94,7 +94,7 @@ void process_with_windows()
             LOCK_GUARD(window->event_queue_lock());
             window->event_queue().clear();
         }
-        
+
         sleep::for_milliseconds(100);
     }
 }

@@ -87,11 +87,11 @@ void CPU::start_all_processors()
     for (auto processor_id : apic_ids)
         s_processors.append_back(processor_id);
 
-    for (auto processor_id : InterruptController::smp_data().application_processor_apic_ids) {
+    for (auto processor_id : apic_ids) {
         LAPIC::start_processor(processor_id);
 
         auto& this_processor = CPU::at_id(processor_id);
-        
+
         while (!this_processor.is_online())
             ;
     }
@@ -104,10 +104,9 @@ void CPU::start_all_processors()
 CPU::LocalData& CPU::at_id(u32 id)
 {
     auto cpu = linear_search(s_processors.begin(), s_processors.end(), id,
-                             [] (const LocalData& cpu_data, u32 id_to_find)
-                             {
-                                 return cpu_data.id() == id_to_find;
-                             });
+        [](const LocalData& cpu_data, u32 id_to_find) {
+            return cpu_data.id() == id_to_find;
+        });
 
     if (cpu == s_processors.end()) {
         String error_string;
@@ -152,10 +151,11 @@ void CPU::ap_entrypoint()
     auto& timer = Timer::get_specific(Timer::Type::LAPIC);
     timer.calibrate_for_this_processor();
     timer.enable();
-    
+
+    Process::create_idle_for_this_processor();
+
     auto& current_cpu = CPU::current();
-    current_cpu.set_idle_task(Process::create_idle_for_this_processor());
-    current_cpu.set_tss(new TSS);
+    current_cpu.set_tss(*new TSS);
 
     current_cpu.bring_online();
     ++s_alive_counter;

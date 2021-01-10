@@ -19,9 +19,9 @@ public:
     static RefPtr<Process> create_idle_for_this_processor();
 
     static RefPtr<Process> create_supervisor(
-            Address entrypoint,
-            StringView name,
-            size_t stack_size = default_kernel_stack_size);
+        Address entrypoint,
+        StringView name,
+        size_t stack_size = default_kernel_stack_size);
 
     DynamicArray<RefPtr<Thread>>& threads() { return m_threads; }
 

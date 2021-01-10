@@ -237,7 +237,7 @@ void DemoTTY::execute_command()
 
         write(info_string.to_view());
         write("\n");
-        
+
     } else if (m_current_command == "help"_sv) {
         write("\nWelcome to UltraOS demo terminal.\n"_sv);
         write("Here's a few things you can do:\n"_sv);

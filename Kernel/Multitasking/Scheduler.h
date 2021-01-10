@@ -1,8 +1,8 @@
 #pragma once
 #include "Common/Types.h"
 
-#include "Core/Registers.h"
 #include "Common/Macros.h"
+#include "Core/Registers.h"
 
 #include "Process.h"
 #include "Thread.h"
@@ -53,7 +53,7 @@ private:
     List<Thread>* m_preemtable_threads;
 
     static InterruptSafeSpinLock s_queues_lock;
-    
+
     static Scheduler* s_instance;
 };
 }

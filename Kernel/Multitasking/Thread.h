@@ -1,10 +1,10 @@
 #pragma once
 
+#include "Common/List.h"
 #include "Core/CPU.h"
 #include "Interrupts/Timer.h"
 #include "Memory/AddressSpace.h"
 #include "TSS.h"
-#include "Common/List.h"
 
 namespace kernel {
 
@@ -27,8 +27,6 @@ public:
     struct PACKED ControlBlock {
         ptr_t current_kernel_stack_top;
     };
-
-    static void initialize();
 
     static RefPtr<Thread> create_idle(Process& owner);
     static RefPtr<Thread> create_supervisor(Process& owner, Address kernel_stack, Address entrypoint);
@@ -74,7 +72,7 @@ public:
         {
             ASSERT(l != nullptr);
             ASSERT(r != nullptr);
-            
+
             return l->wakeup_time() < r->wakeup_time();
         }
     };
@@ -89,10 +87,10 @@ private:
 
     Address m_initial_kernel_stack_top { nullptr };
     ControlBlock m_control_block { 0 };
-    
+
     State m_state { State::READY };
     IsSupervisor m_is_supervisor { IsSupervisor::NO };
-    
+
     u64 m_wake_up_time { 0 };
 
     Window* m_window { nullptr };

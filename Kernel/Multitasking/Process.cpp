@@ -17,9 +17,11 @@ RefPtr<Process> Process::create_idle_for_this_processor()
     process_name << CPU::current_id() << " idle task";
 
     RefPtr<Process> process = new Process(AddressSpace::of_kernel(), IsSupervisor::YES, process_name.to_view());
-    
+
     auto main_thread = Thread::create_idle(*process);
     process->m_threads.emplace(main_thread);
+
+    CPU::current().set_idle_task(process);
 
     return process;
 }
