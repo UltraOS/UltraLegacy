@@ -112,7 +112,7 @@
     VIRTUAL_KEY(MM_PREVIOUS_TRACK, "Previous Track")        \
     VIRTUAL_KEY(MM_NEXT_TRACK, "Next Track")                \
     VIRTUAL_KEY(MM_MUTE, "Mute")                            \
-    VIRTUAL_KEY(MM_CALCULATOR, "Calcualtor")                \
+    VIRTUAL_KEY(MM_CALCULATOR, "Calculator")                \
     VIRTUAL_KEY(MM_PLAY, "Play")                            \
     VIRTUAL_KEY(MM_STOP, "Stop")                            \
     VIRTUAL_KEY(MM_VOLUME_DOWN, "Volume Down")              \
