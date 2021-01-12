@@ -24,6 +24,7 @@
 #include "WindowManager/DemoTTY.h"
 #include "WindowManager/Painter.h"
 #include "WindowManager/WindowManager.h"
+#include "ACPI/ACPI.h"
 
 namespace kernel {
 
@@ -51,6 +52,8 @@ namespace kernel {
     IDT::the().install();
 
     MemoryManager::inititalize();
+
+    ACPI::the().initialize();
 
     InterruptController::discover_and_setup();
     Timer::discover_and_setup();
