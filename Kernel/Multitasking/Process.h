@@ -23,6 +23,8 @@ public:
         StringView name,
         size_t stack_size = default_kernel_stack_size);
 
+    void create_thread(Address entrypoint, size_t stack_size = default_kernel_stack_size);
+
     DynamicArray<RefPtr<Thread>>& threads() { return m_threads; }
 
     AddressSpace& address_space() { return m_address_space; }
@@ -34,6 +36,8 @@ public:
     [[nodiscard]] u32 id() const { return m_id; }
 
     [[nodiscard]] const String& name() const { return m_name; }
+
+    [[nodiscard]] InterruptSafeSpinLock& lock() const { return m_lock; }
 
     friend bool operator<(const RefPtr<Process>& l, const RefPtr<Process>& r)
     {
@@ -64,9 +68,10 @@ private:
 
     String m_name;
 
-    Atomic<u32> m_next_thread_id { main_thread_id + 1 };
+    Atomic<u32> m_next_thread_id { main_thread_id };
+
+    mutable InterruptSafeSpinLock m_lock;
 
     static Atomic<u32> s_next_process_id;
-    static InterruptSafeSpinLock s_lock;
 };
 }

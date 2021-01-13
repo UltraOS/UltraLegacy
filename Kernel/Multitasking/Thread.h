@@ -35,16 +35,16 @@ public:
     void activate();
     void deactivate();
 
-    State state() const { return m_state; }
+    [[nodiscard]] State state() const { return m_state; }
 
     static Thread* current() { return CPU::current().current_thread(); }
 
-    ControlBlock* control_block() { return &m_control_block; }
+    [[nodiscard]] ControlBlock* control_block() { return &m_control_block; }
 
-    IsSupervisor is_supervisor() const { return m_is_supervisor; }
+    [[nodiscard]] IsSupervisor is_supervisor() const { return m_is_supervisor; }
 
-    Process& owner() { return m_owner; }
-    AddressSpace& address_space();
+    [[nodiscard]] Process& owner() { return m_owner; }
+    [[nodiscard]] AddressSpace& address_space();
 
     void sleep(u64 until)
     {

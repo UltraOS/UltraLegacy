@@ -28,8 +28,8 @@
 
 namespace kernel {
 
-[[noreturn]] void dummy_kernel_process();
 [[noreturn]] void process_with_windows();
+[[noreturn]] void dummy_thread();
 
 [[noreturn]] void run(LoaderContext* context)
 {
@@ -71,11 +71,13 @@ namespace kernel {
 
     PS2Controller::initialize();
 
-    Process::create_supervisor(process_with_windows, "demo window"_sv);
+    {
+        // A process with 2 threads
+        auto process = Process::create_supervisor(process_with_windows, "demo window"_sv);
+        process->create_thread(dummy_thread);
+    }
 
     DemoTTY::initialize();
-
-    Process::create_supervisor(dummy_kernel_process, "sleeping dummy"_sv);
 
     Interrupts::enable();
 
@@ -102,7 +104,7 @@ void process_with_windows()
     }
 }
 
-void dummy_kernel_process()
+void dummy_thread()
 {
     for (;;) {
         sleep::for_seconds(1);
