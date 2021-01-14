@@ -241,12 +241,34 @@ template <bool value, typename T = void>
 using enable_if_t = typename enable_if<value, T>::type;
 // --------------------
 
+// ---- conditional ----
+template <bool test, typename IfTrue, typename IfFalse>
+struct conditional {
+    using type = IfTrue;
+};
+
+template <typename IfTrue, typename IfFalse>
+struct conditional<false, IfTrue, IfFalse>
+{
+    using type = IfFalse;
+};
+
+template <bool test, typename IfTrue, typename IfFalse>
+using conditional_t = typename conditional<test, IfTrue, IfFalse>::type;
+// --------------------
+
 // ---- in_place ----
 struct in_place_t {
     explicit in_place_t() = default;
 };
 
 inline constexpr in_place_t in_place {};
+// --------------------
+
+
+// ---- void_t ----
+template<class...>
+using void_t = void;
 // --------------------
 
 }
