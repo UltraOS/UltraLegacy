@@ -16,6 +16,39 @@ public:
     {
     }
 
+    // TODO: SFINAE based on whether FirstT & SecondT are convertable to First & Second
+    template <typename FirstT, typename SecondT>
+    Pair(const Pair<FirstT, SecondT>& other)
+        : m_first(other.first())
+        , m_second(other.second())
+    {
+    }
+
+    template <typename FirstT, typename SecondT>
+    Pair(Pair<FirstT, SecondT>&& other)
+        : m_first(move(other.first()))
+        , m_second(move(other.second()))
+    {
+    }
+
+    template <typename FirstT, typename SecondT>
+    Pair& operator=(const Pair<FirstT, SecondT>& other)
+    {
+        m_first = other.first();
+        m_second = other.second();
+
+        return *this;
+    }
+
+    template <typename FirstT, typename SecondT>
+    Pair& operator=(const Pair<FirstT, SecondT>&& other)
+    {
+        m_first = move(other.first());
+        m_second = move(other.second());
+
+        return *this;
+    }
+
     First& first() { return m_first; }
     const First& first() const { return m_first; }
 
