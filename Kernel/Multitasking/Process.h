@@ -1,7 +1,8 @@
 #pragma once
 
 #include "Common/DynamicArray.h"
-#include "Common/RedBlackTree.h"
+#include "Common/Set.h"
+
 #include "Memory/VirtualRegion.h"
 #include "Thread.h"
 
@@ -25,7 +26,7 @@ public:
 
     void create_thread(Address entrypoint, size_t stack_size = default_kernel_stack_size);
 
-    DynamicArray<RefPtr<Thread>>& threads() { return m_threads; }
+    Set<RefPtr<Thread>, Less<>>& threads() { return m_threads; }
 
     AddressSpace& address_space() { return m_address_space; }
 
@@ -61,10 +62,10 @@ private:
     u32 m_id { 0 };
 
     AddressSpace& m_address_space;
-    RedBlackTree<RefPtr<VirtualRegion>, Less<>> m_virtual_regions;
+    Set<RefPtr<VirtualRegion>, Less<>> m_virtual_regions;
+    Set<RefPtr<Thread>, Less<>> m_threads;
 
     IsSupervisor m_is_supervisor { IsSupervisor::NO };
-    DynamicArray<RefPtr<Thread>> m_threads;
 
     String m_name;
 

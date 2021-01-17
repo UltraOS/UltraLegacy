@@ -219,7 +219,7 @@ private:
 
     mutable InterruptSafeSpinLock m_virtual_region_lock;
 
-    RedBlackTree<RefPtr<VirtualRegion>, Less<>> m_kernel_virtual_regions;
+    Set<RefPtr<VirtualRegion>, Less<>> m_kernel_virtual_regions;
 
     // sorted in ascending order therefore can be searched via lower_bound/bianry_search
     DynamicArray<UniquePtr<PhysicalRegion>> m_physical_regions;

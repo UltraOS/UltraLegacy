@@ -3,7 +3,7 @@
 #include "Common/Lock.h"
 #include "Common/Logger.h"
 #include "Common/Macros.h"
-#include "Common/RedBlackTree.h"
+#include "Common/Set.h"
 #include "Common/String.h"
 #include "Common/Types.h"
 
@@ -16,7 +16,7 @@ class VirtualAllocator {
     MAKE_NONCOPYABLE(VirtualAllocator);
 
 public:
-    using RangeIterator = RedBlackTree<Range, Less<>>::Iterator;
+    using RangeIterator = Set<Range, Less<>>::Iterator;
 
     VirtualAllocator() = default;
     VirtualAllocator(Address begin, Address end);
@@ -42,7 +42,7 @@ private:
 private:
     Range m_base_range;
 
-    RedBlackTree<Range, Less<>> m_allocated_ranges;
+    Set<Range, Less<>> m_allocated_ranges;
 
     mutable InterruptSafeSpinLock m_lock;
 };

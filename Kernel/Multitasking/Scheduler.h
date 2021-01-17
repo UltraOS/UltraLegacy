@@ -1,7 +1,9 @@
 #pragma once
-#include "Common/Types.h"
 
 #include "Common/Macros.h"
+#include "Common/Set.h"
+#include "Common/Types.h"
+
 #include "Core/Registers.h"
 
 #include "Process.h"
@@ -44,9 +46,9 @@ private:
     static void save_state_and_schedule();
 
 private:
-    RedBlackTree<RefPtr<Process>, Less<>> m_processes; // sorted by pid
+    Set<RefPtr<Process>, Less<>> m_processes; // sorted by pid
 
-    RedBlackTree<Thread*, Thread::WakeTimePtrComparator> m_sleeping_threads; // sorted by wake-up time
+    Set<Thread*, Thread::WakeTimePtrComparator> m_sleeping_threads; // sorted by wake-up time
 
     // A simplified version of the O(1) scheduler
     List<Thread>* m_expired_threads;

@@ -17,12 +17,11 @@
 namespace kernel {
 
 Atomic<size_t> CPU::s_alive_counter;
-InterruptSafeSpinLock CPU::s_processors_lock;
-List<CPU::LocalData> CPU::s_processors;
+Map<u32, CPU::LocalData> CPU::s_processors;
 
 Thread& CPU::LocalData::idle_task()
 {
-    return *m_idle_process->threads().first();
+    return **m_idle_process->threads().begin();
 }
 
 CPU::ID::ID(u32 function)
@@ -51,9 +50,10 @@ void CPU::MSR::write(u32 index)
 void CPU::initialize()
 {
     if (supports_smp()) {
-        s_processors.append_back(LAPIC::my_id());
+        auto my_id = LAPIC::my_id();
+        s_processors.emplace(make_pair(my_id, LocalData(my_id)));
     } else {
-        s_processors.append_back(0);
+        s_processors.emplace(make_pair(0, LocalData(0)));
     }
 
     ++s_alive_counter;
@@ -85,7 +85,7 @@ void CPU::start_all_processors()
     // as well, which would lead to recursively calling current() everywhere.
     auto& apic_ids = InterruptController::smp_data().application_processor_apic_ids;
     for (auto processor_id : apic_ids)
-        s_processors.append_back(processor_id);
+        s_processors.emplace(make_pair(processor_id, LocalData(processor_id)));
 
     for (auto processor_id : apic_ids) {
         LAPIC::start_processor(processor_id);
@@ -103,10 +103,7 @@ void CPU::start_all_processors()
 
 CPU::LocalData& CPU::at_id(u32 id)
 {
-    auto cpu = linear_search(s_processors.begin(), s_processors.end(), id,
-        [](const LocalData& cpu_data, u32 id_to_find) {
-            return cpu_data.id() == id_to_find;
-        });
+    auto cpu = s_processors.find(id);
 
     if (cpu == s_processors.end()) {
         String error_string;
@@ -114,7 +111,7 @@ CPU::LocalData& CPU::at_id(u32 id)
         runtime::panic(error_string.data());
     }
 
-    return *cpu;
+    return cpu->second();
 }
 
 CPU::LocalData& CPU::current()
@@ -135,10 +132,10 @@ u32 CPU::current_id()
 
 void CPU::LocalData::bring_online()
 {
-    ASSERT(m_is_online == false);
+    ASSERT(*m_is_online == false);
     ASSERT(LAPIC::my_id() == m_id);
 
-    m_is_online = true;
+    *m_is_online = true;
 }
 
 void CPU::ap_entrypoint()

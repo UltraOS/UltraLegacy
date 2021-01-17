@@ -1,3 +1,4 @@
+#include "ACPI/ACPI.h"
 #include "Common/Conversions.h"
 #include "Common/Logger.h"
 #include "Common/Types.h"
@@ -24,7 +25,6 @@
 #include "WindowManager/DemoTTY.h"
 #include "WindowManager/Painter.h"
 #include "WindowManager/WindowManager.h"
-#include "ACPI/ACPI.h"
 
 namespace kernel {
 

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Common/Atomic.h"
-#include "Common/List.h"
+#include "Common/Map.h"
 #include "Common/RefPtr.h"
 #include "Common/String.h"
 #include "Common/Types.h"
@@ -64,6 +64,7 @@ public:
         explicit LocalData(u32 id)
             : m_id(id)
         {
+            m_is_online = new Atomic<bool>(false);
         }
 
         [[nodiscard]] u32 id() const { return m_id; }
@@ -80,23 +81,23 @@ public:
         void set_tss(TSS& tss) { m_tss = &tss; }
 
         // bsp is always the first processor
-        bool is_bsp() const { return this == &s_processors.front(); }
+        bool is_bsp() const { return this == &s_processors.begin()->second(); }
 
         void set_idle_task(RefPtr<Process> process) { m_idle_process = process; }
         Thread& idle_task();
 
         void bring_online();
-        bool is_online() const { return m_is_online; }
+        bool is_online() const { return *m_is_online; }
 
     private:
         u32 m_id;
         RefPtr<Process> m_idle_process;
         Thread* m_current_thread { nullptr };
         TSS* m_tss { nullptr };
-        Atomic<bool> m_is_online { false };
+        Atomic<bool>* m_is_online { nullptr };
     };
 
-    static List<LocalData>& processors() { return s_processors; }
+    static Map<u32, LocalData>& processors() { return s_processors; }
 
     static LocalData& current();
     static LocalData& at_id(u32);
@@ -108,9 +109,6 @@ private:
 
 private:
     static Atomic<size_t> s_alive_counter;
-
-    static InterruptSafeSpinLock s_processors_lock;
-    // TODO: replace with a map <id, processor>
-    static List<LocalData> s_processors;
+    static Map<u32, LocalData> s_processors;
 };
 }

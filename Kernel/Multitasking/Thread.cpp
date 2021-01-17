@@ -106,6 +106,11 @@ Thread::Thread(Process& owner, Address kernel_stack, IsSupervisor is_supervisor)
 {
 }
 
+bool Thread::is_main() const
+{
+    return m_id == Process::main_thread_id;
+}
+
 void Thread::activate()
 {
     m_state = State::RUNNING;

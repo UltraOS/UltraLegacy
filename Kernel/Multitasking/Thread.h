@@ -10,7 +10,7 @@ namespace kernel {
 
 class Window;
 
-class Thread : public StandaloneListNode {
+class Thread : public StandaloneListNode<Thread> {
     MAKE_NONCOPYABLE(Thread);
     MAKE_NONMOVABLE(Thread);
 
@@ -46,6 +46,8 @@ public:
     [[nodiscard]] Process& owner() { return m_owner; }
     [[nodiscard]] AddressSpace& address_space();
 
+    [[nodiscard]] bool is_main() const;
+
     void sleep(u64 until)
     {
         m_state = State::BLOCKED;
@@ -76,6 +78,22 @@ public:
             return l->wakeup_time() < r->wakeup_time();
         }
     };
+
+    // A bunch of operators to make RedBlackTree work with Thread
+    friend bool operator<(const RefPtr<Thread>& l, const RefPtr<Thread>& r)
+    {
+        return l->m_id < r->m_id;
+    }
+
+    friend bool operator<(const RefPtr<Thread>& l, u32 id)
+    {
+        return l->m_id < id;
+    }
+
+    friend bool operator<(u32 id, const RefPtr<Thread>& r)
+    {
+        return id < r->m_id;
+    }
 
 private:
     Thread(Process& owner, Address kernel_stack, IsSupervisor);
