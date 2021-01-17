@@ -6,38 +6,15 @@
 
 namespace kernel {
 
-class StandaloneListNode {
-public:
-    StandaloneListNode() = default;
-
-    StandaloneListNode(StandaloneListNode* previous, StandaloneListNode* next)
-        : m_previous(previous)
-        , m_next(next)
-    {
-    }
-
-    StandaloneListNode* next() { return m_next; }
-    const StandaloneListNode* next() const { return m_next; }
-
-    StandaloneListNode* previous() { return m_previous; }
-    const StandaloneListNode* previous() const { return m_previous; }
-
-    void set_next(StandaloneListNode* next) { m_next = next; }
-    void set_previous(StandaloneListNode* previous) { m_previous = previous; }
-
-    virtual ~StandaloneListNode() = default;
-
-private:
-    StandaloneListNode* m_previous { nullptr };
-    StandaloneListNode* m_next { nullptr };
-};
+template <typename T>
+class StandaloneListNode;
 
 template <typename T, typename = void>
 class List {
 };
 
 template <typename T>
-class List<T, typename enable_if<!is_base_of_v<StandaloneListNode, T>>::type> {
+class List<T, typename enable_if<!is_base_of_v<StandaloneListNode<T>, T>>::type> {
 public:
     class NodeBase {
     public:
@@ -166,14 +143,14 @@ public:
         NodeBase* m_node { nullptr };
     };
 
-    void splice(Iterator after_destionation, List& source_list, Iterator source_iterator)
+    void splice(Iterator after_destination, List& source_list, Iterator source_iterator)
     {
         if (this != &source_list) {
             source_list.m_size--;
             m_size++;
             ASSERT(source_iterator != source_list.end());
-        } else if (after_destionation == source_iterator
-            || source_iterator.m_node->next() == after_destionation.m_node) {
+        } else if (after_destination == source_iterator
+            || source_iterator.m_node->next() == after_destination.m_node) {
             return;
         }
 
@@ -185,10 +162,10 @@ public:
         prev->set_next(next);
         next->set_previous(prev);
 
-        source_iterator.m_node->set_next(after_destionation.m_node);
-        source_iterator.m_node->set_previous(after_destionation.m_node->previous());
-        after_destionation.m_node->previous()->set_next(source_iterator.m_node);
-        after_destionation.m_node->set_previous(source_iterator.m_node);
+        source_iterator.m_node->set_next(after_destination.m_node);
+        source_iterator.m_node->set_previous(after_destination.m_node->previous());
+        after_destination.m_node->previous()->set_next(source_iterator.m_node);
+        after_destination.m_node->set_previous(source_iterator.m_node);
     }
 
     void erase(Iterator itr)
@@ -238,45 +215,22 @@ private:
 
 // list of standalone nodes (doesn't own the nodes that are a part of it)
 template <typename T>
-class List<T, typename enable_if<is_base_of_v<StandaloneListNode, T>>::type> {
+class List<T, typename enable_if<is_base_of_v<StandaloneListNode<T>, T>>::type> {
 public:
     List()
         : m_end(&m_end, &m_end)
     {
     }
 
-    void insert_back(T& node)
-    {
-        auto* previous = m_end.previous();
-
-        previous->set_next(&node);
-        node.set_previous(previous);
-
-        m_end.set_previous(&node);
-        node.set_next(&m_end);
-
-        m_size++;
-    }
-
-    void insert_front(T& node)
-    {
-        auto* next = m_end.next();
-
-        next->set_previous(&node);
-        node.set_next(next);
-
-        m_end.set_next(&node);
-        node.set_previous(&m_end);
-
-        m_size++;
-    }
+    void insert_back(T& node);
+    void insert_front(T& node);
 
     class Iterator {
     public:
         friend class List;
 
         Iterator() = default;
-        explicit Iterator(StandaloneListNode* node)
+        explicit Iterator(StandaloneListNode<T>* node)
             : m_node(node)
         {
         }
@@ -318,50 +272,12 @@ public:
         bool operator!=(const Iterator& itr) const { return m_node != itr.m_node; }
 
     private:
-        StandaloneListNode* m_node { nullptr };
+        StandaloneListNode<T>* m_node { nullptr };
     };
 
-    void splice(Iterator after_destionation, List& source_list, Iterator source_iterator)
-    {
-        if (this != &source_list) {
-            source_list.m_size--;
-            m_size++;
-            ASSERT(source_iterator != source_list.end());
-        } else if (after_destionation == source_iterator
-            || source_iterator.m_node->next() == after_destionation.m_node) {
-            return;
-        }
+    void splice(Iterator after_destination, List& source_list, Iterator source_iterator);
 
-        ASSERT(source_iterator != end());
-
-        auto prev = source_iterator.m_node->previous();
-        auto next = source_iterator.m_node->next();
-
-        prev->set_next(next);
-        next->set_previous(prev);
-
-        source_iterator.m_node->set_next(after_destionation.m_node);
-        source_iterator.m_node->set_previous(after_destionation.m_node->previous());
-        after_destionation.m_node->previous()->set_next(source_iterator.m_node);
-        after_destionation.m_node->set_previous(source_iterator.m_node);
-    }
-
-    T& pop(Iterator itr)
-    {
-        ASSERT(itr != end());
-
-        auto* node = itr.m_node;
-
-        node->previous()->set_next(node->next());
-        node->next()->set_previous(node->previous());
-
-        node->set_next(nullptr);
-        node->set_previous(nullptr);
-
-        m_size--;
-
-        return *static_cast<T*>(node);
-    }
+    T& pop(Iterator itr);
 
     T& pop_front()
     {
@@ -389,9 +305,149 @@ public:
     [[nodiscard]] size_t size() const { return m_size; }
     [[nodiscard]] bool empty() const { return size() == 0; }
 
+    ~List();
+
 private:
-    StandaloneListNode m_end;
+    StandaloneListNode<T> m_end;
     size_t m_size { 0 };
 };
+
+template <typename T>
+class StandaloneListNode {
+public:
+    StandaloneListNode() = default;
+
+    StandaloneListNode(StandaloneListNode* previous, StandaloneListNode* next)
+        : m_previous(previous)
+        , m_next(next)
+    {
+    }
+
+    StandaloneListNode* next() { return m_next; }
+    const StandaloneListNode* next() const { return m_next; }
+
+    StandaloneListNode* previous() { return m_previous; }
+    const StandaloneListNode* previous() const { return m_previous; }
+
+    void set_next(StandaloneListNode* next) { m_next = next; }
+    void set_previous(StandaloneListNode* previous) { m_previous = previous; }
+
+    [[nodiscard]] bool is_on_a_list() const { return m_my_list != nullptr; }
+
+    void pop_off()
+    {
+        ASSERT(m_my_list != nullptr);
+        m_my_list->pop(List<T>::Iterator(this));
+    }
+
+    virtual ~StandaloneListNode() = default;
+
+private:
+    void set_my_list(List<T>* list)
+    {
+        ASSERT(list == nullptr || m_my_list == nullptr);
+        m_my_list = list;
+    }
+
+private:
+    friend class List<T>;
+    List<T>* m_my_list { nullptr }; // for O(1) pop_off without having to know the list
+    StandaloneListNode* m_previous { nullptr };
+    StandaloneListNode* m_next { nullptr };
+};
+
+template <typename T>
+void List<T, typename enable_if<is_base_of_v<StandaloneListNode<T>, T>>::type>::insert_back(T& node)
+{
+    auto* previous = m_end.previous();
+
+    previous->set_next(&node);
+    node.set_previous(previous);
+
+    m_end.set_previous(&node);
+    node.set_next(&m_end);
+
+    node.set_my_list(this);
+
+    m_size++;
+}
+
+template <typename T>
+void List<T, typename enable_if<is_base_of_v<StandaloneListNode<T>, T>>::type>::insert_front(T& node)
+{
+    auto* next = m_end.next();
+
+    next->set_previous(&node);
+    node.set_next(next);
+
+    m_end.set_next(&node);
+    node.set_previous(&m_end);
+
+    node.set_my_list(this);
+
+    m_size++;
+}
+
+template <typename T>
+T& List<T, typename enable_if<is_base_of_v<StandaloneListNode<T>, T>>::type>::pop(Iterator itr)
+{
+    ASSERT(itr != end());
+
+    auto* node = itr.m_node;
+
+    node->previous()->set_next(node->next());
+    node->next()->set_previous(node->previous());
+
+    node->set_next(nullptr);
+    node->set_previous(nullptr);
+    node->set_my_list(nullptr);
+
+    m_size--;
+
+    return *static_cast<T*>(node);
+}
+
+template <typename T>
+void List<T, typename enable_if<is_base_of_v<StandaloneListNode<T>, T>>::type>::splice(Iterator after_destination, List& source_list, Iterator source_iterator)
+{
+    if (this != &source_list) {
+        source_list.m_size--;
+        m_size++;
+
+        // Have to do it this way, otherwise we trigger an assertion
+        source_iterator.m_node->set_my_list(nullptr);
+        source_iterator.m_node->set_my_list(this);
+
+        ASSERT(source_iterator != source_list.end());
+    } else if (after_destination == source_iterator
+        || source_iterator.m_node->next() == after_destination.m_node) {
+        return;
+    }
+
+    ASSERT(source_iterator != end());
+
+    auto prev = source_iterator.m_node->previous();
+    auto next = source_iterator.m_node->next();
+
+    prev->set_next(next);
+    next->set_previous(prev);
+
+    source_iterator.m_node->set_next(after_destination.m_node);
+    source_iterator.m_node->set_previous(after_destination.m_node->previous());
+    after_destination.m_node->previous()->set_next(source_iterator.m_node);
+    after_destination.m_node->set_previous(source_iterator.m_node);
+}
+
+template <typename T>
+List<T, typename enable_if<is_base_of_v<StandaloneListNode<T>, T>>::type>::~List()
+{
+    auto* next_node = m_end.next();
+
+    for (size_t i = 0; i < m_size; ++i) {
+        auto* current_node = next_node;
+        next_node = next_node->next();
+        current_node->set_my_list(nullptr);
+    }
+}
 
 }
