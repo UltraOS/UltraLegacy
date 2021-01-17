@@ -24,7 +24,7 @@ serialize(ColorT color)
 #include "Common/Set.h"
 
 template <typename T, typename Compare = kernel::Less<T>>
-using rbtree = kernel::detail::RedBlackTree<kernel::detail::SetTraits<T, Compare>>;
+using rbtree = kernel::detail::RedBlackTree<kernel::detail::SetTraits<T, Compare, false>>;
 
 template <typename TreeNodeT>
 void recursive_verify_one(TreeNodeT parent, TreeNodeT child)
