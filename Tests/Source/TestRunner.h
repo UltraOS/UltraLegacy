@@ -448,11 +448,41 @@ public:
 
 class Deletable {
 public:
-    Deletable(size_t& counter) : m_counter(&counter) {}
-    ~Deletable() { (*m_counter)++; }
+    Deletable(size_t& counter)
+        : m_counter(&counter)
+    {
+    }
 
-private:
-    size_t* m_counter;
+    Deletable(Deletable&& other)
+        : m_counter(other.m_counter)
+    {
+        other.m_counter = nullptr;
+    }
+
+    Deletable& operator=(const Deletable& other)
+    {
+        m_counter = other.m_counter;
+        return *this;
+    }
+
+    Deletable& operator=(Deletable&& other)
+    {
+        m_counter = other.m_counter;
+        other.m_counter = nullptr;
+
+        return *this;
+    }
+
+    ~Deletable()
+    {
+        if (!m_counter)
+            return;
+
+        (*m_counter)++;
+    }
+
+protected:
+    size_t* m_counter { nullptr };
 };
 
 struct ConstructableDeletable : public Deletable {
@@ -462,6 +492,6 @@ struct ConstructableDeletable : public Deletable {
         (*m_ctor_counter)++;
     }
 
-private:
+protected:
     size_t* m_ctor_counter;
 };

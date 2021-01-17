@@ -1,17 +1,233 @@
 #pragma once
 
+#include "Common/Pair.h"
+#include "Common/Traits.h"
 #include "Common/Types.h"
 #include "Common/Utilities.h"
 #include "Core/Runtime.h"
 
-namespace kernel {
+namespace kernel::detail {
 
-template <typename T, typename Comparator = Less<T>>
+template <typename ValueNodeT>
+ValueNodeT inorder_successor_of(ValueNodeT node)
+{
+    ASSERT(node != nullptr);
+    ASSERT(!node->is_null());
+
+    if (node->right) {
+        node = node->right;
+
+        while (node->left) {
+            node = node->left;
+        }
+
+        return node;
+    }
+
+    auto* parent = node->parent;
+
+    while (!parent->is_null() && node->is_right_child()) {
+        node = parent;
+        parent = node->parent;
+    }
+
+    return parent;
+}
+
+template <typename ValueNodeT>
+ValueNodeT inorder_predecessor_of(ValueNodeT node)
+{
+    ASSERT(node != nullptr);
+    ASSERT(!node->is_null());
+
+    if (node->left) {
+        node = node->left;
+
+        while (node->right) {
+            node = node->right;
+        }
+
+        return node;
+    }
+
+    auto* parent = node->parent;
+
+    while (!parent->is_null() && node->is_left_child()) {
+        node = parent;
+        parent = node->parent;
+    }
+
+    return parent;
+}
+
+template <typename Tree>
+class ConstTreeIterator {
+public:
+    friend Tree;
+
+    using ValueType = typename Tree::ValueType;
+    using ValueNode = typename Tree::ValueNode;
+
+    ConstTreeIterator() = default;
+    ConstTreeIterator(const ValueNode* node)
+        : m_node(node)
+    {
+    }
+
+    const ValueType& operator*() const
+    {
+        ASSERT(m_node && !m_node->is_null());
+        return m_node->value;
+    }
+
+    ConstTreeIterator& operator++()
+    {
+        ASSERT(m_node && !m_node->is_null());
+
+        m_node = inorder_successor_of(m_node);
+
+        return *this;
+    }
+
+    ConstTreeIterator operator++(int)
+    {
+        ASSERT(m_node && !m_node->is_null());
+
+        ConstTreeIterator old(m_node);
+
+        m_node = inorder_successor_of(m_node);
+
+        return old;
+    }
+
+    ConstTreeIterator& operator--()
+    {
+        // This should technically check that node is not equal begin(),
+        // but i'm not sure how we can verify that from here
+        ASSERT(m_node != nullptr);
+
+        decrement();
+
+        return *this;
+    }
+
+    ConstTreeIterator operator--(int)
+    {
+        // This should technically check that node is not equal begin(),
+        // but i'm not sure how we can verify that from here
+        ASSERT(m_node != nullptr);
+
+        ConstTreeIterator old(m_node);
+
+        decrement();
+
+        return old;
+    }
+
+    const ValueType* operator->() const
+    {
+        ASSERT(m_node && !m_node->is_null());
+
+        return &m_node->value;
+    }
+
+    bool operator==(const ConstTreeIterator& other) const
+    {
+        return m_node == other.m_node;
+    }
+
+    bool operator!=(const ConstTreeIterator& other) const
+    {
+        return m_node != other.m_node;
+    }
+
+private:
+    void decrement()
+    {
+        ASSERT(m_node != nullptr);
+
+        if (m_node->is_null()) {
+            m_node = m_node->right;
+        } else {
+            m_node = inorder_predecessor_of(m_node);
+        }
+    }
+
+private:
+    const ValueNode* m_node { nullptr };
+};
+
+template <typename Tree>
+class TreeIterator : public ConstTreeIterator<Tree> {
+public:
+    friend Tree;
+
+    using Base = ConstTreeIterator<Tree>;
+    using ValueType = typename Tree::ValueType;
+    using ValueNode = typename Tree::ValueNode;
+
+    TreeIterator() = default;
+    TreeIterator(const ValueNode* node)
+        : Base(node)
+    {
+    }
+
+    ValueType& operator*()
+    {
+        return const_cast<ValueType&>(Base::operator*());
+    }
+
+    TreeIterator& operator++()
+    {
+        Base::operator++();
+        return *this;
+    }
+
+    TreeIterator operator++(int)
+    {
+        auto old = *this;
+        Base::operator++();
+
+        return old;
+    }
+
+    TreeIterator& operator--()
+    {
+        Base::operator--();
+        return *this;
+    }
+
+    TreeIterator operator--(int)
+    {
+        auto old = *this;
+        Base::operator--();
+
+        return old;
+    }
+
+    ValueType* operator->()
+    {
+        return const_cast<ValueType*>(Base::operator->());
+    }
+};
+
+// Expected traits:
+// - typename KeyType
+// - typename ValueType (expected to be same as key_type for set)
+// - typename KeyComparator
+// - typename ValueComparator
+// - bool allow_duplicates
+// - static const key_type& extract_key(const value_type&)
+
+template <typename Traits>
 class RedBlackTree {
 public:
-    using element_type = T;
+    using KeyComparator = typename Traits::KeyComparator;
+    using ValueComparator = typename Traits::ValueComparator;
+    using ValueType = typename Traits::ValueType;
+    using KeyType = typename Traits::KeyType;
 
-    RedBlackTree(Comparator comparator = Comparator())
+    RedBlackTree(KeyComparator comparator = KeyComparator())
         : m_comparator(move(comparator))
     {
     }
@@ -140,7 +356,7 @@ public:
             BLACK = 1
         } color { Color::RED };
 
-        T value;
+        ValueType value;
 
         bool is_black() const { return color == Color::BLACK; }
         bool is_red() const { return color == Color::RED; }
@@ -164,120 +380,52 @@ public:
         }
     };
 
-    class Iterator {
-    public:
-        friend class RedBlackTree;
+    using Iterator = conditional_t<is_same_v<KeyType, ValueType>, ConstTreeIterator<RedBlackTree>, TreeIterator<RedBlackTree>>;
+    using ConstIterator = ConstTreeIterator<RedBlackTree>;
 
-        Iterator() = default;
-        Iterator(const ValueNode* node)
-            : m_node(node)
-        {
-        }
-
-        const T& operator*() const
-        {
-            ASSERT(m_node && !m_node->is_null());
-            return m_node->value;
-        }
-
-        Iterator& operator++()
-        {
-            ASSERT(m_node && !m_node->is_null());
-
-            m_node = inorder_successor_of(m_node);
-
-            return *this;
-        }
-
-        Iterator operator++(int)
-        {
-            ASSERT(m_node && !m_node->is_null());
-
-            Iterator old(m_node);
-
-            m_node = inorder_successor_of(m_node);
-
-            return old;
-        }
-
-        Iterator& operator--()
-        {
-            // This should technically check that node is not equal begin(),
-            // but i'm not sure how we can verify that from here
-            ASSERT(m_node != nullptr);
-
-            decrement();
-
-            return *this;
-        }
-
-        Iterator operator--(int)
-        {
-            // This should technically check that node is not equal begin(),
-            // but i'm not sure how we can verify that from here
-            ASSERT(m_node != nullptr);
-
-            Iterator old(m_node);
-
-            decrement();
-
-            return old;
-        }
-
-        const T* operator->() const
-        {
-            ASSERT(m_node && !m_node->is_null());
-
-            return &m_node->value;
-        }
-
-        bool operator==(const Iterator& other) const
-        {
-            return m_node == other.m_node;
-        }
-
-        bool operator!=(const Iterator& other) const
-        {
-            return m_node != other.m_node;
-        }
-
-    private:
-        void decrement()
-        {
-            ASSERT(m_node != nullptr);
-
-            if (m_node->is_null()) {
-                m_node = m_node->right;
-            } else {
-                m_node = inorder_predecessor_of(m_node);
-            }
-        }
-
-    private:
-        const ValueNode* m_node { nullptr };
-    };
-
-    Iterator begin() const
+    Iterator begin()
     {
         return Iterator(left_most_node());
     }
 
-    Iterator end() const { return Iterator(super_root_as_value_node()); }
+    Iterator end()
+    {
+        return Iterator(super_root_as_value_node());
+    }
 
-    Iterator push(const T& value)
+    ConstIterator begin() const
+    {
+        return ConstIterator(left_most_node());
+    }
+
+    ConstIterator end() const
+    {
+        return ConstIterator(super_root_as_value_node());
+    }
+
+    Pair<Iterator, bool> push(const ValueType& value)
     {
         return emplace(value);
     }
 
-    Iterator push(T&& value)
+    Pair<Iterator, bool> push(ValueType&& value)
     {
         return emplace(move(value));
     }
 
     template <typename... Args>
-    Iterator emplace(Args&&... args)
+    Pair<Iterator, bool> emplace(Args&&... args)
     {
-        auto* new_node = new ValueNode(forward<Args>(args)...);
+        auto value = ValueType(forward<Args>(args)...);
+
+        if (!Traits::allow_duplicates) {
+            auto* location = find_node(Traits::extract_key(value));
+
+            if (location != super_root_as_value_node())
+                return { location, false };
+        }
+
+        auto* new_node = new ValueNode(move(value));
 
         bool smaller_than_left = false;
         bool greater_than_right = false;
@@ -285,7 +433,7 @@ public:
         if (m_super_root.left == nullptr) {
             m_super_root.left = new_node;
             smaller_than_left = true;
-        } else if (m_comparator(new_node->value, m_super_root.left->value)) {
+        } else if (value_comparator()(new_node->value, m_super_root.left->value)) {
             m_super_root.left = new_node;
             smaller_than_left = true;
         }
@@ -293,16 +441,16 @@ public:
         if (m_super_root.right == nullptr) {
             m_super_root.right = new_node;
             greater_than_right = true;
-        } else if (m_comparator(m_super_root.right->value, new_node->value)) {
+        } else if (value_comparator()(m_super_root.right->value, new_node->value)) {
             m_super_root.right = new_node;
             greater_than_right = true;
         }
 
         if (!smaller_than_left && !greater_than_right) {
-            if (!m_comparator(m_super_root.left->value, new_node->value)) // edge case, emplaced == smallest
+            if (!value_comparator()(m_super_root.left->value, new_node->value)) // edge case, emplaced == smallest
                 m_super_root.left = new_node;
 
-            if (!m_comparator(new_node->value, m_super_root.right->value)) // edge case, emplaced == greatest
+            if (!value_comparator()(new_node->value, m_super_root.right->value)) // edge case, emplaced == greatest
                 m_super_root.right = new_node;
         }
 
@@ -311,13 +459,13 @@ public:
             m_root->parent = super_root_as_value_node();
             m_root->color = ValueNode::Color::BLACK;
             m_size = 1;
-            return Iterator(new_node);
+            return { Iterator(new_node), true };
         }
 
         auto* current = m_root;
 
         for (;;) {
-            if (m_comparator(current->value, new_node->value)) {
+            if (value_comparator()(current->value, new_node->value)) {
                 if (current->right == nullptr) {
                     current->right = new_node;
                     new_node->parent = current;
@@ -341,11 +489,19 @@ public:
         fix_insertion_violations_if_needed(new_node);
         ++m_size;
 
-        return Iterator(new_node);
+        return { Iterator(new_node), true };
     }
 
-    template <typename Key, typename Compare = Comparator, typename = typename Compare::is_transparent>
-    const T& get(const Key& value) const
+    template <typename Key, typename Compare = KeyComparator, typename = typename Compare::is_transparent>
+    const ValueType& get(const Key& key) const
+    {
+        auto* node = find_node(key);
+        ASSERT(node != super_root_as_value_node());
+
+        return node->value;
+    }
+
+    const ValueType& get(const KeyType& value)
     {
         auto* node = find_node(value);
         ASSERT(node != super_root_as_value_node());
@@ -353,26 +509,18 @@ public:
         return node->value;
     }
 
-    const T& get(const T& value)
+    template <typename Key, typename Compare = KeyComparator, typename = typename Compare::is_transparent>
+    bool contains(const Key& key) const
     {
-        auto* node = find_node(value);
-        ASSERT(node != super_root_as_value_node());
-
-        return node->value;
+        return find_node(key) != super_root_as_value_node();
     }
 
-    template <typename Key, typename Compare = Comparator, typename = typename Compare::is_transparent>
-    bool contains(const Key& value) const
+    bool contains(const KeyType& value)
     {
         return find_node(value) != super_root_as_value_node();
     }
 
-    bool contains(const T& value)
-    {
-        return find_node(value) != super_root_as_value_node();
-    }
-
-    void remove(Iterator iterator)
+    void remove(ConstIterator iterator)
     {
         auto* node = const_cast<ValueNode*>(iterator.m_node);
 
@@ -390,9 +538,20 @@ public:
         remove_node(node);
     }
 
-    void remove(const T& value)
+    void remove(const KeyType& value)
     {
         auto node = find(value);
+
+        if (node == end())
+            return;
+
+        remove(node);
+    }
+
+    template <typename Key, typename Compare = KeyComparator, typename = typename Compare::is_transparent>
+    void remove(const Key& key)
+    {
+        auto node = find(key);
 
         if (node == end())
             return;
@@ -403,35 +562,68 @@ public:
     size_t size() const { return m_size; }
     bool empty() const { return m_size == 0; }
 
-    template <typename Key, typename Compare = Comparator, typename = typename Compare::is_transparent>
-    Iterator find(const Key& key) const
+    template <typename Key, typename Compare = KeyComparator, typename = typename Compare::is_transparent>
+    Iterator find(const Key& key)
     {
         return { find_node(key) };
     }
 
-    Iterator find(const T& key) const
+    Iterator find(const KeyType& key)
     {
         return { find_node(key) };
     }
 
-    template <typename Key, typename Compare = Comparator, typename = typename Compare::is_transparent>
-    Iterator lower_bound(const Key& key) const
+    template <typename Key, typename Compare = KeyComparator, typename = typename Compare::is_transparent>
+    ConstIterator find(const Key& key) const
+    {
+        return { find_node(key) };
+    }
+
+    ConstIterator find(const KeyType& key) const
+    {
+        return { find_node(key) };
+    }
+
+    template <typename Key, typename Compare = KeyComparator, typename = typename Compare::is_transparent>
+    Iterator lower_bound(const Key& key)
     {
         return { lower_bound_node(key) };
     }
 
-    Iterator lower_bound(const T& key) const
+    Iterator lower_bound(const KeyType& key)
     {
         return { lower_bound_node(key) };
     }
 
-    template <typename Key, typename Compare = Comparator, typename = typename Compare::is_transparent>
-    Iterator upper_bound(const Key& key) const
+    template <typename Key, typename Compare = KeyComparator, typename = typename Compare::is_transparent>
+    ConstIterator lower_bound(const Key& key) const
+    {
+        return { lower_bound_node(key) };
+    }
+
+    ConstIterator lower_bound(const KeyType& key) const
+    {
+        return { lower_bound_node(key) };
+    }
+
+    template <typename Key, typename Compare = KeyComparator, typename = typename Compare::is_transparent>
+    Iterator upper_bound(const Key& key)
     {
         return { upper_bound_node(key) };
     }
 
-    Iterator upper_bound(const T& key) const
+    Iterator upper_bound(const KeyType& key)
+    {
+        return { upper_bound_node(key) };
+    }
+
+    template <typename Key, typename Compare = KeyComparator, typename = typename Compare::is_transparent>
+    ConstIterator upper_bound(const Key& key) const
+    {
+        return { upper_bound_node(key) };
+    }
+
+    ConstIterator upper_bound(const KeyType& key) const
     {
         return { upper_bound_node(key) };
     }
@@ -546,7 +738,7 @@ private:
         ValueNode* result = super_root_as_value_node();
 
         while (node) {
-            if (m_comparator(key, node->value)) {
+            if (m_comparator(key, Traits::extract_key(node->value))) {
                 result = node;
                 node = node->left;
             } else {
@@ -567,7 +759,7 @@ private:
         ValueNode* result = super_root_as_value_node();
 
         while (node) {
-            if (m_comparator(node->value, key)) {
+            if (m_comparator(Traits::extract_key(node->value), key)) {
                 node = node->right;
             } else {
                 result = node;
@@ -587,9 +779,9 @@ private:
         auto* current_node = m_root;
 
         while (current_node) {
-            if (m_comparator(current_node->value, key)) {
+            if (m_comparator(Traits::extract_key(current_node->value), key)) {
                 current_node = current_node->right;
-            } else if (m_comparator(key, current_node->value)) {
+            } else if (m_comparator(key, Traits::extract_key(current_node->value))) {
                 current_node = current_node->left;
             } else {
                 return current_node;
@@ -1050,62 +1242,15 @@ private:
         node->parent = left_child;
     }
 
-    template <typename ValueNodeT>
-    static ValueNodeT inorder_successor_of(ValueNodeT node)
+    ValueComparator value_comparator()
     {
-        ASSERT(node != nullptr);
-        ASSERT(!node->is_null());
-
-        if (node->right) {
-            node = node->right;
-
-            while (node->left) {
-                node = node->left;
-            }
-
-            return node;
-        }
-
-        auto* parent = node->parent;
-
-        while (!parent->is_null() && node->is_right_child()) {
-            node = parent;
-            parent = node->parent;
-        }
-
-        return parent;
-    }
-
-    template <typename ValueNodeT>
-    static ValueNodeT inorder_predecessor_of(ValueNodeT node)
-    {
-        ASSERT(node != nullptr);
-        ASSERT(!node->is_null());
-
-        if (node->left) {
-            node = node->left;
-
-            while (node->right) {
-                node = node->right;
-            }
-
-            return node;
-        }
-
-        auto* parent = node->parent;
-
-        while (!parent->is_null() && node->is_left_child()) {
-            node = parent;
-            parent = node->parent;
-        }
-
-        return parent;
+        return ValueComparator(m_comparator);
     }
 
 private:
     ValueNode* m_root { nullptr };
     Node<ValueNode> m_super_root;
-    Comparator m_comparator;
+    KeyComparator m_comparator;
     size_t m_size { 0 };
 };
 

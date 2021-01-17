@@ -21,6 +21,10 @@ serialize(ColorT color)
 // Important to be able to verify the tree structure
 #define private public
 #include "Common/RedBlackTree.h"
+#include "Common/Set.h"
+
+template <typename T, typename Compare = kernel::Less<T>>
+using rbtree = kernel::detail::RedBlackTree<kernel::detail::SetTraits<T, Compare>>;
 
 template <typename TreeNodeT>
 void recursive_verify_one(TreeNodeT parent, TreeNodeT child)
@@ -88,7 +92,7 @@ void verify_trees_are_equal(const TreeT& left, const TreeT& right)
 }
 
 TEST(Emplace) {
-    kernel::RedBlackTree<size_t> tree;
+    rbtree<size_t> tree;
 
     static constexpr size_t test_size = 10000;
 
@@ -108,9 +112,22 @@ TEST(Emplace) {
 }
 
 struct ComparableDeletable : Deletable {
-    ComparableDeletable(size_t& counter) : Deletable(counter) {}
+    ComparableDeletable(size_t id, size_t& counter)
+        : m_id(id)
+        , Deletable(counter)
+    {
+    }
 
-    bool operator<(const ComparableDeletable&) const { return rand() % 10 > 5; }
+    ComparableDeletable(ComparableDeletable&& other)
+        : m_id(other.m_id), Deletable(std::move(other))
+    {
+        other.m_id = 0;
+    }
+
+    bool operator<(const ComparableDeletable& other) const { return m_id < other.m_id; }
+
+private:
+    size_t m_id { 0 };
 };
 
 TEST(Clear) {
@@ -118,10 +135,10 @@ TEST(Clear) {
 
     size_t items_deleted_counter = 0;
 
-    kernel::RedBlackTree<ComparableDeletable> tree;
+    rbtree<ComparableDeletable> tree;
 
     for (size_t i = 0; i < test_size; ++i)
-        tree.emplace(items_deleted_counter);
+        tree.emplace(i, items_deleted_counter);
 
     tree.clear();
 
@@ -135,10 +152,10 @@ TEST(Destructor) {
     size_t items_deleted_counter = 0;
 
     {
-        kernel::RedBlackTree<ComparableDeletable> tree;
+        rbtree<ComparableDeletable> tree;
 
         for (size_t i = 0; i < test_size; ++i)
-            tree.emplace(items_deleted_counter);
+            tree.emplace(i, items_deleted_counter);
     }
 
     Assert::that(items_deleted_counter).is_equal(test_size);
@@ -147,12 +164,12 @@ TEST(Destructor) {
 TEST(CopyConstructor) {
     constexpr size_t test_size = 100;
 
-    kernel::RedBlackTree<size_t> original_tree;
+    rbtree<size_t> original_tree;
 
     for (size_t i = 0; i < test_size; ++i)
         original_tree.emplace(i);
 
-    kernel::RedBlackTree<size_t> new_tree(original_tree);
+    rbtree<size_t> new_tree(original_tree);
 
     Assert::that(new_tree.size()).is_equal(original_tree.size());
 
@@ -166,8 +183,8 @@ TEST(CopyConstructor) {
 TEST(CopyAssignment) {
     constexpr size_t test_size = 109;
 
-    kernel::RedBlackTree<size_t> original_tree;
-    kernel::RedBlackTree<size_t> new_tree;
+    rbtree<size_t> original_tree;
+    rbtree<size_t> new_tree;
     new_tree.emplace(1);
 
     for (size_t i = 0; i < test_size; ++i)
@@ -187,12 +204,12 @@ TEST(CopyAssignment) {
 TEST(MoveConstructor) {
     constexpr size_t test_size = 10;
 
-    kernel::RedBlackTree<size_t> original_tree;
+    rbtree<size_t> original_tree;
 
     for (size_t i = 0; i < test_size; ++i)
         original_tree.emplace(i);
 
-    kernel::RedBlackTree<size_t> new_tree(move(original_tree));
+    rbtree<size_t> new_tree(kernel::move(original_tree));
 
     Assert::that(original_tree.size()).is_equal(0);
     Assert::that(new_tree.size()).is_equal(test_size);
@@ -201,20 +218,20 @@ TEST(MoveConstructor) {
 TEST(MoveAssignment) {
     constexpr size_t test_size = 10;
 
-    kernel::RedBlackTree<size_t> original_tree;
-    kernel::RedBlackTree<size_t> new_tree;
+    rbtree<size_t> original_tree;
+    rbtree<size_t> new_tree;
 
     for (size_t i = 0; i < test_size; ++i)
         original_tree.emplace(i);
 
-    new_tree = move(original_tree);
+    new_tree = kernel::move(original_tree);
 
     Assert::that(original_tree.size()).is_equal(0);
     Assert::that(new_tree.size()).is_equal(test_size);
 }
 
 TEST(EmptyIterator) {
-    kernel::RedBlackTree<size_t> tree;
+    rbtree<size_t> tree;
 
     size_t iterations = 0;
 
@@ -226,7 +243,7 @@ TEST(EmptyIterator) {
 }
 
 TEST(Iterator) {
-    kernel::RedBlackTree<size_t> tree;
+    rbtree<size_t> tree;
 
     size_t size = 10001;
 
@@ -240,12 +257,12 @@ TEST(Iterator) {
 }
 
 TEST(IteratorPostIncrement) {
-    kernel::RedBlackTree<size_t> tree;
+    rbtree<size_t> tree;
 
     tree.emplace(1);
     tree.emplace(2);
 
-    kernel::RedBlackTree<size_t>::Iterator itr = tree.begin();
+    rbtree<size_t>::Iterator itr = tree.begin();
 
     Assert::that(*(itr++)).is_equal(1);
     Assert::that(*(itr++)).is_equal(2);
@@ -253,13 +270,13 @@ TEST(IteratorPostIncrement) {
 }
 
 TEST(IteratorPreIncrement) {
-    kernel::RedBlackTree<size_t> tree;
+    rbtree<size_t> tree;
 
     tree.emplace(1);
     tree.emplace(2);
     tree.emplace(3);
 
-    kernel::RedBlackTree<size_t>::Iterator itr = tree.begin();
+    rbtree<size_t>::Iterator itr = tree.begin();
 
     Assert::that(*itr).is_equal(1);
     Assert::that(*(++itr)).is_equal(2);
@@ -268,13 +285,13 @@ TEST(IteratorPreIncrement) {
 }
 
 TEST(IteratorPostDecrement) {
-    kernel::RedBlackTree<size_t> tree;
+    rbtree<size_t> tree;
 
     tree.emplace(1);
     tree.emplace(2);
     tree.emplace(3);
 
-    kernel::RedBlackTree<size_t>::Iterator itr = tree.end();
+    rbtree<size_t>::Iterator itr = tree.end();
 
     Assert::that(itr--).is_equal(tree.end());
     Assert::that(*(itr--)).is_equal(3);
@@ -283,13 +300,13 @@ TEST(IteratorPostDecrement) {
 }
 
 TEST(IteratorPreDecrement) {
-    kernel::RedBlackTree<size_t> tree;
+    rbtree<size_t> tree;
 
     tree.emplace(1);
     tree.emplace(2);
     tree.emplace(3);
 
-    kernel::RedBlackTree<size_t>::Iterator itr = tree.end();
+    rbtree<size_t>::Iterator itr = tree.end();
 
     Assert::that(*(--itr)).is_equal(3);
     Assert::that(*(--itr)).is_equal(2);
@@ -298,7 +315,7 @@ TEST(IteratorPreDecrement) {
 }
 
 TEST(LowerBound) {
-    kernel::RedBlackTree<size_t> tree;
+    rbtree<size_t> tree;
 
     tree.emplace(10);
     tree.emplace(20);
@@ -317,7 +334,7 @@ TEST(LowerBound) {
 }
 
 TEST(UpperBound) {
-    kernel::RedBlackTree<size_t> tree;
+    rbtree<size_t> tree;
 
     tree.emplace(10);
     tree.emplace(20);
@@ -336,8 +353,8 @@ TEST(UpperBound) {
 }
 
 TEST(RemovalCase4) {
-    kernel::RedBlackTree<int> tree;
-    using Color = kernel::RedBlackTree<int>::ValueNode::Color;
+    rbtree<int> tree;
+    using Color = rbtree<int>::ValueNode::Color;
 
     // Case 4:
     //    10 (BLACK)
@@ -369,8 +386,8 @@ TEST(RemovalCase4) {
 }
 
 TEST(RemovalCase6) {
-    kernel::RedBlackTree<int> tree;
-    using Color = kernel::RedBlackTree<int>::ValueNode::Color;
+    rbtree<int> tree;
+    using Color = rbtree<int>::ValueNode::Color;
 
     // Case 6:
     //    10 (BLACK)
@@ -396,8 +413,8 @@ TEST(RemovalCase6) {
 }
 
 TEST(RemovalCase3ToCase1) {
-    kernel::RedBlackTree<int> tree;
-    using Color = kernel::RedBlackTree<int>::ValueNode::Color;
+    rbtree<int> tree;
+    using Color = rbtree<int>::ValueNode::Color;
 
     // Case 3:
     //    10 (BLACK)
@@ -421,10 +438,10 @@ TEST(RemovalCase3ToCase1) {
 }
 
 TEST(RemovalCase3ToCase5ToCase6) {
-    kernel::RedBlackTree<int> tree;
+    rbtree<int> tree;
 
-    using ValueNode = kernel::RedBlackTree<int>::ValueNode;
-    using Color = kernel::RedBlackTree<int>::ValueNode::Color;
+    using ValueNode = rbtree<int>::ValueNode;
+    using Color = rbtree<int>::ValueNode::Color;
 
     // Case 3:
     //         ------ 10 (BLACK) -----------
@@ -496,10 +513,10 @@ TEST(RemovalCase3ToCase5ToCase6) {
 }
 
 TEST(RemovalCase2ToCase4) {
-    kernel::RedBlackTree<int> tree;
+    rbtree<int> tree;
 
-    using ValueNode = kernel::RedBlackTree<int>::ValueNode;
-    using Color = kernel::RedBlackTree<int>::ValueNode::Color;
+    using ValueNode = rbtree<int>::ValueNode;
+    using Color = rbtree<int>::ValueNode::Color;
 
     // Case 2:
     //         ------ 10 (BLACK) -----------
@@ -571,10 +588,10 @@ TEST(RemovalCase2ToCase4) {
 }
 
 TEST(SuccessorIsChildOfRootRemoval) {
-    kernel::RedBlackTree<int> tree;
+    rbtree<int> tree;
 
-    using ValueNode = kernel::RedBlackTree<int>::ValueNode;
-    using Color = kernel::RedBlackTree<int>::ValueNode::Color;
+    using ValueNode = rbtree<int>::ValueNode;
+    using Color = rbtree<int>::ValueNode::Color;
 
     tree.emplace(1);
     tree.emplace(-1);
@@ -590,7 +607,7 @@ TEST(SuccessorIsChildOfRootRemoval) {
 }
 
 TEST(LotsOfRemoves) {
-    kernel::RedBlackTree<int> tree;
+    rbtree<int> tree;
 
     static constexpr int test_size = 1000;
 
@@ -616,7 +633,7 @@ TEST(LotsOfRemoves) {
 }
 
 TEST(Find) {
-    kernel::RedBlackTree<int> tree;
+    rbtree<int> tree;
 
     for (int i = 0; i < 100; ++i)
         tree.push(i);
@@ -626,7 +643,7 @@ TEST(Find) {
 }
 
 TEST(RemoveWithIterator) {
-    kernel::RedBlackTree<int> tree;
+    rbtree<int> tree;
 
     tree.push(1);
 
@@ -637,7 +654,7 @@ TEST(RemoveWithIterator) {
 }
 
 TEST(GreaterCompare) {
-    kernel::RedBlackTree<int, kernel::Greater<int>> tree;
+    rbtree<int, kernel::Greater<int>> tree;
 
     for (int i = 0; i < 100; ++i)
         tree.push(i);
@@ -659,10 +676,16 @@ TEST(GreaterCompare) {
 }
 
 TEST(ReturnedIterator) {
-    kernel::RedBlackTree<int> tree;
+    rbtree<int> tree;
 
-    Assert::that(*tree.emplace(1)).is_equal(1);
-    Assert::that(*tree.push(2)).is_equal(2);
+    auto res = tree.emplace(1);
+    Assert::that(*res.first()).is_equal(1);
+    Assert::that(res.second()).is_true();
+
+
+    auto res1 = tree.emplace(1);
+    Assert::that(res1.first()).is_equal(res.first());
+    Assert::that(res1.second()).is_false();
 }
 
 #include "Common/UniquePtr.h"
@@ -689,7 +712,7 @@ struct HelloWorld {
 };
 
 TEST(TransparentComparator) {
-    kernel::RedBlackTree<kernel::UniquePtr<HelloWorld>, kernel::Less<>> transparent_tree;
+    rbtree<kernel::UniquePtr<HelloWorld>, kernel::Less<>> transparent_tree;
 
     transparent_tree.emplace(kernel::UniquePtr<HelloWorld>::create(5));
     transparent_tree.emplace(kernel::UniquePtr<HelloWorld>::create(3));

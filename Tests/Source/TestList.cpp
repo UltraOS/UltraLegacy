@@ -154,7 +154,7 @@ TEST(Erase) {
 }
 
 TEST(Standalone) {
-    struct thing : public kernel::StandaloneListNode {
+    struct thing : public kernel::StandaloneListNode<thing> {
         thing(int x) : x(x) {}
 
         int x;
@@ -180,4 +180,11 @@ TEST(Standalone) {
     Assert::that(list.pop_front().x).is_equal(2);
     Assert::that(list.pop_back().x).is_equal(3);
     Assert::that(list.pop_front().x).is_equal(1);
+
+    list.insert_back(t1);
+    Assert::that(t1.is_on_a_list()).is_true();
+    Assert::that(list.size()).is_equal(1);
+    t1.pop_off();
+    Assert::that(list.size()).is_equal(0);
+    Assert::that(t1.is_on_a_list()).is_false();
 }
