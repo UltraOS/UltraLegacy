@@ -286,6 +286,11 @@ private:
 
     void become(String&& other)
     {
+        if (other.empty()) {
+            clear();
+            return;
+        }
+
         if (other.is_small()) {
             construct_from(other.data(), other.size());
             other.at(0) = '\0';

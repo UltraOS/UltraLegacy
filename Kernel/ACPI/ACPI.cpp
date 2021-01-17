@@ -23,8 +23,8 @@ bool ACPI::find_rsdp()
 
     static constexpr Address ebda_base = 0x80000;
     auto ebda_range = Range::from_two_pointers(
-            MemoryManager::physical_to_virtual(ebda_base),
-            MemoryManager::physical_to_virtual(ebda_base + 1 * KB));
+        MemoryManager::physical_to_virtual(ebda_base),
+        MemoryManager::physical_to_virtual(ebda_base + 1 * KB));
 
     auto rsdp = rsdp_signature.find_in_range(ebda_range, rsdp_alignment);
 
@@ -36,8 +36,8 @@ bool ACPI::find_rsdp()
     static constexpr Address bios_base = 0xE0000;
     static constexpr Address bios_end = 0xFFFFF;
     auto bios_range = Range::from_two_pointers(
-            MemoryManager::physical_to_virtual(bios_base),
-            MemoryManager::physical_to_virtual(bios_end));
+        MemoryManager::physical_to_virtual(bios_base),
+        MemoryManager::physical_to_virtual(bios_end));
 
     rsdp = rsdp_signature.find_in_range(bios_range, rsdp_alignment);
 

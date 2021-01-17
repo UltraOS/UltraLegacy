@@ -248,8 +248,7 @@ struct conditional {
 };
 
 template <typename IfTrue, typename IfFalse>
-struct conditional<false, IfTrue, IfFalse>
-{
+struct conditional<false, IfTrue, IfFalse> {
     using type = IfFalse;
 };
 
@@ -265,9 +264,8 @@ struct in_place_t {
 inline constexpr in_place_t in_place {};
 // --------------------
 
-
 // ---- void_t ----
-template<class...>
+template <class...>
 using void_t = void;
 // --------------------
 
