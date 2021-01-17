@@ -48,7 +48,7 @@ private:
 private:
     Set<RefPtr<Process>, Less<>> m_processes; // sorted by pid
 
-    Set<Thread*, Thread::WakeTimePtrComparator> m_sleeping_threads; // sorted by wake-up time
+    MultiSet<Thread*, Thread::WakeTimePtrComparator> m_sleeping_threads; // sorted by wake-up time
 
     // A simplified version of the O(1) scheduler
     List<Thread>* m_expired_threads;
