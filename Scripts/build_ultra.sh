@@ -10,7 +10,7 @@ echo "Building UltraOS..."
 true_path="$(dirname "$(realpath "$0")")"
 root_path=$true_path/..
 
-arch="32"
+arch="64"
 
 if [ "$1" ]
   then
@@ -28,7 +28,7 @@ source $true_path/utils.sh
 pushd $root_path
 mkdir -p Build$arch || on_error
 pushd Build$arch
-cmake .. -DARCH=$1 || on_error
+cmake .. -DARCH=$arch || on_error
 cmake --build . -- -j$(nproc) || on_error
 popd
 popd
