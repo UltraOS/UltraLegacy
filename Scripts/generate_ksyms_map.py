@@ -20,8 +20,6 @@ full_path = f"{sys.argv[1]}/{sys.argv[2]}"
 symbols = []
 
 with open(full_path, "r") as f:
-    line = f.readline()
-
     previous_address = ""
 
     while True:
