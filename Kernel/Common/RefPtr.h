@@ -115,12 +115,18 @@ public:
         swap(m_ref_count, other.m_ref_count);
     }
 
+    void reset()
+    {
+        adopt(nullptr);
+    }
+
     void adopt(T* ptr)
     {
         decrement();
 
         m_ptr = ptr;
-        m_ref_count = new NonOwningRefCounter<T>(ptr);
+
+        m_ref_count = ptr ? new NonOwningRefCounter<T>(ptr) : nullptr;
     }
 
     T& operator*() const
@@ -164,9 +170,7 @@ public:
         return *this;
     }
 
-    T* get() { return m_ptr; }
-
-    const T* get() const { return m_ptr; }
+    T* get() const { return m_ptr; }
 
     bool is_null() const { return get() == nullptr; }
 

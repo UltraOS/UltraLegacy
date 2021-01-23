@@ -65,7 +65,7 @@ public:
 
     T operator++(int) ALWAYS_INLINE { return fetch_add(1); }
 
-    T operator--() ALWAYS_INLINE { return fetch_subtract(1) + 1; }
+    T operator--() ALWAYS_INLINE { return fetch_subtract(1) - 1; }
 
     T operator--(int) ALWAYS_INLINE { return fetch_subtract(1); }
 

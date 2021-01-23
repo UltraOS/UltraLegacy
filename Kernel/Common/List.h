@@ -337,7 +337,7 @@ public:
     void pop_off()
     {
         ASSERT(m_my_list != nullptr);
-        m_my_list->pop(List<T>::Iterator(this));
+        m_my_list->pop(typename List<T>::Iterator(this));
     }
 
     virtual ~StandaloneListNode() = default;
