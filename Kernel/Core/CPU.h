@@ -69,6 +69,8 @@ public:
 
         [[nodiscard]] u32 id() const { return m_id; }
 
+        [[nodiscard]] Process& current_process() const;
+
         [[nodiscard]] Thread* current_thread() const { return m_current_thread; }
         void set_current_thread(Thread* thread) { m_current_thread = thread; }
 

@@ -122,6 +122,12 @@ CPU::LocalData& CPU::current()
         return at_id(0);
 }
 
+[[nodiscard]] Process& CPU::LocalData::current_process() const
+{
+    ASSERT(m_current_thread != nullptr);
+    return m_current_thread->owner();
+}
+
 u32 CPU::current_id()
 {
     if (is_initialized())
