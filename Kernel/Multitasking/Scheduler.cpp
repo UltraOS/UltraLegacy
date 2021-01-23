@@ -3,6 +3,7 @@
 #include "Interrupts/IDT.h"
 #include "Interrupts/Utilities.h"
 
+#include "TaskFinalizer.h"
 #include "Scheduler.h"
 
 namespace kernel {
@@ -27,15 +28,34 @@ void Scheduler::inititalize()
     IDT::the().configure_ist();
 #endif
 
+    TaskFinalizer::spawn();
+
     Timer::register_scheduler_handler(on_tick);
 }
 
 void Scheduler::sleep(u64 wake_time)
 {
-    ASSERT(!Interrupts::are_enabled());
+    Interrupts::ScopedDisabler d;
 
-    Thread::current()->sleep(wake_time);
-    save_state_and_schedule();
+    auto* current_thread = Thread::current();
+    bool success = false;
+
+    {
+        LOCK_GUARD(s_queues_lock);
+
+        success = current_thread->sleep(wake_time);
+
+        if (success)
+            m_sleeping_threads.emplace(current_thread);
+    }
+
+    if (success)
+        save_state_and_schedule();
+    else
+        // If sleep() fails we assume the thread's state
+        // is set to dead, therefore we can afford to call
+        // pick_next() and not save the state of the thread.
+        pick_next();
 }
 
 void Scheduler::wake_ready_threads()
@@ -56,7 +76,68 @@ void Scheduler::wake_ready_threads()
 
 void Scheduler::exit(size_t)
 {
-    ASSERT(!"Scheduler::exit() is not yet implemented!");
+    Interrupts::ScopedDisabler d;
+
+    Thread::current()->exit();
+
+    // We don't even have to save state because this thread will never be ran again
+    pick_next();
+}
+
+void Scheduler::free_deferred_threads()
+{
+    for (auto itr = m_deferred_deleted_dead_threads.begin(); itr != m_deferred_deleted_dead_threads.end(); ++itr) {
+        auto* thread = itr.node();
+        m_deferred_deleted_dead_threads.pop(itr++);
+        TaskFinalizer::the().free_thread(*thread);
+    }
+}
+
+void Scheduler::kill_current_thread()
+{
+    auto* current_thread = Thread::current();
+
+    if (!current_thread->is_main()) {
+        ASSERT(current_thread->is_dead());
+        // We have to defer freeing of this thread, otherwise
+        // it becomes a race condition between scheduler and taks finalizer
+        m_deferred_deleted_dead_threads.insert_back(*current_thread);
+        return;
+    }
+
+    auto find_sleeping_thread = [this](Thread* thread) -> decltype(m_sleeping_threads)::ConstIterator
+    {
+        auto lb = m_sleeping_threads.lower_bound(thread);
+
+        while (lb != m_sleeping_threads.end() && *lb != thread)
+            ++lb;
+
+        ASSERT(lb != m_sleeping_threads.end());
+        ASSERT(*lb == thread);
+
+        return lb;
+    };
+
+    // Killing the main thread so we also have to kill every other thread
+    LOCK_GUARD(current_thread->owner().lock());
+    for (const auto& thread : current_thread->owner().threads()) {
+        if (thread.get() == current_thread) {
+            m_deferred_deleted_dead_threads.insert_back(*current_thread);
+            continue;
+        }
+
+        // since this thread is not running we can afford to free it right away
+        if (thread->is_sleeping()) {
+            auto this_thread = find_sleeping_thread(thread.get());
+            m_sleeping_threads.remove(this_thread);
+            TaskFinalizer::the().free_thread(*thread);
+        } else if (thread->is_on_a_list()) {
+            thread->pop_off();
+            TaskFinalizer::the().free_thread(*thread);
+        } // else thread is currently running, kill once it gets preempted
+
+        thread->exit();
+    }
 }
 
 void Scheduler::crash()
@@ -73,7 +154,20 @@ void Scheduler::register_process(RefPtr<Process> process)
     m_processes.emplace(process);
 
     for (auto& thread : process->threads())
-        register_thread_unchecked(const_cast<Thread*>(thread.get()));
+        register_thread_unchecked(thread.get());
+}
+
+RefPtr<Process> Scheduler::unregister_process(u32 id)
+{
+    LOCK_GUARD(s_queues_lock);
+
+    auto this_process = m_processes.find(id);
+    ASSERT(this_process != m_processes.end());
+
+    auto ref = *this_process;
+    m_processes.remove(id);
+
+    return ref;
 }
 
 void Scheduler::register_thread(Thread* thread)
@@ -135,13 +229,14 @@ void Scheduler::pick_next()
 
     auto* current_thread = Thread::current();
 
+    free_deferred_threads();
     wake_ready_threads();
 
     // if current thread is not dead/sleeping/blocked we put it back on the expired queue
     if (current_thread->is_running() && current_thread != &CPU::current().idle_task())
         m_expired_threads->insert_back(*current_thread);
-    else if (current_thread->is_sleeping())
-        m_sleeping_threads.emplace(current_thread);
+    else if (current_thread->is_dead())
+         kill_current_thread();
 
     auto* next_thread = pick_next_thread();
 

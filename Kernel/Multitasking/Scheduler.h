@@ -24,6 +24,8 @@ public:
     [[noreturn]] void crash();
 
     void register_process(RefPtr<Process>);
+    RefPtr<Process> unregister_process(u32 id);
+
     void register_thread(Thread*);
 
     struct Stats {
@@ -33,22 +35,26 @@ public:
     Stats stats() const;
 
 private:
-    // The 3 functions below assume s_queues_lock is held by the caller
+    // The 5 functions below assume s_queues_lock is held by the caller
     void register_thread_unchecked(Thread*); // Doesn't check if ID of owner is registered
     void wake_ready_threads();
     Thread* pick_next_thread();
+    void kill_current_thread();
+    void free_deferred_threads();
 
-    void pick_next();
+    [[noreturn]] void pick_next();
 
     static void schedule(const RegisterState* registers);
     static void on_tick(const RegisterState&);
-    static void switch_task(Thread::ControlBlock* new_task);
+    [[noreturn]] static void switch_task(Thread::ControlBlock* new_task);
     static void save_state_and_schedule();
 
 private:
     Set<RefPtr<Process>, Less<>> m_processes; // sorted by pid
 
     MultiSet<Thread*, Thread::WakeTimePtrComparator> m_sleeping_threads; // sorted by wake-up time
+
+    List<Thread> m_deferred_deleted_dead_threads;
 
     // A simplified version of the O(1) scheduler
     List<Thread>* m_expired_threads;
