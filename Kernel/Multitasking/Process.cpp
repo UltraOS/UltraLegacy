@@ -30,9 +30,8 @@ RefPtr<Process> Process::create_supervisor(Address entrypoint, StringView name, 
     RefPtr<Process> process = new Process(AddressSpace::of_kernel(), IsSupervisor::YES, name);
 
     auto stack = MemoryManager::the().allocate_kernel_stack(String(name) + " thread 0 stack", stack_size);
-    process->m_virtual_regions.emplace(stack);
 
-    auto main_thread = Thread::create_supervisor(*process, stack->virtual_range().end(), entrypoint);
+    auto main_thread = Thread::create_supervisor(*process, stack, entrypoint);
     process->m_threads.emplace(main_thread);
 
     Scheduler::the().register_process(process);
@@ -44,18 +43,22 @@ void Process::create_thread(Address entrypoint, size_t stack_size)
 {
     LOCK_GUARD(m_lock);
 
+    // Trying to create a thread for a dead process
+    // TODO: add some sort of handling for this case
+    ASSERT(!m_threads.empty() && !m_threads.begin()->get()->is_dead());
+
     RefPtr<Thread> thread;
 
     if (m_is_supervisor == IsSupervisor::YES) {
         String name = m_name;
         name << " thread " << m_next_thread_id.load() << " stack";
         auto stack = MemoryManager::the().allocate_kernel_stack(name, stack_size);
-        m_virtual_regions.emplace(stack);
-        thread = Thread::create_supervisor(*this, stack->virtual_range().end(), entrypoint);
+        thread = Thread::create_supervisor(*this, stack, entrypoint);
     } else {
         ASSERT_NEVER_REACHED(); // trying to create user thread (TODO)
     }
 
+    m_threads.emplace(thread);
     Scheduler::the().register_thread(thread.get());
 }
 

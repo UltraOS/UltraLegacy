@@ -29,8 +29,8 @@ public:
     };
 
     static RefPtr<Thread> create_idle(Process& owner);
-    static RefPtr<Thread> create_supervisor(Process& owner, Address kernel_stack, Address entrypoint);
-    static RefPtr<Thread> create_user(Process& owner, Address kernel_stack, Address user_stack, Address entrypoint);
+    static RefPtr<Thread> create_supervisor(Process& owner, RefPtr<VirtualRegion> kernel_stack, Address entrypoint);
+    static RefPtr<Thread> create_user(Process& owner, RefPtr<VirtualRegion> kernel_stack, RefPtr<VirtualRegion> user_stack, Address entrypoint);
 
     void activate();
     void deactivate();
@@ -48,10 +48,26 @@ public:
 
     [[nodiscard]] bool is_main() const;
 
-    void sleep(u64 until)
+    [[nodiscard]] VirtualRegion& kernel_stack()
     {
-        m_state = State::BLOCKED;
+        ASSERT(!m_kernel_stack.is_null());
+        return *m_kernel_stack;
+    }
+
+    [[nodiscard]] VirtualRegion& user_stack()
+    {
+        ASSERT(!m_user_stack.is_null());
+        return *m_user_stack;
+    }
+
+    bool sleep(u64 until)
+    {
+        auto expected = State::RUNNING;
+        if (!m_state.compare_and_exchange(&expected, State::BLOCKED))
+            return false;
+
         m_wake_up_time = until;
+        return true;
     }
 
     void exit() { m_state = State::DEAD; }
@@ -95,18 +111,23 @@ public:
         return id < r->m_id;
     }
 
+    [[nodiscard]] u32 id() const { return m_id; }
+
 private:
-    Thread(Process& owner, Address kernel_stack, IsSupervisor);
+    Thread(Process& owner);
+    Thread(Process& owner, RefPtr<VirtualRegion> kernel_stack, RefPtr<VirtualRegion> user_stack, IsSupervisor);
 
 private:
     u32 m_id { 0 };
 
     Process& m_owner;
 
-    Address m_initial_kernel_stack_top { nullptr };
+    RefPtr<VirtualRegion> m_kernel_stack;
+    RefPtr<VirtualRegion> m_user_stack;
+
     ControlBlock m_control_block { 0 };
 
-    State m_state { State::READY };
+    Atomic<State> m_state { State::READY };
     IsSupervisor m_is_supervisor { IsSupervisor::NO };
 
     u64 m_wake_up_time { 0 };

@@ -27,6 +27,7 @@ public:
     void create_thread(Address entrypoint, size_t stack_size = default_kernel_stack_size);
 
     Set<RefPtr<Thread>, Less<>>& threads() { return m_threads; }
+    Set<RefPtr<VirtualRegion>, Less<>>& virtual_regions() { return m_virtual_regions; }
 
     AddressSpace& address_space() { return m_address_space; }
 
@@ -39,6 +40,8 @@ public:
     [[nodiscard]] const String& name() const { return m_name; }
 
     [[nodiscard]] InterruptSafeSpinLock& lock() const { return m_lock; }
+
+    static Process& current() { return CPU::current().current_process(); }
 
     friend bool operator<(const RefPtr<Process>& l, const RefPtr<Process>& r)
     {
@@ -55,8 +58,20 @@ public:
         return process_id < r->id();
     }
 
+    ~Process()
+    {
+        ASSERT(m_released == true);
+    }
+
 private:
     Process(AddressSpace& address_space, IsSupervisor, StringView name);
+
+    friend class TaskFinalizer;
+    void mark_as_released()
+    {
+        ASSERT(m_released == false);
+        m_released = true;
+    }
 
 private:
     u32 m_id { 0 };
@@ -72,6 +87,8 @@ private:
     Atomic<u32> m_next_thread_id { main_thread_id };
 
     mutable InterruptSafeSpinLock m_lock;
+
+    bool m_released { false };
 
     static Atomic<u32> s_next_process_id;
 };
