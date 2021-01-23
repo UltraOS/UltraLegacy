@@ -171,11 +171,7 @@ void MemoryManager::unquickmap_page(Address virtual_address)
 Page MemoryManager::allocate_page(bool should_zero)
 {
     for (auto& region : m_physical_regions) {
-        // We have to `const_cast` because RedBlackTree nodes are always const for obvious reasons.
-        // However, here we know that allocating a page won't break the tree structure since
-        // we don't change the value of the PhysicalRegion::range, and that's what's used for
-        // sorting the ranges in the tree.
-        auto page = const_cast<PhysicalRegion&>(*region).allocate_page();
+        auto page = region->allocate_page();
 
         if (!page)
             continue;
@@ -213,14 +209,13 @@ PhysicalRegion* MemoryManager::physical_region_responsible_for_page(const Page& 
 
         --physical_region;
 
-        // the reason for `const_cast` is described in detail in `allocate_page`
         if (physical_region->get()->range().contains(page.address()))
-            return &const_cast<PhysicalRegion&>(**physical_region);
+            return physical_region->get();
 
         return nullptr;
     }
 
-    return &const_cast<PhysicalRegion&>(**physical_region);
+    return physical_region->get();
 }
 
 VirtualRegion* MemoryManager::virtual_region_responsible_for_address(Address address)
@@ -623,6 +618,84 @@ void MemoryManager::allocate_initial_kernel_regions()
     // Kernel image is somewhere inside our virtual address space, so let's mark it as allocated
     AddressSpace::of_kernel().allocator().allocate(MemoryManager::kernel_reserved_range());
 #endif
+}
+
+void MemoryManager::free_virtual_region(VirtualRegion& vr)
+{
+    log() << "MemoryManager: Freeing virtual region \"" << vr.name().to_view() << "\"";
+
+    ASSERT(!vr.is_eternal());
+    ASSERT(!vr.is_shared()); // TODO
+
+    if (vr.is_private()) {
+        auto& pvr = static_cast<PrivateVirtualRegion&>(vr);
+
+        for (auto& page : pvr.m_owned_pages)
+            free_page(page);
+
+        // AddressSpace::current().unmap_rage()
+    }
+
+    if (vr.is_supervisor()) {
+        LOCK_GUARD(m_virtual_region_lock);
+        m_kernel_virtual_regions.remove(vr.virtual_range().begin());
+    }
+
+    auto& current_process = Process::current();
+
+    current_process.address_space().allocator().deallocate(vr.virtual_range());
+
+    vr.mark_as_released();
+
+    if (vr.is_stack())
+        return;
+
+    LOCK_GUARD(current_process.lock());
+    Process::current().virtual_regions().remove(vr.virtual_range().begin());
+}
+
+void MemoryManager::free_all_virtual_regions(Process& process)
+{
+    for (auto& vr : process.virtual_regions()) {
+        ASSERT(!vr->is_eternal());
+        ASSERT(!vr->is_shared()); // TODO
+
+        if (vr->is_private()) {
+            auto* pvr = static_cast<PrivateVirtualRegion*>(vr.get());
+
+            for (auto& page : pvr->m_owned_pages)
+                free_page(page);
+
+            // Should return IsSupervisor
+            if (pvr->is_supervisor()) {
+                LOCK_GUARD(m_virtual_region_lock);
+                // TODO: AddressSpace::of_kernel().unmap_range(virtual_range)
+                m_kernel_virtual_regions.remove(pvr->virtual_range().begin());
+            }
+        } else if (vr->is_non_owning()) {
+            if (vr->is_supervisor()) {
+                // TODO: AddressSpace::of_kernel().unmap_range(virtual_range)
+            }
+        } else {
+            ASSERT_NEVER_REACHED();
+        }
+
+        if (process.is_supervisor() == IsSupervisor::YES)
+            AddressSpace::of_kernel().allocator().deallocate(vr->virtual_range());
+
+        vr->mark_as_released();
+    }
+
+    process.virtual_regions().clear();
+}
+
+void MemoryManager::free_address_space(AddressSpace& address_space)
+{
+    ASSERT(address_space != AddressSpace::of_kernel());
+    ASSERT(!address_space.is_active());
+
+    for (auto& page : address_space.owned_pages())
+        free_page(page);
 }
 
 String MemoryManager::kernel_virtual_regions_debug_dump()

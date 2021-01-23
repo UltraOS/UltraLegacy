@@ -172,6 +172,10 @@ public:
     VR allocate_kernel_non_owning(StringView purpose, Range physical_range);
     VR allocate_user_non_owning(StringView purpose, Range physical_range, AddressSpace& = AddressSpace::current());
 
+    void free_virtual_region(VirtualRegion&);
+    void free_all_virtual_regions(Process&);
+    void free_address_space(AddressSpace&);
+
     String kernel_virtual_regions_debug_dump();
 
 private:
