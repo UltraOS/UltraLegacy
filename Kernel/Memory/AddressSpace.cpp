@@ -61,16 +61,24 @@ void AddressSpace::inititalize()
 
         s_of_kernel->map_huge_range(virtual_range, physical_range);
     }
+#elif defined (ULTRA_32)
+    MemoryManager::the().set_quickmap_range({ MemoryManager::kernel_quickmap_range_base, MemoryManager::kernel_quickmap_range_size });
 #endif
+
+    // Preallocate all kernel tables so we don't have to bother with synchronization too much
+    // It costs us 1 MiB but that's OK.
+    for (size_t i = MemoryManager::kernel_first_table_index; i < Table::entry_count; ++i) {
+        if (s_of_kernel->entry_at(i).is_present())
+            continue;
+
+        s_of_kernel->entry_at(i).set_physical_address(MemoryManager::the().allocate_page().address())
+                                .make_supervisor_present();
+    }
 
     s_of_kernel->flush_all();
     s_of_kernel->allocator().reset_with(
         MemoryManager::the().kernel_address_space_free_base(),
         MemoryManager::the().kernel_address_space_free_ceiling());
-
-#ifdef ULTRA_32
-    MemoryManager::the().set_quickmap_range({ MemoryManager::kernel_quickmap_range_base, MemoryManager::kernel_quickmap_range_size });
-#endif
 }
 
 void AddressSpace::map_page_directory_entry(size_t index, Address physical_address, IsSupervisor is_supervisor)
@@ -466,13 +474,8 @@ void AddressSpace::flush_at(Address virtual_address)
 
 AddressSpace& AddressSpace::current()
 {
-    // this is possible in case a page fault happens before
-    // Scheduler::initialize() or some other memory corruption
-    // in which case the only existing address space is that of kernel
-    if (!CPU::is_initialized() || !CPU::current().current_thread()) {
-        warning() << "AddressSpace: current_thread == nullptr, returning kernel address space";
+    if (!CPU::is_initialized() || !CPU::current().current_thread())
         return AddressSpace::of_kernel();
-    }
 
     return CPU::current().current_thread()->address_space();
 }

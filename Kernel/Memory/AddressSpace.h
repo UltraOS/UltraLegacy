@@ -67,10 +67,8 @@ public:
     VirtualAllocator& allocator();
     Address physical_address();
 
-    void store_physical_page(const Page& page)
-    {
-        m_physical_pages.append(page);
-    }
+    // Not thread safe, the directory is assumed to be inactive
+    DynamicArray<Page>& owned_pages() { return m_physical_pages; }
 
     void map_page(Address virtual_address, Address physical_address, IsSupervisor = IsSupervisor::YES);
     void map_range(Range virtual_range, Range physical_range, IsSupervisor = IsSupervisor::YES);
