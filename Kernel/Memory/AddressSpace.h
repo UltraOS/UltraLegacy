@@ -94,6 +94,7 @@ public:
 #endif
 
     void unmap_page(Address virtual_address);
+    void unmap_range(const Range&);
 
     bool is_active();
     void make_active();

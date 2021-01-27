@@ -415,9 +415,22 @@ void AddressSpace::unmap_page(Address virtual_address)
         .entry_at(indices.fourth())
         .set_present(false);
 
+    // TODO: TLB shootdown on all cpus
     flush_at(virtual_address);
 }
 #endif
+
+void AddressSpace::unmap_range(const Range& range)
+{
+    ASSERT_PAGE_ALIGNED(range.begin());
+
+    size_t page_count = range.length() / Page::size;
+
+    for (size_t i = 0; i < page_count; ++i) {
+        auto offset = i * Page::size;
+        unmap_page(range.begin() + offset);
+    }
+}
 
 VirtualAllocator& AddressSpace::allocator()
 {
