@@ -396,6 +396,8 @@ public:
         return data()[i];
     }
 
+    [[nodiscard]] const char& operator[](size_t i) const { return at(i); }
+
     [[nodiscard]] constexpr bool equals(StringView other) const
     {
         if (size() != other.size())
@@ -572,4 +574,47 @@ private:
     size_t m_current_offset { 0 };
     char m_buffer[buffer_size];
 };
+
+inline bool operator<(StringView l, StringView r)
+{
+    if (l.size() < r.size())
+        return true;
+    if (r.size() < l.size())
+        return false;
+
+    for (size_t i = 0; i < l.size(); ++i) {
+        if (l[i] < r[i])
+            return true;
+        if (r[i] < l[i])
+            return false;
+    }
+
+    return false;
+}
+
+inline bool operator<(const String& l, const String& r)
+{
+    return l.to_view() < r.to_view();
+}
+
+inline bool operator<(const String& l, const char* r)
+{
+    return l.to_view() < StringView(r);
+}
+
+inline bool operator<(const char* l, const String& r)
+{
+    return StringView(l) < r.to_view();
+}
+
+inline bool operator<(const String& l, StringView r)
+{
+    return l.to_view() < r;
+}
+
+inline bool operator<(StringView l, const String& r)
+{
+    return l < r.to_view();
+}
+
 }

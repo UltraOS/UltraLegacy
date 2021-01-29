@@ -98,22 +98,22 @@ public:
 
     Value& operator[](const Key& key)
     {
-        if (contains(key))
+        if (Base::contains(key))
             return Base::find(key)->second();
 
         auto value = make_pair(key, Value());
 
-        return emplace(move(value)).first()->second();
+        return Base::emplace(move(value)).first()->second();
     }
 
     Value& operator[](Key&& key)
     {
-        if (contains(key))
+        if (Base::contains(key))
             return Base::find(key)->second();
 
         auto value = make_pair(move(key), Value());
 
-        return emplace(move(value)).first()->second();
+        return Base::emplace(move(value)).first()->second();
     }
 };
 
