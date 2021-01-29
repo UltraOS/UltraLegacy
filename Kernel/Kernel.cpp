@@ -53,8 +53,6 @@ namespace kernel {
 
     MemoryManager::inititalize();
 
-    ACPI::the().initialize();
-
     InterruptController::discover_and_setup();
     Timer::discover_and_setup();
     CPU::initialize();
@@ -62,7 +60,7 @@ namespace kernel {
     VideoDevice::discover_and_setup(context);
 
     Scheduler::inititalize();
-
+    ACPI::the().initialize();
     CPU::start_all_processors();
 
     Time::initialize();
@@ -87,7 +85,8 @@ namespace kernel {
 
 void process_with_windows()
 {
-    auto window = Window::create(*Thread::current(), { 10, 10, 200, 100 }, WindowManager::the().active_theme(), "Demo"_sv);
+    Window* window = Window::create(*Thread::current(), { 10, 10, 200, 100 }, WindowManager::the().active_theme(), "Demo"_sv).get();
+
     Painter window_painter(&window->surface());
 
     window_painter.fill_rect(window->view_rect(), { 0x16, 0x21, 0x3e });
@@ -97,6 +96,14 @@ void process_with_windows()
     while (true) {
         {
             LOCK_GUARD(window->event_queue_lock());
+            for (auto& event : window->event_queue()) {
+                if (event.type == Event::Type::WINDOW_SHOULD_CLOSE) {
+                    lock_guard.~LockGuard();
+                    window->close();
+                    Scheduler::the().exit(0);
+                }
+            }
+
             window->event_queue().clear();
         }
 

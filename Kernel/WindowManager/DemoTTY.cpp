@@ -5,6 +5,7 @@
 #include "Multitasking/Process.h"
 #include "Multitasking/Scheduler.h"
 #include "WindowManager/WindowManager.h"
+#include "ACPI/ACPI.h"
 
 namespace kernel {
 
@@ -108,6 +109,10 @@ void DemoTTY::tick()
                 scroll(Direction::UP, 3);
             else
                 scroll(Direction::DOWN, 3);
+            break;
+        }
+        case Event::Type::WINDOW_SHOULD_CLOSE: {
+            write("please don't close me :("_sv);
             break;
         }
         default:
@@ -234,6 +239,19 @@ void DemoTTY::execute_command()
         info_string << "\n\nTasks per cpu:";
         for (auto& cpu : stats.processor_to_task)
             info_string << "\ncpu " << cpu.first() << ": " << cpu.second() << "";
+
+        write(info_string.to_view());
+        write("\n");
+
+    } else if (m_current_command == "acpi"_sv) {
+        write("\nACPI information:\n"_sv);
+        String info_string;
+
+        info_string << "Revision: " << ACPI::the().rsdp_revision() << "\n";
+
+        for (auto& table : ACPI::the().tables()) {
+            info_string << "table " << table.name.to_view() << " @ " << table.physical_address << " length " << table.length << "\n";
+        }
 
         write(info_string.to_view());
         write("\n");
