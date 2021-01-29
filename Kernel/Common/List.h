@@ -184,6 +184,18 @@ public:
     Iterator begin() { return Iterator(m_end.next()); }
     Iterator end() { return Iterator(&m_end); }
 
+    void pop_front()
+    {
+        ASSERT(!empty());
+        erase(begin());
+    }
+
+    void pop_back()
+    {
+        ASSERT(!empty());
+        erase(--end());
+    }
+
     T& front() { return as_value_node(m_end.next())->value(); }
     const T& front() const { return as_value_node(m_end.next())->value(); }
 
@@ -236,6 +248,11 @@ public:
         }
 
         T* node() { return static_cast<T*>(m_node); }
+
+        T& operator*()
+        {
+            return *node();
+        }
 
         Iterator& operator++()
         {
