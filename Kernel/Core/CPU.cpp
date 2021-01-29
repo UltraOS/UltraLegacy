@@ -71,12 +71,12 @@ CPU::FLAGS CPU::flags()
 
 bool CPU::supports_smp()
 {
-    return InterruptController::supports_smp();
+    return !InterruptController::is_legacy_mode();
 }
 
 void CPU::start_all_processors()
 {
-    if (!InterruptController::supports_smp())
+    if (InterruptController::is_legacy_mode())
         return;
 
     // We have to do this here because otherwise we have a race condition

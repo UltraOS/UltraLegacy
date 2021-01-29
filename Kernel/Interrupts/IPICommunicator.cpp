@@ -17,7 +17,7 @@ void IPICommunicator::install()
 
 void IPICommunicator::send_ipi(u8 dest)
 {
-    ASSERT(InterruptController::the().supports_smp());
+    ASSERT(!InterruptController::is_legacy_mode());
 
     LAPIC::send_ipi<LAPIC::DestinationType::SPECIFIC>(dest);
 }
@@ -29,7 +29,7 @@ void IPICommunicator::hang_all_cores()
 
     // FIXME: This is terrible because not all cpus might be online, also
     //        there can be cpus marked as unusable making this IPI call UB
-    if (InterruptController::supports_smp())
+    if (!InterruptController::is_legacy_mode())
         LAPIC::send_ipi<LAPIC::DestinationType::ALL_EXCLUDING_SELF>();
 }
 
