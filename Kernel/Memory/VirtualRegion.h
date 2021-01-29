@@ -163,8 +163,7 @@ public:
 
     [[nodiscard]] bool is_property_set(Properties property) const { return m_properties & property; }
 
-    [[nodiscard]] bool is_supervisor() const { return is_property_set(Properties::SUPERVISOR); }
-    [[nodiscard]] bool is_user() const { return !is_supervisor(); }
+    [[nodiscard]] IsSupervisor is_supervisor() const { return is_property_set(Properties::SUPERVISOR) ? IsSupervisor::YES : IsSupervisor::NO; }
 
     [[nodiscard]] bool is_eternal() const { return is_property_set(Properties::ETERNAL); }
 
@@ -178,7 +177,7 @@ public:
     void make_eternal()
     {
         ASSERT(!is_eternal());
-        ASSERT(!is_user());
+        ASSERT(is_supervisor() == IsSupervisor::YES);
         m_properties += Properties::ETERNAL;
     }
 

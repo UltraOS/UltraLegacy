@@ -33,7 +33,7 @@ struct PACKED E820MemoryMap {
     PhysicalRange* end() const { return entries + entry_count; }
 };
 
-class LoaderContext;
+struct LoaderContext;
 
 // Native UltraOS memory map format:
 // PhysicalRange entries are all unique and are sorted in ascending order

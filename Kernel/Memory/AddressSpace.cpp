@@ -61,7 +61,7 @@ void AddressSpace::inititalize()
 
         s_of_kernel->map_huge_range(virtual_range, physical_range);
     }
-#elif defined (ULTRA_32)
+#elif defined(ULTRA_32)
     MemoryManager::the().set_quickmap_range({ MemoryManager::kernel_quickmap_range_base, MemoryManager::kernel_quickmap_range_size });
 #endif
 
@@ -71,8 +71,7 @@ void AddressSpace::inititalize()
         if (s_of_kernel->entry_at(i).is_present())
             continue;
 
-        s_of_kernel->entry_at(i).set_physical_address(MemoryManager::the().allocate_page().address())
-                                .make_supervisor_present();
+        s_of_kernel->entry_at(i).set_physical_address(MemoryManager::the().allocate_page().address()).make_supervisor_present();
     }
 
     s_of_kernel->flush_all();

@@ -626,19 +626,31 @@ void MemoryManager::free_virtual_region(VirtualRegion& vr)
 
     ASSERT(!vr.is_eternal());
     ASSERT(!vr.is_shared()); // TODO
+    ASSERT(!vr.is_released());
+
+    bool interrupt_state = false;
+    vr.lock().lock(interrupt_state, __FILE__, __LINE__, CPU::current_id());
 
     if (vr.is_private()) {
         auto& pvr = static_cast<PrivateVirtualRegion&>(vr);
 
         for (auto& page : pvr.m_owned_pages)
             free_page(page);
-
-        // AddressSpace::current().unmap_rage()
     }
 
-    if (vr.is_supervisor()) {
+    if (vr.is_supervisor() == IsSupervisor::YES) {
         LOCK_GUARD(m_virtual_region_lock);
         m_kernel_virtual_regions.remove(vr.virtual_range().begin());
+    }
+
+    AddressSpace::current().unmap_range(vr.virtual_range());
+
+    // This means we're freeing this region early, before having initialized everything
+    if (!CPU::is_initialized() || Scheduler::is_initialized()) {
+        AddressSpace::of_kernel().allocator().deallocate(vr.virtual_range());
+        vr.mark_as_released();
+        vr.lock().unlock(interrupt_state);
+        return;
     }
 
     auto& current_process = Process::current();
@@ -646,7 +658,9 @@ void MemoryManager::free_virtual_region(VirtualRegion& vr)
     current_process.address_space().allocator().deallocate(vr.virtual_range());
 
     vr.mark_as_released();
+    vr.lock().unlock(interrupt_state);
 
+    // Stack regions are not stored in the process virtual_regions tree
     if (vr.is_stack())
         return;
 
@@ -658,7 +672,8 @@ void MemoryManager::free_all_virtual_regions(Process& process)
 {
     for (auto& vr : process.virtual_regions()) {
         ASSERT(!vr->is_eternal());
-        ASSERT(!vr->is_shared()); // TODO
+        ASSERT(!vr->is_shared());
+        ASSERT(!vr->is_released());
 
         if (vr->is_private()) {
             auto* pvr = static_cast<PrivateVirtualRegion*>(vr.get());
@@ -666,18 +681,15 @@ void MemoryManager::free_all_virtual_regions(Process& process)
             for (auto& page : pvr->m_owned_pages)
                 free_page(page);
 
-            // Should return IsSupervisor
-            if (pvr->is_supervisor()) {
+            if (pvr->is_supervisor() == IsSupervisor::YES) {
                 LOCK_GUARD(m_virtual_region_lock);
-                // TODO: AddressSpace::of_kernel().unmap_range(virtual_range)
+                AddressSpace::of_kernel().unmap_range(vr->virtual_range());
                 m_kernel_virtual_regions.remove(pvr->virtual_range().begin());
             }
-        } else if (vr->is_non_owning()) {
-            if (vr->is_supervisor()) {
-                // TODO: AddressSpace::of_kernel().unmap_range(virtual_range)
-            }
+        } else if (vr->is_non_owning() && vr->is_supervisor() == IsSupervisor::YES) {
+            AddressSpace::of_kernel().unmap_range(vr->virtual_range());
         } else {
-            ASSERT_NEVER_REACHED();
+            ASSERT_NEVER_REACHED(); // TODO: shared region
         }
 
         if (process.is_supervisor() == IsSupervisor::YES)
