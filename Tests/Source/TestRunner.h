@@ -120,7 +120,7 @@ public:
 
             std::string_view test_to_run = argv[1];
 
-            if (s_tests.count(test_to_run)) {
+            if (s_tests && s_tests->count(test_to_run)) {
                 run_tests_for(argv[1]);
             } else if (test_to_run == "all") {
                 run_all();
@@ -148,21 +148,27 @@ private:
 
     static void run_all()
     {
-        for (auto& subject : s_tests) {
+        if (!s_tests)
+            return;
+
+        for (auto& subject : *s_tests) {
             run_tests_for(subject.first);
         }
     }
 
     static void run_tests_for(std::string_view subject_name)
     {
-        auto& tests = s_tests[subject_name];
+        if (!s_tests)
+            return;
+
+        auto& tests = (*s_tests)[subject_name];
 
         std::cout << "Running tests for \"" << subject_name << "\" (" << tests.size() << " tests)" << std::endl;
 
-        if (s_fixtures.count(subject_name)) {
+        if (s_fixtures && s_fixtures->count(subject_name)) {
             bool fixture_failed = true;
 
-            for (auto fixture : s_fixtures[subject_name]) {
+            for (auto fixture : (*s_fixtures)[subject_name]) {
                 fixture_failed = true;
                 try {
                     std::cout << "---- Running fixture \"" << fixture->name() << "\"... ";
@@ -237,17 +243,23 @@ private:
 
     static void register_self(Test* self, std::string_view subject)
     {
-        s_tests[subject].push_back(self);
+        if (!s_tests)
+            s_tests = new std::remove_pointer_t<decltype(s_tests)>();
+
+        (*s_tests)[subject].push_back(self);
     }
 
     static void register_self(Fixture* self, std::string_view subject)
     {
-        s_fixtures[subject].push_back(self);
+        if (!s_fixtures)
+            s_fixtures = new std::remove_pointer_t<decltype(s_fixtures)>();
+
+        (*s_fixtures)[subject].push_back(self);
     }
 
 private:
-    inline static std::map<std::string_view, std::vector<Test*>> s_tests;
-    inline static std::map<std::string_view, std::vector<Fixture*>> s_fixtures;
+    inline static std::map<std::string_view, std::vector<Test*>>* s_tests;
+    inline static std::map<std::string_view, std::vector<Fixture*>>* s_fixtures;
     inline static size_t s_ran_count;
     inline static size_t s_pass_count;
     inline static size_t s_skip_count;
