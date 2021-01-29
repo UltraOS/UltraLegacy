@@ -12,12 +12,9 @@ class WindowManager {
 public:
     static void initialize();
 
-    void add_window(const RefPtr<Window>& window)
-    {
-        LOCK_GUARD(window_lock());
-        m_windows.append_front(window);
-        window->set_focused();
-    }
+    void add_window(const RefPtr<Window>& window);
+
+    void remove_window(Window& window);
 
     [[noreturn]] static void run();
 
@@ -25,7 +22,7 @@ public:
 
     InterruptSafeSpinLock& window_lock() { return m_lock; }
 
-    List<RefPtr<Window>>& windows() { return m_windows; }
+    List<Window>& windows() { return m_windows; }
 
     static WindowManager& the()
     {
@@ -40,7 +37,7 @@ private:
 
     RefPtr<Theme> m_theme;
     RefPtr<Window> m_desktop_window;
-    List<RefPtr<Window>> m_windows;
+    List<Window> m_windows;
 
     static WindowManager* s_instance;
 };

@@ -31,15 +31,15 @@ void EventManager::dispatch_pending()
 
             bool event_handled = false;
             for (auto& window : WindowManager::the().windows()) {
-                event_handled = (window->handle_event(event, event_handled) || event_handled);
+                event_handled |= window.handle_event(event, event_handled);
             }
             continue;
         }
 
         case Event::Type::MOUSE_SCROLL:
             for (auto& window : WindowManager::the().windows()) {
-                if (window->full_translated_rect().contains(Screen::the().cursor().location())) {
-                    window->handle_event(event, false);
+                if (window.full_translated_rect().contains(Screen::the().cursor().location())) {
+                    window.handle_event(event, false);
                     break;
                 }
             }

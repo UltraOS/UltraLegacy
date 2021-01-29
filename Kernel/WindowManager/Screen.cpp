@@ -22,17 +22,17 @@ void Screen::check_if_focused_window_should_change()
     auto window_that_should_be_focused = window_list.end();
 
     for (auto itr = window_list.begin(); itr != window_list.end(); ++itr) {
-        if ((*itr)->full_translated_rect().contains(m_cursor.location())) {
+        if ((*itr).full_translated_rect().contains(m_cursor.location())) {
             window_that_should_be_focused = itr;
             break;
         }
     }
 
     if (window_that_should_be_focused != window_list.end()) {
-        if (Window::is_any_focused() && ((*window_that_should_be_focused).get() == &Window::focused()))
+        if (Window::is_any_focused() && (&*window_that_should_be_focused == &Window::focused()))
             return;
 
-        (*window_that_should_be_focused)->set_focused();
+        (*window_that_should_be_focused).set_focused();
 
         // FIXME: should this do Window::focused().invalidate_rect(...) instead?
         // Invalidate the focused window as it must be redrawn on top of everything

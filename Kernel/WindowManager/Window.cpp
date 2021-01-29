@@ -2,6 +2,7 @@
 #include "Common/Math.h"
 #include "Compositor.h"
 #include "Memory/MemoryManager.h"
+#include "Multitasking/Thread.h"
 #include "Screen.h"
 #include "WindowManager.h"
 
@@ -13,6 +14,7 @@ RefPtr<Window> Window::create(Thread& owner, const Rect& window_rect, RefPtr<The
 {
     RefPtr<Window> window = new Window(owner, Style::NORMAL_FRAME, window_rect, theme, title);
     WindowManager::the().add_window(window);
+    owner.add_window(window);
     return window;
 }
 
@@ -214,8 +216,18 @@ void Window::push_window_event(const Event& event)
     m_event_queue.append(event);
 }
 
+void Window::close()
+{
+    WindowManager::the().remove_window(*this);
+    m_state = State::CLOSED;
+    m_owner.windows().remove(this);
+}
+
 bool Window::handle_event(const Event& event, bool is_handled)
 {
+    if (m_state == State::CLOSED)
+        return false;
+
     if (event.type == Event::Type::MOUSE_MOVE) {
         if (!is_handled) {
             auto mouse_vec = Point(event.mouse_move.x, event.mouse_move.y);
@@ -244,9 +256,24 @@ bool Window::handle_event(const Event& event, bool is_handled)
                     m_state = State::IS_BEING_DRAGGED;
                     m_drag_begin = Screen::the().cursor().location();
                 } else {
-                    m_state = State::NORMAL;
+                    if (m_state == State::CLOSE_BUTTON_HOVERED) {
+                        m_state = State::CLOSE_BUTTON_PRESSED;
+                        m_frame.on_button_state_changed(WindowFrame::Button::CLOSE, WindowFrame::ButtonState::PRESSED);
+                    } else {
+                        m_state = State::NORMAL;
+                    }
                 }
             } else {
+                if (m_state == State::CLOSE_BUTTON_PRESSED) {
+                    if (m_frame.rect_for_button(WindowFrame::Button::CLOSE).contains(Screen::the().cursor().location())) {
+                        Event e {};
+                        e.type = Event::Type::WINDOW_SHOULD_CLOSE;
+                        push_window_event(e);
+                    }
+
+                    m_frame.on_button_state_changed(WindowFrame::Button::CLOSE, WindowFrame::ButtonState::RELEASED);
+                }
+
                 m_state = State::NORMAL;
             }
         }
@@ -286,7 +313,7 @@ bool Window::handle_event(const Event& event, bool is_handled)
 
             set_invalidated(true);
         } else if (m_frame.rect_for_button(WindowFrame::Button::CLOSE).contains(mouse_vec) && !is_handled) {
-            if (m_state != State::CLOSE_BUTTON_HOVERED) {
+            if (m_state != State::CLOSE_BUTTON_HOVERED && m_state != State::CLOSE_BUTTON_PRESSED) {
                 release_buttons_if_needed();
                 m_state = State::CLOSE_BUTTON_HOVERED;
                 m_frame.on_button_state_changed(WindowFrame::Button::CLOSE, WindowFrame::ButtonState::HOVERED);

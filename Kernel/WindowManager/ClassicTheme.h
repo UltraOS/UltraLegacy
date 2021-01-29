@@ -19,11 +19,14 @@ public:
     Color color_for_button_state(WindowFrame::Button button, WindowFrame::ButtonState state) const override
     {
         static constexpr Color dimmer_frame_color = { 0x69, 0x1c, 0x4a };
+        static constexpr Color dimmer_red_color = { 0xBE, 0x00, 0x00 };
 
         switch (button) {
         case WindowFrame::Button::CLOSE:
             if (state == WindowFrame::ButtonState::HOVERED)
                 return Color::red();
+            else if (state == WindowFrame::ButtonState::PRESSED)
+                return dimmer_red_color;
             [[fallthrough]];
         default:
             if (state == WindowFrame::ButtonState::HOVERED)

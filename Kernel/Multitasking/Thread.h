@@ -5,10 +5,9 @@
 #include "Interrupts/Timer.h"
 #include "Memory/AddressSpace.h"
 #include "TSS.h"
+#include "WindowManager/Window.h"
 
 namespace kernel {
-
-class Window;
 
 class Thread : public StandaloneListNode<Thread> {
     MAKE_NONCOPYABLE(Thread);
@@ -82,7 +81,8 @@ public:
 
     bool should_be_woken_up() const { return m_wake_up_time <= Timer::nanoseconds_since_boot(); }
 
-    void set_window(Window* window) { m_window = window; }
+    Set<RefPtr<Window>, Less<>>& windows() { return m_windows; }
+    void add_window(RefPtr<Window> window) { m_windows.emplace(window); }
 
     class WakeTimePtrComparator {
     public:
@@ -132,6 +132,6 @@ private:
 
     u64 m_wake_up_time { 0 };
 
-    Window* m_window { nullptr };
+    Set<RefPtr<Window>, Less<>> m_windows;
 };
 }

@@ -1,7 +1,8 @@
 #include "TaskFinalizer.h"
+#include "Memory/MemoryManager.h"
 #include "Process.h"
 #include "Sleep.h"
-#include "Memory/MemoryManager.h"
+#include "WindowManager/Window.h"
 
 namespace kernel {
 
@@ -62,9 +63,7 @@ bool TaskFinalizer::finalize_task_queue()
     while (!m_processes_to_free.empty()) {
         freed_at_least_one = true;
         auto next_process_to_free = m_processes_to_free.front();
-
-        // TODO: pop_back & pop_front
-        m_processes_to_free.erase(m_processes_to_free.begin());
+        m_processes_to_free.pop_front();
 
         do_free_process(move(next_process_to_free));
     }
@@ -79,7 +78,9 @@ void TaskFinalizer::do_free_thread(Thread& thread)
 
     auto& owner = thread.owner();
 
-    // TODO: delete window if thread owns one
+    while (!thread.windows().empty()) {
+        (*thread.windows().begin())->close();
+    }
 
     MemoryManager::the().free_virtual_region(thread.kernel_stack());
     if (thread.is_supervisor() == IsSupervisor::NO)

@@ -36,7 +36,7 @@ void Compositor::compose()
     auto& windows = WindowManager::the().windows();
 
     for (auto& window : windows) {
-        window->submit_dirty_rects();
+        window.submit_dirty_rects();
     }
 
     for (auto& rect : m_dirty_rects) {
@@ -45,15 +45,15 @@ void Compositor::compose()
         for (auto itr = --windows.end(); itr != windows.end(); --itr) {
             auto& window = *itr;
 
-            if (window->is_invalidated())
+            if (window.is_invalidated())
                 continue;
 
-            auto intersected_rect = window->full_translated_rect().intersected(rect);
+            auto intersected_rect = window.full_translated_rect().intersected(rect);
             if (intersected_rect.empty())
                 continue;
 
             m_painter->set_clip_rect(m_wallpaper_rect);
-            m_painter->blit(intersected_rect.top_left(), window->surface(), intersected_rect.translated(-window->location()));
+            m_painter->blit(intersected_rect.top_left(), window.surface(), intersected_rect.translated(-window.location()));
             m_painter->reset_clip_rect();
         }
 
@@ -64,16 +64,16 @@ void Compositor::compose()
     m_dirty_rects.clear();
 
     for (auto& window : windows) {
-        if (window->is_invalidated()) {
+        if (window.is_invalidated()) {
             m_painter->set_clip_rect(m_wallpaper_rect);
-            m_painter->blit(window->location(), window->surface(), window->full_rect());
+            m_painter->blit(window.location(), window.surface(), window.full_rect());
             m_painter->reset_clip_rect();
         }
 
-        window->set_invalidated(false);
+        window.set_invalidated(false);
 
         if (!m_cursor_invalidated)
-            m_cursor_invalidated = window->full_translated_rect().contains(m_last_cursor_location);
+            m_cursor_invalidated = window.full_translated_rect().contains(m_last_cursor_location);
     }
 
     if (m_cursor_invalidated) {

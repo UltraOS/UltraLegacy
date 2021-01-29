@@ -3,6 +3,7 @@
 
 #include "Compositor.h"
 #include "EventManager.h"
+#include "Memory/MemoryManager.h"
 #include "Screen.h"
 #include "WindowManager.h"
 
@@ -24,6 +25,30 @@ WindowManager::WindowManager()
     : m_theme(Theme::make_default())
     , m_desktop_window(Window::create_desktop(*Thread::current(), Screen::the().rect(), m_theme))
 {
+}
+
+void WindowManager::add_window(const RefPtr<Window>& window)
+{
+    LOCK_GUARD(window_lock());
+    m_windows.insert_front(*window);
+    window->set_focused();
+    Compositor::the().add_dirty_rect(window->full_translated_rect());
+}
+
+void WindowManager::remove_window(Window& window)
+{
+    LOCK_GUARD(window_lock());
+    window.pop_off();
+
+    if (Window::is_any_focused() && &window == &Window::focused()) {
+        if (m_windows.empty())
+            m_desktop_window->set_focused();
+        else
+            m_windows.front().set_focused();
+    }
+
+    Compositor::the().add_dirty_rect(window.full_translated_rect());
+    MemoryManager::the().free_virtual_region(window.surface_region());
 }
 
 void WindowManager::run()

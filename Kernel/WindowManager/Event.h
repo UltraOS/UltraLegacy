@@ -40,6 +40,7 @@ struct Event {
         KEY_STATE,
         WINDOW_RESIZE,
         WINDOW_MOVE,
+        WINDOW_SHOULD_CLOSE,
         CHAR_TYPED,
     } type;
 };

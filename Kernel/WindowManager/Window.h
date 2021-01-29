@@ -2,15 +2,18 @@
 
 #include "Bitmap.h"
 #include "Common/DynamicArray.h"
+#include "Common/List.h"
 #include "Event.h"
-#include "Multitasking/Thread.h"
+#include "Memory/VirtualRegion.h"
 #include "Rect.h"
 #include "Theme.h"
 #include "WindowFrame.h"
 
 namespace kernel {
 
-class Window {
+class Thread;
+
+class Window : public StandaloneListNode<Window> {
     MAKE_NONCOPYABLE(Window);
     MAKE_NONMOVABLE(Window);
 
@@ -77,6 +80,22 @@ public:
 
     [[nodiscard]] const String& title() const { return m_title; }
 
+    VirtualRegion& surface_region() { return *m_surface_region; }
+
+    void close();
+
+    ~Window() { ASSERT(m_state == State::CLOSED); }
+
+    friend bool operator<(const RefPtr<Window>& l, const Window* r)
+    {
+        return l.get() < r;
+    }
+
+    friend bool operator<(const Window* l, const RefPtr<Window>& r)
+    {
+        return l < r.get();
+    }
+
 private:
     void invalidate_rects_based_on_drag_delta(const Rect& new_rect) const;
 
@@ -86,8 +105,10 @@ private:
         NORMAL,
         IS_BEING_DRAGGED,
         CLOSE_BUTTON_HOVERED,
+        CLOSE_BUTTON_PRESSED,
         MAXIMIZE_BUTTON_HOVERED,
         MINIMIZE_BUTTON_HOVERED,
+        CLOSED,
     };
 
 private:
@@ -104,7 +125,7 @@ private:
     Point m_location;
     // TODO: set this to false and invalidate the entire window
     // with invalidate_rect() upon creation instead?
-    bool m_invalidated { true };
+    bool m_invalidated { false };
     State m_state { State::NORMAL };
 
     RefPtr<Surface> m_front_surface;
@@ -117,7 +138,6 @@ private:
     InterruptSafeSpinLock m_event_queue_lock;
     DynamicArray<Event> m_event_queue;
 
-    // TODO: this should be a weak ptr
     static Window* s_currently_focused;
 };
 }

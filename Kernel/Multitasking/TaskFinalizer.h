@@ -1,13 +1,14 @@
 #pragma once
 
-#include "Thread.h"
-#include "Process.h"
 #include "Common/RefPtr.h"
+#include "Process.h"
+#include "Thread.h"
 
 namespace kernel {
 
 class TaskFinalizer {
     MAKE_SINGLETON(TaskFinalizer);
+
 public:
     static void spawn();
 

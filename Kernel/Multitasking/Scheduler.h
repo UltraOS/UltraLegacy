@@ -16,6 +16,8 @@ class Scheduler {
 
 public:
     static void inititalize();
+    static bool is_initialized() { return s_instance != nullptr; }
+
     static Scheduler& the();
 
     void yield();

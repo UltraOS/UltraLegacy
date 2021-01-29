@@ -3,8 +3,8 @@
 #include "Interrupts/IDT.h"
 #include "Interrupts/Utilities.h"
 
-#include "TaskFinalizer.h"
 #include "Scheduler.h"
+#include "TaskFinalizer.h"
 
 namespace kernel {
 
@@ -100,13 +100,12 @@ void Scheduler::kill_current_thread()
     if (!current_thread->is_main()) {
         ASSERT(current_thread->is_dead());
         // We have to defer freeing of this thread, otherwise
-        // it becomes a race condition between scheduler and taks finalizer
+        // it becomes a race condition between scheduler and task finalizer
         m_deferred_deleted_dead_threads.insert_back(*current_thread);
         return;
     }
 
-    auto find_sleeping_thread = [this](Thread* thread) -> decltype(m_sleeping_threads)::ConstIterator
-    {
+    auto find_sleeping_thread = [this](Thread* thread) -> decltype(m_sleeping_threads)::ConstIterator {
         auto lb = m_sleeping_threads.lower_bound(thread);
 
         while (lb != m_sleeping_threads.end() && *lb != thread)
@@ -236,7 +235,7 @@ void Scheduler::pick_next()
     if (current_thread->is_running() && current_thread != &CPU::current().idle_task())
         m_expired_threads->insert_back(*current_thread);
     else if (current_thread->is_dead())
-         kill_current_thread();
+        kill_current_thread();
 
     auto* next_thread = pick_next_thread();
 
