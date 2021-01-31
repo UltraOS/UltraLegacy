@@ -123,10 +123,6 @@ public:
         };
 
         struct PACKED InterruptSourceOverride {
-            enum class Bus : u8 {
-                ISA = 0,
-            };
-
             EntryHeader header;
             Bus bus;
             u8 source;
@@ -136,11 +132,18 @@ public:
             u16 reserved : 12;
         };
 
+        struct PACKED LAPICAddressOverride {
+            EntryHeader header;
+            u16 reserved;
+            u64 address;
+        };
+
         static constexpr size_t size = sdt_header_size + 8;
         static constexpr size_t entry_header_size = 2;
         static constexpr size_t lapic_entry_size = 8;
         static constexpr size_t ioapic_entry_size = 12;
         static constexpr size_t interrupt_source_override_size = 10;
+        static constexpr size_t lapic_address_override_size = 12;
     };
 
 
@@ -149,6 +152,7 @@ public:
     static_assert(sizeof(MADT::LAPIC) == MADT::lapic_entry_size, "Incorrect size of LAPIC");
     static_assert(sizeof(MADT::IOAPIC) == MADT::ioapic_entry_size, "Incorrect size of IOAPIC");
     static_assert(sizeof(MADT::InterruptSourceOverride) == MADT::interrupt_source_override_size, "Incorrect interrupt source override size");
+    static_assert(sizeof(MADT::LAPICAddressOverride) == MADT::lapic_address_override_size, "Incorrect lapic address override size");
 
     SMPData* generate_smp_data();
 

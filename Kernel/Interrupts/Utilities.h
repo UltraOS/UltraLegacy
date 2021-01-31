@@ -17,9 +17,9 @@ enum class TriggerMode : u8 {
     LEVEL = 3
 };
 
-enum class Bus {
-    ISA,
-    PCI
+enum class Bus : u8 {
+    ISA = 0,
+    PCI = 1,
 };
 
 inline Polarity default_polarity_for_bus(Bus bus)

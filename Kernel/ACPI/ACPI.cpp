@@ -68,6 +68,9 @@ void ACPI::collect_all_sdts()
     size_t pointer_stride;
 
     if (m_rsdp->revision == 2) {
+        if (m_rsdp->xsdt_pointer > MemoryManager::max_memory_address)
+            FAILED_ASSERTION("ACPI: XSDT is outside of accessible range");
+
         root_sdt_physical = static_cast<Address::underlying_pointer_type>(m_rsdp->xsdt_pointer);
         root_sdt_name = "XSDT"_sv;
         pointer_stride = 8;
@@ -197,7 +200,7 @@ SMPData* ACPI::generate_smp_data()
             auto* iso = madt.as_pointer<MADT::InterruptSourceOverride>();
 
             // Spec says this is the bus that gets overriden
-            ASSERT(iso->bus == MADT::InterruptSourceOverride::Bus::ISA);
+            ASSERT(iso->bus == Bus::ISA);
 
             log() << "ACPI: interrupt override " << iso->source << " -> " << iso->gsi
                   << " polarity: " << to_string(iso->polarity) << " | trigger mode: " << to_string(iso->trigger_mode);
@@ -208,6 +211,17 @@ SMPData* ACPI::generate_smp_data()
             smp_info->irqs_to_info[iso->source] = { iso->source, iso->gsi, polarity, trigger_mode };
 
             break;
+        }
+        case MADT::EntryType::LAPIC_ADDRESS_OVERRIDE: {
+            auto* override = madt.as_pointer<MADT::LAPICAddressOverride>();
+
+            // Some protection for the 32 bit kernel
+            if (override->address > MemoryManager::max_memory_address)
+                FAILED_ASSERTION("LAPIC override address is outside of accessible range");
+
+            smp_info->lapic_address = static_cast<Address::underlying_pointer_type>(override->address);
+
+            log() << "ACPI: Overriding LAPIC address to " << smp_info->lapic_address;
         }
         default:
             break;

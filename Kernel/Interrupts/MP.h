@@ -30,7 +30,7 @@ public:
         case EntryType::LOCAL_INTERRUPT_ASSIGNMENT:
             return 8;
         default:
-            ASSERT_NEVER_REACHED();
+            FAILED_ASSERTION("unknown entry type");
         }
     }
 
