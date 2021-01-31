@@ -1,11 +1,11 @@
 #include "DemoTTY.h"
+#include "ACPI/ACPI.h"
 #include "Drivers/Video/VideoDevice.h"
 #include "EventManager.h"
 #include "Memory/MemoryManager.h"
 #include "Multitasking/Process.h"
 #include "Multitasking/Scheduler.h"
 #include "WindowManager/WindowManager.h"
-#include "ACPI/ACPI.h"
 
 namespace kernel {
 

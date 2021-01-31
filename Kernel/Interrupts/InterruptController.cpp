@@ -1,11 +1,11 @@
 #include "InterruptController.h"
+#include "ACPI/ACPI.h"
 #include "APIC.h"
 #include "Core/CPU.h"
 #include "LAPIC.h"
 #include "MP.h"
 #include "Memory/MemoryManager.h"
 #include "PIC.h"
-#include "ACPI/ACPI.h"
 
 namespace kernel {
 

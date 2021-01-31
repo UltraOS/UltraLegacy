@@ -33,6 +33,32 @@ void LAPIC::initialize_for_this_processor()
     static constexpr u32 enable_bit = 0b100000000;
 
     write_register(Register::SPURIOUS_INTERRUPT_VECTOR, current_value | enable_bit | spurious_irq_index);
+
+    auto& smp_data = InterruptController::smp_data();
+
+    auto my_info = linear_search(smp_data.lapics.begin(), smp_data.lapics.end(), my_id(),
+        [](const LAPICInfo& info, u32 id) {
+            return info.id == id;
+        });
+
+    ASSERT(my_info != smp_data.lapics.end());
+
+    if (my_info->nmi_connection) {
+        static constexpr u32 nmi_bit = 0b10000000000;
+
+        auto& nmi = my_info->nmi_connection.value();
+
+        // Both AMD and intel maunals say that trigger mode is hardcoded as edge for NMIs
+        ASSERT(nmi.trigger_mode == decltype(nmi.trigger_mode)::EDGE);
+
+        if (nmi.lint == 0) {
+            write_register(Register::LVT_LOCAL_INTERRUPT_0, nmi_bit);
+        } else if (nmi.lint == 1) {
+            write_register(Register::LVT_LOCAL_INTERRUPT_1, nmi_bit);
+        } else {
+            FAILED_ASSERTION("LINT can either be 0 or 1");
+        }
+    }
 }
 
 void LAPIC::Timer::calibrate_for_this_processor()

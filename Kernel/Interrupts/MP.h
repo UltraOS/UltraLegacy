@@ -126,8 +126,16 @@ public:
         u16 reserved : 12;
         u8 source_bus_id;
         u8 source_bus_irq;
-        u8 destination_ioapic_id;
-        u8 destination_ioapic_pin;
+
+        union {
+            u8 destination_ioapic_id;
+            u8 destination_lapic_id;
+        };
+
+        union {
+            u8 destination_ioapic_pin;
+            u8 destination_lapic_lint;
+        };
     };
 
     struct PACKED BusEntry {

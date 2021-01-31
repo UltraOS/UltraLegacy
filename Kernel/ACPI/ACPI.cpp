@@ -93,7 +93,7 @@ void ACPI::collect_all_sdts()
 
     root_sdt += sizeof(SDTHeader);
     auto root_sdt_end = root_sdt + (root_sdt_length - sizeof(SDTHeader));
-    m_tables.reserve((root_sdt_end - root_sdt) /  pointer_stride);
+    m_tables.reserve((root_sdt_end - root_sdt) / pointer_stride);
 
     for (; root_sdt < root_sdt_end; root_sdt += pointer_stride) {
         Address table_address;
@@ -135,10 +135,9 @@ bool ACPI::verify_checksum(Address virtual_address, size_t length)
 ACPI::TableInfo* ACPI::get_table_info(StringView signature)
 {
     auto it = linear_search(m_tables.begin(), m_tables.end(), signature,
-                            [](const TableInfo& ti, StringView signature)
-                            {
-                                return ti.name == signature;
-                            });
+        [](const TableInfo& ti, StringView signature) {
+            return ti.name == signature;
+        });
 
     return it == m_tables.end() ? nullptr : &*it;
 }
@@ -168,6 +167,8 @@ SMPData* ACPI::generate_smp_data()
         smp_info->irqs_to_info[i] = { i, i, default_polarity_for_bus(Bus::ISA), default_trigger_mode_for_bus(Bus::ISA) };
     }
 
+    DynamicArray<Pair<u8, LAPICInfo::NMI>> lapic_uid_to_nmi;
+
     while (madt < madt_end) {
         auto* entry = madt.as_pointer<MADT::EntryHeader>();
 
@@ -178,10 +179,10 @@ SMPData* ACPI::generate_smp_data()
 
             log() << "ACPI: CPU " << lapic->id << " is bsp: " << is_bsp << " | online capable: " << !lapic->should_be_ignored();
 
-            if (is_bsp || lapic->should_be_ignored())
+            if (lapic->should_be_ignored())
                 break;
 
-            smp_info->ap_lapic_ids.append(lapic->id);
+            smp_info->lapics.append({ lapic->id, lapic->acpi_uid, {} });
             break;
         }
         case MADT::EntryType::IOAPIC: {
@@ -213,21 +214,76 @@ SMPData* ACPI::generate_smp_data()
             break;
         }
         case MADT::EntryType::LAPIC_ADDRESS_OVERRIDE: {
-            auto* override = madt.as_pointer<MADT::LAPICAddressOverride>();
+            auto* lapic_override = madt.as_pointer<MADT::LAPICAddressOverride>();
 
             // Some protection for the 32 bit kernel
-            if (override->address > MemoryManager::max_memory_address)
+            if (lapic_override->address > MemoryManager::max_memory_address)
                 FAILED_ASSERTION("LAPIC override address is outside of accessible range");
 
-            smp_info->lapic_address = static_cast<Address::underlying_pointer_type>(override->address);
+            smp_info->lapic_address = static_cast<Address::underlying_pointer_type>(lapic_override->address);
 
             log() << "ACPI: Overriding LAPIC address to " << smp_info->lapic_address;
+
+            break;
+        }
+        case MADT::EntryType::NMI_SOURCE: {
+            auto nmi_source = madt.as_pointer<MADT::NMISource>();
+
+            log() << "ACPI: nmi source at gsi " << nmi_source->gsi;
+
+            break;
+        }
+        case MADT::EntryType::LAPIC_NMI: {
+            auto lapic_nmi = madt.as_pointer<MADT::LAPICNMI>();
+            log() << "ACPI: lapic " << lapic_nmi->acpi_uid
+                  << " nmi at lint " << lapic_nmi->lint_number
+                  << " polarity: " << to_string(lapic_nmi->polarity)
+                  << " | trigger mode: " << to_string(lapic_nmi->trigger_mode);
+
+            Pair<u8, LAPICInfo::NMI> nmi;
+            nmi.set_first(lapic_nmi->acpi_uid);
+
+            auto& info = nmi.second();
+            info.lint = lapic_nmi->lint_number;
+            info.polarity = lapic_nmi->polarity == Polarity::CONFORMING ? Polarity::ACTIVE_HIGH : lapic_nmi->polarity;
+            info.trigger_mode = lapic_nmi->trigger_mode == TriggerMode::CONFORMING ? TriggerMode::EDGE : lapic_nmi->trigger_mode;
+
+            lapic_uid_to_nmi.append(nmi);
+
+            break;
         }
         default:
             break;
         }
 
         madt += entry->length;
+    }
+
+    static constexpr u8 all_processors_uid = 0xFF;
+
+    if (!lapic_uid_to_nmi.empty()) {
+        if (lapic_uid_to_nmi[0].first() == all_processors_uid) { // single NMI entry for all LAPICs
+            ASSERT(lapic_uid_to_nmi.size() == 1);
+
+            for (auto& lapic : smp_info->lapics)
+                lapic.nmi_connection = lapic_uid_to_nmi[0].second();
+        } else {
+            for (auto& nmi_entry : lapic_uid_to_nmi) {
+                auto& lapics = smp_info->lapics;
+
+                auto lapic = linear_search(lapics.begin(), lapics.end(), nmi_entry.first(),
+                    [](const LAPICInfo& info, u8 acpi_uid) {
+                        return info.acpi_uid == acpi_uid;
+                    });
+
+                // You may think that this is an error, but it's actually not.
+                // One of my laptops generates 8 LAPIC NMIs even though theres 4 LAPICs
+                if (lapic == lapics.end())
+                    continue;
+
+                lapic->nmi_connection = nmi_entry.second();
+            }
+        }
     }
 
     return smp_info;

@@ -1,7 +1,8 @@
 #pragma once
 
-#include "Core/CPU.h"
 #include "Common/DynamicArray.h"
+#include "Common/Optional.h"
+#include "Core/CPU.h"
 
 namespace kernel {
 
@@ -53,8 +54,20 @@ struct IRQInfo {
     TriggerMode trigger_mode;
 };
 
+struct LAPICInfo {
+    struct NMI {
+        Polarity polarity;
+        TriggerMode trigger_mode;
+        u8 lint;
+    };
+
+    u8 id;
+    u8 acpi_uid;
+    Optional<NMI> nmi_connection;
+};
+
 struct SMPData {
-    DynamicArray<u8> ap_lapic_ids;
+    DynamicArray<LAPICInfo> lapics;
     u8 bsp_lapic_id;
     Address lapic_address;
     Address ioapic_address;
@@ -91,39 +104,38 @@ inline StringView to_string(TriggerMode t)
 
 namespace Interrupts {
 
-inline bool are_enabled()
-{
-    return CPU::flags() & CPU::FLAGS::INTERRUPTS;
-}
-
-inline void enable()
-{
-    sti();
-}
-
-inline void disable()
-{
-    cli();
-}
-
-class ScopedDisabler {
-public:
-    ScopedDisabler()
-        : m_should_enable(are_enabled())
+    inline bool are_enabled()
     {
-        disable();
+        return CPU::flags() & CPU::FLAGS::INTERRUPTS;
     }
 
-    ~ScopedDisabler()
+    inline void enable()
     {
-        if (m_should_enable)
-            enable();
+        sti();
     }
 
-private:
-    bool m_should_enable { false };
-};
+    inline void disable()
+    {
+        cli();
+    }
 
+    class ScopedDisabler {
+    public:
+        ScopedDisabler()
+            : m_should_enable(are_enabled())
+        {
+            disable();
+        }
+
+        ~ScopedDisabler()
+        {
+            if (m_should_enable)
+                enable();
+        }
+
+    private:
+        bool m_should_enable { false };
+    };
 }
 
 }

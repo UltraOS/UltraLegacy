@@ -3,8 +3,8 @@
 #include "Common/Macros.h"
 #include "Common/Map.h"
 #include "Common/Types.h"
-#include "Memory/TypedMapping.h"
 #include "Interrupts/Utilities.h"
+#include "Memory/TypedMapping.h"
 
 namespace kernel {
 
@@ -99,7 +99,8 @@ public:
                 ONLINE_CAPABLE = 2,
             };
 
-            friend bool operator&(Flags l, Flags r) {
+            friend bool operator&(Flags l, Flags r)
+            {
                 return static_cast<u32>(l) & static_cast<u32>(r);
             }
 
@@ -138,14 +139,32 @@ public:
             u64 address;
         };
 
+        struct PACKED NMISource {
+            EntryHeader header;
+            Polarity polarity : 2;
+            TriggerMode trigger_mode : 2;
+            u16 reserved : 12;
+            u32 gsi;
+        };
+
+        struct PACKED LAPICNMI {
+            EntryHeader header;
+            u8 acpi_uid;
+            Polarity polarity : 2;
+            TriggerMode trigger_mode : 2;
+            u16 reserved : 12;
+            u8 lint_number;
+        };
+
         static constexpr size_t size = sdt_header_size + 8;
         static constexpr size_t entry_header_size = 2;
         static constexpr size_t lapic_entry_size = 8;
         static constexpr size_t ioapic_entry_size = 12;
         static constexpr size_t interrupt_source_override_size = 10;
         static constexpr size_t lapic_address_override_size = 12;
+        static constexpr size_t nmi_source_size = 8;
+        static constexpr size_t lapic_nmi_size = 6;
     };
-
 
     static_assert(sizeof(MADT) == MADT::size, "Incorrect size of MADT");
     static_assert(sizeof(MADT::EntryHeader) == MADT::entry_header_size, "Incorrect size of MADT entry");
@@ -153,6 +172,8 @@ public:
     static_assert(sizeof(MADT::IOAPIC) == MADT::ioapic_entry_size, "Incorrect size of IOAPIC");
     static_assert(sizeof(MADT::InterruptSourceOverride) == MADT::interrupt_source_override_size, "Incorrect interrupt source override size");
     static_assert(sizeof(MADT::LAPICAddressOverride) == MADT::lapic_address_override_size, "Incorrect lapic address override size");
+    static_assert(sizeof(MADT::NMISource) == MADT::nmi_source_size, "Incorrect NMI source size");
+    static_assert(sizeof(MADT::LAPICNMI) == MADT::lapic_nmi_size, "Incorrect LAPIC NMI size");
 
     SMPData* generate_smp_data();
 

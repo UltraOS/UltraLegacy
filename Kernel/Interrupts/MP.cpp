@@ -99,15 +99,17 @@ SMPData* MP::parse_configuration_table(FloatingPointer* fp_table)
         return nullptr;
     }
 
-    auto* smp_data = new SMPData;
-    smp_data->lapic_address = configuration_table.local_apic_pointer;
+    auto* smp_info = new SMPData;
+    smp_info->lapic_address = configuration_table.local_apic_pointer;
 
-    log() << "MP: LAPIC @ " << smp_data->lapic_address;
+    log() << "MP: LAPIC @ " << smp_info->lapic_address;
 
     Address entry_address = &configuration_table + 1;
 
-    u8 isa_bus_id = 0xFF;
-    u8 pci_bus_id = 0xFF;
+    Optional<u8> isa_bus_id {};
+    Optional<u8> pci_bus_id {};
+
+    DynamicArray<Pair<u8, LAPICInfo::NMI>> lapic_id_to_nmi;
 
     for (size_t i = 0; i < configuration_table.entry_count; ++i) {
         EntryType type = *entry_address.as_pointer<MP::EntryType>();
@@ -123,9 +125,9 @@ SMPData* MP::parse_configuration_table(FloatingPointer* fp_table)
                   << " is bsp: " << is_bsp << " | online capable: " << is_ok;
 
             if (is_bsp)
-                smp_data->bsp_lapic_id = processor.local_apic_id;
-            else
-                smp_data->ap_lapic_ids.append(processor.local_apic_id);
+                smp_info->bsp_lapic_id = processor.local_apic_id;
+
+            smp_info->lapics.append({ processor.local_apic_id, 0xFF, {} });
 
             break;
         }
@@ -152,13 +154,13 @@ SMPData* MP::parse_configuration_table(FloatingPointer* fp_table)
             log() << "MP: I/O APIC at " << format::as_hex << io_apic.io_apic_pointer
                   << " is_ok:" << is_ok << " id:" << io_apic.id;
 
-            smp_data->ioapic_address = static_cast<ptr_t>(io_apic.io_apic_pointer);
+            smp_info->ioapic_address = static_cast<ptr_t>(io_apic.io_apic_pointer);
 
             break;
         }
         case EntryType::IO_INTERRUPT_ASSIGNMENT:
         case EntryType::LOCAL_INTERRUPT_ASSIGNMENT: {
-            ASSERT(isa_bus_id != 0xFF);
+            ASSERT(isa_bus_id.has_value());
 
             auto& interrupt = *entry_address.as_pointer<InterruptEntry>();
 
@@ -176,14 +178,25 @@ SMPData* MP::parse_configuration_table(FloatingPointer* fp_table)
                   << " id: " << interrupt.destination_ioapic_id << "\n----> Destination " << str_apic
                   << " pin: " << interrupt.destination_ioapic_pin << "\n";
 
+            if (type == EntryType::LOCAL_INTERRUPT_ASSIGNMENT && interrupt.interrupt_type == InterruptEntry::Type::NMI) {
+                Pair<u8, LAPICInfo::NMI> nmi;
+                nmi.set_first(interrupt.destination_lapic_id);
+                auto& info = nmi.second();
+                info.polarity = interrupt.polarity == Polarity::CONFORMING ? Polarity::ACTIVE_HIGH : interrupt.polarity;
+                info.trigger_mode = interrupt.trigger_mode == TriggerMode::CONFORMING ? TriggerMode::EDGE : interrupt.trigger_mode;
+                info.lint = interrupt.destination_lapic_lint;
+                lapic_id_to_nmi.append(nmi);
+
+                break;
+            }
+
             // TODO: 1. handle lapic assignemnts separetely (LINT0/LINT1 stuff)
             //       2. handle interrupt types other than the default vectored
             //       3. handle interrupts that are coming from the PCI bus
-            if (type == EntryType::LOCAL_INTERRUPT_ASSIGNMENT || interrupt.interrupt_type != InterruptEntry::Type::INT
-                || interrupt.source_bus_id != isa_bus_id) {
-                entry_address += sizeof_entry(type);
-                continue;
-            }
+            if (type == EntryType::LOCAL_INTERRUPT_ASSIGNMENT
+                || interrupt.interrupt_type != InterruptEntry::Type::INT
+                || interrupt.source_bus_id != isa_bus_id.value())
+                break;
 
             // TODO: take care of the possibility of having multiple IOAPICs
             IRQInfo info {};
@@ -192,45 +205,69 @@ SMPData* MP::parse_configuration_table(FloatingPointer* fp_table)
 
             if (interrupt.polarity != Polarity::CONFORMING) {
                 info.polarity = interrupt.polarity;
-            } else if (interrupt.source_bus_id == isa_bus_id) {
-                info.polarity = Polarity::ACTIVE_HIGH;
-            } else if (interrupt.source_bus_id == pci_bus_id) {
-                info.polarity = Polarity::ACTIVE_LOW;
+            } else if (interrupt.source_bus_id == isa_bus_id.value()) {
+                info.polarity = default_polarity_for_bus(Bus::ISA);
+            } else if (interrupt.source_bus_id == pci_bus_id.value()) {
+                info.polarity = default_polarity_for_bus(Bus::PCI);
             } else {
                 warning()
                     << "MP: interrupt polarity was declared conforming but the default mode for bus "
                     << interrupt.source_bus_id << " is unknown.\n";
-                entry_address += sizeof_entry(type);
-                continue;
+                break;
             }
 
             if (interrupt.trigger_mode != TriggerMode::CONFORMING) {
                 info.trigger_mode = interrupt.trigger_mode;
-            } else if (interrupt.source_bus_id == isa_bus_id) {
-                info.trigger_mode = TriggerMode::EDGE;
-            } else if (interrupt.source_bus_id == pci_bus_id) {
-                info.trigger_mode = TriggerMode::LEVEL;
+            } else if (interrupt.source_bus_id == isa_bus_id.value()) {
+                info.trigger_mode = default_trigger_mode_for_bus(Bus::ISA);
+            } else if (interrupt.source_bus_id == pci_bus_id.value()) {
+                info.trigger_mode = default_trigger_mode_for_bus(Bus::PCI);
             } else {
                 warning() << "MP: interrupt trigger mode was declared conforming\n"
                              "          but the default mode for bus "
                           << interrupt.source_bus_id << " is unknown.\n";
-                entry_address += sizeof_entry(type);
-                continue;
+                break;
             }
 
-            smp_data->irqs_to_info[info.original_irq_index] = info;
+            smp_info->irqs_to_info[info.original_irq_index] = info;
             break;
         }
         default:
             warning() << "MP: unknown type of entry " << static_cast<u8>(type) << ", skipping the entire table";
-            delete smp_data;
+            delete smp_info;
             return nullptr;
         }
 
         entry_address += sizeof_entry(type);
     }
 
-    return smp_data;
+    static constexpr u8 all_processors_uid = 0xFF;
+
+    if (!lapic_id_to_nmi.empty()) {
+        if (lapic_id_to_nmi[0].first() == all_processors_uid) { // single NMI entry for all LAPICs
+            ASSERT(lapic_id_to_nmi.size() == 1);
+
+            for (auto& lapic : smp_info->lapics)
+                lapic.nmi_connection = lapic_id_to_nmi[0].second();
+        } else {
+            for (auto& nmi_entry : lapic_id_to_nmi) {
+                auto& lapics = smp_info->lapics;
+
+                auto lapic = linear_search(lapics.begin(), lapics.end(), nmi_entry.first(),
+                    [](const LAPICInfo& info, u8 id) {
+                        return info.id == id;
+                    });
+
+                // This isn't an error when it happens in ACPI so I guess it isn't here either
+                if (lapic == lapics.end())
+                    continue;
+
+                lapic->nmi_connection = nmi_entry.second();
+            }
+        }
+    }
+
+    return smp_info;
 }
 
 }

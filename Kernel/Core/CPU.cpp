@@ -83,14 +83,22 @@ void CPU::start_all_processors()
     // with each cpu emplacing their local data upon entering ap_entrypoint.
     // Locking is also not an option because CPU::current would have to use this lock
     // as well, which would lead to recursively calling current() everywhere.
-    auto& apic_ids = InterruptController::smp_data().ap_lapic_ids;
-    for (auto processor_id : apic_ids)
-        s_processors.emplace(make_pair(processor_id, LocalData(processor_id)));
+    auto bsp_id = InterruptController::smp_data().bsp_lapic_id;
+    auto& lapics = InterruptController::smp_data().lapics;
+    for (const auto& lapic : lapics) {
+        if (lapic.id == bsp_id)
+            continue;
 
-    for (auto processor_id : apic_ids) {
-        LAPIC::start_processor(processor_id);
+        s_processors.emplace(make_pair(lapic.id, LocalData(lapic.id)));
+    }
 
-        auto& this_processor = CPU::at_id(processor_id);
+    for (const auto& lapic : lapics) {
+        if (lapic.id == bsp_id)
+            continue;
+
+        LAPIC::start_processor(lapic.id);
+
+        auto& this_processor = CPU::at_id(lapic.id);
 
         while (!this_processor.is_online())
             ;
