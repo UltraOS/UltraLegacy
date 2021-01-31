@@ -53,6 +53,8 @@ namespace kernel {
 
     MemoryManager::inititalize();
 
+    ACPI::the().initialize();
+
     InterruptController::discover_and_setup();
     Timer::discover_and_setup();
     CPU::initialize();
@@ -60,7 +62,6 @@ namespace kernel {
     VideoDevice::discover_and_setup(context);
 
     Scheduler::inititalize();
-    ACPI::the().initialize();
     CPU::start_all_processors();
 
     Time::initialize();

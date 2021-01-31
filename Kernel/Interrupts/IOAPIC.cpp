@@ -39,16 +39,16 @@ void IOAPIC::RedirectionEntry::apply_redirection_to(u8 irq_index)
     write_register(higher_register, redirection_entry_as_u32[1]);
 }
 
-void IOAPIC::map_irq(const InterruptController::IRQInfo& irq, u8 to_index)
+void IOAPIC::map_irq(const IRQInfo& irq, u8 to_index)
 {
     RedirectionEntry re {};
     re.index = to_index;
     re.delivery_mode = DeliveryMode::FIXED;
     re.destination_mode = DestinationMode::PHYSICAL;
-    re.pin_polarity = irq.is_active_high ? PinPolarity::ACTIVE_HIGH : PinPolarity::ACTIVE_LOW;
-    re.trigger_mode = irq.is_edge ? TriggerMode::EDGE : TriggerMode::LEVEL;
+    re.pin_polarity = irq.polarity == Polarity::ACTIVE_HIGH ? PinPolarity::ACTIVE_HIGH : PinPolarity::ACTIVE_LOW;
+    re.trigger_mode = irq.trigger_mode == decltype(irq.trigger_mode)::EDGE ? TriggerMode::EDGE : TriggerMode::LEVEL;
     re.is_disabled = false;
-    re.local_apic_id = InterruptController::smp_data().bootstrap_processor_apic_id;
+    re.local_apic_id = InterruptController::smp_data().bsp_lapic_id;
 
     re.apply_redirection_to(irq.redirected_irq_index);
 }

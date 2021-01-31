@@ -4,6 +4,7 @@
 #include "Common/Macros.h"
 #include "Common/String.h"
 #include "Common/Types.h"
+#include "Utilities.h"
 
 namespace kernel {
 
@@ -21,21 +22,6 @@ public:
     static InterruptController& the();
 
     static bool is_legacy_mode() { return s_smp_data == nullptr; }
-
-    struct IRQInfo {
-        u8 original_irq_index;
-        u8 redirected_irq_index;
-        bool is_edge;
-        bool is_active_high;
-    };
-
-    struct SMPData {
-        DynamicArray<u8> application_processor_apic_ids;
-        u8 bootstrap_processor_apic_id;
-        Address lapic_address;
-        Address ioapic_address;
-        DynamicArray<IRQInfo> irqs;
-    };
 
     static const SMPData& smp_data()
     {

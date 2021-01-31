@@ -268,6 +268,7 @@ void DemoTTY::execute_command()
         write("pm - physical memory stats\n"_sv);
         write("video-mode - get current video mode information\n"_sv);
         write("cpu - get CPU information\n"_sv);
+        write("acpi - dump all detected acpi tables\n"_sv);
         write("timer - get the primary system timer model\n"_sv);
         write("clear - clear the terminal screen\n"_sv);
     } else if (m_current_command == "kvm"_sv) {

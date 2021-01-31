@@ -25,7 +25,7 @@ public:
 
     static u32 redirection_entry_count();
 
-    static void map_irq(const InterruptController::IRQInfo& irq, u8 to_index);
+    static void map_irq(const IRQInfo& irq, u8 to_index);
 
 private:
     static void select_register(Register);

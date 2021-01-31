@@ -127,3 +127,4 @@ inline void operator delete[](void* ptr, size_t) noexcept
             : kernel::runtime::on_assertion_failed(TO_STRING(expression), __FILE__, __PRETTY_FUNCTION__, __LINE__))
 
 #define ASSERT_NEVER_REACHED() ASSERT(!"Tried to execute a non-reachable area")
+#define FAILED_ASSERTION(why) kernel::runtime::on_assertion_failed(why, __FILE__, __PRETTY_FUNCTION__, __LINE__)

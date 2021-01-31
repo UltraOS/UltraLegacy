@@ -83,7 +83,7 @@ void CPU::start_all_processors()
     // with each cpu emplacing their local data upon entering ap_entrypoint.
     // Locking is also not an option because CPU::current would have to use this lock
     // as well, which would lead to recursively calling current() everywhere.
-    auto& apic_ids = InterruptController::smp_data().application_processor_apic_ids;
+    auto& apic_ids = InterruptController::smp_data().ap_lapic_ids;
     for (auto processor_id : apic_ids)
         s_processors.emplace(make_pair(processor_id, LocalData(processor_id)));
 

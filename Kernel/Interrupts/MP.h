@@ -9,7 +9,7 @@ namespace kernel {
 // Aka MultiProcessor Specification
 class MP {
 public:
-    static InterruptController::SMPData* parse();
+    static SMPData* parse();
 
     enum class EntryType : u8 {
         PROCESSOR,
@@ -103,18 +103,6 @@ public:
             ExtINT = 3
         };
 
-        enum class Polarity : u8 {
-            CONFORMING = 0,
-            ACTIVE_HIGH = 1,
-            ACTIVE_LOW = 3
-        };
-
-        enum class TriggerMode : u8 {
-            CONFORMING = 0,
-            EDGE = 1,
-            LEVEL = 3
-        };
-
         static StringView to_string(Type t)
         {
             switch (t) {
@@ -126,34 +114,6 @@ public:
                 return "System Management"_sv;
             case Type::ExtINT:
                 return "External"_sv;
-            default:
-                return "Unknown"_sv;
-            }
-        }
-
-        static StringView to_string(Polarity p)
-        {
-            switch (p) {
-            case Polarity::CONFORMING:
-                return "Conforming"_sv;
-            case Polarity::ACTIVE_HIGH:
-                return "Active High"_sv;
-            case Polarity::ACTIVE_LOW:
-                return "Active Low"_sv;
-            default:
-                return "Unknown"_sv;
-            }
-        }
-
-        static StringView to_string(TriggerMode t)
-        {
-            switch (t) {
-            case TriggerMode::CONFORMING:
-                return "Conforming"_sv;
-            case TriggerMode::EDGE:
-                return "Edge"_sv;
-            case TriggerMode::LEVEL:
-                return "Level"_sv;
             default:
                 return "Unknown"_sv;
             }
@@ -178,7 +138,7 @@ public:
 
 private:
     static FloatingPointer* find_floating_pointer_table();
-    static InterruptController::SMPData* parse_configuration_table(FloatingPointer*);
+    static SMPData* parse_configuration_table(FloatingPointer*);
 
 private:
     static FloatingPointer* s_floating_pointer;

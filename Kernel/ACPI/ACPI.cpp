@@ -129,4 +129,94 @@ bool ACPI::verify_checksum(Address virtual_address, size_t length)
     return sum == 0;
 }
 
+ACPI::TableInfo* ACPI::get_table_info(StringView signature)
+{
+    auto it = linear_search(m_tables.begin(), m_tables.end(), signature,
+                            [](const TableInfo& ti, StringView signature)
+                            {
+                                return ti.name == signature;
+                            });
+
+    return it == m_tables.end() ? nullptr : &*it;
+}
+
+SMPData* ACPI::generate_smp_data()
+{
+    auto* madt_info = get_table_info("APIC"_sv);
+
+    if (!madt_info)
+        return nullptr;
+
+    auto madt_mapping = TypedMapping<MADT>::create("MADT"_sv, madt_info->physical_address, madt_info->length);
+    Address madt = madt_mapping.get();
+    auto* smp_info = new SMPData();
+
+    smp_info->lapic_address = madt_mapping->lapic_address;
+    log() << "ACPI: LAPIC @ " << smp_info->lapic_address;
+
+    madt += sizeof(MADT);
+    auto madt_end = madt + (madt_info->length - sizeof(MADT));
+
+    smp_info->bsp_lapic_id = (CPU::ID(0x1).b & 0xFF000000) >> 24;
+
+    static constexpr size_t legacy_irqs_count = 16;
+
+    for (u32 i = 0; i < legacy_irqs_count; ++i) {
+        smp_info->irqs_to_info[i] = { i, i, default_polarity_for_bus(Bus::ISA), default_trigger_mode_for_bus(Bus::ISA) };
+    }
+
+    while (madt < madt_end) {
+        auto* entry = madt.as_pointer<MADT::EntryHeader>();
+
+        switch (entry->type) {
+        case MADT::EntryType::LAPIC: {
+            auto* lapic = madt.as_pointer<MADT::LAPIC>();
+            auto is_bsp = lapic->id == smp_info->bsp_lapic_id;
+
+            log() << "ACPI: CPU " << lapic->id << " is bsp: " << is_bsp << " | online capable: " << !lapic->should_be_ignored();
+
+            if (is_bsp || lapic->should_be_ignored())
+                break;
+
+            smp_info->ap_lapic_ids.append(lapic->id);
+            break;
+        }
+        case MADT::EntryType::IOAPIC: {
+            auto* ioapic = madt.as_pointer<MADT::IOAPIC>();
+
+            log() << "ACPI: IOAPIC " << ioapic->id << " @ " << format::as_hex << ioapic->address
+                  << " gsi base " << format::as_dec << ioapic->gsi_base;
+
+            if (smp_info->ioapic_address)
+                FAILED_ASSERTION("Support for multiple IOAPICs is not yet implemented");
+
+            smp_info->ioapic_address = ioapic->address;
+            break;
+        }
+        case MADT::EntryType::INTERRUPT_SOURCE_OVERRIDE: {
+            auto* iso = madt.as_pointer<MADT::InterruptSourceOverride>();
+
+            // Spec says this is the bus that gets overriden
+            ASSERT(iso->bus == MADT::InterruptSourceOverride::Bus::ISA);
+
+            log() << "ACPI: interrupt override " << iso->source << " -> " << iso->gsi
+                  << " polarity: " << to_string(iso->polarity) << " | trigger mode: " << to_string(iso->trigger_mode);
+
+            auto polarity = iso->polarity == Polarity::CONFORMING ? default_polarity_for_bus(Bus::ISA) : iso->polarity;
+            auto trigger_mode = iso->trigger_mode == TriggerMode::CONFORMING ? default_trigger_mode_for_bus(Bus::ISA) : iso->trigger_mode;
+
+            smp_info->irqs_to_info[iso->source] = { iso->source, iso->gsi, polarity, trigger_mode };
+
+            break;
+        }
+        default:
+            break;
+        }
+
+        madt += entry->length;
+    }
+
+    return smp_info;
+}
+
 }

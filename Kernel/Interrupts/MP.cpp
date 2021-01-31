@@ -6,7 +6,7 @@ namespace kernel {
 
 MP::FloatingPointer* MP::s_floating_pointer;
 
-InterruptController::SMPData* MP::parse()
+SMPData* MP::parse()
 {
     ASSERT(s_floating_pointer == nullptr);
 
@@ -68,7 +68,7 @@ MP::FloatingPointer* MP::find_floating_pointer_table()
     return nullptr;
 }
 
-InterruptController::SMPData* MP::parse_configuration_table(FloatingPointer* fp_table)
+SMPData* MP::parse_configuration_table(FloatingPointer* fp_table)
 {
     static constexpr u8 imcr_register = SET_BIT(7);
 
@@ -99,12 +99,12 @@ InterruptController::SMPData* MP::parse_configuration_table(FloatingPointer* fp_
         return nullptr;
     }
 
-    log() << "MP: Local APIC at " << format::as_hex << configuration_table.local_apic_pointer;
+    auto* smp_data = new SMPData;
+    smp_data->lapic_address = configuration_table.local_apic_pointer;
+
+    log() << "MP: LAPIC @ " << smp_data->lapic_address;
 
     Address entry_address = &configuration_table + 1;
-
-    auto* smp_data = new InterruptController::SMPData;
-    smp_data->lapic_address = static_cast<ptr_t>(configuration_table.local_apic_pointer);
 
     u8 isa_bus_id = 0xFF;
     u8 pci_bus_id = 0xFF;
@@ -112,21 +112,24 @@ InterruptController::SMPData* MP::parse_configuration_table(FloatingPointer* fp_
     for (size_t i = 0; i < configuration_table.entry_count; ++i) {
         EntryType type = *entry_address.as_pointer<MP::EntryType>();
 
-        if (type == EntryType::PROCESSOR) {
+        switch (type) {
+        case EntryType::PROCESSOR: {
             auto& processor = *entry_address.as_pointer<ProcessorEntry>();
 
             bool is_bsp = processor.flags & ProcessorEntry::Flags::BSP;
             bool is_ok = processor.flags & ProcessorEntry::Flags::OK;
 
-            log() << "MP: A new processor -> APIC id:" << processor.local_apic_id
-                  << " type:" << (is_bsp ? "BSP" : "AP") << " is_ok:" << is_ok;
+            log() << "MP: CPU " << processor.local_apic_id
+                  << " is bsp: " << is_bsp << " | online capable: " << is_ok;
 
             if (is_bsp)
-                smp_data->bootstrap_processor_apic_id = processor.local_apic_id;
+                smp_data->bsp_lapic_id = processor.local_apic_id;
             else
-                smp_data->application_processor_apic_ids.append(processor.local_apic_id);
+                smp_data->ap_lapic_ids.append(processor.local_apic_id);
 
-        } else if (type == EntryType::BUS) {
+            break;
+        }
+        case EntryType::BUS: {
             auto& bus = *entry_address.as_pointer<BusEntry>();
 
             log() << "MP: Bus id " << bus.id << " type " << StringView(bus.type_string, 6);
@@ -139,7 +142,9 @@ InterruptController::SMPData* MP::parse_configuration_table(FloatingPointer* fp_
             if (StringView(bus.type_string, 3) == pci_bus)
                 pci_bus_id = bus.id;
 
-        } else if (type == EntryType::IO_APIC) {
+            break;
+        }
+        case EntryType::IO_APIC: {
             auto& io_apic = *entry_address.as_pointer<IOAPICEntry>();
 
             bool is_ok = io_apic.flags & IOAPICEntry::Flags::OK;
@@ -148,7 +153,11 @@ InterruptController::SMPData* MP::parse_configuration_table(FloatingPointer* fp_
                   << " is_ok:" << is_ok << " id:" << io_apic.id;
 
             smp_data->ioapic_address = static_cast<ptr_t>(io_apic.io_apic_pointer);
-        } else if (type == EntryType::IO_INTERRUPT_ASSIGNMENT || type == EntryType::LOCAL_INTERRUPT_ASSIGNMENT) {
+
+            break;
+        }
+        case EntryType::IO_INTERRUPT_ASSIGNMENT:
+        case EntryType::LOCAL_INTERRUPT_ASSIGNMENT: {
             ASSERT(isa_bus_id != 0xFF);
 
             auto& interrupt = *entry_address.as_pointer<InterruptEntry>();
@@ -160,8 +169,8 @@ InterruptController::SMPData* MP::parse_configuration_table(FloatingPointer* fp_
 
             log() << "MP: " << str_type << " entry:"
                   << "\n----> Type: " << InterruptEntry::to_string(interrupt.interrupt_type) << " Interrupt"
-                  << "\n----> Polarity: " << InterruptEntry::to_string(interrupt.polarity)
-                  << "\n----> Trigger mode: " << InterruptEntry::to_string(interrupt.trigger_mode)
+                  << "\n----> Polarity: " << to_string(interrupt.polarity)
+                  << "\n----> Trigger mode: " << to_string(interrupt.trigger_mode)
                   << "\n----> Source bus ID: " << interrupt.source_bus_id
                   << "\n----> Source bus IRQ: " << interrupt.source_bus_irq << "\n----> Destination " << str_apic
                   << " id: " << interrupt.destination_ioapic_id << "\n----> Destination " << str_apic
@@ -177,16 +186,16 @@ InterruptController::SMPData* MP::parse_configuration_table(FloatingPointer* fp_
             }
 
             // TODO: take care of the possibility of having multiple IOAPICs
-            InterruptController::IRQInfo info {};
+            IRQInfo info {};
             info.original_irq_index = interrupt.source_bus_irq;
             info.redirected_irq_index = interrupt.destination_ioapic_pin;
 
-            if (interrupt.polarity != InterruptEntry::Polarity::CONFORMING) {
-                info.is_active_high = interrupt.polarity == InterruptEntry::Polarity::ACTIVE_HIGH;
+            if (interrupt.polarity != Polarity::CONFORMING) {
+                info.polarity = interrupt.polarity;
             } else if (interrupt.source_bus_id == isa_bus_id) {
-                info.is_active_high = true;
+                info.polarity = Polarity::ACTIVE_HIGH;
             } else if (interrupt.source_bus_id == pci_bus_id) {
-                info.is_active_high = false;
+                info.polarity = Polarity::ACTIVE_LOW;
             } else {
                 warning()
                     << "MP: interrupt polarity was declared conforming but the default mode for bus "
@@ -195,12 +204,12 @@ InterruptController::SMPData* MP::parse_configuration_table(FloatingPointer* fp_
                 continue;
             }
 
-            if (interrupt.trigger_mode != InterruptEntry::TriggerMode::CONFORMING) {
-                info.is_edge = interrupt.trigger_mode == InterruptEntry::TriggerMode::EDGE;
+            if (interrupt.trigger_mode != TriggerMode::CONFORMING) {
+                info.trigger_mode = interrupt.trigger_mode;
             } else if (interrupt.source_bus_id == isa_bus_id) {
-                info.is_edge = true;
+                info.trigger_mode = TriggerMode::EDGE;
             } else if (interrupt.source_bus_id == pci_bus_id) {
-                info.is_edge = false;
+                info.trigger_mode = TriggerMode::LEVEL;
             } else {
                 warning() << "MP: interrupt trigger mode was declared conforming\n"
                              "          but the default mode for bus "
@@ -209,7 +218,13 @@ InterruptController::SMPData* MP::parse_configuration_table(FloatingPointer* fp_
                 continue;
             }
 
-            smp_data->irqs.emplace(info);
+            smp_data->irqs_to_info[info.original_irq_index] = info;
+            break;
+        }
+        default:
+            warning() << "MP: unknown type of entry " << static_cast<u8>(type) << ", skipping the entire table";
+            delete smp_data;
+            return nullptr;
         }
 
         entry_address += sizeof_entry(type);

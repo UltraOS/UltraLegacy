@@ -5,17 +5,19 @@
 #include "MP.h"
 #include "Memory/MemoryManager.h"
 #include "PIC.h"
+#include "ACPI/ACPI.h"
 
 namespace kernel {
 
 InterruptController* InterruptController::s_instance;
-InterruptController::SMPData* InterruptController::s_smp_data;
+SMPData* InterruptController::s_smp_data;
 
 void InterruptController::discover_and_setup()
 {
-    // ACPI::find_whatver_tables_are_responsible_for_smp();
+    s_smp_data = ACPI::the().generate_smp_data();
 
-    s_smp_data = MP::parse();
+    if (!s_smp_data)
+        s_smp_data = MP::parse();
 
     if (!s_smp_data) {
         log() << "InterruptController: No APIC support detected, reverting to PIC";

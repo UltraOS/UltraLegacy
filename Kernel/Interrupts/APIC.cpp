@@ -23,19 +23,15 @@ void APIC::clear_all() { }
 
 void APIC::enable_irq(u8 index)
 {
-    auto& irqs = smp_data().irqs;
-    auto it = linear_search(irqs.begin(), irqs.end(), index,
-        [](const IRQInfo& info, u8 index) {
-            return info.original_irq_index == index;
-        });
+    auto& irqs = smp_data().irqs_to_info;
 
-    if (it == irqs.end()) {
+    if (!irqs.contains(index)) {
         String error_string;
         error_string << "Couldn't find an irq source for " << index;
         runtime::panic(error_string.data());
     }
 
-    IOAPIC::map_irq(*it, IRQManager::irq_base_index + index);
+    IOAPIC::map_irq(irqs.get(index), IRQManager::irq_base_index + index);
 }
 
 void APIC::disable_irq(u8)
