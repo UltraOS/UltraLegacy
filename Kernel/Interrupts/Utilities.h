@@ -47,9 +47,9 @@ inline TriggerMode default_trigger_mode_for_bus(Bus bus)
     }
 }
 
-struct IRQInfo {
-    u32 original_irq_index;
-    u32 redirected_irq_index;
+struct IRQ {
+    u32 irq_index;
+    u32 gsi;
     Polarity polarity;
     TriggerMode trigger_mode;
 };
@@ -66,12 +66,34 @@ struct LAPICInfo {
     Optional<NMI> nmi_connection;
 };
 
+struct IOAPICNMI {
+    Polarity polarity;
+    TriggerMode trigger_mode;
+    u32 gsi;
+};
+
+struct IOAPICInfo {
+    using GSIRange = BasicRange<u32>;
+    u8 id;
+    GSIRange gsi_range;
+    Address address;
+
+    u32 rebase_gsi(u32 gsi) const
+    {
+        ASSERT(gsi_range.contains(gsi));
+        return gsi - gsi_range.begin();
+    }
+};
+
 struct SMPData {
     DynamicArray<LAPICInfo> lapics;
-    u8 bsp_lapic_id;
     Address lapic_address;
-    Address ioapic_address;
-    Map<u8, IRQInfo, Less<>> irqs_to_info;
+    u8 bsp_lapic_id;
+
+    DynamicArray<IOAPICNMI> ioapic_nmis;
+    DynamicArray<IOAPICInfo> ioapics;
+
+    Map<u8, IRQ, Less<>> irqs_to_info;
 };
 
 inline StringView to_string(Polarity p)

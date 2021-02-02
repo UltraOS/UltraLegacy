@@ -44,7 +44,7 @@ public:
         u32 oem_table_pointer;
         u16 oem_table_size;
         u16 entry_count;
-        u32 local_apic_pointer;
+        u32 lapic_address;
         u16 extended_table_length;
         u8 extended_table_checksum;
         u8 reserved;
@@ -72,8 +72,8 @@ public:
         friend bool operator&(Flags l, Flags r) { return static_cast<u8>(l) & static_cast<u8>(r); }
 
         EntryType type;
-        u8 local_apic_id;
-        u8 local_apic_version;
+        u8 lapic_id;
+        u8 lapic_version;
         Flags flags;
         u32 signature;
         u32 feature_flags;
@@ -92,7 +92,7 @@ public:
         u8 id;
         u8 version;
         Flags flags;
-        u32 io_apic_pointer;
+        u32 ioapic_address;
     };
 
     struct PACKED InterruptEntry {

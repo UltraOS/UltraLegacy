@@ -191,10 +191,8 @@ SMPData* ACPI::generate_smp_data()
             log() << "ACPI: IOAPIC " << ioapic->id << " @ " << format::as_hex << ioapic->address
                   << " gsi base " << format::as_dec << ioapic->gsi_base;
 
-            if (smp_info->ioapic_address)
-                FAILED_ASSERTION("Support for multiple IOAPICs is not yet implemented");
+            smp_info->ioapics.append({ioapic->id, { ioapic->gsi_base, 0 }, ioapic->address});
 
-            smp_info->ioapic_address = ioapic->address;
             break;
         }
         case MADT::EntryType::INTERRUPT_SOURCE_OVERRIDE: {
@@ -229,7 +227,9 @@ SMPData* ACPI::generate_smp_data()
         case MADT::EntryType::NMI_SOURCE: {
             auto nmi_source = madt.as_pointer<MADT::NMISource>();
 
-            log() << "ACPI: nmi source at gsi " << nmi_source->gsi;
+            log() << "ACPI: IOAPIC nmi source at gsi " << nmi_source->gsi;
+
+            smp_info->ioapic_nmis.append({ nmi_source->polarity, nmi_source->trigger_mode, nmi_source->gsi });
 
             break;
         }

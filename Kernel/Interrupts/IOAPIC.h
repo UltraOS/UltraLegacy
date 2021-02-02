@@ -18,17 +18,21 @@ public:
         REDIRECTION_TABLE = 16, // 16 -> however many entries * 2
     };
 
-    static void set_base_address(Address physical_base);
+    static void initialize_all();
 
-    static u32 read_register(Register);
-    static void write_register(Register, u32 data);
+    static u32 read_register(Address, Register);
+    static void write_register(Address, Register, u32 data);
 
-    static u32 redirection_entry_count();
+    static u32 redirection_entry_count(Address);
 
-    static void map_irq(const IRQInfo& irq, u8 to_index);
+    static void map_irq(const IRQ& irq, u8 to_index);
+
+    static const IOAPICInfo& responsible_for_gsi(u32);
 
 private:
-    static void select_register(Register);
+    static void apply_nmi(const IOAPICInfo&, const IOAPICNMI&);
+
+    static void select_register(Address, Register);
 
     enum class DeliveryMode : u8 {
         FIXED = 0,
@@ -72,14 +76,11 @@ private:
         u8 local_apic_id : 4;
         u8 reserved_2 : 4;
 
-        void apply_redirection_to(u8 irq_index);
+        void apply_redirection_to(Address, u8 irq_index);
     };
 
     static constexpr size_t redirection_entry_size = 8;
 
     static_assert(sizeof(RedirectionEntry) == redirection_entry_size);
-
-    static Address s_base;
-    static u8 s_cached_redirection_entry_count;
 };
 }

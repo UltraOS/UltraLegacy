@@ -23,7 +23,7 @@ public:
 
     static bool is_legacy_mode() { return s_smp_data == nullptr; }
 
-    static const SMPData& smp_data()
+    static SMPData& smp_data()
     {
         ASSERT(s_smp_data != nullptr);
 

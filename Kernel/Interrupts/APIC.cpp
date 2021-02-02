@@ -11,7 +11,7 @@ APIC::APIC()
     PIC::ensure_disabled();
     LAPIC::set_base_address(smp_data().lapic_address);
     LAPIC::initialize_for_this_processor();
-    IOAPIC::set_base_address(smp_data().ioapic_address);
+    IOAPIC::initialize_all();
 }
 
 void APIC::end_of_interrupt(u8)

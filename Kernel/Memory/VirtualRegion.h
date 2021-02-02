@@ -61,6 +61,11 @@ public:
         ETERNAL = SET_BIT(5),
     };
 
+    friend Specifier operator|(Specifier l, Specifier r)
+    {
+        return static_cast<Specifier>(static_cast<size_t>(l) | static_cast<size_t>(r));
+    }
+
     enum class Properties : size_t {
         SUPERVISOR = SET_BIT(0), // Self-explanatory
 

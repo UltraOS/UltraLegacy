@@ -100,7 +100,7 @@ SMPData* MP::parse_configuration_table(FloatingPointer* fp_table)
     }
 
     auto* smp_info = new SMPData;
-    smp_info->lapic_address = configuration_table.local_apic_pointer;
+    smp_info->lapic_address = configuration_table.lapic_address;
 
     log() << "MP: LAPIC @ " << smp_info->lapic_address;
 
@@ -121,13 +121,13 @@ SMPData* MP::parse_configuration_table(FloatingPointer* fp_table)
             bool is_bsp = processor.flags & ProcessorEntry::Flags::BSP;
             bool is_ok = processor.flags & ProcessorEntry::Flags::OK;
 
-            log() << "MP: CPU " << processor.local_apic_id
+            log() << "MP: CPU " << processor.lapic_id
                   << " is bsp: " << is_bsp << " | online capable: " << is_ok;
 
             if (is_bsp)
-                smp_info->bsp_lapic_id = processor.local_apic_id;
+                smp_info->bsp_lapic_id = processor.lapic_id;
 
-            smp_info->lapics.append({ processor.local_apic_id, 0xFF, {} });
+            smp_info->lapics.append({ processor.lapic_id, 0xFF, {} });
 
             break;
         }
@@ -151,10 +151,21 @@ SMPData* MP::parse_configuration_table(FloatingPointer* fp_table)
 
             bool is_ok = io_apic.flags & IOAPICEntry::Flags::OK;
 
-            log() << "MP: I/O APIC at " << format::as_hex << io_apic.io_apic_pointer
+            log() << "MP: I/O APIC at " << format::as_hex << io_apic.ioapic_address
                   << " is_ok:" << is_ok << " id:" << io_apic.id;
 
-            smp_info->ioapic_address = static_cast<ptr_t>(io_apic.io_apic_pointer);
+            if (!is_ok)
+                break;
+
+            // This is mostly because they don't specify GSI base for IOAPICs but instead give you
+            // the IOAPIC id in interrupt assigment entries, this is very inconvenient and would require
+            // a few annoying workarounds to combine this with ACPI MADT IOAPIC entries. Since MP tables
+            // are mostly obsolete anyway I decided not to do that.
+            if (!smp_info->ioapics.empty())
+                FAILED_ASSERTION("Multiple IOAPICs are not supported for intel MP");
+
+            // We assume GSI base of 0 for single IOAPIC configuration
+            smp_info->ioapics.append({ io_apic.id, { 0, 0 }, io_apic.ioapic_address });
 
             break;
         }
@@ -199,9 +210,9 @@ SMPData* MP::parse_configuration_table(FloatingPointer* fp_table)
                 break;
 
             // TODO: take care of the possibility of having multiple IOAPICs
-            IRQInfo info {};
-            info.original_irq_index = interrupt.source_bus_irq;
-            info.redirected_irq_index = interrupt.destination_ioapic_pin;
+            IRQ info {};
+            info.irq_index = interrupt.source_bus_irq;
+            info.gsi = interrupt.destination_ioapic_pin;
 
             if (interrupt.polarity != Polarity::CONFORMING) {
                 info.polarity = interrupt.polarity;
@@ -229,7 +240,7 @@ SMPData* MP::parse_configuration_table(FloatingPointer* fp_table)
                 break;
             }
 
-            smp_info->irqs_to_info[info.original_irq_index] = info;
+            smp_info->irqs_to_info[info.irq_index] = info;
             break;
         }
         default:
