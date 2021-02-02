@@ -577,19 +577,20 @@ private:
 
 inline bool operator<(StringView l, StringView r)
 {
-    if (l.size() < r.size())
-        return true;
-    if (r.size() < l.size())
-        return false;
+    size_t i = 0;
+    size_t j = 0;
 
-    for (size_t i = 0; i < l.size(); ++i) {
-        if (l[i] < r[i])
+    while (i < l.size() && j < r.size()) {
+        if (l[i] < r[j])
             return true;
-        if (r[i] < l[i])
+        if (r[j] < l[i])
             return false;
+
+        ++i;
+        ++j;
     }
 
-    return false;
+    return (i == l.size()) && (j != r.size());
 }
 
 inline bool operator<(const String& l, const String& r)
