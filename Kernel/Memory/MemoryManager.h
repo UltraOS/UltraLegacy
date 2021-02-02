@@ -20,6 +20,9 @@ namespace kernel {
 class AddressSpace;
 class PageFault;
 
+// defined in Architecture/X/Entrypoint.asm
+extern "C" ptr_t bsp_kernel_stack_end;
+
 class MemoryManager {
     MAKE_SINGLETON(MemoryManager);
 
@@ -90,7 +93,36 @@ public:
     // Reserves kernel image from the memory map & initializes the heap
     static void early_initialize(LoaderContext*);
 
-    static void inititalize();
+    static void inititalize() ALWAYS_INLINE
+    {
+        initialize_all();
+
+        // The way this works is we make the memory manager page fault handler believe that
+        // the address of fault belongs to a private kernel stack region. We do this by remapping
+        // the kernel trampoline stack to a different virtual address with a guard page at the bottom.
+        // This can't be easily done with the actual initial stack because it's mapped in using 2 MB pages.
+
+        auto new_stack_begin = s_instance->remap_bsp_stack();
+        ptr_t current_stack_pointer;
+        ptr_t offset;
+        ptr_t new_stack_pointer;
+
+#ifdef ULTRA_64
+#define STACK_POINTER "rsp"
+#elif defined(ULTRA_32)
+#define STACK_POINTER "esp"
+#endif
+        asm volatile("mov %%" STACK_POINTER ", %0"
+            : "=a"(current_stack_pointer)
+            :: "memory");
+
+        offset = current_stack_pointer - Address(&bsp_kernel_stack_end);
+        new_stack_pointer = new_stack_begin + offset;
+
+        asm volatile("mov %0, %%" STACK_POINTER ::"a"(new_stack_pointer)
+                     : "memory");
+#undef STACK_POINTER
+    }
 
     static void handle_page_fault(const RegisterState&, const PageFault&);
 
@@ -179,7 +211,10 @@ public:
     String kernel_virtual_regions_debug_dump();
 
 private:
+    static void initialize_all();
     void allocate_initial_kernel_regions();
+
+    ptr_t remap_bsp_stack();
 
     // This API is used by AddressSpace to allocate table pages
     friend class AddressSpace;

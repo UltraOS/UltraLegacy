@@ -53,6 +53,11 @@ global memory_map_entries_buffer
 memory_map_entries_buffer:
     resb PAGE_SIZE
 
+global bsp_kernel_stack_end
+bsp_kernel_stack_end:
+    resb 32768
+bsp_kernel_stack_begin:
+
 ; Physical memory layout
 ; 0MB -> 1MB unused (bootloader and bios stuff)
 ; 1MB -> 4MB kernel
@@ -73,7 +78,7 @@ section .entry
 global start
 start:
     ; Set up the kernel stack
-    mov rsp, kernel_stack_begin
+    mov rsp, bsp_kernel_stack_begin
 
     ; zero section bss
     mov rcx, section_bss_end
@@ -150,13 +155,6 @@ hang:
     cli
     hlt
     jmp hang
-
-section .bss
-align 16
-kernel_stack_end:
-    resb 32768
-global kernel_stack_begin
-kernel_stack_begin:
 
 section .magic
     global magic_string

@@ -62,6 +62,17 @@ void MemoryManager::early_initialize(LoaderContext* loader_context)
     HeapAllocator::initialize();
 }
 
+void MemoryManager::initialize_all()
+{
+    ASSERT(s_instance == nullptr);
+
+    s_instance = new MemoryManager();
+
+    AddressSpace::inititalize();
+
+    s_instance->allocate_initial_kernel_regions();
+}
+
 MemoryManager::MemoryManager()
 {
     // That's it, we no longer need the boot allocator, we can take it from here
@@ -304,7 +315,12 @@ void MemoryManager::handle_page_fault(const RegisterState& registers, const Page
             if (aligned_address == private_region.virtual_range().begin()) { // PF on the stack guard page
                 // TODO: kill the process if fault.is_supervisor() == IsSupervisor::NO
                 String error_string;
-                error_string << "MemoryManager: Stack overflow! Thread " << Thread::current() << " on core " << CPU::current_id();
+                auto* thread = Thread::current();
+
+                error_string << "MemoryManager: Stack overflow! Thread "
+                             << thread << " (" << thread->owner().name().to_view()
+                             << ") on core " << CPU::current_id();
+
                 runtime::panic(error_string.begin(), &registers);
             }
         }
@@ -319,7 +335,7 @@ void MemoryManager::handle_page_fault(const RegisterState& registers, const Page
     }
 
     // Technically we can also get a page fault on a shared region but we don't use shared regions yet
-    ASSERT(!"Page fault in non private region");
+    FAILED_ASSERTION("Page fault in non private region");
 }
 
 void MemoryManager::inititalize(AddressSpace& directory)
@@ -397,12 +413,23 @@ MemoryManager& MemoryManager::the()
     return *s_instance;
 }
 
-void MemoryManager::inititalize()
+ptr_t MemoryManager::remap_bsp_stack()
 {
-    ASSERT(s_instance == nullptr);
-    s_instance = new MemoryManager();
-    AddressSpace::inititalize();
-    s_instance->allocate_initial_kernel_regions();
+    auto initial_kernel_stack_size = 32 * KB;
+    VirtualRegion::Specification stack_spec {};
+    stack_spec.is_supervisor = IsSupervisor::YES;
+    stack_spec.virtual_range = AddressSpace::of_kernel().allocator().allocate(initial_kernel_stack_size + Page::size);
+    stack_spec.purpose = "core 0 idle task stack"_sv;
+    stack_spec.region_specifier = VirtualRegion::Specifier::STACK;
+    stack_spec.region_type = VirtualRegion::Type::PRIVATE;
+    m_kernel_virtual_regions.emplace(VirtualRegion::from_specification(stack_spec));
+
+    // Guard page
+    stack_spec.virtual_range.set_begin(stack_spec.virtual_range.begin() + Page::size);
+    auto physical_range = Range(MemoryManager::virtual_to_physical(&bsp_kernel_stack_end), initial_kernel_stack_size);
+    AddressSpace::of_kernel().map_range(stack_spec.virtual_range, physical_range);
+
+    return stack_spec.virtual_range.begin();
 }
 
 MemoryManager::VR MemoryManager::allocate_user_stack(StringView purpose, AddressSpace& address_space, size_t length)
