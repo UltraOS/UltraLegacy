@@ -73,10 +73,10 @@ private:
         TriggerMode trigger_mode : 1;
         bool is_disabled : 1;
         u64 reserved_1 : 38;
-        u8 local_apic_id : 4;
+        u8 lapic_id : 4;
         u8 reserved_2 : 4;
 
-        void apply_redirection_to(Address, u8 irq_index);
+        void apply_to(Address, u8 gsi);
     };
 
     static constexpr size_t redirection_entry_size = 8;

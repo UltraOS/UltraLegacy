@@ -36,9 +36,9 @@ void IOAPIC::apply_nmi(const IOAPICInfo& ioapic, const IOAPICNMI& nmi)
     re.pin_polarity = nmi.polarity == Polarity::ACTIVE_HIGH ? PinPolarity::ACTIVE_HIGH : PinPolarity::ACTIVE_LOW;
     re.trigger_mode = nmi.trigger_mode == decltype(nmi.trigger_mode)::EDGE ? TriggerMode::EDGE : TriggerMode::LEVEL;
     re.is_disabled = false;
-    re.local_apic_id = InterruptController::smp_data().bsp_lapic_id;
+    re.lapic_id = InterruptController::smp_data().bsp_lapic_id;
 
-    re.apply_redirection_to(ioapic.address, ioapic.rebase_gsi(nmi.gsi));
+    re.apply_to(ioapic.address, ioapic.rebase_gsi(nmi.gsi));
 }
 
 const IOAPICInfo& IOAPIC::responsible_for_gsi(u32 gsi)
@@ -63,7 +63,7 @@ u32 IOAPIC::redirection_entry_count(Address address)
     return ((value & redirection_entry_mask) >> 16) + 1;
 }
 
-void IOAPIC::RedirectionEntry::apply_redirection_to(Address address, u8 irq_index)
+void IOAPIC::RedirectionEntry::apply_to(Address address, u8 irq_index)
 {
     u32 redirection_entry_as_u32[2];
     copy_memory(this, redirection_entry_as_u32, sizeof(*this));
@@ -84,10 +84,10 @@ void IOAPIC::map_irq(const IRQ& irq, u8 to_index)
     re.pin_polarity = irq.polarity == Polarity::ACTIVE_HIGH ? PinPolarity::ACTIVE_HIGH : PinPolarity::ACTIVE_LOW;
     re.trigger_mode = irq.trigger_mode == decltype(irq.trigger_mode)::EDGE ? TriggerMode::EDGE : TriggerMode::LEVEL;
     re.is_disabled = false;
-    re.local_apic_id = InterruptController::smp_data().bsp_lapic_id;
+    re.lapic_id = InterruptController::smp_data().bsp_lapic_id;
 
     auto& ioapic = responsible_for_gsi(irq.gsi);
-    re.apply_redirection_to(ioapic.address, ioapic.rebase_gsi(irq.gsi));
+    re.apply_to(ioapic.address, ioapic.rebase_gsi(irq.gsi));
 }
 
 void IOAPIC::select_register(Address address, Register reg)
