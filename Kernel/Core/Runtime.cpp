@@ -56,26 +56,29 @@ void KernelSymbolTable::parse_all()
     static constexpr auto ksyms_begin_magic = "KSYMS"_sv;
     static constexpr auto ksyms_end_magic = "SMYSK"_sv;
 
-    auto* current_offset = MemoryManager::physical_to_virtual(physical_symbols_base).as_pointer<char>();
+    static constexpr size_t symbol_failsafe_count = 10000;
 
-    if (StringView(current_offset, ksyms_begin_magic.size()) != ksyms_begin_magic) {
+    auto* symbols_pointer = MemoryManager::physical_to_virtual(physical_symbols_base).as_pointer<char>();
+
+    if (StringView(symbols_pointer, ksyms_begin_magic.size()) != ksyms_begin_magic) {
         warning() << "SymbolTable: invalid symbol base magic, kernel symbols won't be available";
         return;
     }
-    current_offset += ksyms_begin_magic.size();
 
-    while (StringView(current_offset, ksyms_end_magic.size()) != ksyms_end_magic) {
-        if (s_symbol_count == max_symbols) {
-            warning() << "SymbolTable: reached the maximum amount of symbols, not all symbols will be available";
-            break;
+    symbols_pointer += ksyms_begin_magic.size();
+
+    s_symbols = Address(symbols_pointer).as_pointer<Symbol>();
+
+    while (StringView(symbols_pointer, ksyms_end_magic.size()) != ksyms_end_magic) {
+        s_symbol_count++;
+        symbols_pointer += sizeof(Symbol);
+
+        if (s_symbol_count > symbol_failsafe_count) {
+            warning() << "SymbolTable: Cannot find end of table, ignoring all symbols";
+            s_symbol_count = 0;
+            s_symbols = nullptr;
+            return;
         }
-
-        ptr_t base_of_this_symbol = *reinterpret_cast<ptr_t*>(current_offset);
-        current_offset += sizeof(ptr_t);
-
-        s_symbols[s_symbol_count++] = Symbol(base_of_this_symbol, current_offset);
-
-        current_offset += String::length_of(current_offset) + 1;
     }
 
     if (!symbols_available())
@@ -102,18 +105,18 @@ const KernelSymbolTable::Symbol* KernelSymbolTable::find_symbol(ptr_t address)
     if (!is_address_within_symbol_table(address))
         return nullptr;
 
-    for (size_t i = 0; i < s_symbol_count - 1; ++i) {
-        if (address < s_symbols[i + 1])
-            return &s_symbols[i];
-    }
+    auto* symbol = lower_bound(begin(), end(), address);
 
-    return &s_symbols[s_symbol_count - 1];
+    if (symbol == end() || symbol->address() != address)
+        --symbol;
+
+    return symbol;
 }
 
-ptr_t KernelSymbolTable::s_symbols_begin;
-ptr_t KernelSymbolTable::s_symbols_end;
+Address KernelSymbolTable::s_symbols_begin;
+Address KernelSymbolTable::s_symbols_end;
 size_t KernelSymbolTable::s_symbol_count;
-KernelSymbolTable::Symbol KernelSymbolTable::s_symbols[max_symbols];
+KernelSymbolTable::Symbol* KernelSymbolTable::s_symbols;
 
 void on_assertion_failed(const char* message, const char* file, const char* function, u32 line)
 {

@@ -4,8 +4,7 @@
 # [KSYMS] - a magic string indicating the beginning of KSyms file
 # for each symbol
     # [size_t] - address of current symbol
-    # [char[...]] - ascii representation of the symbol name
-    # [0] - a null terminator for the ascii string
+    # [char[MAX_SYMBOL_LENGTH]] - ascii representation of the symbol name, terminated with null
 # [SMYSK] - a magic string indicating the end of KSyms file
 
 import sys
@@ -51,10 +50,11 @@ with open(full_path, "r") as f:
             if "::s_" in demangled_symbol:
                 continue
 
-            if len(demangled_symbol) > MAX_SYMBOL_LENGTH:
+            symbol_length = len(demangled_symbol)
+            if symbol_length > MAX_SYMBOL_LENGTH - 1:
                 continue
 
-            symbols.append((int(as_list[0], 16), demangled_symbol))
+            symbols.append((int(as_list[0], 16), demangled_symbol + ("\0" * (MAX_SYMBOL_LENGTH - symbol_length - 1))))
 
 sizeof_pointer = 4
 if symbols[0][0] > 0xFFFFFFFF:

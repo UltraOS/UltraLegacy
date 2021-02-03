@@ -12,28 +12,25 @@ void init_global_objects();
 
 class KernelSymbolTable {
 public:
-    static constexpr size_t max_symbols = 1024;
     static constexpr Address physical_symbols_base = 0x45000;
 
-    class Symbol {
+    struct PACKED Symbol {
     public:
-        Symbol() = default;
-
-        Symbol(ptr_t address, char* name)
-            : m_address(address)
-            , m_name(name)
-        {
-        }
+        static constexpr size_t max_name_length = 100;
 
         ptr_t address() const { return m_address; }
         const char* name() const { return m_name; }
 
         friend bool operator<(ptr_t address, const Symbol& symbol) { return address < symbol.address(); }
+        friend bool operator<(const Symbol& symbol, ptr_t address) { return symbol.address() < address; }
 
     private:
         ptr_t m_address { 0 };
-        char* m_name { nullptr };
+        char m_name[max_name_length];
     };
+
+    static Symbol* begin() { return s_symbols; }
+    static Symbol* end() { return s_symbols + s_symbol_count; }
 
     static bool symbols_available() { return s_symbol_count > 0; }
     static void parse_all();
@@ -41,11 +38,11 @@ public:
     static const Symbol* find_symbol(ptr_t address);
 
 private:
-    static ptr_t s_symbols_begin;
-    static ptr_t s_symbols_end;
+    static Address s_symbols_begin;
+    static Address s_symbols_end;
 
     static size_t s_symbol_count;
-    static Symbol s_symbols[max_symbols];
+    static Symbol* s_symbols;
 };
 
 ALWAYS_INLINE inline Address base_pointer();
