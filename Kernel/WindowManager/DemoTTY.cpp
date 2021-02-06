@@ -190,32 +190,30 @@ void DemoTTY::execute_command()
 
         auto& memory_map = reinterpret_cast<const BIOSContext*>(loader_context)->memory_map;
 
-        write("\nE820 physical memory map: ");
+        write("\nE820 physical memory map:\n");
 
         for (auto& entry : memory_map) {
-            write("\n"_sv);
             String range_str;
             range_str << format::as_hex << "base: " << format::as_hex << entry.base_address;
-            range_str << format::as_hex << "\nend:  " << format::as_hex << entry.base_address + entry.length;
-            range_str << format::as_dec << "\nlength: " << entry.length / KB << " KB";
-            range_str << "\ntype: " << static_cast<u32>(entry.type);
+            range_str << format::as_hex << " end:  " << format::as_hex << entry.base_address + entry.length;
+            range_str << format::as_dec << " length: " << entry.length / KB << " KB";
+            range_str << " type: " << static_cast<u32>(entry.type) << "\n";
             write(range_str.to_view());
-            write("\n"_sv);
         }
+        write("\n");
     } else if (m_current_command == "memory-map"_sv) {
         auto& map = MemoryManager::the().memory_map();
-        write("\nUltraOS physical memory map: ");
+        write("\nUltraOS physical memory map:\n");
 
         for (auto& entry : map) {
-            write("\n"_sv);
             String range_str;
             range_str << "base: " << entry.begin();
-            range_str << "\nend:  " << entry.end();
-            range_str << "\nlength: " << entry.length() / KB << " KB";
-            range_str << "\ntype: " << entry.type_as_string();
+            range_str << " end:  " << entry.end();
+            range_str << " length: " << entry.length() / KB << " KB";
+            range_str << " type: " << entry.type_as_string() << "\n";
             write(range_str.to_view());
-            write("\n"_sv);
         }
+        write("\n");
     } else if (m_current_command == "video-mode"_sv) {
         write("\nVideo mode information:\n"_sv);
 
