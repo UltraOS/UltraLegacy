@@ -229,8 +229,8 @@ public:
     }
 
 private:
-    AddrT m_begin { nullptr };
-    AddrT m_end { nullptr };
+    AddrT m_begin = AddrT();
+    AddrT m_end = AddrT();
 };
 
 using Range = BasicRange<Address>;

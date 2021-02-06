@@ -673,7 +673,7 @@ void MemoryManager::free_virtual_region(VirtualRegion& vr)
     AddressSpace::current().unmap_range(vr.virtual_range());
 
     // This means we're freeing this region early, before having initialized everything
-    if (!CPU::is_initialized() || Scheduler::is_initialized()) {
+    if (!CPU::is_initialized() || !Scheduler::is_initialized()) {
         AddressSpace::of_kernel().allocator().deallocate(vr.virtual_range());
         vr.mark_as_released();
         vr.lock().unlock(interrupt_state);

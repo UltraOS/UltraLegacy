@@ -110,7 +110,7 @@ public:
     void operator+=(size_t offset) { m_ptr += offset; }
 
 private:
-    SizeT m_ptr;
+    SizeT m_ptr { 0 };
 };
 
 using Address = BasicAddress<ptr_t>;
