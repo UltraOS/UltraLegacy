@@ -15,6 +15,7 @@ public:
     }
 
     const Range& physical_range() const { return m_physical_range; }
+    void switch_physical_range_and_remap(Range physical_range);
 
 private:
     Range m_physical_range;
