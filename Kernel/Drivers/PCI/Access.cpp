@@ -4,14 +4,14 @@
 
 namespace kernel {
 
-Access* Access::s_instance;
-
-void Access::detect()
+Access* Access::detect()
 {
-    if (ACPI::the().get_table_info("MCFG"_sv) == nullptr)
-        FAILED_ASSERTION("This computer doesn't support PCIe, support for legacy PCI is not implemented");
+    if (ACPI::the().get_table_info("MCFG"_sv) == nullptr) {
+        warning() << "This computer doesn't support PCIe, support for legacy PCI is not implemented";
+        return nullptr;
+    }
 
-    s_instance = new MMIOAccess();
+    return new MMIOAccess();
 }
 
 }
