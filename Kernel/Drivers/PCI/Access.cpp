@@ -1,6 +1,6 @@
 #include "Access.h"
-#include "MMIOAccess.h"
 #include "ACPI/ACPI.h"
+#include "MMIOAccess.h"
 
 namespace kernel {
 

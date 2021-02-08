@@ -6,8 +6,7 @@
 
 namespace kernel {
 
-class MMIOAccess : public Access
-{
+class MMIOAccess : public Access {
 public:
     MMIOAccess();
 
@@ -37,7 +36,10 @@ public:
         DynamicArray<PCI::DeviceInfo>& enumerate_all(const DynamicArray<ConfigurationSpaceInfo>&);
 
 #ifdef ULTRA_32
-        ~DeviceEnumerator() { MemoryManager::the().free_virtual_region(*m_view_region); }
+        ~DeviceEnumerator()
+        {
+            MemoryManager::the().free_virtual_region(*m_view_region);
+        }
 #endif
 
     private:
@@ -71,8 +73,20 @@ public:
 
 private:
     Address physical_base_for(PCI::Location) const;
+    Address virtual_address_for(PCI::Location) const;
 
 private:
+#ifdef ULTRA_32
+    struct CachedDeviceMapping {
+        PCI::Location location;
+        MemoryManager::VR mapping;
+
+        Address virtual_address() const { return mapping->virtual_range().begin(); }
+    };
+
+    mutable DynamicArray<CachedDeviceMapping> m_cached_mappings;
+#endif
+
     DynamicArray<ConfigurationSpaceInfo> m_config_spaces;
 };
 

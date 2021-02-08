@@ -16,12 +16,13 @@ MMIOAccess::MMIOAccess()
 
     while (mcfg < mcfg_end) {
         auto* entry = mcfg.as_pointer<MCFGEntry>();
-        log() << "MCFG config space @ " << format::as_hex << entry->physical_base << " bus " << entry->start_pci_bus_number << " -> " << entry->end_pci_bus_number;
+        log() << "MCFG config space @ " << format::as_hex << entry->physical_base << " bus "
+              << entry->start_pci_bus_number << " -> " << entry->end_pci_bus_number;
 
         m_config_spaces.append({ static_cast<Address::underlying_pointer_type>(entry->physical_base),
-                                 entry->pci_segment_group_number,
-                                 entry->start_pci_bus_number,
-                                 entry->end_pci_bus_number });
+            entry->pci_segment_group_number,
+            entry->start_pci_bus_number,
+            entry->end_pci_bus_number });
 
         mcfg += MCFGEntry::size;
     }
@@ -30,11 +31,9 @@ MMIOAccess::MMIOAccess()
 Address MMIOAccess::physical_base_for(PCI::Location location) const
 {
     auto space = linear_search(m_config_spaces.begin(), m_config_spaces.end(), location,
-                               [] (const ConfigurationSpaceInfo& config_info, const PCI::Location& location)
-                               {
-                                   return config_info.segment_group_number == location.segment &&
-                                          location.bus >= config_info.first_bus && location.bus <= config_info.last_bus;
-                               });
+        [](const ConfigurationSpaceInfo& config_info, const PCI::Location& location) {
+            return config_info.segment_group_number == location.segment && location.bus >= config_info.first_bus && location.bus <= config_info.last_bus;
+        });
 
     if (space == m_config_spaces.end()) {
         String error_string;
@@ -50,9 +49,30 @@ Address MMIOAccess::physical_base_for(PCI::Location location) const
     return physical_base;
 }
 
+Address MMIOAccess::virtual_address_for(PCI::Location location) const
+{
+#ifdef ULTRA_32
+    auto mapping = linear_search(m_cached_mappings.begin(), m_cached_mappings.end(), location,
+        [](const CachedDeviceMapping& mapping, const PCI::Location& location) {
+            return mapping.location == location;
+        });
+
+    if (mapping == m_cached_mappings.end()) {
+        log() << "PCIe: cache miss for device @ " << location << ", allocating a new region...";
+        auto vr = MemoryManager::the().allocate_kernel_non_owning("PCIe"_sv, { physical_base_for(location), configuration_space_size });
+        m_cached_mappings.append({ location, vr });
+        mapping = m_cached_mappings.end() - 1;
+    }
+
+    return mapping->virtual_address();
+#elif defined(ULTRA_64)
+    return MemoryManager::physical_to_virtual(physical_base_for(location));
+#endif
+}
+
 u32 MMIOAccess::read32(PCI::Location location, u32 offset)
 {
-    return *MemoryManager::physical_to_virtual(physical_base_for(location) + offset).as_pointer<volatile u32>();
+    return *Address(virtual_address_for(location) + offset).as_pointer<volatile u32>();
 }
 
 u32 MMIOAccess::DeviceEnumerator::read32(u32 offset)
@@ -91,7 +111,7 @@ void MMIOAccess::DeviceEnumerator::remap_base_for_device(PCI::Location location)
     auto physical_base = access().physical_base_for(location);
 #ifdef ULTRA_32
     auto& region = static_cast<NonOwningVirtualRegion&>(*m_view_region);
-    region.switch_physical_range_and_remap({physical_base , configuration_space_size });
+    region.switch_physical_range_and_remap({ physical_base, configuration_space_size });
 #elif defined(ULTRA_64)
     m_current_virtual_base = MemoryManager::physical_to_virtual(physical_base);
 #endif
@@ -103,7 +123,7 @@ DynamicArray<PCI::DeviceInfo>& MMIOAccess::DeviceEnumerator::enumerate_all(const
         if (space.first_bus != 0)
             continue;
 
-        remap_base_for_device({ 0, 0, 0, 0});
+        remap_base_for_device({ 0, 0, 0, 0 });
 
         auto is_multifunction = read8(PCI::header_type_offset) & PCI::multifunction_bit;
         ASSERT(is_multifunction == false);
@@ -115,7 +135,8 @@ DynamicArray<PCI::DeviceInfo>& MMIOAccess::DeviceEnumerator::enumerate_all(const
     return m_found_devices;
 }
 
-void MMIOAccess::DeviceEnumerator::enumerate_function(u8 bus, u8 device, u8 function) {
+void MMIOAccess::DeviceEnumerator::enumerate_function(u8 bus, u8 device, u8 function)
+{
     PCI::Location location { m_current_segment, bus, device, function };
     remap_base_for_device(location);
 
@@ -136,7 +157,8 @@ void MMIOAccess::DeviceEnumerator::enumerate_function(u8 bus, u8 device, u8 func
     }
 };
 
-void MMIOAccess::DeviceEnumerator::enumerate_device(u8 bus, u8 device) {
+void MMIOAccess::DeviceEnumerator::enumerate_device(u8 bus, u8 device)
+{
     u8 last_function = 1;
 
     remap_base_for_device({ m_current_segment, bus, device, 0 });
@@ -160,7 +182,8 @@ void MMIOAccess::DeviceEnumerator::enumerate_device(u8 bus, u8 device) {
     }
 };
 
-void MMIOAccess::DeviceEnumerator::enumerate_bus(u8 bus) {
+void MMIOAccess::DeviceEnumerator::enumerate_bus(u8 bus)
+{
     for (u8 device = 0; device < 32; ++device)
         enumerate_device(bus, device);
 }

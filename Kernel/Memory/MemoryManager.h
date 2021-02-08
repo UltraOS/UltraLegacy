@@ -113,8 +113,7 @@ public:
 #define STACK_POINTER "esp"
 #endif
         asm volatile("mov %%" STACK_POINTER ", %0"
-            : "=a"(current_stack_pointer)
-            :: "memory");
+                     : "=a"(current_stack_pointer)::"memory");
 
         offset = current_stack_pointer - Address(&bsp_kernel_stack_end);
         new_stack_pointer = new_stack_begin + offset;

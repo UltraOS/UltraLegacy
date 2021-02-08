@@ -191,7 +191,7 @@ SMPData* ACPI::generate_smp_data()
             log() << "ACPI: IOAPIC " << ioapic->id << " @ " << format::as_hex << ioapic->address
                   << " gsi base " << format::as_dec << ioapic->gsi_base;
 
-            smp_info->ioapics.append({ioapic->id, { ioapic->gsi_base, 0 }, ioapic->address});
+            smp_info->ioapics.append({ ioapic->id, { ioapic->gsi_base, 0 }, ioapic->address });
 
             break;
         }

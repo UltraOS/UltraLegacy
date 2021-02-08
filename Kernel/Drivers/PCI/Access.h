@@ -1,10 +1,10 @@
 #pragma once
 
+#include "Common/DynamicArray.h"
+#include "Common/Logger.h"
 #include "Common/Macros.h"
 #include "Core/Runtime.h"
-#include "Common/DynamicArray.h"
 #include "PCI.h"
-#include "Common/Logger.h"
 namespace kernel {
 
 class Access {

@@ -1,5 +1,6 @@
 #include "DemoTTY.h"
 #include "ACPI/ACPI.h"
+#include "Drivers/PCI/PCI.h"
 #include "Drivers/Video/VideoDevice.h"
 #include "EventManager.h"
 #include "Memory/MemoryManager.h"
@@ -214,6 +215,16 @@ void DemoTTY::execute_command()
             write(range_str.to_view());
         }
         write("\n");
+    } else if (m_current_command == "pci"_sv) {
+        const auto& devices = PCI::the().devices();
+        write("\nDetected PCIe devices:\n");
+
+        for (auto& device : devices) {
+            String device_str;
+            device_str << device << "\n";
+            write(device_str.to_view());
+        }
+        write("\n");
     } else if (m_current_command == "video-mode"_sv) {
         write("\nVideo mode information:\n"_sv);
 
@@ -268,6 +279,7 @@ void DemoTTY::execute_command()
         write("cpu - get CPU information\n"_sv);
         write("acpi - dump all detected acpi tables\n"_sv);
         write("timer - get the primary system timer model\n"_sv);
+        write("pci - dump all detected PCIe devices\n"_sv);
         write("clear - clear the terminal screen\n"_sv);
     } else if (m_current_command == "kvm"_sv) {
         write("\nKernel address space virtual memory dump:\n");

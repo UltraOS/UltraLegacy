@@ -1,7 +1,7 @@
 #include "IOAPIC.h"
+#include "InterruptController.h"
 #include "Memory/AddressSpace.h"
 #include "Memory/MemoryManager.h"
-#include "InterruptController.h"
 
 namespace kernel {
 

@@ -20,4 +20,5 @@ qemu-system-x86_64 -drive file="Images/Ultra${arch}HDD.vmdk",index=0,media=disk 
                    -smp 4                                                       \
                    -m 128                                                       \
                    -no-reboot                                                   \
+                   -M q35                                                       \
                    --enable-kvm                                                 \

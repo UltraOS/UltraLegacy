@@ -1,8 +1,8 @@
 #pragma once
 
-#include "Common/Types.h"
 #include "Common/DynamicArray.h"
 #include "Common/String.h"
+#include "Common/Types.h"
 
 namespace kernel {
 
@@ -28,6 +28,11 @@ public:
         u8 device;
         u8 function;
 
+        friend bool operator==(const Location& l, const Location& r)
+        {
+            return l.segment == r.segment && l.bus == r.bus && l.device == r.device && l.function == r.function;
+        }
+
         template <typename LoggerT>
         friend LoggerT&& operator<<(LoggerT&& logger, const Location& location)
         {
@@ -44,7 +49,7 @@ public:
         template <typename LoggerT>
         friend LoggerT&& operator<<(LoggerT&& logger, const DeviceInfo& device)
         {
-            logger << format::as_hex <<  device.vendor_id << ":" << device.device_id << " @ " << device.location;
+            logger << format::as_hex << device.vendor_id << ":" << device.device_id << " @ " << device.location;
             return logger;
         }
     };
@@ -57,6 +62,8 @@ public:
     }
 
     static Access& access();
+
+    const DynamicArray<DeviceInfo>& devices() const { return m_devices; }
 
 private:
     DynamicArray<DeviceInfo> m_devices;

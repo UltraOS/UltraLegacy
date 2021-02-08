@@ -6,6 +6,7 @@
 #include "Core/CPU.h"
 #include "Core/GDT.h"
 #include "Core/Runtime.h"
+#include "Drivers/PCI/PCI.h"
 #include "Drivers/PS2/PS2Controller.h"
 #include "Drivers/Video/VideoDevice.h"
 #include "Interrupts/ExceptionDispatcher.h"
@@ -58,6 +59,8 @@ namespace kernel {
     InterruptController::discover_and_setup();
     Timer::discover_and_setup();
     CPU::initialize();
+
+    PCI::the().detect_all();
 
     VideoDevice::discover_and_setup(context);
 
