@@ -17,6 +17,7 @@ public:
 
         return { vr, offset };
     }
+
 #elif defined(ULTRA_64)
     static TypedMapping create(StringView, Address physical_address, size_t = sizeof(T))
     {
@@ -44,7 +45,8 @@ public:
 #ifdef ULTRA_32
     ~TypedMapping()
     {
-        if (m_vr)
+        // 2 being this and the memory manager
+        if (m_vr && m_vr.reference_count() == 2)
             MemoryManager::the().free_virtual_region(*m_vr);
     }
 #endif
