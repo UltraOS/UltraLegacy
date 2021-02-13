@@ -35,6 +35,7 @@ FILE(GLOB CPP_FILES "${PROJECT_SOURCE_DIR}/*cpp"               "${PROJECT_SOURCE
                     "${PROJECT_SOURCE_DIR}/Drivers/Video/*cpp" "${PROJECT_SOURCE_DIR}/Drivers/Video/*h"
                     "${PROJECT_SOURCE_DIR}/Drivers/PS2/*cpp"   "${PROJECT_SOURCE_DIR}/Drivers/PS2/*h"
                     "${PROJECT_SOURCE_DIR}/Drivers/PCI/*cpp"   "${PROJECT_SOURCE_DIR}/Drivers/PCI/*h"
+                    "${PROJECT_SOURCE_DIR}/Drivers/AHCI/*cpp"   "${PROJECT_SOURCE_DIR}/Drivers/AHCI/*h"
                     "${PROJECT_SOURCE_DIR}/WindowManager/*cpp" "${PROJECT_SOURCE_DIR}/WindowManager/*h"
                     "${PROJECT_SOURCE_DIR}/ACPI/*cpp"          "${PROJECT_SOURCE_DIR}/ACPI/*h")
 
