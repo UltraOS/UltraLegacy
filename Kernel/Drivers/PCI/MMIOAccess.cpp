@@ -75,6 +75,11 @@ u32 MMIOAccess::read32(PCI::Location location, u32 offset)
     return *Address(virtual_address_for(location) + offset).as_pointer<volatile u32>();
 }
 
+void MMIOAccess::write32(PCI::Location location, u32 offset, u32 value)
+{
+    *Address(virtual_address_for(location) + offset).as_pointer<volatile u32>() = value;
+}
+
 u32 MMIOAccess::DeviceEnumerator::read32(u32 offset)
 {
     return *Address(virtual_base() + offset).as_pointer<volatile u32>();
@@ -141,9 +146,9 @@ void MMIOAccess::DeviceEnumerator::enumerate_function(u8 bus, u8 device, u8 func
     remap_base_for_device(location);
 
     u8 device_class = read8(PCI::class_offset);
-    u8 device_sub_class = read8(PCI::subclass_offset);
+    u8 device_subclass = read8(PCI::subclass_offset);
 
-    if (device_class == PCI::bridge_device_class && device_sub_class == PCI::pci_to_pci_bridge_subclass) {
+    if (device_class == PCI::bridge_device_class && device_subclass == PCI::pci_to_pci_bridge_subclass) {
         auto subordinate_bus = read8(PCI::subordinate_bus_offset);
         log() << "PCIe: detected subordinate bus " << subordinate_bus;
         enumerate_bus(subordinate_bus);
@@ -152,6 +157,9 @@ void MMIOAccess::DeviceEnumerator::enumerate_function(u8 bus, u8 device, u8 func
         device.location = location;
         device.device_id = read16(PCI::device_id_offset);
         device.vendor_id = read16(PCI::vendor_id_offset);
+        device.class_code = device_class;
+        device.subclass_code = device_subclass;
+        device.programming_interface = read8(PCI::programming_interface_offset);
         m_found_devices.append(device);
         log() << "PCIe: detected device " << device;
     }

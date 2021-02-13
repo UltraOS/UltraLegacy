@@ -67,6 +67,8 @@ public:
     };
 
     u32 read32(PCI::Location, u32 offset) override;
+    void write32(PCI::Location, u32 offset, u32 value) override;
+
     DynamicArray<PCI::DeviceInfo> list_all_devices() override;
 
     static_assert(sizeof(MCFGEntry) == MCFGEntry::size, "Incorrect size of MCFG entry");
