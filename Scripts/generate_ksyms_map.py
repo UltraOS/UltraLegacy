@@ -50,6 +50,9 @@ with open(full_path, "r") as f:
             if "::s_" in demangled_symbol:
                 continue
 
+            if demangled_symbol.startswith("interrupt") and demangled_symbol.endswith("_handler"):
+                continue
+
             symbol_length = len(demangled_symbol)
             if symbol_length > MAX_SYMBOL_LENGTH - 1:
                 continue

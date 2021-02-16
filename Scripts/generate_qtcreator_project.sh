@@ -15,7 +15,7 @@ project_name=ultra
 source $true_path/utils.sh
 
 pushd $path_to_kernel
-project_files=$(find ./ -type f -name "*.cpp" -o -name "*.h" -o -name "*.asm")
+project_files=$(find ./ -type f -name "*.cpp" -o -name "*.h" -o -name "*.asm"  -o -name "*.inc")
 project_directories=$(find ./ -type d)
 
 arch="32"
