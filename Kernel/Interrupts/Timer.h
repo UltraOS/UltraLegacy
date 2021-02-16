@@ -13,7 +13,7 @@ namespace kernel {
 
 class Timer : public IRQHandler {
 public:
-    explicit Timer(u16 irq_index);
+    explicit Timer(IRQHandler::Type, u16 irq_index = any_vector);
 
     enum class Type {
         PIT,
@@ -91,14 +91,8 @@ public:
             runtime::panic("Failed to find a replacement for current timer, cannot run without a timer");
     }
 
-protected:
-    void finalize_irq() override
-    {
-        InterruptController::the().end_of_interrupt(irq_index());
-    }
-
 private:
-    void handle_irq(const RegisterState& registers) override
+    void handle_irq(RegisterState& registers) override
     {
         on_tick(registers, CPU::current().is_bsp());
     }

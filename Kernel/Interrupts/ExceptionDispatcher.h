@@ -6,26 +6,32 @@
 
 #include "Core/Registers.h"
 
-#define EXCEPTION_HANDLER_SYMBOL(index) extern "C" void exception##index##_handler()
+#include "InterruptHandler.h"
 
 namespace kernel {
 
 class ExceptionHandler;
 
-class ExceptionDispatcher {
-    MAKE_STATIC(ExceptionDispatcher);
+class ExceptionDispatcher final : public RangedInterruptHandler {
+    MAKE_SINGLETON(ExceptionDispatcher);
 
 public:
     static constexpr size_t exception_count = 20;
 
-    static void install();
+    static void initialize();
 
-    static void register_handler(ExceptionHandler&);
-    static void unregister_handler(ExceptionHandler&);
+    static ExceptionDispatcher& the()
+    {
+        ASSERT(s_instance != nullptr);
+        return *s_instance;
+    }
+
+    void register_handler(ExceptionHandler&);
+    void unregister_handler(ExceptionHandler&);
+
+    void handle_interrupt(RegisterState&) override;
 
 private:
-    static void exception_handler(RegisterState*) USED;
-
     static const constexpr StringView s_exception_messages[] = {
         "Division-by-zero"_sv,
         "Debug"_sv,
@@ -52,6 +58,8 @@ private:
     };
 
 private:
-    static ExceptionHandler* s_handlers[exception_count];
+    static ExceptionDispatcher* s_instance;
+
+    ExceptionHandler* m_handlers[exception_count];
 };
 }

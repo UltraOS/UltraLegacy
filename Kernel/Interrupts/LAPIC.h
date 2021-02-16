@@ -8,24 +8,30 @@
 namespace kernel {
 
 class LAPIC {
-    MAKE_NONCOPYABLE(LAPIC)
-    MAKE_NONMOVABLE(LAPIC);
+    MAKE_STATIC(LAPIC);
 
 public:
+    class SpuriousHandler : public MonoInterruptHandler {
+    public:
+        static constexpr u32 vector_number = 0xFF;
+
+        SpuriousHandler();
+        void handle_interrupt(RegisterState&) override;
+    };
+
     // replace with numeric_limits
     static constexpr u32 invalid_destination = -1;
-    static constexpr u32 spurious_irq_index = 0xFF;
 
-    class Timer : public ::kernel::Timer {
+    class Timer final : public ::kernel::Timer {
     public:
-        Timer()
-            : ::kernel::Timer(irq_number)
-        {
-        }
-
         static constexpr u32 irq_number = 253;
         static constexpr u32 masked_bit = 1 << 16;
         static constexpr u32 periodic_mode = 1 << 17;
+
+        Timer()
+            : ::kernel::Timer(IRQHandler::Type::FIXED, irq_number)
+        {
+        }
 
         void calibrate_for_this_processor() override;
 

@@ -11,9 +11,8 @@
 #include "Drivers/Video/VideoDevice.h"
 #include "Interrupts/ExceptionDispatcher.h"
 #include "Interrupts/IDT.h"
-#include "Interrupts/IPICommunicator.h"
-#include "Interrupts/IRQManager.h"
 #include "Interrupts/InterruptController.h"
+#include "Interrupts/InterruptManager.h"
 #include "Interrupts/SyscallDispatcher.h"
 #include "Interrupts/Timer.h"
 #include "Memory/AddressSpace.h"
@@ -31,6 +30,7 @@ namespace kernel {
 
 [[noreturn]] void process_with_windows();
 [[noreturn]] void dummy_thread();
+[[noreturn]] void initialize_drivers();
 
 [[noreturn]] void run(LoaderContext* context)
 {
@@ -46,10 +46,7 @@ namespace kernel {
     GDT::the().create_basic_descriptors();
     GDT::the().install();
 
-    ExceptionDispatcher::install();
-    IRQManager::install();
-    SyscallDispatcher::install();
-    IPICommunicator::install();
+    InterruptManager::initialize_all();
     IDT::the().install();
 
     MemoryManager::inititalize();
@@ -60,8 +57,6 @@ namespace kernel {
     Timer::discover_and_setup();
     CPU::initialize();
 
-    PCI::the().detect_all();
-
     VideoDevice::discover_and_setup(context);
 
     Scheduler::inititalize();
@@ -71,7 +66,7 @@ namespace kernel {
 
     WindowManager::initialize();
 
-    PS2Controller::initialize();
+    Process::create_supervisor(initialize_drivers, "Driver init");
 
     {
         // A process with 2 threads
@@ -85,6 +80,16 @@ namespace kernel {
 
     for (;;)
         hlt();
+}
+
+void initialize_drivers()
+{
+    PS2Controller::initialize();
+
+    PCI::the().collect_all_devices();
+    PCI::the().initialize_supported();
+
+    Scheduler::the().exit(0);
 }
 
 void process_with_windows()

@@ -4,18 +4,24 @@
 
 #include "Core/Registers.h"
 
+#include "InterruptHandler.h"
+
 namespace kernel {
 
-class SyscallDispatcher {
-    MAKE_STATIC(SyscallDispatcher);
-
+class SyscallDispatcher : public MonoInterruptHandler {
+    MAKE_SINGLETON(SyscallDispatcher);
 public:
-    static constexpr u16 syscall_index = 0x80;
+    static void initialize();
+
+    static constexpr u16 vector_number = 0x80;
 
     static constexpr u32 exit = 0;
     static constexpr u32 debug_log = 1;
 
-    static void install();
-    static void dispatch(RegisterState*) USED;
+private:
+    void handle_interrupt(RegisterState&) override;
+
+private:
+    static SyscallDispatcher* s_instance;
 };
 }

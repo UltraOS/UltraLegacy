@@ -50,6 +50,18 @@ IDT& IDT::register_user_interrupt_handler(u16 index, isr handler)
     return register_isr(index, TRAP_GATE | RING_3 | PRESENT, handler);
 }
 
+void IDT::make_user_callable(u16 index)
+{
+    auto& the_entry = m_entries[index];
+    the_entry.attributes = TRAP_GATE | RING_3 | PRESENT;
+}
+
+void IDT::make_non_user_callable(u16 index)
+{
+    auto& the_entry = m_entries[index];
+    the_entry.attributes = INTERRUPT_GATE | RING_0 | PRESENT;
+}
+
 #ifdef ULTRA_64
 void IDT::configure_ist()
 {

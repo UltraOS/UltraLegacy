@@ -5,10 +5,10 @@
 namespace kernel {
 
 class PageFaultHandler : public ExceptionHandler {
-    MAKE_SINGLETON(PageFaultHandler);
-
 public:
     static constexpr auto exception_number = 0xE;
+
+    PageFaultHandler();
 
     void handle(const RegisterState& state) override;
 
@@ -16,6 +16,5 @@ public:
 
 private:
     size_t m_occurrences { 0 };
-    static PageFaultHandler s_instance;
 };
 }

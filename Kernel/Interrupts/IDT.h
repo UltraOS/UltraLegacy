@@ -30,6 +30,9 @@ public:
     IDT& register_interrupt_handler(u16 index, isr handler);
     IDT& register_user_interrupt_handler(u16 index, isr handler);
 
+    void make_user_callable(u16 index);
+    void make_non_user_callable(u16 index);
+
     void install();
 
 #ifdef ULTRA_64

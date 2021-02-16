@@ -161,10 +161,8 @@ SMPData* ACPI::generate_smp_data()
 
     smp_info->bsp_lapic_id = (CPU::ID(0x1).b & 0xFF000000) >> 24;
 
-    static constexpr size_t legacy_irqs_count = 16;
-
-    for (u32 i = 0; i < legacy_irqs_count; ++i) {
-        smp_info->irqs_to_info[i] = { i, i, default_polarity_for_bus(Bus::ISA), default_trigger_mode_for_bus(Bus::ISA) };
+    for (u32 i = 0; i < legacy_irq_count; ++i) {
+        smp_info->legacy_irqs_to_info[i] = { i, i, default_polarity_for_bus(Bus::ISA), default_trigger_mode_for_bus(Bus::ISA) };
     }
 
     DynamicArray<Pair<u8, LAPICInfo::NMI>> lapic_uid_to_nmi;
@@ -207,7 +205,7 @@ SMPData* ACPI::generate_smp_data()
             auto polarity = iso->polarity == Polarity::CONFORMING ? default_polarity_for_bus(Bus::ISA) : iso->polarity;
             auto trigger_mode = iso->trigger_mode == TriggerMode::CONFORMING ? default_trigger_mode_for_bus(Bus::ISA) : iso->trigger_mode;
 
-            smp_info->irqs_to_info[iso->source] = { iso->source, iso->gsi, polarity, trigger_mode };
+            smp_info->legacy_irqs_to_info[iso->source] = { iso->source, iso->gsi, polarity, trigger_mode };
 
             break;
         }

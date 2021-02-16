@@ -2,6 +2,7 @@
 #include "ACPI/ACPI.h"
 #include "APIC.h"
 #include "Core/CPU.h"
+#include "IRQHandler.h"
 #include "LAPIC.h"
 #include "MP.h"
 #include "Memory/MemoryManager.h"

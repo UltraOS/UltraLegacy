@@ -2,39 +2,38 @@
 #include "Common/Macros.h"
 #include "Core/IO.h"
 
-#include "IRQManager.h"
+#include "InterruptController.h"
 #include "PIC.h"
 
 namespace kernel {
 
 PIC::PIC()
 {
-    remap(IRQManager::irq_base_index + 1);
+    new SpuriousHandler(true);
+    new SpuriousHandler(false);
+
+    remap(legacy_irq_base + 1);
     clear_all();
 }
 
-bool PIC::is_spurious(u8 request_number)
+PIC::SpuriousHandler::SpuriousHandler(bool master)
+    : IRQHandler(IRQHandler::Type::LEGACY, master ? spurious_master : spurious_slave)
 {
-    if (request_number == spurious_master || request_number == spurious_slave)
-        return !is_irq_being_serviced(request_number);
-
-    return false;
 }
 
-void PIC::handle_spurious_irq(u8 request_number)
+void PIC::SpuriousHandler::handle_irq(RegisterState&)
 {
-    // if it came from the slave we only need to EOI the master, otherwise do nothing
-    if (request_number == spurious_slave)
+    if (is_irq_being_serviced(legacy_irq_number()))
+        return;
+
+    if (legacy_irq_number() == spurious_slave)
         IO::out8<master_command>(end_of_interrupt_code);
 }
 
 void PIC::ensure_disabled()
 {
     // just call the constructor, which already gets us to the state we're looking for
-    auto pic = PIC();
-
-    // don't keep the slave IRQ enabled, we don't care
-    pic.disable_irq(slave_irq_index);
+    PIC();
 }
 
 void PIC::end_of_interrupt(u8 request_number)
@@ -53,29 +52,35 @@ void PIC::clear_all()
     set_raw_irq_mask(all_off_mask, false);
 }
 
-void PIC::enable_irq(u8 index)
+void PIC::enable_irq_for(const IRQHandler& handler)
 {
+    ASSERT(handler.irq_handler_type() == IRQHandler::Type::LEGACY);
+    auto number = handler.legacy_irq_number();
+
     u8 current_mask;
 
-    if (index < 8) {
+    if (number < 8) {
         current_mask = IO::in8<master_data>();
-        IO::out8<master_data>(current_mask & ~(SET_BIT(index)));
+        IO::out8<master_data>(current_mask & ~(SET_BIT(number)));
     } else {
         current_mask = IO::in8<slave_data>();
-        IO::out8<slave_data>(current_mask & ~(SET_BIT(index - 8)));
+        IO::out8<slave_data>(current_mask & ~(SET_BIT(number - 8)));
     }
 }
 
-void PIC::disable_irq(u8 index)
+void PIC::disable_irq_for(const IRQHandler& handler)
 {
+    ASSERT(handler.irq_handler_type() == IRQHandler::Type::LEGACY);
+    auto number = handler.legacy_irq_number();
+
     u8 current_mask;
 
-    if (index < 8) {
+    if (number < 8) {
         current_mask = IO::in8<master_data>();
-        IO::out8<master_data>(current_mask | SET_BIT(index));
+        IO::out8<master_data>(current_mask | SET_BIT(number));
     } else {
         current_mask = IO::in8<slave_data>();
-        IO::out8<slave_data>(current_mask | SET_BIT(index - 8));
+        IO::out8<slave_data>(current_mask | SET_BIT(number - 8));
     }
 }
 

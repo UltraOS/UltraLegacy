@@ -3,8 +3,6 @@
 
 namespace kernel {
 
-PageFaultHandler PageFaultHandler::s_instance;
-
 PageFaultHandler::PageFaultHandler()
     : ExceptionHandler(exception_number)
 {

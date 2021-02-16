@@ -7,7 +7,7 @@
 namespace kernel {
 
 PIT::PIT()
-    : Timer(irq_number)
+    : Timer(IRQHandler::Type::LEGACY, irq_number)
 {
     set_frequency(default_ticks_per_second);
 }

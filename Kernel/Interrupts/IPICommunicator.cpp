@@ -5,14 +5,19 @@
 
 #include "IPICommunicator.h"
 
-// Defined in Arcitecture/X/Interrupts.asm
-extern "C" void ipi_handler();
-
 namespace kernel {
 
-void IPICommunicator::install()
+IPICommunicator* IPICommunicator::s_instance;
+
+void IPICommunicator::initialize()
 {
-    IDT::the().register_interrupt_handler(vector_number, &ipi_handler);
+    ASSERT(s_instance == nullptr);
+    s_instance = new IPICommunicator;
+}
+
+IPICommunicator::IPICommunicator()
+    : MonoInterruptHandler(vector_number, false)
+{
 }
 
 void IPICommunicator::send_ipi(u8 dest)
@@ -33,7 +38,7 @@ void IPICommunicator::hang_all_cores()
         LAPIC::send_ipi<LAPIC::DestinationType::ALL_EXCLUDING_SELF>();
 }
 
-void IPICommunicator::on_ipi(RegisterState*)
+void IPICommunicator::handle_interrupt(RegisterState&)
 {
     // TODO: At the moment IPIs are only used as a panic mechanism.
     //       Add a separate handler for panic later or add some kind of a

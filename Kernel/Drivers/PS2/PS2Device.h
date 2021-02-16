@@ -12,12 +12,15 @@ public:
     static constexpr u8 port_2_irq_number = 12;
 
     explicit PS2Device(PS2Controller::Channel channel)
-        : IRQHandler(channel == PS2Controller::Channel::ONE ? port_1_irq_number : port_2_irq_number)
+        : IRQHandler(IRQHandler::Type::LEGACY, channel == PS2Controller::Channel::ONE ? port_1_irq_number : port_2_irq_number)
         , m_channel(channel)
     {
     }
 
     [[nodiscard]] PS2Controller::Channel channel() const { return m_channel; }
+
+protected:
+    virtual void handle_action() = 0;
 
     template <typename CommandT>
     void send_command(CommandT command)
@@ -36,9 +39,8 @@ public:
 
     static u8 read_data() { return PS2Controller::the().read_data(); }
 
-    void handle_irq(const RegisterState&) override { handle_action(); }
-
-    virtual void handle_action() = 0;
+private:
+    void handle_irq(RegisterState&) override { handle_action(); }
 
 private:
     PS2Controller::Channel m_channel;

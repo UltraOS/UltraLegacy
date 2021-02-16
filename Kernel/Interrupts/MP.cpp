@@ -240,7 +240,7 @@ SMPData* MP::parse_configuration_table(FloatingPointer* fp_table)
                 break;
             }
 
-            smp_info->irqs_to_info[info.irq_index] = info;
+            smp_info->legacy_irqs_to_info[info.irq_index] = info;
             break;
         }
         default:

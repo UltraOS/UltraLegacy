@@ -93,7 +93,7 @@ struct SMPData {
     DynamicArray<IOAPICNMI> ioapic_nmis;
     DynamicArray<IOAPICInfo> ioapics;
 
-    Map<u8, IRQ, Less<>> irqs_to_info;
+    Map<u16, IRQ, Less<>> legacy_irqs_to_info;
 };
 
 inline StringView to_string(Polarity p)
@@ -123,6 +123,9 @@ inline StringView to_string(TriggerMode t)
         return "Unknown"_sv;
     }
 }
+
+inline static constexpr size_t legacy_irq_base = 32;
+inline static constexpr size_t legacy_irq_count = 16;
 
 namespace Interrupts {
 

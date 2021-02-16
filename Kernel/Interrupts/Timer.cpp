@@ -13,8 +13,8 @@ DynamicArray<Timer::TransparentEventHandler> Timer::s_transparent_handlers;
 Atomic<Timer*> Timer::s_primary_timer;
 DynamicArray<Timer*> Timer::s_timers;
 
-Timer::Timer(u16 irq_index)
-    : IRQHandler(irq_index)
+Timer::Timer(IRQHandler::Type type, u16 irq_index)
+    : IRQHandler(type, irq_index)
 {
     LOCK_GUARD(s_lock);
     s_timers.append(this);
@@ -37,7 +37,7 @@ void Timer::on_tick(const RegisterState& register_state, bool is_bsp)
             handler();
     }
 
-    InterruptController::the().end_of_interrupt(irq_index());
+    InterruptController::the().end_of_interrupt(legacy_irq_number());
     s_scheduler_handler(register_state);
 }
 

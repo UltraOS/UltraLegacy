@@ -25,7 +25,7 @@ public:
 
     static u32 redirection_entry_count(Address);
 
-    static void map_irq(const IRQ& irq, u8 to_index);
+    static void map_legacy_irq(const IRQ& irq, u8 to_index);
 
     static const IOAPICInfo& responsible_for_gsi(u32);
 

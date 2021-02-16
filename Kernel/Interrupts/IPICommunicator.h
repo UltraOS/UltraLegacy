@@ -4,22 +4,29 @@
 #include "Common/Types.h"
 
 #include "Core/Registers.h"
+#include "InterruptHandler.h"
 
 namespace kernel {
 
-class IPICommunicator {
-    MAKE_STATIC(IPICommunicator);
-
+class IPICommunicator : public MonoInterruptHandler {
+    MAKE_SINGLETON(IPICommunicator);
 public:
     static constexpr u16 vector_number = 254;
 
-    static void install();
+    static void initialize();
 
-    static void send_ipi(u8 dest);
+    static IPICommunicator& the()
+    {
+        ASSERT(s_instance != nullptr);
+        return *s_instance;
+    }
 
-    static void hang_all_cores();
+    void send_ipi(u8 dest);
+    void hang_all_cores();
+
+    void handle_interrupt(RegisterState&) override;
 
 private:
-    static void on_ipi(RegisterState*) USED;
+    static IPICommunicator* s_instance;
 };
 }

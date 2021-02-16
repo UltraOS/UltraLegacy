@@ -75,7 +75,7 @@ void IOAPIC::RedirectionEntry::apply_to(Address address, u8 irq_index)
     write_register(address, higher_register, redirection_entry_as_u32[1]);
 }
 
-void IOAPIC::map_irq(const IRQ& irq, u8 to_index)
+void IOAPIC::map_legacy_irq(const IRQ& irq, u8 to_index)
 {
     RedirectionEntry re {};
     re.index = to_index;

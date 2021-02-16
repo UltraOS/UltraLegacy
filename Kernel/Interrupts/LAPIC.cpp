@@ -6,7 +6,7 @@
 #include "Multitasking/Scheduler.h"
 
 #include "IPICommunicator.h"
-#include "IRQManager.h"
+#include "InterruptManager.h"
 #include "Timer.h"
 
 #include "LAPIC.h"
@@ -26,13 +26,23 @@ void LAPIC::set_base_address(Address physical_base)
 #endif
 }
 
+LAPIC::SpuriousHandler::SpuriousHandler()
+    : MonoInterruptHandler(vector_number)
+{
+}
+
+void LAPIC::SpuriousHandler::handle_interrupt(RegisterState&)
+{
+    warning() << "LAPIC: spurious interrupt";
+}
+
 void LAPIC::initialize_for_this_processor()
 {
     auto current_value = read_register(Register::SPURIOUS_INTERRUPT_VECTOR);
 
     static constexpr u32 enable_bit = 0b100000000;
 
-    write_register(Register::SPURIOUS_INTERRUPT_VECTOR, current_value | enable_bit | spurious_irq_index);
+    write_register(Register::SPURIOUS_INTERRUPT_VECTOR, current_value | enable_bit | SpuriousHandler::vector_number);
 
     auto& smp_data = InterruptController::smp_data();
 

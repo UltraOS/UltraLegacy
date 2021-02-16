@@ -172,7 +172,7 @@ size_t dump_backtrace(ptr_t* into, size_t max_depth, Address base_pointer)
     error() << panic_message << "\n";
 
     if (InterruptController::is_initialized())
-        IPICommunicator::hang_all_cores();
+        IPICommunicator::the().hang_all_cores();
 
     Rect surface_rect;
     Point center;

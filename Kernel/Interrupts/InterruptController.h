@@ -8,6 +8,8 @@
 
 namespace kernel {
 
+class IRQHandler;
+
 class InterruptController {
     MAKE_INHERITABLE_SINGLETON(InterruptController) = default;
 
@@ -36,11 +38,8 @@ public:
 
     virtual void clear_all() = 0;
 
-    virtual void enable_irq(u8 index) = 0;
-    virtual void disable_irq(u8 index) = 0;
-
-    virtual bool is_spurious(u8 request_number) = 0;
-    virtual void handle_spurious_irq(u8 request_number) = 0;
+    virtual void enable_irq_for(const IRQHandler&) = 0;
+    virtual void disable_irq_for(const IRQHandler&) = 0;
 
     virtual Type type() const = 0;
 

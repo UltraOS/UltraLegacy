@@ -4,32 +4,49 @@
 
 #include "Core/Registers.h"
 
-#include "IRQManager.h"
 #include "InterruptController.h"
+#include "InterruptHandler.h"
 
 namespace kernel {
 
-class IRQHandler {
-    MAKE_NONCOPYABLE(IRQHandler);
-
+class IRQHandler : public MonoInterruptHandler {
 public:
-    IRQHandler(u16 irq_index)
-        : m_irq_index(irq_index)
+    enum class Type {
+        LEGACY,
+        MSI,
+        ANY,
+        FIXED
+    };
+
+    IRQHandler(Type type, u16 vector = any_vector)
+        : MonoInterruptHandler(type == Type::LEGACY ? legacy_irq_base + vector : vector, false)
+        , m_type(type)
     {
-        IRQManager::register_irq_handler(*this);
     }
 
-    u16 irq_index() const { return m_irq_index; }
+    u16 legacy_irq_number() const { return interrupt_vector() - legacy_irq_base; }
+    Type irq_handler_type() const { return m_type; }
 
-    virtual void handle_irq(const RegisterState& registers) = 0;
-    virtual void finalize_irq() { InterruptController::the().end_of_interrupt(irq_index()); }
+    virtual void enable_irq() { InterruptController::the().enable_irq_for(*this); }
+    virtual void disable_irq() { InterruptController::the().disable_irq_for(*this); }
 
-    virtual void enable_irq() { InterruptController::the().enable_irq(irq_index()); }
-    virtual void disable_irq() { InterruptController::the().disable_irq(irq_index()); }
-
-    virtual ~IRQHandler() { IRQManager::unregister_irq_handler(*this); }
+protected:
+    virtual void handle_irq(RegisterState&) = 0;
 
 private:
-    u16 m_irq_index;
+    void handle_interrupt(RegisterState& registers) override
+    {
+        handle_irq(registers);
+
+        // We pass the legacy number because only PIC requires the irq number
+        // to send an EOI, and if we're using PIC we're definitely not using
+        // anything like MSIs/LAPIC timers, so it's kind of an invariant, although
+        // I don't like that we have to assume anything at all :(
+        InterruptController::the().end_of_interrupt(legacy_irq_number());
+    }
+
+private:
+    Type m_type;
 };
+
 }

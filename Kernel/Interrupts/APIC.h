@@ -12,11 +12,8 @@ public:
 
     void clear_all() override;
 
-    void enable_irq(u8 index) override;
-    void disable_irq(u8 index) override;
-
-    bool is_spurious(u8 request_number) override;
-    void handle_spurious_irq(u8 request_number) override;
+    void enable_irq_for(const IRQHandler&) override;
+    void disable_irq_for(const IRQHandler&) override;
 
     Type type() const override { return Type::APIC; }
 };

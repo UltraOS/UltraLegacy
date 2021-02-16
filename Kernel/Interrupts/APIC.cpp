@@ -10,6 +10,7 @@ APIC::APIC()
 {
     PIC::ensure_disabled();
     LAPIC::set_base_address(smp_data().lapic_address);
+    new LAPIC::SpuriousHandler();
     LAPIC::initialize_for_this_processor();
     IOAPIC::initialize_all();
 }
@@ -21,32 +22,26 @@ void APIC::end_of_interrupt(u8)
 
 void APIC::clear_all() { }
 
-void APIC::enable_irq(u8 index)
+void APIC::enable_irq_for(const IRQHandler& handler)
 {
-    auto& irqs = smp_data().irqs_to_info;
+    ASSERT(handler.irq_handler_type() == IRQHandler::Type::LEGACY);
 
-    if (!irqs.contains(index)) {
+    auto& irqs = smp_data().legacy_irqs_to_info;
+    auto irq_index = handler.legacy_irq_number();
+
+    if (!irqs.contains(irq_index)) {
         String error_string;
-        error_string << "Couldn't find an irq source for " << index;
+        error_string << "Couldn't find an irq source for " << irq_index;
         runtime::panic(error_string.data());
     }
 
-    IOAPIC::map_irq(irqs.get(index), IRQManager::irq_base_index + index);
+    IOAPIC::map_legacy_irq(irqs.get(irq_index), handler.interrupt_vector());
 }
 
-void APIC::disable_irq(u8)
+void APIC::disable_irq_for(const IRQHandler&)
 {
     // TODO
     ASSERT_NEVER_REACHED();
 }
 
-bool APIC::is_spurious(u8 request_number)
-{
-    return request_number == LAPIC::spurious_irq_index;
-}
-
-void APIC::handle_spurious_irq(u8)
-{
-    // do nothing for APIC, it doesn't need an EOI
-}
 }

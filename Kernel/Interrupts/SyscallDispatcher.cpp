@@ -7,14 +7,20 @@
 
 namespace kernel {
 
-extern "C" void syscall_handler();
+SyscallDispatcher* SyscallDispatcher::s_instance;
 
-void SyscallDispatcher::install()
+void SyscallDispatcher::initialize()
 {
-    IDT::the().register_user_interrupt_handler(syscall_index, &syscall_handler);
+    ASSERT(s_instance == nullptr);
+    s_instance = new SyscallDispatcher;
 }
 
-void SyscallDispatcher::dispatch(RegisterState* registers)
+SyscallDispatcher::SyscallDispatcher()
+    : MonoInterruptHandler(vector_number, true)
+{
+}
+
+void SyscallDispatcher::handle_interrupt(RegisterState& registers)
 {
     // Syscall conventions:
     // Interrupt number: 0x80
@@ -23,11 +29,11 @@ void SyscallDispatcher::dispatch(RegisterState* registers)
     // R/EBX, R/ECX, R/EDX, R/ESI, R/EDI, R/EBP -> syscall arguments, left -> right
 
 #ifdef ULTRA_32
-    const auto syscall_number = registers->eax;
-    const auto arg0 = registers->ebx;
+    const auto syscall_number = registers.eax;
+    const auto arg0 = registers.ebx;
 #elif defined(ULTRA_64)
-    const auto syscall_number = registers->rax;
-    const auto arg0 = registers->rbx;
+    const auto syscall_number = registers.rax;
+    const auto arg0 = registers.rbx;
 #endif
 
     switch (syscall_number) {

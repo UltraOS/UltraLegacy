@@ -20,13 +20,12 @@ public:
     void set_resolution(u8);
     void set_sample_rate(u8);
 
-    void handle_action() override;
-
     [[nodiscard]] StringView name() const override { return "PS2 Mouse"; }
     [[nodiscard]] SubType sub_type() const { return m_sub_type; }
 
 private:
     void detect_subtype();
+    void handle_action() override;
 
     [[nodiscard]] u8 bytes_in_packet() const;
 
