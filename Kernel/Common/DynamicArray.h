@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/Runtime.h"
+#include "InitializerList.h"
 #include "Macros.h"
 #include "Memory.h"
 #include "Traits.h"
@@ -11,7 +12,15 @@ namespace kernel {
 template <typename T>
 class DynamicArray {
 public:
-    DynamicArray() { }
+    DynamicArray() = default;
+
+    DynamicArray(std::initializer_list<T> items)
+    {
+        reserve(items.size());
+
+        for (auto& item : items)
+            emplace(item);
+    }
 
     DynamicArray(size_t initial_capacity) { reserve(initial_capacity); }
 
