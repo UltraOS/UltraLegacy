@@ -207,6 +207,10 @@ public:
     void free_all_virtual_regions(Process&);
     void free_address_space(AddressSpace&);
 
+    // Only use directly when must, otherwise use functions above
+    [[nodiscard]] Page allocate_page(bool should_zero = true);
+    void free_page(Page& page);
+
     String kernel_virtual_regions_debug_dump();
 
 private:
@@ -214,11 +218,6 @@ private:
     void allocate_initial_kernel_regions();
 
     ptr_t remap_bsp_stack();
-
-    // This API is used by AddressSpace to allocate table pages
-    friend class AddressSpace;
-    [[nodiscard]] Page allocate_page(bool should_zero = true);
-    void free_page(Page& page);
 
     friend class PrivateVirtualRegion;
     void preallocate(PrivateVirtualRegion&, bool should_zero = true);

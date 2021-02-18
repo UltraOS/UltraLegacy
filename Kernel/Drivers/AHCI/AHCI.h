@@ -186,7 +186,7 @@ public:
         u8 command_list_override : 1;
         u8 fis_receive_enable : 1;
         u8 reserved : 3;
-        u8 current_command_slot : 1;
+        u8 current_command_slot : 5;
         u8 mechanical_presence_switch_state : 1;
         u8 fis_receive_running : 1;
         u8 command_list_running : 1;
@@ -195,7 +195,7 @@ public:
         u8 hot_plug_capable_port : 1;
         u8 mechanical_presence_swtich_attached_to_port : 1;
         u8 cold_presence_detection : 1;
-        u8 external_stata_port : 1;
+        u8 external_sata_port : 1;
         u8 fis_base_switching_capable_port : 1;
         u8 automatic_partial_to_slumber_transitions_enabled : 1;
         u8 device_is_atapi : 1;
@@ -367,7 +367,7 @@ public:
         u8 nvmhci_reserved[0xA0 - 0x60];
         u8 vendor_specific_registers[0x100 - 0xA0];
 
-        struct Port {
+        struct PACKED Port {
             u32 command_list_base_address;
             u32 command_list_base_address_upper;
             u32 fis_base_address;
@@ -393,16 +393,262 @@ public:
             static constexpr size_t size = 0x80;
         } ports[32];
 
+        static constexpr size_t offset_to_ports = 0x100;
         static constexpr size_t size = 0x1100;
     };
 
     static_assert(sizeof(HBA::Port) == HBA::Port::size, "Incorrect size of HBA port");
     static_assert(sizeof(HBA) == HBA::size, "Incorrect size of HBA");
 
+    struct PACKED CommandHeader {
+        u8 command_fis_length : 5;
+        u8 atapi : 1;
+        u8 write : 1;
+        u8 prefetchable : 1;
+        u8 reset : 1;
+        u8 bist : 1;
+        u8 clear_busy_upon_r_ok : 1;
+        u8 reserved_1 : 1;
+        u8 port_multiplier_port : 4;
+        u32 physical_region_descriptor_table_length : 16;
+        u32 physical_region_descriptor_byte_count;
+        u32 command_table_base_address;
+        u32 command_table_base_address_upper;
+        u32 reserved_2;
+        u32 reserved_3;
+        u32 reserved_4;
+        u32 reserved_5;
+
+        static constexpr size_t size = 8 * sizeof(u32);
+    };
+
+    struct PACKED CommandList {
+        CommandHeader command[32];
+    };
+
+    static_assert(sizeof(CommandHeader) == CommandHeader::size, "Incorrect size of CommandHeader");
+
+    enum class FISType : u8 {
+        REGISTER_HOST_TO_DEVICE = 0x27,
+        REGISTER_DEVICE_TO_HOST = 0x34,
+        DMA_ACTIVATE = 0x39,
+        DMA_SETUP = 0x41,
+        DATA = 0x46,
+        BIST = 0x58,
+        PIO_SETUP = 0x5F,
+        SET_DEVICE_BITS = 0xA1,
+    };
+
+    struct PACKED FISHostToDevice {
+        FISType type = native_type;
+
+        u8 port_multiplier : 4;
+        u8 reserved_1 : 3;
+        u8 is_command : 1;
+
+        u8 command_register;
+        u8 feature_lower;
+
+        u8 lba_1;
+        u8 lba_2;
+        u8 lba_3;
+
+        u8 device_register;
+
+        u8 lba_4;
+        u8 lba_5;
+        u8 lba_6;
+
+        u8 feature_upper;
+
+        u8 count_lower;
+        u8 count_upper;
+
+        u8 icc;
+        u8 control_register;
+
+        u32 reserved_2;
+
+        static constexpr FISType native_type = FISType::REGISTER_HOST_TO_DEVICE;
+        static constexpr size_t size_in_dwords = 5;
+    };
+
+    struct PACKED FISDeviceToHost {
+        FISType type = native_type;
+
+        u8 port_multiplier : 4;
+        u8 reserved_1 : 2;
+        u8 interrupt : 1;
+        u8 reserved_2 : 1;
+
+        u8 status_register;
+        u8 error_register;
+
+        u8 lba_1;
+        u8 lba_2;
+        u8 lba_3;
+
+        u8 device_register;
+
+        u8 lba_4;
+        u8 lba_5;
+        u8 lba_6;
+
+        u8 reserved_3;
+
+        u8 count_lower;
+        u8 count_upper;
+
+        u8 reserved_4[6];
+
+        static constexpr FISType native_type = FISType::REGISTER_DEVICE_TO_HOST;
+        static constexpr size_t size_in_dwords = 5;
+    };
+
+    struct PACKED FISData {
+        FISType type = native_type;
+
+        u8 port_multiplier : 4;
+        u8 reserved_1 : 4;
+        u8 reserved_2[2];
+
+        u32 data[1];
+
+        static constexpr FISType native_type = FISType::DATA;
+    };
+
+    struct PACKED FISPIOSetup {
+        FISType type = native_type;
+
+        u8 port_multiplier : 4;
+        u8 reserved_1 : 1;
+        u8 data_transfer_direction : 1;
+        u8 interrupt : 1;
+        u8 reserved_2 : 1;
+
+        u8 status_register;
+        u8 error_register;
+
+        u8 lba_1;
+        u8 lba_2;
+        u8 lba_3;
+
+        u8 device_register;
+
+        u8 lba_4;
+        u8 lba_5;
+        u8 lba_6;
+
+        u8 reserved_3;
+
+        u8 count_lower;
+        u8 count_upper;
+
+        u8 reserved_4;
+        u8 new_status_register;
+
+        u16 trasnfer_count;
+        u8 reserved_5[2];
+
+        static constexpr FISType native_type = FISType::PIO_SETUP;
+        static constexpr size_t size_in_dwords = 5;
+    };
+
+    struct PACKED FISDMASetup {
+        FISType type = native_type;
+
+        u8 port_multiplier : 4;
+        u8 reserved_1 : 1;
+        u8 data_transfer_direction : 1;
+        u8 interrupt : 1;
+        u8 auto_activate : 1;
+
+        u8 reserved_2[2];
+
+        u32 dma_buffer_id_lower;
+        u32 dma_buffer_id_upper;
+
+        u32 reserved_3;
+
+        u32 dma_buffer_offset;
+        u32 transfer_count;
+
+        u32 reserved_4;
+
+        static constexpr FISType native_type = FISType::DMA_SETUP;
+        static constexpr size_t size_in_dwords = 7;
+    };
+
+    struct PACKED FISDeviceBits {
+        FISType type = native_type;
+
+        u8 port_multiplier : 4;
+        u8 reserved_1 : 2;
+        u8 interrupt : 1;
+        u8 notification : 1;
+
+        u8 status_register;
+        u8 error_register;
+
+        u32 protocol_specific;
+
+        static constexpr FISType native_type = FISType::SET_DEVICE_BITS;
+        static constexpr size_t size_in_dwords = 2;
+    };
+
+    static_assert(sizeof(FISHostToDevice) == FISHostToDevice::size_in_dwords * sizeof(u32), "Incorrect size of FISHostToDevice");
+    static_assert(sizeof(FISDeviceToHost) == FISDeviceToHost::size_in_dwords * sizeof(u32), "Incorrect size of FISDeviceToHost");
+    static_assert(sizeof(FISPIOSetup) == FISPIOSetup::size_in_dwords * sizeof(u32), "Incorrect size of FISPIOSetup");
+    static_assert(sizeof(FISDMASetup) == FISDMASetup::size_in_dwords * sizeof(u32), "Incorrect size of FISDMASetup");
+    static_assert(sizeof(FISDeviceBits) == FISDeviceBits::size_in_dwords * sizeof(u32), "Incorrect size of FISDeviceBits");
+
+    struct PACKED HBAFIS {
+        FISDMASetup dma_setup;
+        u8 padding_1[4];
+
+        FISPIOSetup pio_setup;
+        u8 padding_2[12];
+
+        FISDeviceToHost device_to_host;
+        u8 padding_3[4];
+
+        FISDeviceBits device_bits;
+
+        u8 unknown[64];
+
+        u8 reserved[0x100 - 0xA0];
+
+        static constexpr size_t size = 0x100;
+    };
+
+    static_assert(sizeof(HBAFIS) == HBAFIS::size, "Incorrect size of HBAFIS");
+
+    struct Port {
+        TypedMapping<CommandList> command_list;
+        TypedMapping<HBAFIS> hba_fis;
+        DynamicBitArray slot_map;
+        size_t lba_size;
+        size_t lba_count;
+    };
+
 private:
     void perform_bios_handoff();
     void enable_ahci();
     void hba_reset();
+    void initialize_ports();
+    void initialize_port(size_t index);
+    void ensure_port_is_idle(size_t index);
+
+    template <typename T>
+    size_t offset_of_port_structure(size_t index)
+    {
+        Address base = m_hba.get();
+        base += HBA::offset_to_ports;
+        base += HBA::Port::size * index;
+        base += T::offset;
+
+        return base;
+    }
 
     template <typename T>
     T hba_read()
@@ -416,15 +662,39 @@ private:
     }
 
     template <typename T>
+    T port_read(size_t index)
+    {
+        Address base = offset_of_port_structure<T>(index);
+
+        auto raw = *base.as_pointer<volatile u32>();
+
+        return bit_cast<T>(raw);
+    }
+
+    template <typename T>
     void hba_write(T reg)
     {
         Address base = m_hba.get();
+        base += T::offset;
+
+        auto type_punned_reg = bit_cast<u32>(reg);
+        *base.as_pointer<volatile u32>() = type_punned_reg;
+    }
+
+    template <typename T>
+    void port_write(size_t index, T reg)
+    {
+        Address base = offset_of_port_structure<T>(index);
+
         auto type_punned_reg = bit_cast<u32>(reg);
         *base.as_pointer<volatile u32>() = type_punned_reg;
     }
 
 private:
     TypedMapping<volatile HBA> m_hba;
+
+    DynamicArray<Port> m_ports;
+    u8 m_command_slots_per_port { 0 };
     bool m_supports_64bit { false };
 };
 
