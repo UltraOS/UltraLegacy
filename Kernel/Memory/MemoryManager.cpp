@@ -258,7 +258,7 @@ VirtualRegion* MemoryManager::virtual_region_responsible_for_address(Address add
     return nullptr;
 }
 
-void MemoryManager::free_page(Page& page)
+void MemoryManager::free_page(const Page& page)
 {
     auto* region = physical_region_responsible_for_page(page);
 

@@ -209,7 +209,7 @@ public:
 
     // Only use directly when must, otherwise use functions above
     [[nodiscard]] Page allocate_page(bool should_zero = true);
-    void free_page(Page& page);
+    void free_page(const Page& page);
 
     String kernel_virtual_regions_debug_dump();
 

@@ -423,10 +423,35 @@ public:
     };
 
     struct PACKED CommandList {
-        CommandHeader command[32];
+        CommandHeader commands[32];
+    };
+
+    struct PACKED PRDT {
+        u32 data_base;
+        u32 data_upper;
+
+        u32 reserved_1;
+
+        u32 byte_count : 22;
+        u32 reserved_2 : 9;
+        u32 interrupt_on_completion : 1;
+
+        static constexpr size_t size = 4 * sizeof(u32);
+    };
+
+    struct PACKED CommandTable {
+        u8 command_fis[64];
+        u8 atapi_command[16];
+        u8 reserved[48];
+
+        PRDT prdts[];
+
+        static constexpr size_t size = 0x80;
     };
 
     static_assert(sizeof(CommandHeader) == CommandHeader::size, "Incorrect size of CommandHeader");
+    static_assert(sizeof(PRDT) == PRDT::size, "Incorrect size of PRDT");
+    static_assert(sizeof(CommandTable) == CommandTable::size, "Incorrect size of command table");
 
     enum class FISType : u8 {
         REGISTER_HOST_TO_DEVICE = 0x27,
@@ -624,9 +649,38 @@ public:
     static_assert(sizeof(HBAFIS) == HBAFIS::size, "Incorrect size of HBAFIS");
 
     struct Port {
+        enum class Type : u32 {
+            NONE = 0xDEADBEEF,
+            SATA = 0x00000101,
+            ATAPI = 0xEB140101,
+            ENCLOSURE_MANAGEMENT_BRIDGE = 0xC33C0101,
+            PORT_MULTIPLIER = 0x96690101
+        } type = Type::NONE;
+        
+        StringView type_to_string()
+        {
+            switch (type) {
+            case Type::NONE:
+                return "none"_sv;
+            case Type::SATA:
+                return "SATA"_sv;
+            case Type::ATAPI:
+                return "ATAPI"_sv;
+            case Type::ENCLOSURE_MANAGEMENT_BRIDGE:
+                return "Enclosure Management Bridge"_sv;
+            case Type::PORT_MULTIPLIER:
+                return "Port Multiplier"_sv;
+            default:
+                return "Invalid"_sv;
+            }
+        }
+
+        bool implemented;
+
         TypedMapping<CommandList> command_list;
-        TypedMapping<HBAFIS> hba_fis;
+
         DynamicBitArray slot_map;
+
         size_t lba_size;
         size_t lba_count;
     };
@@ -636,8 +690,12 @@ private:
     void enable_ahci();
     void hba_reset();
     void initialize_ports();
+    Port::Type type_of_port(size_t index);
+    bool port_has_device_attached(size_t index);
+    void reset_port(size_t index);
     void initialize_port(size_t index);
     void ensure_port_is_idle(size_t index);
+    void identify_sata_port(size_t index);
 
     template <typename T>
     size_t offset_of_port_structure(size_t index)
@@ -690,10 +748,12 @@ private:
         *base.as_pointer<volatile u32>() = type_punned_reg;
     }
 
+    Address allocate_safe_page();
+
 private:
     TypedMapping<volatile HBA> m_hba;
 
-    DynamicArray<Port> m_ports;
+    Port m_ports[32] {};
     u8 m_command_slots_per_port { 0 };
     bool m_supports_64bit { false };
 };
