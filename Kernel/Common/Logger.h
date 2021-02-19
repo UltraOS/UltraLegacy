@@ -188,8 +188,15 @@ inline Logger error()
     return logger;
 }
 
-inline Logger log()
+inline Logger log(StringView prefix = ""_sv)
 {
-    return info();
+    auto logger = info();
+
+    if (!prefix.empty()) {
+        logger.write(prefix);
+        logger.write(": "_sv);
+    }
+
+    return logger;
 }
 }
