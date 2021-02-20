@@ -5,17 +5,17 @@
 
 namespace kernel {
 
-class AHCI : public PCI::Device {
+class AHCI : public PCI::Device, public IRQHandler {
     AUTO_DETECT_PCI(AHCI);
 
 public:
-    AHCI(PCI::Location);
+    AHCI(const PCI::DeviceInfo&);
 
     static constexpr u8 class_code = 0x01;
     static constexpr u8 subclass_code = 0x06;
     static constexpr u8 programming_interface = 1;
 
-    Type type() const override { return Type::DISK; }
+    Device::Type type() const override { return Device::Type::DISK; }
     StringView name() const override { return "AHCI"_sv; }
 
     static void autodetect(const DynamicArray<PCI::DeviceInfo>&);
@@ -696,6 +696,10 @@ private:
     void initialize_port(size_t index);
     void ensure_port_is_idle(size_t index);
     void identify_sata_port(size_t index);
+
+    void handle_irq(RegisterState&) override { log("AHCI") << "GOT IRQ " << format::as_hex << m_hba->ports[0].interrupt_status; }
+    void enable_irq() override { ASSERT_NEVER_REACHED(); }
+    void disable_irq() override { ASSERT_NEVER_REACHED(); }
 
     template <typename T>
     size_t offset_of_port_structure(size_t index)

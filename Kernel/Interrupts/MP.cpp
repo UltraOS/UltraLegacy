@@ -263,9 +263,10 @@ SMPData* MP::parse_configuration_table(FloatingPointer* fp_table)
         } else {
             for (auto& nmi_entry : lapic_id_to_nmi) {
                 auto& lapics = smp_info->lapics;
+                auto id = nmi_entry.first();
 
-                auto lapic = linear_search(lapics.begin(), lapics.end(), nmi_entry.first(),
-                    [](const LAPICInfo& info, u8 id) {
+                auto lapic = linear_search_for(lapics.begin(), lapics.end(),
+                    [id](const LAPICInfo& info) {
                         return info.id == id;
                     });
 

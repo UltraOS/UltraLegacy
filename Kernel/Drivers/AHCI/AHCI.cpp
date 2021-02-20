@@ -15,11 +15,10 @@
 
 #endif
 
-#include "Multitasking/Sleep.h"
 namespace kernel {
 
-AHCI::AHCI(PCI::Location location)
-    : Device(location)
+AHCI::AHCI(const PCI::DeviceInfo& info)
+    : Device(info), IRQHandler(IRQHandler::Type::MSI)
 {
     enable_memory_space();
     make_bus_master();
@@ -39,11 +38,14 @@ AHCI::AHCI(PCI::Location location)
     ghc.interrupt_enable = true;
     hba_write(ghc);
 
+    log("AHCI") << "enabling MSI for interrupt vector " << interrupt_vector();
+    enable_msi(interrupt_vector());
+
     auto cap = hba_read<CAP>();
     m_supports_64bit = cap.supports_64bit_addressing;
     m_command_slots_per_port = cap.number_of_command_slots + 1;
 
-    log() << "AHCI: detected " << m_command_slots_per_port << " command slots per port";
+    log("AHCI") << "detected " << m_command_slots_per_port << " command slots per port";
 
     initialize_ports();
 }
@@ -52,7 +54,7 @@ void AHCI::initialize_ports()
 {
     auto implemented_ports = m_hba->ports_implemented;
 
-    log() << "AHCI: detected " << __builtin_popcount(implemented_ports) << " implemented ports";
+    log("AHCI") << "detected " << __builtin_popcount(implemented_ports) << " implemented ports";
 
     for (size_t i = 0; i < 32; ++i) {
         if (!(implemented_ports & SET_BIT(i)))
@@ -111,7 +113,7 @@ void AHCI::initialize_port(size_t index)
         SET_DWORDS_TO_ADDRESS(command.command_table_base_address, command.command_table_base_address_upper, page);
     }
 
-    // NOTE: we *have* to reset after we set both fis & command list registers,
+    // NOTE: we have to reset *after* we set both fis & command list registers,
     //       otherwise the port will not be able to send an init D2H to retrieve
     //       the signature & other info
     reset_port(index);
@@ -122,6 +124,7 @@ void AHCI::initialize_port(size_t index)
     port_write(index, cmd);
 
     m_hba->ports[index].error = 0xFFFFFFFF;
+    m_hba->ports[index].interrupt_enable = 0xFFFFFFFF;
 
     port.type = type_of_port(index);
 
@@ -187,6 +190,7 @@ void AHCI::identify_sata_port(size_t index)
 
     auto& prdt_0 = command_table_0->prdts[0];
     prdt_0.byte_count = 511; // FIXME: unmagic
+    prdt_0.interrupt_on_completion = true;
 
     SET_DWORDS_TO_ADDRESS(prdt_0.data_base, prdt_0.data_upper, identify_base);
 
@@ -316,7 +320,7 @@ void AHCI::autodetect(const DynamicArray<PCI::DeviceInfo>& devices)
             continue;
 
         log() << "AHCI: detected a new controller -> " << device;
-        new AHCI(device.location);
+        new AHCI(device);
     }
 }
 

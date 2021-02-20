@@ -134,8 +134,8 @@ bool ACPI::verify_checksum(Address virtual_address, size_t length)
 
 ACPI::TableInfo* ACPI::get_table_info(StringView signature)
 {
-    auto it = linear_search(m_tables.begin(), m_tables.end(), signature,
-        [](const TableInfo& ti, StringView signature) {
+    auto it = linear_search_for(m_tables.begin(), m_tables.end(),
+        [&signature](const TableInfo& ti) {
             return ti.name == signature;
         });
 
@@ -269,9 +269,11 @@ SMPData* ACPI::generate_smp_data()
             for (auto& nmi_entry : lapic_uid_to_nmi) {
                 auto& lapics = smp_info->lapics;
 
-                auto lapic = linear_search(lapics.begin(), lapics.end(), nmi_entry.first(),
-                    [](const LAPICInfo& info, u8 acpi_uid) {
-                        return info.acpi_uid == acpi_uid;
+                auto uid = nmi_entry.first();
+
+                auto lapic = linear_search_for(lapics.begin(), lapics.end(),
+                    [uid](const LAPICInfo& info) {
+                        return info.acpi_uid == uid;
                     });
 
                 // You may think that this is an error, but it's actually not.

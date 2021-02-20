@@ -30,8 +30,8 @@ MMIOAccess::MMIOAccess()
 
 Address MMIOAccess::physical_base_for(PCI::Location location) const
 {
-    auto space = linear_search(m_config_spaces.begin(), m_config_spaces.end(), location,
-        [](const ConfigurationSpaceInfo& config_info, const PCI::Location& location) {
+    auto space = linear_search_for(m_config_spaces.begin(), m_config_spaces.end(),
+        [&location](const ConfigurationSpaceInfo& config_info) {
             return config_info.segment_group_number == location.segment && location.bus >= config_info.first_bus && location.bus <= config_info.last_bus;
         });
 
@@ -52,8 +52,8 @@ Address MMIOAccess::physical_base_for(PCI::Location location) const
 Address MMIOAccess::virtual_address_for(PCI::Location location) const
 {
 #ifdef ULTRA_32
-    auto mapping = linear_search(m_cached_mappings.begin(), m_cached_mappings.end(), location,
-        [](const CachedDeviceMapping& mapping, const PCI::Location& location) {
+    auto mapping = linear_search_for(m_cached_mappings.begin(), m_cached_mappings.end(),
+        [&location](const CachedDeviceMapping& mapping) {
             return mapping.location == location;
         });
 
@@ -153,17 +153,38 @@ void MMIOAccess::DeviceEnumerator::enumerate_function(u8 bus, u8 device, u8 func
         log() << "PCIe: detected subordinate bus " << subordinate_bus;
         enumerate_bus(subordinate_bus);
     } else {
-        PCI::DeviceInfo device;
+        auto& device = m_found_devices.emplace();
         device.location = location;
         device.device_id = read16(PCI::device_id_offset);
         device.vendor_id = read16(PCI::vendor_id_offset);
         device.class_code = device_class;
         device.subclass_code = device_subclass;
         device.programming_interface = read8(PCI::programming_interface_offset);
-        m_found_devices.append(device);
+        enumerate_capabilities(device);
         log() << "PCIe: detected device " << device;
     }
-};
+}
+
+void MMIOAccess::DeviceEnumerator::enumerate_capabilities(PCI::DeviceInfo& device)
+{
+    auto status_register = read16(PCI::status_register_offset);
+
+    static constexpr u16 capabilities_bit = SET_BIT(4);
+
+    if (!(status_register & capabilities_bit)) {
+        log("PCIe") << "no capabilities for device " << device;
+        return;
+    }
+
+    auto capability_offset = read8(PCI::capability_pointer_offset);
+
+    while (capability_offset) {
+        auto value = read16(capability_offset);
+        auto& cap = device.capabilities.append({ static_cast<PCI::DeviceInfo::Capability::ID>(value & 0xFF), capability_offset });
+        capability_offset = value >> 8;
+        log("PCIe") << "device " << device << " capability \"" << cap.id_to_string() << "\"";
+    }
+}
 
 void MMIOAccess::DeviceEnumerator::enumerate_device(u8 bus, u8 device)
 {

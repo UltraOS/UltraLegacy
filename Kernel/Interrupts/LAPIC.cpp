@@ -46,8 +46,10 @@ void LAPIC::initialize_for_this_processor()
 
     auto& smp_data = InterruptController::smp_data();
 
-    auto my_info = linear_search(smp_data.lapics.begin(), smp_data.lapics.end(), my_id(),
-        [](const LAPICInfo& info, u32 id) {
+    auto id = my_id();
+
+    auto my_info = linear_search_for(smp_data.lapics.begin(), smp_data.lapics.end(),
+        [&id](const LAPICInfo& info) {
             return info.id == id;
         });
 

@@ -143,21 +143,21 @@ ItrT binary_search(ItrT begin, ItrT end, const U& value, Comparator comparator =
     return result == end ? result : (comparator(value, *result) ? end : result);
 }
 
-template <typename ItrT, typename U>
-ItrT linear_search(ItrT begin, ItrT end, const U& value)
-{
-    return linear_search(begin, end, value, [](decltype(*begin) l, const U& r) { return l == r; });
-}
-
-template <typename ItrT, typename U, typename Pred>
-ItrT linear_search(ItrT begin, ItrT end, const U& value, Pred predicate)
+template <typename ItrT, typename Pred>
+ItrT linear_search_for(ItrT begin, ItrT end, Pred predicate)
 {
     for (auto itr = begin; itr != end; ++itr) {
-        if (predicate(*itr, value))
+        if (predicate(*itr))
             return itr;
     }
 
     return end;
+}
+
+template <typename ItrT, typename U>
+ItrT linear_search(ItrT begin, ItrT end, const U& value)
+{
+    return linear_search_for(begin, end, [&value](decltype(*begin) cont_val) { return cont_val == value; });
 }
 
 template <typename T, typename Comparator = Less<T>>

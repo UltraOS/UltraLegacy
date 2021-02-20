@@ -14,6 +14,7 @@ public:
     static constexpr u32 vendor_id_offset = 0x0;
     static constexpr u32 device_id_offset = 0x2;
     static constexpr u32 command_register_offset = 0x4;
+    static constexpr u32 status_register_offset = 0x6;
     static constexpr u32 base_bar_offset = 0x10;
     static constexpr u16 invalid_vendor = 0xFFFF;
     static constexpr u32 header_type_offset = 0xE;
@@ -21,6 +22,7 @@ public:
     static constexpr u32 subclass_offset = 0xA;
     static constexpr u32 class_offset = 0xB;
     static constexpr u32 subordinate_bus_offset = 0x1A;
+    static constexpr u32 capability_pointer_offset = 0x34;
 
     static constexpr u8 bridge_device_class = 0x6;
     static constexpr u8 pci_to_pci_bridge_subclass = 0x4;
@@ -56,6 +58,83 @@ public:
         u8 subclass_code;
         u8 programming_interface;
 
+        struct Capability {
+            enum class ID : u8 {
+                PCI_POWER_MANAGEMENT_INTERFACE = 0x01,
+                ACCELERATED_GRAPHICS_PORT = 0x02,
+                VITAL_PRODUCT_DATA = 0x03,
+                SLOT_IDENTIFICATION = 0x04,
+                MESSAGE_SIGNALED_INTERRUPTS = 0x05,
+                COMPACT_PCI_HOT_SWAP = 0x06,
+                PCI_X = 0x07,
+                HYPER_TRANSPORT = 0x08,
+                VENDOR_SPECIFIC = 0x09,
+                DEBUG_PORT = 0x0A,
+                COMPACT_PCI = 0x0B,
+                PCI_HOT_PLUG = 0x0C,
+                ACCELERATED_GRAPHICS_PORT_8X = 0x0E,
+                SECURE_DEVICE = 0x0F,
+                PCI_EXPRESS = 0x10,
+                MESSAGE_SIGNALED_INTERRUPTS_EXTENDED = 0x11,
+                SATA_DATA_CONFIGURATION = 0x12,
+                ADVANCED_FEATURES = 0x13,
+                ENHANCED_ALLOCATION = 0x14,
+                FLATTENING_PORTAL_BRIDGE = 0x15
+            } id;
+            
+            StringView id_to_string() const
+            {
+                switch (id) {
+                case ID::PCI_POWER_MANAGEMENT_INTERFACE:
+                    return "PCI Power Management Interface"_sv;
+                case ID::ACCELERATED_GRAPHICS_PORT:
+                    return "Accelerated Graphics Port"_sv;
+                case ID::VITAL_PRODUCT_DATA:
+                    return "Vital Product Data"_sv;
+                case ID::SLOT_IDENTIFICATION:
+                    return "Slot Identification"_sv;
+                case ID::MESSAGE_SIGNALED_INTERRUPTS:
+                    return "Message Signaled Interrupts"_sv;
+                case ID::COMPACT_PCI_HOT_SWAP:
+                    return "Compact PCI Hot Swap"_sv;
+                case ID::PCI_X:
+                    return "PCI-X"_sv;
+                case ID::HYPER_TRANSPORT:
+                    return "HyperTransport"_sv;
+                case ID::VENDOR_SPECIFIC:
+                    return "<Vendor Specific>"_sv;
+                case ID::DEBUG_PORT:
+                    return "Debug Port"_sv;
+                case ID::COMPACT_PCI:
+                    return "Compact PCI"_sv;
+                case ID::PCI_HOT_PLUG:
+                    return "PCI Hot Plug"_sv;
+                case ID::ACCELERATED_GRAPHICS_PORT_8X:
+                    return "Accelerated Graphics Port 8x"_sv;
+                case ID::SECURE_DEVICE:
+                    return "Secure Device"_sv;
+                case ID::PCI_EXPRESS:
+                    return "PCI Express"_sv;
+                case ID::MESSAGE_SIGNALED_INTERRUPTS_EXTENDED:
+                    return "Message Signaled Interrupts Extended";
+                case ID::SATA_DATA_CONFIGURATION:
+                    return "Sata Data/Index Configuration"_sv;
+                case ID::ADVANCED_FEATURES:
+                    return "Advanced Features"_sv;
+                case ID::ENHANCED_ALLOCATION:
+                    return "Enhanced Allocation"_sv;
+                case ID::FLATTENING_PORTAL_BRIDGE:
+                    return "Flattening Portal Bridge"_sv;
+                default:
+                    return "Unknown"_sv;
+                }
+            }
+            
+            u8 offset;
+        };
+
+        DynamicArray<Capability> capabilities;
+
         template <typename LoggerT>
         friend LoggerT&& operator<<(LoggerT&& logger, const DeviceInfo& device)
         {
@@ -90,25 +169,28 @@ public:
         struct BAR {
             enum class Type {
                 IO,
-                MEMORY
+                MEMORY,
+                NOT_PRESENT
             } type;
 
             Address address;
         };
 
-        Device(Location);
+        Device(const DeviceInfo&);
 
-        const Location& location() const { return m_location; }
+        const DeviceInfo& pci_device_info() { return m_info; }
+        const Location& location() const { return m_info.location; }
 
         BAR bar(u8);
 
         void make_bus_master();
         void enable_memory_space();
         void enable_io_space();
+        void enable_msi(u16 vector);
         void clear_interrupts_disabled();
 
     private:
-        Location m_location;
+        DeviceInfo m_info;
     };
 
 private:

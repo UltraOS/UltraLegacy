@@ -46,6 +46,7 @@ public:
         void enumerate_function(u8 bus, u8 device, u8 function);
         void enumerate_device(u8 bus, u8 device);
         void enumerate_bus(u8 bus);
+        void enumerate_capabilities(PCI::DeviceInfo&);
 
         Address virtual_base() const;
         void remap_base_for_device(PCI::Location);

@@ -100,7 +100,11 @@ Timer& Timer::get_specific(Type type)
 {
     LOCK_GUARD(s_lock);
 
-    auto timer = linear_search(s_timers.begin(), s_timers.end(), type, [](const Timer* l, Timer::Type r) { return l->type() == r; });
+    auto timer = linear_search_for(s_timers.begin(), s_timers.end(),
+                               [&type](const Timer* timer)
+                               {
+                                    return timer->type() == type;
+                               });
 
     if (timer != s_timers.end())
         return **timer;
