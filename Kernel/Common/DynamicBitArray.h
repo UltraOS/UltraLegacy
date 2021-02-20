@@ -56,6 +56,21 @@ public:
         return {};
     }
 
+    Optional<size_t> find_bit_starting_at_offset(bool of_value, size_t offset) const
+    {
+        ASSERT(offset < m_bit_count);
+
+        for (size_t index = offset; index < m_bit_count; ++index)
+        {
+            auto loc = location_of_bit(index);
+
+            if ((m_bits[loc.first()] & SET_BIT(loc.second())) == of_value)
+                return index;
+        }
+
+        return {};
+    }
+
     Optional<size_t> find_range(size_t length, bool of_value) const
     {
         size_t contiguous_bits = 0;

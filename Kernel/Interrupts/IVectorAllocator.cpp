@@ -29,9 +29,9 @@ u16 IVectorAllocator::allocate_vector()
 {
     static constexpr size_t allocation_base = legacy_irq_base + legacy_irq_count;
 
-    auto bit = m_allocation_map.find_bit(false, allocation_base);
+    auto bit = m_allocation_map.find_bit_starting_at_offset(false, allocation_base);
     ASSERT(bit.has_value());
-    ASSERT(bit.value() < allocation_base);
+    ASSERT(bit.value() >= allocation_base);
 
     m_allocation_map.set_bit(bit.value(), true);
 

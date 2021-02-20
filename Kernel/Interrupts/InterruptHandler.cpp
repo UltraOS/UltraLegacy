@@ -23,7 +23,7 @@ MonoInterruptHandler::MonoInterruptHandler(u16 vector, bool user_callable)
         m_vector = IVectorAllocator::the().allocate_vector();
     else {
         m_vector = vector;
-        IVectorAllocator::the().allocate_vector();
+        IVectorAllocator::the().allocate_vector(vector);
     }
 
     InterruptManager::register_handler(*this);
