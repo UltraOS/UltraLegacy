@@ -464,6 +464,93 @@ public:
         SET_DEVICE_BITS = 0xA1,
     };
 
+    enum class ATACommand : u8 {
+        CFA_ERASE_SECTORS = 0xC0,
+        CFA_REQUEST_EXTENDED_ERROR_CODE = 0x03,
+        CFA_TRANSLATE_SECTOR = 0x87,
+        CFA_WRITE_MULTIPLE_WITHOUT_ERASE = 0xCD,
+        CFA_WRITE_SECTORS_WITHOUT_ERASE = 0x38,
+        CHECK_MEDIA_CARD_TYPE = 0xD1,
+        CHECK_POWER_MODE = 0xE5,
+        CONFIGURE_STREAM = 0x51,
+        DEVICE_CONFIGURATION = 0xB1, // feature reg = 0xC0
+        DEVICE_CONFIGURATION_FREEZE_LOCK = 0xB1, // feature reg = 0xC1
+        DEVICE_CONFIGURATION_IDENTITY = 0xB1, // feature reg = 0xC2
+        DEVICE_CONFIGURATION_SET = 0xB1, // feature reg = 0xC3
+        DEVICE_RESET = 0x08,
+        DOWNLOAD_MICROCODE = 0x92,
+        EXECUTE_DEVICE_DIAGNOSTICS = 0x90,
+        FLUSH_CACHE = 0xE7,
+        FLUSH_CACHE_EXT = 0xEA,
+        GET_MEDIA_STATUS = 0xDA,
+        IDENTIFY_DEVICE = 0xEC,
+        IDENTIFY_PACKET_DEVICE = 0xA1,
+        IDLE = 0xE3,
+        IDLE_IMMEDIATE = 0xE1,
+        MEDIA_EJECT = 0xED,
+        MEDIA_LOCK = 0xDE,
+        MEDIA_UNLOCK = 0xDF,
+        NOP = 0x00,
+        PACKET = 0xA0,
+        READ_BUFFER = 0xE4,
+        READ_DMA = 0xC8,
+        READ_DMA_EXT = 0x25,
+        READ_DMA_QUEUED = 0xC7,
+        READ_DMA_QUEUED_EXT = 0x26,
+        READ_LOG_EXT = 0x2F,
+        READ_MULTIPLE = 0xC4,
+        READ_MULTIPLE_EXIT = 0x29,
+        READ_NATIVE_MAX_ADDRESS = 0xF8,
+        READ_NATIVE_MAX_ADDRESS_EXT = 0x27,
+        READ_SECTORS = 0x20,
+        READ_SECTORS_EXT = 0x24,
+        READ_STREAM_DMA_EXT = 0x2A,
+        READ_STREAM_EXT = 0x2B,
+        READ_VERIFY_SECTORS = 0x40,
+        READ_VERIFY_SECTORS_EXT = 0x42,
+        SECURITY_DISABLE_PASSWORD = 0xF6,
+        SECURITY_ERASE_PREPARE = 0xF3,
+        SECURITY_ERASE_UNIT = 0xF4,
+        SECURITY_FREEZE_LOCK = 0xF5,
+        SECURITY_SET_PASSWORD = 0xF1,
+        SECURITY_UNLOCK = 0xF2,
+        SERVICE = 0xA2,
+        SET_FEATURES = 0xEF,
+        SET_MAX_ADDRESS = 0xF9,
+        SET_MAX_SET_PASSWORD = 0xF9, // feature reg = 0x01
+        SET_MAX_LOCK = 0xF9, // feature reg = 0x02
+        SET_MAX_UNLOCK = 0xF9, // feature reg = 0x03
+        SET_MAX_FREEZE_LOCK = 0xF9, // feature reg = 0x04
+        SET_MAX_ADDRESS_EXT = 0x37,
+        SET_MULTIPLE_MODE = 0xC6,
+        SLEEP = 0xE6,
+        SMART_DISABLE_OPERATIONS = 0xB0, // feature reg = 0xD9
+        SMART_ENABLE_DISABLE_AUTOSAVE = 0xB0, // feature reg = 0xD2
+        SMART_ENABLE_OPERATIONS = 0xB0, // feature reg = 0xD8
+        SMART_EXECUTE_OFFLINE_IMMEDIATE = 0xB0, // feature reg = 0xD4
+        SMART_READ_DATA = 0xB0, // feature reg = 0xD0
+        SMART_READ_LOG = 0xB0, // feature reg = 0xD5
+        SMART_RETURN_STATUS = 0xB0, // feature reg = 0xDA
+        SMART_WRITE_LOG = 0xB0, // feature reg = 0xD6
+        STANDBY = 0xE2,
+        STANDBY_IMMEDIATE = 0xE0,
+        WRITE_BUFFER = 0xE8,
+        WRITE_DMA = 0xCA,
+        WRITE_DMA_EXT = 0x35,
+        WRITE_DMA_FUA_EXT = 0x3D,
+        WRITE_DMA_QUEUED = 0xCC,
+        WRITE_DMA_QUEUED_EXIT = 0x36,
+        WRITE_DMA_QUEUED_FUA_EXT = 0x3E,
+        WRITE_LOG_EXT = 0x3F,
+        WRITE_MULTIPLE = 0xC5,
+        WRITE_MULTIPLE_EXT = 0x39,
+        WRITE_MULTIPLE_FUA_EXT = 0xCE,
+        WRITE_SECTORS = 0x30,
+        WRITE_SECTORS_EXT = 0x34,
+        WRITE_STREAM_DMA_EXT = 0x3A,
+        WRITE_STREAM_EXT = 0x3B,
+    };
+
     struct PACKED FISHostToDevice {
         FISType type = native_type;
 
@@ -471,7 +558,7 @@ public:
         u8 reserved_1 : 3;
         u8 is_command : 1;
 
-        u8 command_register;
+        ATACommand command_register;
         u8 feature_lower;
 
         u8 lba_1;
@@ -681,8 +768,18 @@ public:
 
         DynamicBitArray slot_map;
 
-        size_t lba_size;
-        size_t lba_count;
+        size_t logical_sector_size;
+        size_t physical_sector_size;
+        u64 lba_count;
+        bool supports_48bit_lba;
+
+        u16 ata_major;
+        u16 ata_minor;
+
+        u8 lba_offset_into_physical_sector;
+
+        String serial_number;
+        String model_string;
     };
 
 private:
@@ -696,8 +793,8 @@ private:
     void initialize_port(size_t index);
     void ensure_port_is_idle(size_t index);
     void identify_sata_port(size_t index);
-
-    void handle_irq(RegisterState&) override { log("AHCI") << "GOT IRQ " << format::as_hex << m_hba->ports[0].interrupt_status; }
+    
+    void handle_irq(RegisterState&) override;
     void enable_irq() override { ASSERT_NEVER_REACHED(); }
     void disable_irq() override { ASSERT_NEVER_REACHED(); }
 

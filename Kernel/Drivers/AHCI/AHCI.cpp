@@ -124,7 +124,6 @@ void AHCI::initialize_port(size_t index)
     port_write(index, cmd);
 
     m_hba->ports[index].error = 0xFFFFFFFF;
-    m_hba->ports[index].interrupt_enable = 0xFFFFFFFF;
 
     port.type = type_of_port(index);
 
@@ -137,8 +136,14 @@ void AHCI::initialize_port(size_t index)
     } else {
         log("AHCI") << "detected device of type \"" << port.type_to_string() << "\" on port " << index;
     }
-
+    
     identify_sata_port(index);
+
+    // Clear all previously issued interrupts
+    m_hba->ports[index].interrupt_status = 0xFFFFFFFF;
+
+    // Enable all interrupts
+    m_hba->ports[index].interrupt_enable = 0xFFFFFFFF;
 
     log() << "AHCI: successfully intitialized port " << index;
 }
@@ -170,11 +175,32 @@ void AHCI::ensure_port_is_idle(size_t index)
     log() << "AHCI: succesfully set port " << index << " to idle state";
 }
 
-// FIXME: very raw impl
+void AHCI::handle_irq(RegisterState&)
+{
+    volatile auto port_status = m_hba->interrupt_pending_status;
+    m_hba->interrupt_pending_status = port_status;
+
+    for (size_t i = 0; i < 32; ++i) {
+        if (!IS_BIT_SET(port_status, i))
+            continue;
+
+        auto port_status = port_read<PortInterruptStatus>(i);
+        port_write(i, port_status);
+
+        u32 x;
+        copy_memory(&port_status, &x, 4);
+
+        log("AHCI") << "got an irq for port " << i << " status=" << x;
+    }
+}
+
 void AHCI::identify_sata_port(size_t index)
 {
+    static constexpr u8 command_slot_for_identify = 0;
+    static constexpr u32 identify_command_buffer_size = 512;
+
     auto& port = m_ports[index];
-    auto& command_header_0 = port.command_list->commands[0];
+    auto& command_header_0 = port.command_list->commands[command_slot_for_identify];
     Address identify_base = allocate_safe_page();
 
     Address command_table_0_phys = ADDRESS_FROM_TWO_DWORDS(command_header_0.command_table_base_address, command_header_0.command_table_base_address_upper);
@@ -184,35 +210,124 @@ void AHCI::identify_sata_port(size_t index)
     command_header_0.command_fis_length = FISHostToDevice::size_in_dwords;
 
     FISHostToDevice fis {};
-    fis.command_register = 0xEC; // FIXME: unmagic this number
+    fis.command_register = ATACommand::IDENTIFY_DEVICE;
     fis.is_command = true;
     copy_memory(&fis, command_table_0->command_fis, sizeof(fis));
 
     auto& prdt_0 = command_table_0->prdts[0];
-    prdt_0.byte_count = 511; // FIXME: unmagic
-    prdt_0.interrupt_on_completion = true;
+    prdt_0.byte_count = identify_command_buffer_size - 1;
 
     SET_DWORDS_TO_ADDRESS(prdt_0.data_base, prdt_0.data_upper, identify_base);
 
-    m_hba->ports[index].command_issue = 1;
+    m_hba->ports[index].command_issue = (1 << command_slot_for_identify);
 
-    while (m_hba->ports[index].command_issue & 1) {
-        // TODO: handler errors
+    // TODO: handle errors
+    while (m_hba->ports[index].command_issue & (1 << command_slot_for_identify));
+
+    auto convert_ata_string = [](String& ata)
+    {
+        for (size_t i = 0; i < ata.size() ; i+= 2)
+            swap(ata[i], ata[i + 1]);
+    };
+
+    auto mapping = TypedMapping<u16>::create("ATA Identify"_sv, identify_base, identify_command_buffer_size);
+    u16* data = mapping.get();
+
+    static constexpr size_t serial_number_offset = 10;
+    static constexpr size_t serial_number_size = 10;
+
+    static constexpr size_t model_number_offset = 27;
+    static constexpr size_t model_number_size = 40;
+
+    static constexpr size_t major_version_offset = 80;
+    static constexpr size_t minor_version_offset = 81;
+
+    static constexpr size_t lba_48bit_support_bit = SET_BIT(10);
+    static constexpr size_t command_and_feature_set_1_offset = 83;
+    static constexpr size_t command_and_features_set_2_offset = 86;
+
+    static constexpr size_t lba_offset = 60;
+    static constexpr size_t lba48_offset = 100;
+
+    static constexpr size_t sector_info_offset = 106;
+
+    port.model_string = StringView(reinterpret_cast<char*>(&data[model_number_offset]), model_number_size);
+    convert_ata_string(port.model_string);
+
+    port.serial_number = StringView(reinterpret_cast<char*>(&data[serial_number_offset]), serial_number_size);
+    convert_ata_string(port.serial_number);
+
+    port.ata_major = data[major_version_offset];
+    port.ata_minor = data[minor_version_offset];
+
+    log("AHCI") << "ata version " << port.ata_major << ":" << port.ata_minor;
+    log("AHCI") << "model \"" << port.model_string.c_string() << "\"";
+    log("AHCI") << "serial number \"" << port.serial_number.c_string() << "\"";
+
+    auto command_and_features = data[command_and_feature_set_1_offset];
+
+    // As per ATA/ATAPI specification: "If bit 14 of word 83 is set to one and bit 15 of word 83
+    // is cleared to zero, then the contents of words 82..83 contain valid support information."
+    if (IS_BIT_SET(command_and_features, 14) && !IS_BIT_SET(command_and_features, 15)) {
+        port.supports_48bit_lba = command_and_features & lba_48bit_support_bit;
     }
 
-    auto mapping = TypedMapping<u16>::create("ATA Identify"_sv, identify_base, 512);
-    auto* data = mapping.get();
+    if (!port.supports_48bit_lba) {
+        // As per ATA/ATAPI specification: "if bit 14 of word 87 is set to one and bit 15 of word
+        // 87 is cleared to zero, then the contents of words 85..87 contain valid information.
+        auto word_87 = data[87];
 
-    info() << "Non-zero ATA Identify words:";
-
-    for (size_t i = 0; i < 512; ++i) {
-        if (data[i] == 0)
-            continue;
-
-        info() << format::as_hex << data[i];
+        if (IS_BIT_SET(word_87, 14) && !IS_BIT_SET(word_87, 15)) {
+            command_and_features = data[command_and_features_set_2_offset];
+            port.supports_48bit_lba = command_and_features & lba_48bit_support_bit;
+        }
     }
 
-    // TODO: record useful fields
+    if (port.supports_48bit_lba) {
+        copy_memory(&data[lba48_offset], &port.lba_count, 8);
+    } else {
+        copy_memory(&data[lba_offset], &port.lba_count, 4);
+    }
+
+    log("AHCI") << "drive lba count " << port.lba_count << " supports 48-bit lba? " << port.supports_48bit_lba;
+
+    // defaults are 256 words per sector
+    port.logical_sector_size = 512;
+    port.physical_sector_size = 512;
+
+    u16 sector_info = data[sector_info_offset];
+
+    // As per ATA/ATAPI specification: If bit 14 of word 106 is set to one and bit 15 of word 106
+    // is cleared to zero, then the contents of word 106 contain valid information.
+    if (IS_BIT_SET(sector_info, 14) && !IS_BIT_SET(sector_info, 15)) {
+        static constexpr size_t multiple_logical_sectors_per_physical_bit = SET_BIT(13);
+        static constexpr size_t logical_sector_greater_than_256_words_bit = SET_BIT(12);
+        static constexpr size_t power_of_2_logical_sectors_per_physical_mask = 0b1111;
+
+        size_t logical_sectors_per_physical = 1;
+
+        if (sector_info & multiple_logical_sectors_per_physical_bit)
+            logical_sectors_per_physical = 1 << (sector_info & power_of_2_logical_sectors_per_physical_mask);
+
+        if (sector_info & logical_sector_greater_than_256_words_bit) {
+            static constexpr size_t logical_sector_size_offset = 117;
+            copy_memory(&data[logical_sector_size_offset], &port.logical_sector_size, 4);
+        }
+
+        port.physical_sector_size = port.logical_sector_size * logical_sectors_per_physical;
+
+        if (port.logical_sector_size == 512 && port.physical_sector_size != 512) {
+            static constexpr size_t alignment_info_offset = 209;
+            static constexpr size_t alignment_offset_mask = 0b11111111111111;
+
+            auto alignment_info = data[alignment_info_offset];
+            port.lba_offset_into_physical_sector = port.logical_sector_size * (alignment_info & alignment_offset_mask);
+        }
+    }
+    
+    log("AHCI") << "physical sector size: " << port.physical_sector_size;
+    log("AHCI") << "logical sector size: " << port.logical_sector_size;
+    log("AHCI") << "lba offset into physical: " << port.lba_offset_into_physical_sector;
 
     MemoryManager::the().free_page(Page(identify_base));
 }
