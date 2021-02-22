@@ -152,6 +152,55 @@ public:
         u8 task_file_error_status : 1;
         u8 cold_port_detect_status : 1;
 
+        bool contains_errors()
+        {
+            bool error =
+                    cold_port_detect_status ||
+                    task_file_error_status ||
+                    host_bus_fatal_error_status ||
+                    host_bus_data_error_status ||
+                    interface_fatal_error_status ||
+                    interface_non_fatal_error_status ||
+                    overflow_status ||
+                    incorrect_port_multiplier_status ||
+                    phyrdy_change_status ||
+                    device_mechanical_presence_status ||
+                    port_connect_change_status ||
+                    unknown_fis_interrupt;
+
+            return error;
+        }
+
+        StringView error_string()
+        {
+            if (cold_port_detect_status)
+                return "Cold presence detection status change"_sv;
+            if (task_file_error_status)
+                return "Task file error"_sv;
+            if (host_bus_fatal_error_status)
+                return "Host bus fatal error"_sv;
+            if (host_bus_data_error_status)
+                return "Host bus data error"_sv;
+            if (interface_fatal_error_status)
+                return "Interface fatal error"_sv;
+            if (interface_non_fatal_error_status)
+                return "Interface non-fatal error"_sv;
+            if (overflow_status)
+                return "Data overflow"_sv;
+            if (incorrect_port_multiplier_status)
+                return "Incorrect port multiplier"_sv;
+            if (phyrdy_change_status)
+                return "Physical layer state changed"_sv;
+            if (device_mechanical_presence_status)
+                return "Device mechanical presence changed"_sv;
+            if (port_connect_change_status)
+                return "Port connection changed status"_sv;
+            if (unknown_fis_interrupt)
+                return "Unknown FIS interrupt"_sv;
+
+            return "<Unknown or no error>";
+        }
+
         static constexpr size_t offset = 0x10;
     };
 
@@ -193,7 +242,7 @@ public:
         u8 cold_presence_state : 1;
         u8 port_multiplier_attached : 1;
         u8 hot_plug_capable_port : 1;
-        u8 mechanical_presence_swtich_attached_to_port : 1;
+        u8 mechanical_presence_switch_attached_to_port : 1;
         u8 cold_presence_detection : 1;
         u8 external_sata_port : 1;
         u8 fis_base_switching_capable_port : 1;
@@ -292,7 +341,7 @@ public:
         } transitions_allowed : 4;
 
         u8 select_power_management : 4;
-        u8 port_multipler_port : 4;
+        u8 port_multiplier_port : 4;
         u32 reserved : 12;
 
         static constexpr size_t offset = 0x2C;
@@ -303,14 +352,14 @@ public:
             RECOVERED_DATA_INTEGRITY_ERROR = SET_BIT(0),
             RECOVERED_COMMUNICATIONS_ERROR = SET_BIT(1),
             TRANSIENT_DATA_INTEGRITY_ERROR = SET_BIT(8),
-            PERSISTENT_COMMUNICATION_OR_DATA_INTERGRITY_ERROR = SET_BIT(9),
+            PERSISTENT_COMMUNICATION_OR_DATA_INTEGRITY_ERROR = SET_BIT(9),
             PROTOCOL_ERROR = SET_BIT(10),
             INTERNAL_ERROR = SET_BIT(11)
         } code;
 
         enum class Diagnostics : u16 {
             PHY_RDY_CHANGE = SET_BIT(1),
-            PHY_RDY_INTERNAL_ERORR = SET_BIT(2),
+            PHY_RDY_INTERNAL_ERROR = SET_BIT(2),
             COMM_WAKE = SET_BIT(3),
             DECODE_ERROR = SET_BIT(4),
             DISPARITY_ERROR = SET_BIT(5),
@@ -763,6 +812,7 @@ public:
         }
 
         bool implemented;
+        bool has_device_attached;
 
         TypedMapping<CommandList> command_list;
 
@@ -780,6 +830,16 @@ public:
 
         String serial_number;
         String model_string;
+
+        Optional<size_t> allocate_slot()
+        {
+            auto slot = slot_map.find_bit(false);
+
+            if (slot.has_value())
+                slot_map.set_bit(slot.value(), true);
+
+            return slot;
+        }
     };
 
 private:
@@ -791,8 +851,14 @@ private:
     bool port_has_device_attached(size_t index);
     void reset_port(size_t index);
     void initialize_port(size_t index);
-    void ensure_port_is_idle(size_t index);
+    void disable_dma_engines_for_all_ports();
+    void disable_dma_engines_for_port(size_t index);
+    void enable_dma_engines_for_port(size_t index);
     void identify_sata_port(size_t index);
+
+    void synchronous_complete_command(size_t port, size_t slot);
+
+    void panic_if_port_error(PortInterruptStatus);
     
     void handle_irq(RegisterState&) override;
     void enable_irq() override { ASSERT_NEVER_REACHED(); }

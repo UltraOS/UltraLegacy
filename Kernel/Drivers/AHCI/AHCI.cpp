@@ -2,6 +2,7 @@
 #include "Common/Logger.h"
 #include "Drivers/PCI/Access.h"
 #include "Interrupts/Timer.h"
+#include "Multitasking/Sleep.h"
 
 #ifdef ULTRA_32
 
@@ -28,10 +29,11 @@ AHCI::AHCI(const PCI::DeviceInfo& info)
     ASSERT(bar_5.type == BAR::Type::MEMORY);
     m_hba = TypedMapping<volatile HBA>::create("AHCI HBA"_sv, bar_5.address);
 
-    // We have to enable AHCI before touching any AHCI port
+    // We have to enable AHCI before touching any AHCI registers
     enable_ahci();
 
     perform_bios_handoff();
+    disable_dma_engines_for_all_ports();
     hba_reset();
 
     auto ghc = hba_read<GHC>();
@@ -48,6 +50,18 @@ AHCI::AHCI(const PCI::DeviceInfo& info)
     log("AHCI") << "detected " << m_command_slots_per_port << " command slots per port";
 
     initialize_ports();
+}
+
+void AHCI::disable_dma_engines_for_all_ports()
+{
+    auto implemented_ports = m_hba->ports_implemented;
+
+    for (size_t i = 0; i < 32; ++i) {
+        if (!(implemented_ports & SET_BIT(i)))
+            continue;
+
+        disable_dma_engines_for_port(i);
+    }
 }
 
 void AHCI::initialize_ports()
@@ -68,8 +82,8 @@ void AHCI::initialize_ports()
 bool AHCI::port_has_device_attached(size_t index) {
     auto status = port_read<PortSATAStatus>(index);
 
-    return !(status.power_management != PortSATAStatus::InterfacePowerManagement::INTERFACE_ACTIVE ||
-             status.device_detection != PortSATAStatus::DeviceDetection::DEVICE_PRESENT_PHY);
+    return status.power_management == PortSATAStatus::InterfacePowerManagement::INTERFACE_ACTIVE &&
+           status.device_detection == PortSATAStatus::DeviceDetection::DEVICE_PRESENT_PHY;
 }
 
 AHCI::Port::Type AHCI::type_of_port(size_t index)
@@ -92,9 +106,10 @@ void AHCI::initialize_port(size_t index)
     if (!port_has_device_attached(index))
         return;
 
-    ensure_port_is_idle(index);
+    disable_dma_engines_for_port(index);
 
     auto& port = m_ports[index];
+    port.has_device_attached = true;
 
     auto command_list_page = allocate_safe_page();
     auto base_fis_page = allocate_safe_page();
@@ -113,17 +128,14 @@ void AHCI::initialize_port(size_t index)
         SET_DWORDS_TO_ADDRESS(command.command_table_base_address, command.command_table_base_address_upper, page);
     }
 
-    // NOTE: we have to reset *after* we set both fis & command list registers,
+    // NOTE: We have to reset *after* we set both fis & command list registers,
     //       otherwise the port will not be able to send an init D2H to retrieve
     //       the signature & other info
+    // NOTE 2: Not resetting the port after resetting the HBA causes the port to hang
+    //         forever for whatever reason on real hardware
     reset_port(index);
-
-    auto cmd = port_read<PortCommandAndStatus>(index);
-    cmd.fis_receive_enable = true;
-    cmd.start = true;
-    port_write(index, cmd);
-
-    m_hba->ports[index].error = 0xFFFFFFFF;
+    
+    enable_dma_engines_for_port(index);
 
     port.type = type_of_port(index);
 
@@ -136,7 +148,7 @@ void AHCI::initialize_port(size_t index)
     } else {
         log("AHCI") << "detected device of type \"" << port.type_to_string() << "\" on port " << index;
     }
-    
+
     identify_sata_port(index);
 
     // Clear all previously issued interrupts
@@ -148,12 +160,12 @@ void AHCI::initialize_port(size_t index)
     log() << "AHCI: successfully intitialized port " << index;
 }
 
-void AHCI::ensure_port_is_idle(size_t index)
+void AHCI::disable_dma_engines_for_port(size_t index)
 {
     auto cmd = port_read<PortCommandAndStatus>(index);
 
     if (!cmd.start && !cmd.command_list_running && !cmd.fis_receive_enable && !cmd.fis_receive_running) {
-        log("AHCI") << "port " << index << " is already idle";
+        log("AHCI") << "DMA engines for port " << index << " are already off";
         return;
     }
 
@@ -172,7 +184,28 @@ void AHCI::ensure_port_is_idle(size_t index)
     if (cmd.command_list_running || cmd.fis_receive_running)
         runtime::panic("AHCI: a port failed to enter idle state in 500ms");
 
-    log() << "AHCI: succesfully set port " << index << " to idle state";
+    log("AHCI") << "successfully disabled DMA engines for port " << index;
+}
+
+void AHCI::enable_dma_engines_for_port(size_t index)
+{
+    auto cmd = port_read<PortCommandAndStatus>(index);
+    cmd.fis_receive_enable = true;
+    port_write(index, cmd);
+
+    static constexpr size_t port_wait_timeout = 500 * Time::nanoseconds_in_millisecond;
+    auto wait_start_ts = Timer::nanoseconds_since_boot();
+    auto wait_end_ts = wait_start_ts + port_wait_timeout;
+
+    do {
+        cmd = port_read<PortCommandAndStatus>(index);
+    } while (cmd.command_list_running && wait_end_ts > Timer::nanoseconds_since_boot());
+
+    if (cmd.command_list_running)
+        runtime::panic("AHCI: PxCMD.CR failed to enter idle state after 500ms");
+
+    cmd.start = true;
+    port_write(index, cmd);
 }
 
 void AHCI::handle_irq(RegisterState&)
@@ -186,6 +219,8 @@ void AHCI::handle_irq(RegisterState&)
 
         auto port_status = port_read<PortInterruptStatus>(i);
         port_write(i, port_status);
+
+        panic_if_port_error(port_status);
 
         u32 x;
         copy_memory(&port_status, &x, 4);
@@ -219,14 +254,11 @@ void AHCI::identify_sata_port(size_t index)
 
     SET_DWORDS_TO_ADDRESS(prdt_0.data_base, prdt_0.data_upper, identify_base);
 
-    m_hba->ports[index].command_issue = (1 << command_slot_for_identify);
-
-    // TODO: handle errors
-    while (m_hba->ports[index].command_issue & (1 << command_slot_for_identify));
+    synchronous_complete_command(index, command_slot_for_identify);
 
     auto convert_ata_string = [](String& ata)
     {
-        for (size_t i = 0; i < ata.size() ; i+= 2)
+        for (size_t i = 0; i < ata.size() - 1; i+= 2)
             swap(ata[i], ata[i + 1]);
     };
 
@@ -324,12 +356,43 @@ void AHCI::identify_sata_port(size_t index)
             port.lba_offset_into_physical_sector = port.logical_sector_size * (alignment_info & alignment_offset_mask);
         }
     }
-    
+
     log("AHCI") << "physical sector size: " << port.physical_sector_size;
     log("AHCI") << "logical sector size: " << port.logical_sector_size;
     log("AHCI") << "lba offset into physical: " << port.lba_offset_into_physical_sector;
 
     MemoryManager::the().free_page(Page(identify_base));
+}
+
+void AHCI::synchronous_complete_command(size_t port, size_t slot)
+{
+    auto command_bit = 1 << slot;
+
+    m_hba->ports[port].command_issue = command_bit;
+
+    static constexpr size_t max_wait_timeout = Time::nanoseconds_in_millisecond * 500;
+    auto wait_begin = Timer::nanoseconds_since_boot();
+    auto wait_end = wait_begin + max_wait_timeout;
+
+    while (m_hba->ports[port].command_issue & command_bit)
+    {
+        if (wait_end < Timer::nanoseconds_since_boot())
+            break;
+    }
+
+    if (m_hba->ports[port].command_issue & command_bit)
+        runtime::panic("AHCI: command failed to complete within 500ms");
+
+    panic_if_port_error(port_read<PortInterruptStatus>(port));
+}
+
+void AHCI::panic_if_port_error(PortInterruptStatus status)
+{
+    if (!status.contains_errors())
+        return;
+
+    String error_string;
+    error_string << "Encountered an unexpected port error: " << status.error_string();
 }
 
 void AHCI::enable_ahci()
@@ -359,17 +422,33 @@ void AHCI::reset_port(size_t index)
     sctl.device_detection_initialization = PortSATAControl::DeviceDetectionInitialization::NOT_REQUESTED;
     port_write(index, sctl);
 
+    wait_begin = Timer::nanoseconds_since_boot();
+    wait_end = wait_begin + comreset_delivery_wait;
+
     auto ssts = port_read<PortSATAStatus>(index);
 
-    do {
+    while (ssts.device_detection != PortSATAStatus::DeviceDetection::DEVICE_PRESENT_PHY) {
         ssts = port_read<PortSATAStatus>(index);
-    } while (ssts.device_detection != PortSATAStatus::DeviceDetection::DEVICE_PRESENT_PHY);
+
+        if (wait_end < Timer::nanoseconds_since_boot())
+            break;
+    }
+
+    if (ssts.device_detection != PortSATAStatus::DeviceDetection::DEVICE_PRESENT_PHY)
+        runtime::panic("AHCI: Port physical layer failed to come back online after reset");
+
+    // Removing this will cause the driver to break on real hw
+    sleep::for_milliseconds(50);
+
+    m_hba->ports[index].error = 0xFFFFFFFF;
 
     log("AHCI") << "successfully reset port " << index;
 }
 
 void AHCI::hba_reset()
 {
+    bool should_spinup = hba_read<CAP>().supports_staggered_spin_up;
+
     auto ghc = hba_read<GHC>();
     ghc.hba_reset = true;
     hba_write(ghc);
@@ -386,6 +465,25 @@ void AHCI::hba_reset()
         runtime::panic("AHCI: HBA failed to reset after 1 second");
 
     enable_ahci();
+
+    if (should_spinup) {
+        auto pi = m_hba->ports_implemented;
+
+        for (size_t i = 0; i < 32; ++i) {
+            if (!IS_BIT_SET(pi, i))
+                continue;
+
+            auto cas = port_read<PortCommandAndStatus>(i);
+            cas.spinup_device = true;
+            port_write(i, cas);
+
+            sleep::for_milliseconds(50);
+        }
+    } else {
+        // If staggered spin up is not supported the controller automatically spins every port up
+        // So we have to wait for it. I have no idea how to check that it did earlier.
+        sleep::for_milliseconds(50);
+    }
 
     log() << "AHCI: succesfully reset HBA";
 }
