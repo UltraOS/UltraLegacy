@@ -20,7 +20,7 @@ public:
     void set_resolution(u8);
     void set_sample_rate(u8);
 
-    [[nodiscard]] StringView name() const override { return "PS2 Mouse"; }
+    [[nodiscard]] StringView device_name() const override { return "PS2 Mouse"; }
     [[nodiscard]] SubType sub_type() const { return m_sub_type; }
 
 private:

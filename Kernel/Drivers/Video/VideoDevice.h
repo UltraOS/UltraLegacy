@@ -11,7 +11,7 @@ class VideoDevice : public Device {
     MAKE_INHERITABLE_SINGLETON(VideoDevice) = default;
 
 public:
-    Type type() const override { return Type::VIDEO; }
+    Type device_type() const override { return Type::VIDEO; }
 
     virtual const VideoMode& mode() const = 0;
 

@@ -15,8 +15,8 @@ public:
     static constexpr u8 subclass_code = 0x06;
     static constexpr u8 programming_interface = 1;
 
-    Device::Type type() const override { return Device::Type::DISK; }
-    StringView name() const override { return "AHCI"_sv; }
+    Device::Type device_type() const override { return Device::Type::STORAGE; }
+    StringView device_name() const override { return "AHCI"_sv; }
 
     static void autodetect(const DynamicArray<PCI::DeviceInfo>&);
 

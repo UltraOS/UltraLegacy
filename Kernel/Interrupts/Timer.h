@@ -5,17 +5,18 @@
 #include "Common/String.h"
 #include "Common/Types.h"
 
+#include "Drivers/Device.h"
 #include "Interrupts/IRQHandler.h"
 
 #include "Time/Time.h"
 
 namespace kernel {
 
-class Timer : public IRQHandler {
+class Timer : public IRQHandler, public Device {
 public:
     explicit Timer(IRQHandler::Type, u16 irq_index = any_vector);
 
-    enum class Type {
+    enum class Model {
         PIT,
         HPET,
         LAPIC,
@@ -34,7 +35,7 @@ public:
     static void unregsiter_handler(TransparentEventHandler);
 
     static Timer& primary();
-    static Timer& get_specific(Type);
+    static Timer& get_specific(Model);
 
     void make_primary();
     bool is_primary() const;
@@ -58,8 +59,9 @@ public:
     virtual u32 current_frequency() const = 0;
 
     virtual bool is_per_cpu() const = 0;
-    virtual StringView model() const = 0;
-    virtual Type type() const = 0;
+
+    Device::Type device_type() const override { return Device::Type::TIMER; }
+    virtual Model model() const = 0;
 
     virtual void enable() = 0;
     virtual void disable() = 0;

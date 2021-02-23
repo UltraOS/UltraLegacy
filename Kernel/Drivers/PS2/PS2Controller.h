@@ -69,8 +69,8 @@ public:
     static_assert(sizeof(Configuration) == 1);
     static_assert(sizeof(Status) == 1);
 
-    [[nodiscard]] Type type() const override { return Type::CONTROLLER; }
-    [[nodiscard]] StringView name() const override { return "8042 PS/2 Controller"; }
+    [[nodiscard]] Type device_type() const override { return Type::CONTROLLER; }
+    [[nodiscard]] StringView device_name() const override { return "8042 PS/2 Controller"; }
 
     static void initialize();
 

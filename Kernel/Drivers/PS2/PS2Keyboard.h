@@ -9,7 +9,7 @@ class PS2Keyboard final : public PS2Device, public Keyboard {
 public:
     explicit PS2Keyboard(PS2Controller::Channel channel);
 
-    [[nodiscard]] StringView name() const override { return "PS2 Keyboard"; }
+    [[nodiscard]] StringView device_name() const override { return "PS2 Keyboard"; }
 
 private:
     void handle_action() override;

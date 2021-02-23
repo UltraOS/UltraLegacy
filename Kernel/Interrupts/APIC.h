@@ -15,6 +15,7 @@ public:
     void enable_irq_for(const IRQHandler&) override;
     void disable_irq_for(const IRQHandler&) override;
 
-    Type type() const override { return Type::APIC; }
+    StringView device_name() const override { return "APIC"_sv; }
+    Model model() const override { return Model::APIC; }
 };
 }

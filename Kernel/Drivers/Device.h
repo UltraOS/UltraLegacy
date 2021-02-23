@@ -10,17 +10,19 @@ public:
     Device() = default;
 
     enum class Type {
+        TIMER,
+        INTERRUPT_CONTROLLER,
         VIDEO,
         KEYBOARD,
         MOUSE,
-        DISK,
+        STORAGE,
         NETWORK,
         AUDIO,
         CONTROLLER,
     };
 
-    virtual Type type() const = 0;
-    virtual StringView name() const = 0;
+    virtual Type device_type() const = 0;
+    virtual StringView device_name() const = 0;
 
     virtual ~Device() = default;
 };

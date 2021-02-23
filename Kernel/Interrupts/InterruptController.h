@@ -4,17 +4,18 @@
 #include "Common/Macros.h"
 #include "Common/String.h"
 #include "Common/Types.h"
+#include "Drivers/Device.h"
 #include "Utilities.h"
 
 namespace kernel {
 
 class IRQHandler;
 
-class InterruptController {
+class InterruptController : public Device {
     MAKE_INHERITABLE_SINGLETON(InterruptController) = default;
 
 public:
-    enum class Type {
+    enum class Model {
         PIC,
         APIC,
     };
@@ -41,7 +42,8 @@ public:
     virtual void enable_irq_for(const IRQHandler&) = 0;
     virtual void disable_irq_for(const IRQHandler&) = 0;
 
-    virtual Type type() const = 0;
+    Device::Type device_type() const override { return Device::Type::INTERRUPT_CONTROLLER; }
+    virtual Model model() const = 0;
 
 private:
     static SMPData* s_smp_data;

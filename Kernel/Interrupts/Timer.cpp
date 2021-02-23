@@ -56,7 +56,7 @@ void Timer::discover_and_setup()
     // TODO: add HPET and maybe something else?
     new PIT;
 
-    if (InterruptController::the().type() == InterruptController::Type::APIC) {
+    if (InterruptController::the().model() == InterruptController::Model::APIC) {
         auto* lapic_timer = new LAPIC::Timer;
         lapic_timer->calibrate_for_this_processor();
     } else {
@@ -96,21 +96,21 @@ Timer& Timer::primary()
     return *s_primary_timer;
 }
 
-Timer& Timer::get_specific(Type type)
+Timer& Timer::get_specific(Model model)
 {
     LOCK_GUARD(s_lock);
 
     auto timer = linear_search_for(s_timers.begin(), s_timers.end(),
-                               [&type](const Timer* timer)
+                               [&model](const Timer* timer)
                                {
-                                    return timer->type() == type;
+                                    return timer->model() == model;
                                });
 
     if (timer != s_timers.end())
         return **timer;
 
     String error_string;
-    error_string << "Failed to find timer of type " << static_cast<size_t>(type);
+    error_string << "Failed to find timer of model " << static_cast<size_t>(model);
     runtime::panic(error_string.data());
 }
 }

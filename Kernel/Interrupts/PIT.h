@@ -29,8 +29,8 @@ public:
     u32 current_frequency() const override { return m_frequency; }
 
     bool is_per_cpu() const override { return false; }
-    StringView model() const override { return "PIT (8254)"_sv; };
-    Type type() const override { return Type::PIT; }
+    StringView device_name() const override { return "PIT (8254)"_sv; };
+    Model model() const override { return Model::PIT; }
 
     void enable() override { enable_irq(); }
     void disable() override { disable_irq(); }

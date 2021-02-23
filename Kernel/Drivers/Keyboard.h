@@ -7,7 +7,7 @@ namespace kernel {
 
 class Keyboard : public Device {
 public:
-    Type type() const override { return Type::KEYBOARD; }
+    Type device_type() const override { return Type::KEYBOARD; }
 
     struct Packet {
         VK key;

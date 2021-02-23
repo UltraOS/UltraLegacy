@@ -62,8 +62,8 @@ public:
         u32 current_frequency() const override { return default_ticks_per_second; }
 
         bool is_per_cpu() const override { return true; }
-        StringView model() const override { return "LAPIC"_sv; }
-        Type type() const override { return Type::LAPIC; }
+        StringView device_name() const override { return "LAPIC Timer"_sv; }
+        Model model() const override { return Model::LAPIC; }
     };
 
 public:

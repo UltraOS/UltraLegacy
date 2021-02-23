@@ -31,7 +31,8 @@ public:
     void enable_irq_for(const IRQHandler&) override;
     void disable_irq_for(const IRQHandler&) override;
 
-    Type type() const override { return Type::PIC; }
+    Model model() const override { return Model::PIC; }
+    StringView device_name() const override { return "PIC(8259)"_sv; }
 
     static void ensure_disabled();
 

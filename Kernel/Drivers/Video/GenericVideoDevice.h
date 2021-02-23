@@ -11,7 +11,7 @@ class GenericVideoDevice : public VideoDevice {
     MAKE_SINGLETON_INHERITABLE(VideoDevice, GenericVideoDevice, const VideoMode&);
 
 public:
-    StringView name() const override { return "Generic Video Device"; }
+    StringView device_name() const override { return "Generic Video Device"; }
 
     const VideoMode& mode() const override { return m_mode; }
 
