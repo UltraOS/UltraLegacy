@@ -10,8 +10,7 @@
 
 extern "C" void __cxa_pure_virtual()
 {
-    kernel::error() << "A pure virtual call!";
-    hang();
+    kernel::runtime::panic("pure virtual call");
 }
 
 using global_constructor_t = void (*)();
@@ -181,7 +180,7 @@ size_t dump_backtrace(ptr_t* into, size_t max_depth, Address base_pointer)
     bool can_draw = VideoDevice::is_ready();
 
     if (can_draw) {
-        auto& surface = VideoDevice::the().surface();
+        auto& surface = VideoDevice::primary().surface();
         surface_rect = { 0, 0, surface.width(), surface.height() };
         center = surface_rect.center();
         exception_rect = { 0, 0, center.x(), center.y() };
@@ -193,7 +192,7 @@ size_t dump_backtrace(ptr_t* into, size_t max_depth, Address base_pointer)
     alignas(Painter) u8 optional_painter[sizeof(Painter)];
 
     if (can_draw)
-        new (optional_painter) Painter(&VideoDevice::the().surface());
+        new (optional_painter) Painter(&VideoDevice::primary().surface());
 
 #define TRY_PAINT(what) \
     if (can_draw)       \

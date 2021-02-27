@@ -33,7 +33,7 @@ void PIC::SpuriousHandler::handle_irq(RegisterState&)
 void PIC::ensure_disabled()
 {
     // just call the constructor, which already gets us to the state we're looking for
-    PIC();
+    new PIC();
 }
 
 void PIC::end_of_interrupt(u8 request_number)

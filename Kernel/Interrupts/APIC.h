@@ -5,9 +5,9 @@
 namespace kernel {
 
 class APIC : public InterruptController {
-    MAKE_SINGLETON_INHERITABLE(InterruptController, APIC);
-
 public:
+    APIC();
+
     void end_of_interrupt(u8 request_number) override;
 
     void clear_all() override;
@@ -15,7 +15,8 @@ public:
     void enable_irq_for(const IRQHandler&) override;
     void disable_irq_for(const IRQHandler&) override;
 
-    StringView device_name() const override { return "APIC"_sv; }
-    Model model() const override { return Model::APIC; }
+    static constexpr StringView type = "APIC"_sv;
+    StringView device_type() const override { return type; }
+    StringView device_model() const override { return "xAPIC"_sv; }
 };
 }

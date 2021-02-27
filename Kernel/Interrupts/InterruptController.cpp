@@ -10,8 +10,17 @@
 
 namespace kernel {
 
-InterruptController* InterruptController::s_instance;
 SMPData* InterruptController::s_smp_data;
+
+bool InterruptController::is_initialized()
+{
+    return DeviceManager::is_initialized() && DeviceManager::the().primary_of(Category::INTERRUPT_CONTROLLER) != nullptr;
+}
+
+InterruptController::InterruptController()
+    : Device(Category::INTERRUPT_CONTROLLER)
+{
+}
 
 void InterruptController::discover_and_setup()
 {
@@ -22,19 +31,19 @@ void InterruptController::discover_and_setup()
 
     if (!s_smp_data) {
         log() << "InterruptController: No APIC support detected, reverting to PIC";
-        s_instance = new PIC;
+        new PIC;
         return;
     }
 
     log() << "InteruptController: Initializing LAPIC and IOAPIC...";
-
-    s_instance = new APIC;
+    (new APIC)->make_primary();
 }
 
-InterruptController& InterruptController::the()
+InterruptController& InterruptController::primary()
 {
-    ASSERT(s_instance != nullptr);
+    auto* primary = DeviceManager::the().primary_of(Category::INTERRUPT_CONTROLLER);
+    ASSERT(primary != nullptr);
 
-    return *s_instance;
+    return *static_cast<InterruptController*>(primary);
 }
 }

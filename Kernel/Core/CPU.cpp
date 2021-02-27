@@ -105,7 +105,7 @@ void CPU::start_all_processors()
     }
 
     // now LAPIC is the primary timer
-    Timer::get_specific(Timer::Model::LAPIC).make_primary();
+    Timer::get_specific(LAPIC::Timer::type).make_primary();
     Timer::primary().enable(); // enable for the BSP
 }
 
@@ -159,7 +159,7 @@ void CPU::ap_entrypoint()
     PAT::the().synchronize();
 
     LAPIC::initialize_for_this_processor();
-    auto& timer = Timer::get_specific(Timer::Model::LAPIC);
+    auto& timer = Timer::get_specific(LAPIC::Timer::type);
     timer.calibrate_for_this_processor();
     timer.enable();
 

@@ -51,6 +51,7 @@ namespace kernel {
 
     MemoryManager::inititalize();
 
+    DeviceManager::initialize();
     ACPI::the().initialize();
 
     InterruptController::discover_and_setup();
@@ -84,7 +85,7 @@ namespace kernel {
 
 void initialize_drivers()
 {
-    PS2Controller::initialize();
+    PS2Controller::detect();
 
     PCI::the().collect_all_devices();
     PCI::the().initialize_supported();

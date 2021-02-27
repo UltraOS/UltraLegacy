@@ -81,7 +81,7 @@ public:
                 ENHANCED_ALLOCATION = 0x14,
                 FLATTENING_PORTAL_BRIDGE = 0x15
             } id;
-            
+
             StringView id_to_string() const
             {
                 switch (id) {
@@ -129,7 +129,7 @@ public:
                     return "Unknown"_sv;
                 }
             }
-            
+
             u8 offset;
         };
 
@@ -164,7 +164,7 @@ public:
         AutoDetector() { PCI::register_autodetect_handler(&DEVICE::autodetect); } \
     } inline static s_auto_detector;
 
-    class Device : public ::kernel::Device {
+    class Device {
     public:
         struct BAR {
             enum class Type {

@@ -7,8 +7,6 @@
 namespace kernel {
 
 class PIC final : public InterruptController {
-    MAKE_SINGLETON_INHERITABLE(InterruptController, PIC);
-
 public:
     static constexpr u16 max_irq_index = 15;
     static constexpr u8 slave_irq_index = 2;
@@ -24,6 +22,8 @@ public:
 
     static constexpr u8 end_of_interrupt_code = 0x20;
 
+    PIC();
+
     void end_of_interrupt(u8 request_number) override;
 
     void clear_all() override;
@@ -31,8 +31,8 @@ public:
     void enable_irq_for(const IRQHandler&) override;
     void disable_irq_for(const IRQHandler&) override;
 
-    Model model() const override { return Model::PIC; }
-    StringView device_name() const override { return "PIC(8259)"_sv; }
+    StringView device_type() const override { return "PIC"_sv; }
+    StringView device_model() const override { return "PIC(8259)"_sv; }
 
     static void ensure_disabled();
 

@@ -27,8 +27,8 @@ public:
     u16 legacy_irq_number() const { return interrupt_vector() - legacy_irq_base; }
     Type irq_handler_type() const { return m_type; }
 
-    virtual void enable_irq() { InterruptController::the().enable_irq_for(*this); }
-    virtual void disable_irq() { InterruptController::the().disable_irq_for(*this); }
+    virtual void enable_irq() { InterruptController::primary().enable_irq_for(*this); }
+    virtual void disable_irq() { InterruptController::primary().disable_irq_for(*this); }
 
 protected:
     virtual void handle_irq(RegisterState&) = 0;
@@ -42,7 +42,7 @@ private:
         // to send an EOI, and if we're using PIC we're definitely not using
         // anything like MSIs/LAPIC timers, so it's kind of an invariant, although
         // I don't like that we have to assume anything at all :(
-        InterruptController::the().end_of_interrupt(legacy_irq_number());
+        InterruptController::primary().end_of_interrupt(legacy_irq_number());
     }
 
 private:

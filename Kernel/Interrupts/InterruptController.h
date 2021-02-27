@@ -12,17 +12,12 @@ namespace kernel {
 class IRQHandler;
 
 class InterruptController : public Device {
-    MAKE_INHERITABLE_SINGLETON(InterruptController) = default;
-
 public:
-    enum class Model {
-        PIC,
-        APIC,
-    };
+    InterruptController();
 
     static void discover_and_setup();
 
-    static InterruptController& the();
+    static InterruptController& primary();
 
     static bool is_legacy_mode() { return s_smp_data == nullptr; }
 
@@ -33,7 +28,7 @@ public:
         return *s_smp_data;
     }
 
-    static bool is_initialized() { return s_instance != nullptr; }
+    static bool is_initialized();
 
     virtual void end_of_interrupt(u8 request_number) = 0;
 
@@ -42,11 +37,7 @@ public:
     virtual void enable_irq_for(const IRQHandler&) = 0;
     virtual void disable_irq_for(const IRQHandler&) = 0;
 
-    Device::Type device_type() const override { return Device::Type::INTERRUPT_CONTROLLER; }
-    virtual Model model() const = 0;
-
 private:
     static SMPData* s_smp_data;
-    static InterruptController* s_instance;
 };
 }

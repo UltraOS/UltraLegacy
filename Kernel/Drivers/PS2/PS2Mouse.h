@@ -15,13 +15,15 @@ public:
 
     static constexpr u8 default_resolution = 0x1;
 
-    explicit PS2Mouse(PS2Controller::Channel channel);
+    explicit PS2Mouse(PS2Controller* parent, PS2Controller::Channel channel);
 
     void set_resolution(u8);
     void set_sample_rate(u8);
 
-    [[nodiscard]] StringView device_name() const override { return "PS2 Mouse"; }
+    [[nodiscard]] StringView device_type() const override { return "PS2 Device"_sv; }
     [[nodiscard]] SubType sub_type() const { return m_sub_type; }
+
+    [[nodiscard]] StringView device_model() const override { return "PS2 Mouse"_sv; }
 
 private:
     void detect_subtype();

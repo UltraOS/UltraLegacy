@@ -15,7 +15,7 @@ void WindowManager::initialize()
 {
     ASSERT(s_instance == nullptr);
 
-    Screen::initialize(VideoDevice::the());
+    Screen::initialize(VideoDevice::primary());
     s_instance = new WindowManager();
     Compositor::initialize();
     Process::create_supervisor(&WindowManager::run, "window manager"_sv, 4 * MB);

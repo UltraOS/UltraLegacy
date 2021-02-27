@@ -4,12 +4,9 @@
 
 namespace kernel {
 
-PS2Controller* PS2Controller::s_instance;
-
-void PS2Controller::initialize()
+PS2Controller::PS2Controller()
+    : Device(Category::CONTROLLER)
 {
-    s_instance = new PS2Controller();
-    s_instance->discover_all_devices();
 }
 
 void PS2Controller::discover_all_devices()
@@ -134,10 +131,10 @@ bool PS2Controller::initialize_device_if_present(Channel channel)
 
     if (device.is_keyboard()) {
         log() << "Detected a keyboard on channel " << static_cast<u8>(channel);
-        m_devices.emplace(new PS2Keyboard(channel));
+        (new PS2Keyboard(this, channel))->make_child_of(this);
     } else if (device.is_mouse()) {
         log() << "Detected a mouse on channel " << static_cast<u8>(channel);
-        m_devices.emplace(new PS2Mouse(channel));
+        (new PS2Mouse(this, channel))->make_child_of(this);
     }
 
     return true;
@@ -145,9 +142,9 @@ bool PS2Controller::initialize_device_if_present(Channel channel)
 
 bool PS2Controller::reset_device(Channel channel)
 {
-    // This command takes a ton of time on real hw (and apparanetly on VirtualBox too)
+    // This command takes a ton of time on real hw (and apparently on VirtualBox too)
     // therefore we cannot afford a smaller delay in read_data()
-    // I have one laptop where this is the minumum safe delay for channel 1 reset
+    // I have one laptop where this is the minimum safe delay for channel 1 reset
     // This is a bit ridiculous tho, but I don't know a better way of doing this :(
     static constexpr size_t reset_max_attempts = 1'000'000;
 

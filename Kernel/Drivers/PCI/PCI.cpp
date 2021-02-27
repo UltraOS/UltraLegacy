@@ -37,7 +37,7 @@ PCI::Device::BAR PCI::Device::bar(u8 bar)
 #ifdef ULTRA_32
     if (is_64_bit) {
         String error;
-        error << "Device " << name() << " @ " << location() << " has 64 bit bar " << bar;
+        error << "Device @ " << location() << " has 64 bit bar " << bar;
         runtime::panic(error.c_string());
     }
 #endif
@@ -81,11 +81,9 @@ void PCI::Device::enable_io_space()
 void PCI::Device::enable_msi(u16 vector)
 {
     auto cap = linear_search_for(m_info.capabilities.begin(), m_info.capabilities.end(),
-                             [](const PCI::DeviceInfo::Capability& cap)
-                             {
-                                return cap.id == PCI::DeviceInfo::Capability::ID::MESSAGE_SIGNALED_INTERRUPTS ||
-                                       cap.id == PCI::DeviceInfo::Capability::ID::MESSAGE_SIGNALED_INTERRUPTS_EXTENDED;
-                             });
+        [](const PCI::DeviceInfo::Capability& cap) {
+            return cap.id == PCI::DeviceInfo::Capability::ID::MESSAGE_SIGNALED_INTERRUPTS || cap.id == PCI::DeviceInfo::Capability::ID::MESSAGE_SIGNALED_INTERRUPTS_EXTENDED;
+        });
 
     ASSERT(cap != m_info.capabilities.end());
 
@@ -107,7 +105,7 @@ void PCI::Device::enable_msi(u16 vector)
         static constexpr u16 bit64_support = SET_BIT(7);
         static constexpr u16 single_message_mask = 0b1111111110001111;
         static constexpr u16 msi_enable_bit = SET_BIT(0);
-        
+
         message_control &= single_message_mask;
         message_control |= msi_enable_bit;
 
@@ -124,7 +122,7 @@ void PCI::Device::enable_msi(u16 vector)
         message_control |= msi_enable_bit;
 
         auto raw_bir = access().read32(location(), cap->offset + bir_offset);
-        
+
         auto bir = raw_bir & bir_mask;
         auto table_offset = raw_bir & ~bir_mask;
 

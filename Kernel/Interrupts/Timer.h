@@ -6,6 +6,7 @@
 #include "Common/Types.h"
 
 #include "Drivers/Device.h"
+#include "Drivers/DeviceManager.h"
 #include "Interrupts/IRQHandler.h"
 
 #include "Time/Time.h"
@@ -15,13 +16,6 @@ namespace kernel {
 class Timer : public IRQHandler, public Device {
 public:
     explicit Timer(IRQHandler::Type, u16 irq_index = any_vector);
-
-    enum class Model {
-        PIT,
-        HPET,
-        LAPIC,
-        ACPI,
-    };
 
     static constexpr u32 default_ticks_per_second = 100;
 
@@ -35,10 +29,7 @@ public:
     static void unregsiter_handler(TransparentEventHandler);
 
     static Timer& primary();
-    static Timer& get_specific(Model);
-
-    void make_primary();
-    bool is_primary() const;
+    static Timer& get_specific(StringView);
 
     virtual void calibrate_for_this_processor() { }
 
@@ -60,38 +51,8 @@ public:
 
     virtual bool is_per_cpu() const = 0;
 
-    Device::Type device_type() const override { return Device::Type::TIMER; }
-    virtual Model model() const = 0;
-
     virtual void enable() = 0;
     virtual void disable() = 0;
-
-    virtual ~Timer()
-    {
-        LOCK_GUARD(s_lock);
-
-        auto this_timer = linear_search(s_timers.begin(), s_timers.end(), this);
-        ASSERT(this_timer != s_timers.end());
-
-        s_timers.erase(this_timer);
-
-        if (!is_primary())
-            return;
-
-        bool did_replace_timer = false;
-
-        for (auto timer : s_timers) {
-            if (timer->is_primary())
-                continue;
-
-            timer->make_primary();
-            did_replace_timer = true;
-            break;
-        }
-
-        if (!did_replace_timer)
-            runtime::panic("Failed to find a replacement for current timer, cannot run without a timer");
-    }
 
 private:
     void handle_irq(RegisterState& registers) override
@@ -108,7 +69,5 @@ private:
     static InterruptSafeSpinLock s_lock;
     static SchedulerEventHandler s_scheduler_handler;
     static DynamicArray<TransparentEventHandler> s_transparent_handlers;
-    static Atomic<Timer*> s_primary_timer;
-    static DynamicArray<Timer*> s_timers;
 };
 }

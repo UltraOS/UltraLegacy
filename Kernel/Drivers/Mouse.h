@@ -8,7 +8,10 @@ namespace kernel {
 
 class Mouse : public Device {
 public:
-    Type device_type() const override { return Type::MOUSE; }
+    Mouse()
+        : Device(Category::MOUSE)
+    {
+    }
 
     struct Packet {
         ScrollDirection scroll_direction;

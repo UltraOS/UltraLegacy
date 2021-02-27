@@ -210,8 +210,8 @@ static const VK multi_byte_keys[] = {
     VK::MM_MEDIA_SELECT,
 };
 
-PS2Keyboard::PS2Keyboard(PS2Controller::Channel channel)
-    : PS2Device(channel)
+PS2Keyboard::PS2Keyboard(PS2Controller* parent, PS2Controller::Channel channel)
+    : PS2Device(parent, channel)
 {
     enable_irq();
 }

@@ -1,9 +1,21 @@
 #include "VideoDevice.h"
+#include "Drivers/DeviceManager.h"
 #include "GenericVideoDevice.h"
 
 namespace kernel {
 
-VideoDevice* VideoDevice::s_device;
+VideoDevice& VideoDevice::primary()
+{
+    auto* device = DeviceManager::the().primary_of(Category::VIDEO);
+    ASSERT(device != nullptr);
+
+    return *static_cast<VideoDevice*>(device);
+}
+
+bool VideoDevice::is_ready()
+{
+    return DeviceManager::is_initialized() && DeviceManager::the().primary_of(Category::VIDEO) != nullptr;
+}
 
 void VideoDevice::discover_and_setup(LoaderContext* context)
 {
@@ -13,6 +25,6 @@ void VideoDevice::discover_and_setup(LoaderContext* context)
 
     auto* bios_context = static_cast<BIOSContext*>(context);
 
-    s_device = new GenericVideoDevice(static_cast<VideoMode&>(bios_context->video_mode));
+    new GenericVideoDevice(static_cast<VideoMode&>(bios_context->video_mode));
 }
 }

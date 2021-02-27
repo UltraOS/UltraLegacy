@@ -53,7 +53,7 @@ GenericVideoDevice::GenericVideoDevice(const VideoMode& video_mode)
         nullptr,
         m_mode.pitch);
 
-    log() << "Initialized \"" << device_name() << "\": " << mode().width << "x" << mode().height << " @ " << mode().bpp
+    log() << "Initialized \"" << device_type() << "\": " << mode().width << "x" << mode().height << " @ " << mode().bpp
           << " bpp";
 }
 

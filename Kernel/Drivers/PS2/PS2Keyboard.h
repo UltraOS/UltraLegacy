@@ -7,9 +7,10 @@ namespace kernel {
 
 class PS2Keyboard final : public PS2Device, public Keyboard {
 public:
-    explicit PS2Keyboard(PS2Controller::Channel channel);
+    explicit PS2Keyboard(PS2Controller* parent, PS2Controller::Channel channel);
 
-    [[nodiscard]] StringView device_name() const override { return "PS2 Keyboard"; }
+    [[nodiscard]] StringView device_type() const override { return "PS2 Device"_sv; }
+    [[nodiscard]] StringView device_model() const override { return "PS2 Keyboard"_sv; }
 
 private:
     void handle_action() override;

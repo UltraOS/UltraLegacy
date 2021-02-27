@@ -10,6 +10,7 @@ namespace kernel {
 
 class SyscallDispatcher : public MonoInterruptHandler {
     MAKE_SINGLETON(SyscallDispatcher);
+
 public:
     static void initialize();
 

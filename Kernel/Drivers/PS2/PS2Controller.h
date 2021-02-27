@@ -12,8 +12,6 @@ namespace kernel {
 class PS2Device;
 
 class PS2Controller final : public Device {
-    MAKE_SINGLETON(PS2Controller) = default;
-
 public:
     static constexpr u8 data_port = 0x60;
     static constexpr u8 status_port = 0x64;
@@ -69,17 +67,13 @@ public:
     static_assert(sizeof(Configuration) == 1);
     static_assert(sizeof(Status) == 1);
 
-    [[nodiscard]] Type device_type() const override { return Type::CONTROLLER; }
-    [[nodiscard]] StringView device_name() const override { return "8042 PS/2 Controller"; }
+    PS2Controller();
 
-    static void initialize();
+    static void detect() { (new PS2Controller())->discover_all_devices(); }
 
-    static PS2Controller& the()
-    {
-        ASSERT(s_instance != nullptr);
-
-        return *s_instance;
-    }
+    static constexpr StringView type = "PS2 Controller"_sv;
+    [[nodiscard]] StringView device_type() const override { return type; }
+    [[nodiscard]] StringView device_model() const override { return "8042 PS2 Controller"_sv; }
 
     void send_command(Command);
     static void flush();
@@ -132,15 +126,10 @@ public:
 
 private:
     void discover_all_devices();
-
     bool reset_device(Channel);
-
     bool initialize_device_if_present(Channel);
 
 private:
-    DynamicArray<PS2Device*> m_devices;
     bool m_last_read_timeout { false };
-
-    static PS2Controller* s_instance;
 };
 }

@@ -4,8 +4,8 @@
 
 namespace kernel {
 
-PS2Mouse::PS2Mouse(PS2Controller::Channel channel)
-    : PS2Device(channel)
+PS2Mouse::PS2Mouse(PS2Controller* parent, PS2Controller::Channel channel)
+    : PS2Device(parent, channel)
 {
     detect_subtype();
     set_resolution(default_resolution);
@@ -35,7 +35,7 @@ void PS2Mouse::set_sample_rate(u8 rate)
 void PS2Mouse::detect_subtype()
 {
     auto current_type = [this]() -> SubType {
-        auto type = PS2Controller::the().identify_device(channel());
+        auto type = controller().identify_device(channel());
         ASSERT(type.id_bytes == 1);
 
         return static_cast<SubType>(type.id[0]);
