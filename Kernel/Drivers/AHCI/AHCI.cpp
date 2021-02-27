@@ -1,17 +1,24 @@
 #include "AHCI.h"
+#include "AHCIPort.h"
 #include "Common/Logger.h"
 #include "Drivers/PCI/Access.h"
 #include "Interrupts/Timer.h"
-#include "Multitasking/Sleep.h"
+#include "Structures.h"
 
 #ifdef ULTRA_32
 
-#define SET_DWORDS_TO_ADDRESS(lower, upper, address) lower = address & 0xFFFFFFFF
-#define ADDRESS_FROM_TWO_DWORDS(lower, upper) Address(lower)
+#define SET_DWORDS_TO_ADDRESS(lower, upper, address) lower = address & 0xFFFFFFFF;
+
+#define ADDRESS_FROM_TWO_DWORDS(lower, upper) \
+    Address(lower);                           \
+    ASSERT(upper == 0)
 
 #elif defined(ULTRA_64)
 
-#define SET_DWORDS_TO_ADDRESS(lower, upper, address) lower = address & 0xFFFFFFFF; upper = address >> 32
+#define SET_DWORDS_TO_ADDRESS(lower, upper, address) \
+    lower = address & 0xFFFFFFFF;                    \
+    upper = address >> 32
+
 #define ADDRESS_FROM_TWO_DWORDS(lower, upper) Address(lower | (static_cast<Address::underlying_pointer_type>(upper) << 32))
 
 #endif
@@ -19,7 +26,9 @@
 namespace kernel {
 
 AHCI::AHCI(const PCI::DeviceInfo& info)
-    : Device(info), IRQHandler(IRQHandler::Type::MSI)
+    : ::kernel::Device(Category::CONTROLLER)
+    , PCI::Device(info)
+    , IRQHandler(IRQHandler::Type::MSI)
 {
     enable_memory_space();
     make_bus_master();
@@ -52,6 +61,57 @@ AHCI::AHCI(const PCI::DeviceInfo& info)
     initialize_ports();
 }
 
+template <typename T>
+size_t AHCI::offset_of_port_structure(size_t index)
+{
+    Address base = m_hba.get();
+    base += HBA::offset_to_ports;
+    base += HBA::Port::size * index;
+    base += T::offset;
+
+    return base;
+}
+
+template <typename T>
+T AHCI::hba_read()
+{
+    Address base = m_hba.get();
+    base += T::offset;
+
+    auto raw = *base.as_pointer<volatile u32>();
+
+    return bit_cast<T>(raw);
+}
+
+template <typename T>
+T AHCI::port_read(size_t index)
+{
+    Address base = offset_of_port_structure<T>(index);
+
+    auto raw = *base.as_pointer<volatile u32>();
+
+    return bit_cast<T>(raw);
+}
+
+template <typename T>
+void AHCI::hba_write(T reg)
+{
+    Address base = m_hba.get();
+    base += T::offset;
+
+    auto type_punned_reg = bit_cast<u32>(reg);
+    *base.as_pointer<volatile u32>() = type_punned_reg;
+}
+
+template <typename T>
+void AHCI::port_write(size_t index, T reg)
+{
+    Address base = offset_of_port_structure<T>(index);
+
+    auto type_punned_reg = bit_cast<u32>(reg);
+    *base.as_pointer<volatile u32>() = type_punned_reg;
+}
+
 void AHCI::disable_dma_engines_for_all_ports()
 {
     auto implemented_ports = m_hba->ports_implemented;
@@ -79,25 +139,25 @@ void AHCI::initialize_ports()
     }
 }
 
-bool AHCI::port_has_device_attached(size_t index) {
+bool AHCI::port_has_device_attached(size_t index)
+{
     auto status = port_read<PortSATAStatus>(index);
 
-    return status.power_management == PortSATAStatus::InterfacePowerManagement::INTERFACE_ACTIVE &&
-           status.device_detection == PortSATAStatus::DeviceDetection::DEVICE_PRESENT_PHY;
+    return status.power_management == PortSATAStatus::InterfacePowerManagement::INTERFACE_ACTIVE && status.device_detection == PortSATAStatus::DeviceDetection::DEVICE_PRESENT_PHY;
 }
 
-AHCI::Port::Type AHCI::type_of_port(size_t index)
+AHCI::PortState::Type AHCI::type_of_port(size_t index)
 {
     auto& port = m_hba->ports[index];
 
-    switch (static_cast<Port::Type>(port.signature)) {
-    case Port::Type::SATA:
-    case Port::Type::ATAPI:
-    case Port::Type::ENCLOSURE_MANAGEMENT_BRIDGE:
-    case Port::Type::PORT_MULTIPLIER:
-        return static_cast<Port::Type>(port.signature);
+    switch (static_cast<PortState::Type>(port.signature)) {
+    case PortState::Type::SATA:
+    case PortState::Type::ATAPI:
+    case PortState::Type::ENCLOSURE_MANAGEMENT_BRIDGE:
+    case PortState::Type::PORT_MULTIPLIER:
+        return static_cast<PortState::Type>(port.signature);
     default:
-        return Port::Type::NONE;
+        return PortState::Type::NONE;
     }
 }
 
@@ -111,6 +171,7 @@ void AHCI::initialize_port(size_t index)
     auto& port = m_ports[index];
     port.has_device_attached = true;
 
+    // FIXME: phys memory leak here
     auto command_list_page = allocate_safe_page();
     auto base_fis_page = allocate_safe_page();
 
@@ -128,21 +189,16 @@ void AHCI::initialize_port(size_t index)
         SET_DWORDS_TO_ADDRESS(command.command_table_base_address, command.command_table_base_address_upper, page);
     }
 
-    // NOTE: We have to reset *after* we set both fis & command list registers,
-    //       otherwise the port will not be able to send an init D2H to retrieve
-    //       the signature & other info
-    // NOTE 2: Not resetting the port after resetting the HBA causes the port to hang
-    //         forever for whatever reason on real hardware
     reset_port(index);
-    
+
     enable_dma_engines_for_port(index);
 
     port.type = type_of_port(index);
 
-    if (port.type == Port::Type::NONE) {
+    if (port.type == PortState::Type::NONE) {
         log("AHCI") << "port " << index << " doesn't have a device attached";
         return;
-    } else if (port.type != Port::Type::SATA) {
+    } else if (port.type != PortState::Type::SATA) {
         log("AHCI") << "port " << index << " has type \"" << port.type_to_string() << "\", which is currently not supported";
         return;
     } else {
@@ -158,6 +214,7 @@ void AHCI::initialize_port(size_t index)
     m_hba->ports[index].interrupt_enable = 0xFFFFFFFF;
 
     log() << "AHCI: successfully intitialized port " << index;
+    (new AHCIPort(*this, index))->make_child_of(this);
 }
 
 void AHCI::disable_dma_engines_for_port(size_t index)
@@ -220,7 +277,7 @@ void AHCI::handle_irq(RegisterState&)
         auto port_status = port_read<PortInterruptStatus>(i);
         port_write(i, port_status);
 
-        panic_if_port_error(port_status);
+        panic_if_port_error(port_status, port_read<PortSATAError>(i));
 
         u32 x;
         copy_memory(&port_status, &x, 4);
@@ -256,9 +313,8 @@ void AHCI::identify_sata_port(size_t index)
 
     synchronous_complete_command(index, command_slot_for_identify);
 
-    auto convert_ata_string = [](String& ata)
-    {
-        for (size_t i = 0; i < ata.size() - 1; i+= 2)
+    auto convert_ata_string = [](String& ata) {
+        for (size_t i = 0; i < ata.size() - 1; i += 2)
             swap(ata[i], ata[i + 1]);
     };
 
@@ -364,6 +420,61 @@ void AHCI::identify_sata_port(size_t index)
     MemoryManager::the().free_page(Page(identify_base));
 }
 
+DynamicArray<Range> AHCI::accumulate_contiguous_physical_ranges(Address virtual_address, size_t byte_length)
+{
+    ASSERT(virtual_address > MemoryManager::kernel_address_space_base);
+    auto& address_space = AddressSpace::of_kernel();
+
+    DynamicArray<Range> contiguous_ranges;
+
+    Address current_address = virtual_address;
+    Range current_range {};
+
+    while (byte_length) {
+        byte_length -= min(Page::size, byte_length);
+
+        auto physical_address = address_space.physical_address_of(current_address);
+
+        if (current_range) {
+            if (current_range.end() == physical_address) {
+                current_range.extend_by(Page::size);
+            } else {
+                contiguous_ranges.append(current_range);
+                current_range = { physical_address, Page::size };
+            }
+        } else {
+            current_range = { physical_address, Page::size };
+        }
+
+        current_address += Page::size;
+    }
+
+    contiguous_ranges.append(current_range);
+
+    return contiguous_ranges;
+}
+
+void AHCI::read_synchronous(size_t port, Address into_virtual_address, size_t first_lba, size_t lba_count)
+{
+    do_synchronous_operation(port, OP::READ, into_virtual_address, first_lba, lba_count);
+}
+
+void AHCI::write_synchronous(size_t port, Address from_virtual_address, size_t first_lba, size_t lba_count)
+{
+    do_synchronous_operation(port, OP::WRITE, from_virtual_address, first_lba, lba_count);
+}
+
+void AHCI::do_synchronous_operation(size_t port, OP op, Address virtual_address, size_t first_lba, size_t lba_count)
+{
+    auto& state = state_of_port(port);
+    ASSERT(state.lba_count <= first_lba + lba_count);
+
+    size_t bytes_to_read = lba_count * state.logical_sector_size;
+    auto ranges = accumulate_contiguous_physical_ranges(virtual_address, bytes_to_read);
+
+    (void)op;
+}
+
 void AHCI::synchronous_complete_command(size_t port, size_t slot)
 {
     auto command_bit = 1 << slot;
@@ -374,8 +485,7 @@ void AHCI::synchronous_complete_command(size_t port, size_t slot)
     auto wait_begin = Timer::nanoseconds_since_boot();
     auto wait_end = wait_begin + max_wait_timeout;
 
-    while (m_hba->ports[port].command_issue & command_bit)
-    {
+    while (m_hba->ports[port].command_issue & command_bit) {
         if (wait_end < Timer::nanoseconds_since_boot())
             break;
     }
@@ -383,16 +493,19 @@ void AHCI::synchronous_complete_command(size_t port, size_t slot)
     if (m_hba->ports[port].command_issue & command_bit)
         runtime::panic("AHCI: command failed to complete within 500ms");
 
-    panic_if_port_error(port_read<PortInterruptStatus>(port));
+    panic_if_port_error(port_read<PortInterruptStatus>(port), port_read<PortSATAError>(port));
 }
 
-void AHCI::panic_if_port_error(PortInterruptStatus status)
+void AHCI::panic_if_port_error(PortInterruptStatus status, PortSATAError error)
 {
-    if (!status.contains_errors())
+    if (!status.contains_errors() && !error.contains_errors())
         return;
 
     String error_string;
-    error_string << "Encountered an unexpected port error: " << status.error_string();
+    error_string << "Encountered an unexpected port error:\nStatus: "
+                 << status.error_string() << "\nSATA Error: " << error.error_string();
+
+    runtime::panic(error_string.c_string());
 }
 
 void AHCI::enable_ahci()
@@ -408,6 +521,11 @@ void AHCI::enable_ahci()
 
 void AHCI::reset_port(size_t index)
 {
+    // We must enable this so we can receive the port signature
+    auto cmd = port_read<PortCommandAndStatus>(index);
+    cmd.fis_receive_enable = true;
+    port_write(index, cmd);
+
     auto sctl = port_read<PortSATAControl>(index);
     sctl.device_detection_initialization = PortSATAControl::DeviceDetectionInitialization::PERFORM_INITIALIZATION;
     port_write(index, sctl);
@@ -416,14 +534,15 @@ void AHCI::reset_port(size_t index)
     auto wait_begin = Timer::nanoseconds_since_boot();
     auto wait_end = wait_begin + comreset_delivery_wait;
 
-    while (wait_end > Timer::nanoseconds_since_boot());
+    while (wait_end > Timer::nanoseconds_since_boot())
+        ;
 
     sctl = port_read<PortSATAControl>(index);
     sctl.device_detection_initialization = PortSATAControl::DeviceDetectionInitialization::NOT_REQUESTED;
     port_write(index, sctl);
 
     wait_begin = Timer::nanoseconds_since_boot();
-    wait_end = wait_begin + comreset_delivery_wait;
+    wait_end = wait_begin + phy_wait_timeout;
 
     auto ssts = port_read<PortSATAStatus>(index);
 
@@ -437,8 +556,9 @@ void AHCI::reset_port(size_t index)
     if (ssts.device_detection != PortSATAStatus::DeviceDetection::DEVICE_PRESENT_PHY)
         runtime::panic("AHCI: Port physical layer failed to come back online after reset");
 
-    // Removing this will cause the driver to break on real hw
-    sleep::for_milliseconds(50);
+    m_hba->ports[index].error = 0xFFFFFFFF;
+
+    wait_for_port_ready(index);
 
     m_hba->ports[index].error = 0xFFFFFFFF;
 
@@ -465,27 +585,91 @@ void AHCI::hba_reset()
         runtime::panic("AHCI: HBA failed to reset after 1 second");
 
     enable_ahci();
+    auto pi = m_hba->ports_implemented;
+    auto fis_receive_page = allocate_safe_page();
+    auto command_list_page = allocate_safe_page();
 
-    if (should_spinup) {
-        auto pi = m_hba->ports_implemented;
+    auto fis_res = TypedMapping<u8>::create("HBA RESET"_sv, fis_receive_page, Page::size);
 
-        for (size_t i = 0; i < 32; ++i) {
-            if (!IS_BIT_SET(pi, i))
-                continue;
+    for (size_t i = 0; i < 32; ++i) {
+        if (!IS_BIT_SET(pi, i))
+            continue;
 
+        auto& port = m_hba->ports[i];
+        SET_DWORDS_TO_ADDRESS(port.fis_base_address, port.fis_base_address_upper, fis_receive_page);
+        SET_DWORDS_TO_ADDRESS(port.command_list_base_address, port.command_list_base_address_upper, command_list_page);
+
+        auto cas = port_read<PortCommandAndStatus>(i);
+        cas.fis_receive_enable = true;
+        port_write(i, cas);
+
+        if (should_spinup) {
             auto cas = port_read<PortCommandAndStatus>(i);
             cas.spinup_device = true;
             port_write(i, cas);
-
-            sleep::for_milliseconds(50);
         }
-    } else {
-        // If staggered spin up is not supported the controller automatically spins every port up
-        // So we have to wait for it. I have no idea how to check that it did earlier.
-        sleep::for_milliseconds(50);
+
+        auto wait_begin = Timer::nanoseconds_since_boot();
+        auto wait_end = wait_begin + phy_wait_timeout;
+
+        auto ssts = port_read<PortSATAStatus>(i);
+
+        // Even though the spec says to wait for either 1h or 3h, it is wrong.
+        // If we were to break on 1h we would clear the error register to early and the port
+        // would hang on PxTFD.STS.BSY
+        // The reason for that is because each port goes from 0 to 1 to 3 gradually as Phy
+        // comes back online, so we have to wait for exactly 3 and only clear the error register
+        // after that.
+        while (ssts.device_detection != PortSATAStatus::DeviceDetection::DEVICE_PRESENT_PHY) {
+            ssts = port_read<PortSATAStatus>(i);
+
+            if (wait_end < Timer::nanoseconds_since_boot())
+                break;
+        }
+
+        if (ssts.device_detection != PortSATAStatus::DeviceDetection::DEVICE_PRESENT_PHY)
+            continue;
+
+        m_hba->ports[i].error = 0xFFFFFFFF;
+
+        wait_for_port_ready(i);
+
+        m_hba->ports[i].error = 0xFFFFFFFF;
+
+        if (i != 31) {
+            // Zero each time so each port starts at zeroed FIS receive
+            zero_memory(fis_res.get(), Page::size);
+        }
     }
 
+    MemoryManager::the().free_page(Page(fis_receive_page));
+    MemoryManager::the().free_page(Page(command_list_page));
+
     log() << "AHCI: succesfully reset HBA";
+}
+
+void AHCI::wait_for_port_ready(size_t index)
+{
+    static constexpr size_t port_reset_timeout = 1 * Time::nanoseconds_in_second;
+    auto wait_start_ts = Timer::nanoseconds_since_boot();
+    auto wait_end_ts = wait_start_ts + port_reset_timeout;
+
+    auto tfd = port_read<PortTaskFileData>(index);
+    while (tfd.status.busy || tfd.status.drq) {
+        if (Timer::nanoseconds_since_boot() > wait_end_ts)
+            break;
+
+        tfd = port_read<PortTaskFileData>(index);
+    }
+
+    if (tfd.status.busy || tfd.status.drq) {
+        String error_str;
+        error_str << "AHCI: port " << index << " reset failed - PxTFD.STS.BSY: "
+                  << format::as_hex << tfd.status.busy << " PxTFD.STS.DRQ: "
+                  << tfd.status.drq << " PxTFD.STS.ERR: " << tfd.status.error;
+
+        runtime::panic(error_str.c_string());
+    }
 }
 
 void AHCI::perform_bios_handoff()
@@ -537,7 +721,6 @@ void AHCI::autodetect(const DynamicArray<PCI::DeviceInfo>& devices)
     }
 }
 
-
 Address AHCI::allocate_safe_page()
 {
     auto page = MemoryManager::the().allocate_page();
@@ -548,6 +731,34 @@ Address AHCI::allocate_safe_page()
 #endif
 
     return page.address();
+}
+
+Optional<size_t> AHCI::PortState::allocate_slot()
+{
+    auto slot = slot_map.find_bit(false);
+
+    if (slot.has_value())
+        slot_map.set_bit(slot.value(), true);
+
+    return slot;
+}
+
+StringView AHCI::PortState::type_to_string()
+{
+    switch (type) {
+    case Type::NONE:
+        return "none"_sv;
+    case Type::SATA:
+        return "SATA"_sv;
+    case Type::ATAPI:
+        return "ATAPI"_sv;
+    case Type::ENCLOSURE_MANAGEMENT_BRIDGE:
+        return "Enclosure Management Bridge"_sv;
+    case Type::PORT_MULTIPLIER:
+        return "Port Multiplier"_sv;
+    default:
+        return "Invalid"_sv;
+    }
 }
 
 }
