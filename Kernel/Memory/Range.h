@@ -68,6 +68,11 @@ public:
         m_end = end;
     }
 
+    void extend_by(size_t length)
+    {
+        set_end(m_end + length);
+    }
+
     bool contains(AddrT address) const
     {
         return address >= begin() && address < end();
