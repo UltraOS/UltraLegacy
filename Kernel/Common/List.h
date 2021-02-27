@@ -49,6 +49,13 @@ public:
         {
         }
 
+        template <typename... Args>
+        Node(in_place_t, Args&&... args)
+            : NodeBase(nullptr, nullptr)
+            , m_value(forward<Args>(args)...)
+        {
+        }
+
         T& value() { return m_value; }
         const T& value() const { return m_value; }
 
@@ -75,10 +82,42 @@ public:
         return new_node->value();
     }
 
+    template <typename... Args>
+    T& emplace_back(Args&&... args)
+    {
+        auto* new_node = new Node(in_place, forward<Args>(args)...);
+
+        new_node->set_previous(m_end.previous());
+        new_node->set_next(&m_end);
+
+        m_end.previous()->set_next(new_node);
+        m_end.set_previous(new_node);
+
+        m_size++;
+
+        return new_node->value();
+    }
+
     template <typename U>
     T& append_front(U&& value)
     {
         auto* new_node = new Node(forward<U>(value), &m_end, m_end.next());
+
+        m_end.next()->set_previous(new_node);
+        m_end.set_next(new_node);
+
+        m_size++;
+
+        return new_node->value();
+    }
+
+    template <typename... Args>
+    T& emplace_front(Args&&... args)
+    {
+        auto* new_node = new Node(in_place, forward<Args>(args)...);
+
+        new_node->set_previous(&m_end);
+        new_node->set_next(m_end.next());
 
         m_end.next()->set_previous(new_node);
         m_end.set_next(new_node);

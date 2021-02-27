@@ -60,8 +60,7 @@ public:
     {
         ASSERT(offset < m_bit_count);
 
-        for (size_t index = offset; index < m_bit_count; ++index)
-        {
+        for (size_t index = offset; index < m_bit_count; ++index) {
             auto loc = location_of_bit(index);
 
             if ((m_bits[loc.first()] & SET_BIT(loc.second())) == of_value)
