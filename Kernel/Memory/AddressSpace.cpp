@@ -431,6 +431,25 @@ void AddressSpace::unmap_range(const Range& range)
     }
 }
 
+Address AddressSpace::physical_address_of(Address virtual_address)
+{
+    ASSERT_PAGE_ALIGNED(virtual_address);
+
+    const auto indices = virtual_address_as_paging_indices(virtual_address);
+#ifdef ULTRA_64
+    if (!entry_at(indices.first()).is_present())
+        return nullptr;
+    if (!pdpt_at(indices.first()).entry_at(indices.second()).is_present())
+        return nullptr;
+    if (!pdpt_at(indices.first()).pdt_at(indices.second()).entry_at(indices.third()).is_present())
+        return nullptr;
+
+    return pdpt_at(indices.first()).pdt_at(indices.second()).pt_at(indices.third()).entry_at(indices.fourth()).physical_address();
+#elif defined(ULTRA_32)
+    return pt_at(indices.first()).entry_at(indices.second()).physical_address();
+#endif
+}
+
 VirtualAllocator& AddressSpace::allocator()
 {
     return m_allocator;

@@ -96,6 +96,8 @@ public:
     void unmap_page(Address virtual_address);
     void unmap_range(const Range&);
 
+    Address physical_address_of(Address);
+
     bool is_active();
     void make_active();
     void flush_all();
