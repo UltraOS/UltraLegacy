@@ -234,19 +234,30 @@ void AHCI::disable_dma_engines_for_port(size_t index)
     cmd.start = false;
     port_write(index, cmd);
 
-    cmd = port_read<PortCommandAndStatus>(index);
-    cmd.fis_receive_enable = false;
-    port_write(index, cmd);
-
     static constexpr size_t port_wait_timeout = 500 * Time::nanoseconds_in_millisecond;
     auto wait_start_ts = Timer::nanoseconds_since_boot();
     auto wait_end_ts = wait_start_ts + port_wait_timeout;
 
     do {
         cmd = port_read<PortCommandAndStatus>(index);
-    } while ((cmd.command_list_running || cmd.fis_receive_running) && Timer::nanoseconds_since_boot() < wait_end_ts);
+    } while (cmd.command_list_running && Timer::nanoseconds_since_boot() < wait_end_ts);
 
-    if (cmd.command_list_running || cmd.fis_receive_running)
+    if (cmd.command_list_running)
+        runtime::panic("AHCI: a port failed to enter idle state in 500ms");
+
+    // "Software shall not clear this bit while PxCMD.ST or PxCMD.CR is set to 1."
+    cmd = port_read<PortCommandAndStatus>(index);
+    cmd.fis_receive_enable = false;
+    port_write(index, cmd);
+
+    wait_start_ts = Timer::nanoseconds_since_boot();
+    wait_end_ts = wait_start_ts + port_wait_timeout;
+
+    do {
+        cmd = port_read<PortCommandAndStatus>(index);
+    } while (cmd.fis_receive_running && Timer::nanoseconds_since_boot() < wait_end_ts);
+
+    if (cmd.fis_receive_running)
         runtime::panic("AHCI: a port failed to enter idle state in 500ms");
 
     log("AHCI") << "successfully disabled DMA engines for port " << index;
