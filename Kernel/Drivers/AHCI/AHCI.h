@@ -1,6 +1,7 @@
 #pragma once
 
 #include "AHCIPort.h"
+#include "Common/Span.h"
 #include "Drivers/Device.h"
 #include "Drivers/PCI/PCI.h"
 #include "Memory/TypedMapping.h"
@@ -61,6 +62,7 @@ public:
         DynamicBitArray slot_map;
 
         Optional<size_t> allocate_slot();
+        void deallocate_slot(size_t);
     };
 
     PortState& state_of_port(size_t index)
@@ -69,8 +71,8 @@ public:
         return m_ports[index];
     }
 
-    void read_synchronous(size_t port, Address into_virtual_address, size_t first_lba, size_t lba_count);
-    void write_synchronous(size_t port, Address from_virtual_address, size_t first_lba, size_t lba_count);
+    void read_synchronous(size_t port, Address into_virtual_address, LBARange);
+    void write_synchronous(size_t port, Address from_virtual_address, LBARange);
 
 private:
     void perform_bios_handoff();
@@ -96,14 +98,35 @@ private:
     // SATA spec says "Wait up to 10 milliseconds for SStatus.DET = 3h" but we'll wait for 20
     static constexpr size_t phy_wait_timeout = 20 * Time::nanoseconds_in_millisecond;
 
-    enum class OP {
-        READ,
-        WRITE
+    struct OP {
+        enum class Type {
+            READ = 0,
+            WRITE = 1
+        } type;
+
+        StringView type_to_string() const
+        {
+            switch (type) {
+            case Type::READ:
+                return "READ"_sv;
+            case Type::WRITE:
+                return "WRITE"_sv;
+            default:
+                return "INVALID"_sv;
+            }
+        }
+
+        bool is_async;
+        size_t port;
+        LBARange lba_range;
+
+        Span<Range> physical_ranges;
     };
 
-    DynamicArray<Range> accumulate_contiguous_physical_ranges(Address, size_t byte_length);
-    void do_synchronous_operation(size_t port, OP, Address virtual_address, size_t first_lba, size_t lba_count);
+    DynamicArray<Range> accumulate_contiguous_physical_ranges(Address, size_t byte_length, size_t max_bytes_per_range);
+    void do_synchronous_operation(size_t port, OP::Type, Address virtual_address, LBARange);
     void synchronous_complete_command(size_t port, size_t slot);
+    void execute(OP&);
 
     template <typename T>
     size_t offset_of_port_structure(size_t index);

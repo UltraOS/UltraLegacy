@@ -3,11 +3,14 @@
 #include "Common/Logger.h"
 #include "Drivers/PCI/Access.h"
 #include "Interrupts/Timer.h"
+#include "Multitasking/Scheduler.h"
 #include "Structures.h"
 
 #ifdef ULTRA_32
 
-#define SET_DWORDS_TO_ADDRESS(lower, upper, address) lower = address & 0xFFFFFFFF;
+#define SET_DWORDS_TO_ADDRESS(lower, upper, address) \
+    lower = address & 0xFFFFFFFF;                    \
+    upper = 0;
 
 #define ADDRESS_FROM_TWO_DWORDS(lower, upper) \
     Address(lower);                           \
@@ -213,6 +216,8 @@ void AHCI::initialize_port(size_t index)
     // Enable all interrupts
     m_hba->ports[index].interrupt_enable = 0xFFFFFFFF;
 
+    m_ports[index].slot_map.set_size(m_command_slots_per_port);
+
     log() << "AHCI: successfully intitialized port " << index;
     (new AHCIPort(*this, index))->make_child_of(this);
 }
@@ -227,6 +232,9 @@ void AHCI::disable_dma_engines_for_port(size_t index)
     }
 
     cmd.start = false;
+    port_write(index, cmd);
+
+    cmd = port_read<PortCommandAndStatus>(index);
     cmd.fis_receive_enable = false;
     port_write(index, cmd);
 
@@ -296,7 +304,7 @@ void AHCI::identify_sata_port(size_t index)
     Address identify_base = allocate_safe_page();
 
     Address command_table_0_phys = ADDRESS_FROM_TWO_DWORDS(command_header_0.command_table_base_address, command_header_0.command_table_base_address_upper);
-    auto command_table_0 = TypedMapping<CommandTable>::create("AHCI command table"_sv, command_table_0_phys, sizeof(CommandTable) + sizeof(PRDT));
+    auto command_table_0 = TypedMapping<CommandTable>::create("AHCI command table"_sv, command_table_0_phys, sizeof(CommandTable) + sizeof(PRDTEntry));
 
     command_header_0.physical_region_descriptor_table_length = 1;
     command_header_0.command_fis_length = FISHostToDevice::size_in_dwords;
@@ -306,7 +314,7 @@ void AHCI::identify_sata_port(size_t index)
     fis.is_command = true;
     copy_memory(&fis, command_table_0->command_fis, sizeof(fis));
 
-    auto& prdt_0 = command_table_0->prdts[0];
+    auto& prdt_0 = command_table_0->prdt_entries[0];
     prdt_0.byte_count = identify_command_buffer_size - 1;
 
     SET_DWORDS_TO_ADDRESS(prdt_0.data_base, prdt_0.data_upper, identify_base);
@@ -420,7 +428,7 @@ void AHCI::identify_sata_port(size_t index)
     MemoryManager::the().free_page(Page(identify_base));
 }
 
-DynamicArray<Range> AHCI::accumulate_contiguous_physical_ranges(Address virtual_address, size_t byte_length)
+DynamicArray<Range> AHCI::accumulate_contiguous_physical_ranges(Address virtual_address, size_t byte_length, size_t max_bytes_per_range)
 {
     ASSERT(virtual_address > MemoryManager::kernel_address_space_base);
     auto& address_space = AddressSpace::of_kernel();
@@ -434,6 +442,7 @@ DynamicArray<Range> AHCI::accumulate_contiguous_physical_ranges(Address virtual_
         byte_length -= min(Page::size, byte_length);
 
         auto physical_address = address_space.physical_address_of(current_address);
+        ASSERT(physical_address);
 
         if (current_range) {
             if (current_range.end() == physical_address) {
@@ -446,6 +455,11 @@ DynamicArray<Range> AHCI::accumulate_contiguous_physical_ranges(Address virtual_
             current_range = { physical_address, Page::size };
         }
 
+        if (current_range.length() == max_bytes_per_range) {
+            contiguous_ranges.append(current_range);
+            current_range.reset();
+        }
+
         current_address += Page::size;
     }
 
@@ -454,25 +468,141 @@ DynamicArray<Range> AHCI::accumulate_contiguous_physical_ranges(Address virtual_
     return contiguous_ranges;
 }
 
-void AHCI::read_synchronous(size_t port, Address into_virtual_address, size_t first_lba, size_t lba_count)
+void AHCI::read_synchronous(size_t port, Address into_virtual_address, LBARange range)
 {
-    do_synchronous_operation(port, OP::READ, into_virtual_address, first_lba, lba_count);
+    do_synchronous_operation(port, OP::Type::READ, into_virtual_address, range);
 }
 
-void AHCI::write_synchronous(size_t port, Address from_virtual_address, size_t first_lba, size_t lba_count)
+void AHCI::write_synchronous(size_t port, Address from_virtual_address, LBARange range)
 {
-    do_synchronous_operation(port, OP::WRITE, from_virtual_address, first_lba, lba_count);
+    do_synchronous_operation(port, OP::Type::WRITE, from_virtual_address, range);
 }
 
-void AHCI::do_synchronous_operation(size_t port, OP op, Address virtual_address, size_t first_lba, size_t lba_count)
+void AHCI::do_synchronous_operation(size_t port, OP::Type op, Address virtual_address, LBARange range)
 {
     auto& state = state_of_port(port);
-    ASSERT(state.lba_count <= first_lba + lba_count);
+    ASSERT(state.lba_count >= range.length());
 
-    size_t bytes_to_read = lba_count * state.logical_sector_size;
-    auto ranges = accumulate_contiguous_physical_ranges(virtual_address, bytes_to_read);
+    // PRDT entry limitation (22 bits for byte count)
+    size_t max_bytes_per_op = 4 * MB;
 
-    (void)op;
+    // 28 byte DMA_READ ATA command only supports 256 sector reads/writes per command :(
+    if (!state.supports_48bit_lba)
+        max_bytes_per_op = state.logical_sector_size * 256;
+
+    size_t bytes_to_read = range.length() * state.logical_sector_size;
+    auto ranges = accumulate_contiguous_physical_ranges(virtual_address, bytes_to_read, max_bytes_per_op);
+
+    static constexpr size_t max_prdt_entries = (Page::size - CommandTable::size) / PRDTEntry::size;
+
+    auto* ranges_begin = ranges.data();
+    size_t count = ranges.size();
+
+    OP operation {};
+    operation.type = op;
+    operation.port = port;
+    operation.is_async = false;
+
+    while (count) {
+        size_t bytes_for_this_op = 0;
+        operation.physical_ranges = { ranges_begin, 0 };
+
+        while (bytes_for_this_op < max_bytes_per_op && ranges_begin != ranges.end() && operation.physical_ranges.size() < max_prdt_entries) {
+            bytes_for_this_op += ranges_begin->length();
+            ranges_begin++;
+            operation.physical_ranges.expand_by(1);
+        }
+
+        if (bytes_for_this_op == 0)
+            break;
+
+        count -= operation.physical_ranges.size();
+
+        ASSERT((bytes_for_this_op % state.logical_sector_size) == 0);
+        bytes_for_this_op = min(bytes_for_this_op, state.logical_sector_size * range.length());
+        auto lba_count_for_this_batch = bytes_for_this_op / state.logical_sector_size;
+
+        operation.lba_range.set_begin(range.begin());
+        operation.lba_range.set_length(lba_count_for_this_batch);
+
+        range.advance_begin_by(lba_count_for_this_batch);
+
+        execute(operation);
+    }
+}
+
+void AHCI::execute(OP& op)
+{
+    log("AHCI") << "executing op " << op.type_to_string() << " lba range: "
+                << op.lba_range << " " << op.physical_ranges.size() << " physical range(s)";
+
+    auto& port = m_ports[op.port];
+
+    auto slot = port.allocate_slot();
+
+    while (!slot) {
+        Scheduler::the().yield();
+        slot = port.allocate_slot();
+    }
+
+    auto& ch = port.command_list->commands[slot.value()];
+
+    ch.physical_region_descriptor_table_length = op.physical_ranges.size();
+    ch.write = static_cast<u8>(op.type);
+    ch.command_fis_length = FISHostToDevice::size_in_dwords;
+    ch.atapi = false;
+    ch.port_multiplier_port = 0;
+
+    Address command_table_physical = ADDRESS_FROM_TWO_DWORDS(ch.command_table_base_address, ch.command_table_base_address_upper);
+    auto command_table = TypedMapping<CommandTable>::create("AHCI command table"_sv, command_table_physical, Page::size);
+
+    FISHostToDevice h2d {};
+
+    ATACommand cmd;
+    if (op.type == OP::Type::READ)
+        cmd = port.supports_48bit_lba ? ATACommand::READ_DMA_EXT : ATACommand::READ_DMA;
+    else if (op.type == OP::Type::WRITE)
+        cmd = port.supports_48bit_lba ? ATACommand::WRITE_DMA_EXT : ATACommand::WRITE_DMA;
+    else
+        ASSERT_NEVER_REACHED();
+
+    h2d.command_register = cmd;
+    h2d.is_command = true;
+
+    h2d.count_lower = op.lba_range.length() & 0xFF;
+    h2d.count_upper = (op.lba_range.length() >> 8) & 0xFF;
+
+    static constexpr u8 lba_bit = SET_BIT(6);
+    h2d.device_register = lba_bit;
+
+    h2d.lba_1 = (op.lba_range.begin() >> 0) & 0xFF;
+    h2d.lba_2 = (op.lba_range.begin() >> 8) & 0xFF;
+    h2d.lba_3 = (op.lba_range.begin() >> 16) & 0xFF;
+    h2d.lba_4 = (op.lba_range.begin() >> 24) & 0xFF;
+    h2d.lba_5 = (op.lba_range.begin() >> 32) & 0xFF;
+    h2d.lba_6 = (op.lba_range.begin() >> 40) & 0xFF;
+
+    copy_memory(&h2d, &command_table->command_fis, h2d.size_in_dwords * sizeof(u32));
+
+    size_t prdt_entry_index = 0;
+    size_t bytes_to_read = op.lba_range.length() * port.logical_sector_size;
+
+    for (auto& phys_range : op.physical_ranges) {
+        auto& prdt_entry = command_table->prdt_entries[prdt_entry_index++];
+
+        prdt_entry.interrupt_on_completion = false;
+        prdt_entry.byte_count = min(bytes_to_read, phys_range.length()) - 1;
+        bytes_to_read -= prdt_entry.byte_count;
+
+        SET_DWORDS_TO_ADDRESS(prdt_entry.data_base, prdt_entry.data_upper, phys_range.begin());
+    }
+
+    command_table->prdt_entries[prdt_entry_index - 1].interrupt_on_completion = op.is_async;
+
+    if (!op.is_async) {
+        synchronous_complete_command(op.port, slot.value());
+        port.deallocate_slot(slot.value());
+    }
 }
 
 void AHCI::synchronous_complete_command(size_t port, size_t slot)
@@ -615,7 +745,7 @@ void AHCI::hba_reset()
         auto ssts = port_read<PortSATAStatus>(i);
 
         // Even though the spec says to wait for either 1h or 3h, it is wrong.
-        // If we were to break on 1h we would clear the error register to early and the port
+        // If we were to break on 1h we would clear the error register too early and the port
         // would hang on PxTFD.STS.BSY
         // The reason for that is because each port goes from 0 to 1 to 3 gradually as Phy
         // comes back online, so we have to wait for exactly 3 and only clear the error register
@@ -741,6 +871,11 @@ Optional<size_t> AHCI::PortState::allocate_slot()
         slot_map.set_bit(slot.value(), true);
 
     return slot;
+}
+
+void AHCI::PortState::deallocate_slot(size_t slot)
+{
+    slot_map.set_bit(slot, false);
 }
 
 StringView AHCI::PortState::type_to_string()

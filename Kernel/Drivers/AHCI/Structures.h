@@ -528,7 +528,7 @@ struct PACKED CommandList {
     CommandHeader commands[32];
 };
 
-struct PACKED PRDT {
+struct PACKED PRDTEntry {
     u32 data_base;
     u32 data_upper;
 
@@ -546,13 +546,13 @@ struct PACKED CommandTable {
     u8 atapi_command[16];
     u8 reserved[48];
 
-    PRDT prdts[];
+    PRDTEntry prdt_entries[];
 
     static constexpr size_t size = 0x80;
 };
 
 static_assert(sizeof(CommandHeader) == CommandHeader::size, "Incorrect size of CommandHeader");
-static_assert(sizeof(PRDT) == PRDT::size, "Incorrect size of PRDT");
+static_assert(sizeof(PRDTEntry) == PRDTEntry::size, "Incorrect size of PRDT entry");
 static_assert(sizeof(CommandTable) == CommandTable::size, "Incorrect size of command table");
 
 enum class FISType : u8 {
