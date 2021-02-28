@@ -73,6 +73,11 @@ public:
         set_end(m_end + length);
     }
 
+    void advance_begin_by(size_t length)
+    {
+        m_begin += length;
+    }
+
     bool contains(AddrT address) const
     {
         return address >= begin() && address < end();
@@ -179,6 +184,12 @@ public:
     bool empty() const
     {
         return m_begin == m_end;
+    }
+
+    void reset()
+    {
+        m_begin = static_cast<AddrT>(nullptr);
+        m_end = static_cast<AddrT>(nullptr);
     }
 
     explicit operator bool() const

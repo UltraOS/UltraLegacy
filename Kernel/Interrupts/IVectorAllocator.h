@@ -11,6 +11,7 @@ inline static constexpr u16 any_vector = 0xFFFF;
 
 class IVectorAllocator {
     MAKE_SINGLETON(IVectorAllocator);
+
 public:
     static void initialize();
 

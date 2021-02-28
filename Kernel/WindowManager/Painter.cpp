@@ -186,7 +186,7 @@ void Painter::draw_32_bpp_bitmap(const Bitmap& bitmap, const Point& point)
 
 void Painter::draw_char(Point top_left, char c, Color char_color, Color fill_color)
 {
-    ASSERT(c > 0);
+    ASSERT(c >= 0);
 
     Color palette[2] { fill_color, char_color };
 

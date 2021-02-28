@@ -6,6 +6,7 @@ build*/
 bin/
 Project/
 Scripts/vhc
+cmake-build-debug/
 
 # Everything tests related
 Tests/Environment/*
