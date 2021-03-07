@@ -9,6 +9,7 @@
 #include "Drivers/PCI/PCI.h"
 #include "Drivers/PS2/PS2Controller.h"
 #include "Drivers/Video/VideoDevice.h"
+#include "Filesystem/VFS.h"
 #include "Interrupts/ExceptionDispatcher.h"
 #include "Interrupts/IDT.h"
 #include "Interrupts/InterruptController.h"
@@ -89,6 +90,7 @@ void initialize_drivers()
 
     PCI::the().collect_all_devices();
     PCI::the().initialize_supported();
+    VFS::initialize();
 
     Scheduler::the().exit(0);
 }
