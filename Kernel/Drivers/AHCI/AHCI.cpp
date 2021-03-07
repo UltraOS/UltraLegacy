@@ -203,6 +203,10 @@ void AHCI::initialize_port(size_t index)
         return;
     } else if (port.type != PortState::Type::SATA) {
         log("AHCI") << "port " << index << " has type \"" << port.type_to_string() << "\", which is currently not supported";
+
+        if (port.type == PortState::Type::ATAPI)
+            port.medium_type = StorageDevice::Info::MediumType::CD;
+
         return;
     } else {
         log("AHCI") << "detected device of type \"" << port.type_to_string() << "\" on port " << index;
@@ -358,6 +362,8 @@ void AHCI::identify_sata_port(size_t index)
 
     static constexpr size_t sector_info_offset = 106;
 
+    static constexpr size_t media_rotation_rate_offset = 217;
+
     port.model_string = StringView(reinterpret_cast<char*>(&data[model_number_offset]), model_number_size);
     convert_ata_string(port.model_string);
 
@@ -432,6 +438,13 @@ void AHCI::identify_sata_port(size_t index)
         }
     }
 
+    static constexpr size_t non_rotating_medium_type = 0x0001;
+    if (data[media_rotation_rate_offset] == non_rotating_medium_type)
+        port.medium_type = StorageDevice::Info::MediumType::SSD;
+    else
+        port.medium_type = StorageDevice::Info::MediumType::HDD;
+
+    log("AHCI") << "device rotation rate: " << data[media_rotation_rate_offset];
     log("AHCI") << "physical sector size: " << port.physical_sector_size;
     log("AHCI") << "logical sector size: " << port.logical_sector_size;
     log("AHCI") << "lba offset into physical: " << port.lba_offset_into_physical_sector;

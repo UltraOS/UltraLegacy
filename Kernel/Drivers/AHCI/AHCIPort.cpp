@@ -24,9 +24,11 @@ StorageDevice::Info AHCIPort::query_info() const
     auto& state = m_controller.state_of_port(m_index);
 
     Info info {};
+    info.drive_model = state.model_string.to_view();
     info.lba_count = state.lba_count;
     info.lba_size = state.logical_sector_size;
     info.optimal_read_size = state.physical_sector_size;
+    info.medium_type = state.medium_type;
 
     return info;
 }

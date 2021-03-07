@@ -51,6 +51,8 @@ public:
         u64 lba_count;
         bool supports_48bit_lba;
 
+        StorageDevice::Info::MediumType medium_type;
+
         u16 ata_major;
         u16 ata_minor;
 
