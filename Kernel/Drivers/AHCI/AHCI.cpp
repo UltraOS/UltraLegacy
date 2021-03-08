@@ -366,9 +366,11 @@ void AHCI::identify_sata_port(size_t index)
 
     port.model_string = StringView(reinterpret_cast<char*>(&data[model_number_offset]), model_number_size);
     convert_ata_string(port.model_string);
+    port.model_string.strip();
 
     port.serial_number = StringView(reinterpret_cast<char*>(&data[serial_number_offset]), serial_number_size);
     convert_ata_string(port.serial_number);
+    port.serial_number.strip();
 
     port.ata_major = data[major_version_offset];
     port.ata_minor = data[minor_version_offset];

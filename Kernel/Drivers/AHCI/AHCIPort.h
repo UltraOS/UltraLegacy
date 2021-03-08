@@ -15,7 +15,7 @@ public:
     Info query_info() const override;
 
     StringView device_type() const override { return "AHCI Port"_sv; }
-    StringView device_model() const override { return device_type(); }
+    StringView device_model() const override;
 
 private:
     AHCI& m_controller;

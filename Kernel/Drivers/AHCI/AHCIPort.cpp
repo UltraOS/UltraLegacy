@@ -19,6 +19,11 @@ void AHCIPort::write_synchronous(Address from_virtual_address, LBARange range)
     m_controller.write_synchronous(m_index, from_virtual_address, range);
 }
 
+StringView AHCIPort::device_model() const
+{
+    return m_controller.state_of_port(m_index).model_string.to_view();
+}
+
 StorageDevice::Info AHCIPort::query_info() const
 {
     auto& state = m_controller.state_of_port(m_index);
