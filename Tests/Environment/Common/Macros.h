@@ -6,6 +6,10 @@
 #define MB (1024ull * KB)
 #define GB (1024ull * MB)
 
+#define SET_BIT(x) (1u << (x))
+
+#define IS_BIT_SET(mask, x) ((mask)&SET_BIT(x))
+
 // Koenig lookup workaround
 #include "Utilities.h"
 #define move    ::kernel::move
@@ -29,15 +33,5 @@
     MAKE_NONMOVABLE(class_name)         \
 private:                                \
     class_name(__VA_ARGS__)
-
-#define MAKE_INHERITABLE_SINGLETON(class_name, ...) \
-    MAKE_NONCOPYABLE(class_name)                    \
-    MAKE_NONMOVABLE(class_name)                     \
-protected:                                          \
-    class_name(__VA_ARGS__)
-
-#define MAKE_SINGLETON_INHERITABLE(inherited_from, class_name, ...) \
-    friend class inherited_from;                                    \
-    MAKE_SINGLETON(class_name, ##__VA_ARGS__)
 
 #define PACKED

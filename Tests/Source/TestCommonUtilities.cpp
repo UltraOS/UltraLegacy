@@ -196,7 +196,7 @@ TEST(LinearSearch) {
     itr = kernel::linear_search(v.begin(), v.end(), super_struct{ 4, 0 });
     Assert::that(itr).is_equal(v.end());
 
-    itr = kernel::linear_search(v.begin(), v.end(), 3, [](super_struct l, int r) { return l.y == r; });
+    itr = kernel::linear_search_for(v.begin(), v.end(), [](super_struct l) { return l.y == 3; });
     Assert::that(itr).is_not_equal(v.end());
     Assert::that(itr->y).is_equal(3);
 }

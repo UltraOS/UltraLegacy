@@ -14,6 +14,7 @@ Tests/Environment/*
 !Tests/Environment/Common/Lock.h
 !Tests/Environment/Common/Logger.h
 !Tests/Environment/Common/Macros.h
+!Tests/Environment/Common/InitializerList.h
 !Tests/Environment/Core/Runtime.h
 !Tests/Environment/Memory/MemoryManager.h
 !Tests/Environment/Drivers/Video/.keep
