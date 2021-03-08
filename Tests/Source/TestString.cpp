@@ -139,3 +139,34 @@ TEST(StackStringBuilderLeftShift) {
 
     Assert::that(const_cast<const char*>(builder.data())).is_equal(expected_string);
 }
+
+TEST(StartsWith) {
+    kernel::StringView str1 = "TEST";
+
+    kernel::StringView str2 = "TEST123321";
+    kernel::StringView str3 = "";
+    kernel::StringView str4 = "TES123123112312321";
+    kernel::StringView str5 = "TEST";
+
+    Assert::that(str2.starts_with(str1)).is_true();
+    Assert::that(str3.starts_with(str1)).is_false();
+    Assert::that(str1.starts_with(str3)).is_true();
+    Assert::that(str4.starts_with(str1)).is_false();
+    Assert::that(str5.starts_with(str1)).is_true();
+}
+
+TEST(Find) {
+    kernel::StringView str1 = "TEST";
+
+    kernel::StringView str2 = "TEST123321";
+    kernel::StringView str3 = "";
+    kernel::StringView str4 = "TES1231TEST12312321";
+    kernel::StringView str5 = "TEASTXXXXXXXTEST";
+
+    Assert::that(str2.find(str1).value_or(-1)).is_equal(0);
+    Assert::that(str3.find(str1).value_or(-1)).is_equal(-1);
+    Assert::that(str1.find(str3).value_or(-1)).is_equal(0);
+    Assert::that(str4.find(str1).value_or(-1)).is_equal(7);
+    Assert::that(str5.find(str1).value_or(-1)).is_equal(12);
+    Assert::that(str1.find(str1).value_or(-1)).is_equal(0);
+}

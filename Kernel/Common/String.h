@@ -4,6 +4,7 @@
 #include "Core/Runtime.h"
 #include "Macros.h"
 #include "Memory.h"
+#include "Optional.h"
 #include "Memory/Range.h"
 #include "Utilities.h"
 
@@ -72,7 +73,7 @@ public:
 
     String() = default;
     String(const char* string) { construct_from(string, length_of(string)); }
-    String(StringView string);
+    explicit String(StringView string);
     String(const String& other) { construct_from(other.data(), other.size()); }
     String(String&& other) { become(forward<String>(other)); }
 
@@ -346,6 +347,50 @@ private:
 class StringView {
 public:
     StringView() = default;
+
+    bool starts_with(StringView string)
+    {
+        if (string.size() > size())
+            return false;
+        if (string.empty())
+            return true;
+
+        for (size_t i = 0; i < string.size(); ++i) {
+            if (at(i) != string.at(i))
+                return false;
+        }
+
+        return true;
+    }
+
+    // TODO: implement KMP?
+    Optional<size_t> find(StringView string)
+    {
+        if (string.size() > size())
+            return {};
+        if (string.empty())
+            return 0;
+
+        for (size_t i = 0; i < size() - string.size() + 1; ++i) {
+            if (at(i) != string[0])
+                continue;
+
+            size_t j = i;
+            size_t k = 0;
+
+            while (k < string.size()) {
+                if (at(j++) != string[k])
+                    break;
+
+                k++;
+            }
+
+            if (k == string.size())
+                return i;
+        }
+
+        return {};
+    }
 
     StringView find_in_range(const Range& range, size_t step = 1) const
     {
