@@ -1,5 +1,6 @@
 #include "DemoTTY.h"
 #include "ACPI/ACPI.h"
+#include "Drivers/AHCI/AHCI.h"
 #include "Drivers/PCI/PCI.h"
 #include "Drivers/Video/VideoDevice.h"
 #include "EventManager.h"
@@ -228,10 +229,10 @@ void DemoTTY::execute_command()
     } else if (m_current_command == "video-mode"_sv) {
         write("\nVideo mode information:\n"_sv);
 
-        auto info = VideoDevice::the().mode();
+        auto info = VideoDevice::primary().mode();
         String info_string;
         info_string << "Resolution: " << info.width << "x" << info.height << " @ " << info.bpp << " bpp";
-        info_string << "\nDevice: \"" << VideoDevice::the().name() << '\"';
+        info_string << "\nDevice: \"" << VideoDevice::primary().device_model() << '\"';
         write(info_string.to_view());
         write("\n"_sv);
     } else if (m_current_command == "cpu"_sv) {
@@ -265,6 +266,39 @@ void DemoTTY::execute_command()
         write(info_string.to_view());
         write("\n");
 
+    } else if (m_current_command == "ahci"_sv) {
+        write("\nAHCI information:\n"_sv);
+        String info_string;
+
+        auto* dev = DeviceManager::the().find_if(Device::Category::CONTROLLER,
+            [](Device* dev) { return dev->device_type() == "AHCI"_sv; });
+
+        if (!dev)
+            return;
+
+        auto& ahci = *static_cast<AHCI*>(dev);
+
+        for (size_t i = 0; i < 32; ++i) {
+            auto& port = ahci.state_of_port(i);
+
+            if (!port.implemented || !port.has_device_attached || port.type == AHCI::PortState::Type::NONE)
+                continue;
+
+            info_string << "\nPort " << i;
+            info_string << "\nType: " << port.type_to_string() << "\n";
+            info_string << "LBA: " << port.lba_count << " supports 48-bit lba? " << port.supports_48bit_lba << "\n";
+            info_string << "Logical sector size: " << port.logical_sector_size << "\n";
+            info_string << "Physical sector size: " << port.physical_sector_size << "\n";
+            info_string << "Offset into physical: " << port.lba_offset_into_physical_sector << "\n";
+            info_string << "Model: " << port.model_string << "\n";
+            info_string << "Serial: " << port.serial_number << "\n";
+            info_string << "ATA version: " << port.ata_major << ":" << port.ata_minor << "\n";
+            info_string << "Medium type: " << StorageDevice::Info::medium_type_to_string(port.medium_type) << "\n";
+            info_string << "Size: " << (port.logical_sector_size * port.lba_count) / MB << " MB \n";
+        }
+
+        write(info_string.to_view());
+        write("\n");
     } else if (m_current_command == "help"_sv) {
         write("\nWelcome to UltraOS demo terminal.\n"_sv);
         write("Here's a few things you can do:\n"_sv);
@@ -280,6 +314,8 @@ void DemoTTY::execute_command()
         write("acpi - dump all detected acpi tables\n"_sv);
         write("timer - get the primary system timer model\n"_sv);
         write("pci - dump all detected PCIe devices\n"_sv);
+        write("devices - dump all system devices\n"_sv);
+        write("ahci - dump AHCI state\n"_sv);
         write("clear - clear the terminal screen\n"_sv);
     } else if (m_current_command == "kvm"_sv) {
         write("\nKernel address space virtual memory dump:\n");
@@ -290,7 +326,61 @@ void DemoTTY::execute_command()
         write("\n");
     } else if (m_current_command == "timer"_sv) {
         write("\nCurrent primary timer: ");
-        write(Timer::primary().model());
+        write(Timer::primary().device_model());
+        write("\n");
+    } else if (m_current_command == "devices"_sv) {
+        auto category = static_cast<Device::Category>(0);
+
+        while (static_cast<size_t>(category) < static_cast<size_t>(Device::Category::LAST)) {
+            auto devices = DeviceManager::the().all_of(category);
+
+            if (devices.empty()) {
+                category = static_cast<Device::Category>(static_cast<size_t>(category) + 1);
+                continue;
+            }
+
+            write("\nCategory: ");
+            write(Device::category_to_string(category));
+
+            if (devices.empty())
+                write(" - None");
+            else
+                write("\n");
+
+            size_t i = 1;
+
+            for (auto* dev : devices) {
+                char num[10];
+                to_string(i++, num, 10);
+                write(num);
+
+                write(". ");
+                write(dev->device_model());
+                if (dev->is_primary())
+                    write(" - primary ");
+
+                auto children = DeviceManager::the().children_of(dev);
+
+                if (children.empty()) {
+                    write("\n");
+                    continue;
+                }
+
+                write("(children: ");
+
+                for (auto child : children) {
+                    write("\"");
+                    write(child->device_model());
+                    write("\" ");
+                }
+                write(")");
+
+                write("\n");
+            }
+
+            category = static_cast<Device::Category>(static_cast<size_t>(category) + 1);
+        }
+
         write("\n");
     } else if (m_current_command.empty()) {
         write("\n");
