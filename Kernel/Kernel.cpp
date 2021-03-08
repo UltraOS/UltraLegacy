@@ -9,7 +9,7 @@
 #include "Drivers/PCI/PCI.h"
 #include "Drivers/PS2/PS2Controller.h"
 #include "Drivers/Video/VideoDevice.h"
-#include "Filesystem/VFS.h"
+#include "FileSystem/VFS.h"
 #include "Interrupts/ExceptionDispatcher.h"
 #include "Interrupts/IDT.h"
 #include "Interrupts/InterruptController.h"

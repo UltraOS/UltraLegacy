@@ -117,7 +117,7 @@ void ACPI::collect_all_sdts()
             continue;
         }
 
-        m_tables.append({ table_address, length_of_table, signature_string });
+        m_tables.append({ table_address, length_of_table, String(signature_string) });
     }
 }
 
