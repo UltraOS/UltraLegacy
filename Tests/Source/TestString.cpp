@@ -170,3 +170,40 @@ TEST(Find) {
     Assert::that(str5.find(str1).value_or(-1)).is_equal(12);
     Assert::that(str1.find(str1).value_or(-1)).is_equal(0);
 }
+
+TEST(Strip) {
+
+    kernel::String str1 = "ASD";
+    kernel::String str2 = " A  ";
+    kernel::String str3 = "  X";
+    kernel::String str4 = "X  ";
+    kernel::String str5 = "   XXX   Y   ";
+    kernel::String str6 = "                              ASD                                     ";
+    kernel::String str7 = "   ";
+    kernel::String str8 = "   AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA  ";
+
+    str1.strip();
+    Assert::that(str1).is_equal("ASD");
+
+    str2.strip();
+    Assert::that(str2).is_equal("A");
+
+    str3.strip();
+    Assert::that(str3).is_equal("X");
+
+    str4.strip();
+    Assert::that(str4).is_equal("X");
+
+    str5.strip();
+    Assert::that(str5).is_equal("XXX   Y");
+
+    str6.strip();
+    Assert::that(str6).is_equal("ASD");
+
+    str7.strip();
+    Assert::that(str7).is_equal("");
+    Assert::that(str7.empty()).is_true();
+
+    str8.strip();
+    Assert::that(str8).is_equal("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+}

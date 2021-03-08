@@ -173,6 +173,32 @@ public:
     using StreamingFormatter::append;
     void append(const String& other);
 
+    // FIXME: feels a bit Q&D
+    void strip()
+    {
+        if (empty())
+            return;
+
+        size_t i = 0;
+        while (i < size() && at(i) == ' ')
+            i++;
+
+        if (i == size()) {
+            clear();
+            return;
+        }
+
+        size_t j = size() - 1;
+        while (j > i && at(j) == ' ')
+            j--;
+
+        if (i == 0 && j == size() - 1)
+            return;
+
+        String copy = *this;
+        construct_from(copy.data() + i, j - i + 1);
+    }
+
     String operator+(const String& other)
     {
         String str = *this;
@@ -270,7 +296,8 @@ private:
             if (!is_small())
                 clear();
 
-            copy_memory(string, m_small_string, length + 1);
+            copy_memory(string, m_small_string, length);
+            m_small_string[length] = '\0';
         } else {
             if (is_small())
                 m_big_string = {};
