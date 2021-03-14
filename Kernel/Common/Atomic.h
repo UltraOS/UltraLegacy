@@ -48,6 +48,11 @@ public:
             static_cast<order_t>(MemoryOrder::ACQUIRE));
     }
 
+    T exchange(T new_value) volatile ALWAYS_INLINE
+    {
+        return __atomic_exchange_n(&m_value, new_value, static_cast<order_t>(MemoryOrder::ACQUIRE));
+    }
+
     T fetch_add(T value, MemoryOrder order = MemoryOrder::SEQ_CST) volatile ALWAYS_INLINE
     {
         return __atomic_fetch_add(&m_value, value, static_cast<order_t>(order));
