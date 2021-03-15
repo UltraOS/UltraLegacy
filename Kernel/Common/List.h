@@ -68,6 +68,45 @@ public:
     {
     }
 
+    List(const List& other)
+        : m_end(&m_end, &m_end)
+    {
+        // TODO: add const iterators
+        for (auto& val : const_cast<List&>(other))
+            append_back(val);
+    }
+
+    List(List&& other)
+        : m_end(&m_end, &m_end)
+    {
+        become(move(other));
+    }
+
+    List& operator=(const List& other)
+    {
+        if (this == &other)
+            return *this;
+
+        clear();
+
+        // TODO: add const iterators
+        for (auto& val : const_cast<List&>(other))
+            append_back(val);
+
+        return *this;
+    }
+
+    List& operator=(List&& other)
+    {
+        if (this == &other)
+            return *this;
+
+        clear();
+        become(move(other));
+
+        return *this;
+    }
+
     // TODO: enable_if<is_same<T, U>>
     template <typename U>
     T& append_back(U&& value)
@@ -244,7 +283,7 @@ public:
     [[nodiscard]] size_t size() const { return m_size; }
     [[nodiscard]] bool empty() const { return size() == 0; }
 
-    ~List()
+    void clear()
     {
         auto* next_node = m_end.next();
 
@@ -255,9 +294,30 @@ public:
         }
     }
 
+    ~List()
+    {
+        clear();
+    }
+
 private:
     Node* as_value_node(NodeBase* node) { return static_cast<Node*>(node); }
     const Node* as_value_node(NodeBase* node) const { return static_cast<const Node*>(node); }
+
+    void become(List&& other)
+    {
+        if (other.empty())
+            return;
+
+        m_end.set_next(other.m_end.next());
+        other.m_end.next()->set_previous(&m_end);
+        other.m_end.set_next(&other.m_end);
+
+        m_end.set_previous(other.m_end.previous());
+        other.m_end.previous()->set_next(&m_end);
+        other.m_end.set_previous(&other.m_end);
+
+        swap(m_size, other.m_size);
+    }
 
 private:
     NodeBase m_end;
@@ -268,9 +328,18 @@ private:
 template <typename T>
 class List<T, typename enable_if<is_base_of_v<StandaloneListNode<T>, T>>::type> {
 public:
-    List()
-        : m_end(&m_end, &m_end)
+    List();
+    List(List&& other);
+
+    List& operator=(List&& other)
     {
+        if (this == &other)
+            return *this;
+
+        clear();
+        become(move(other));
+
+        return *this;
     }
 
     void insert_back(T& node);
@@ -361,7 +430,31 @@ public:
     [[nodiscard]] size_t size() const { return m_size; }
     [[nodiscard]] bool empty() const { return size() == 0; }
 
-    ~List();
+    void clear() { set_nodes_owner_pointer(nullptr); }
+    
+    ~List() { clear(); }
+
+private:
+    void set_nodes_owner_pointer(List*);
+
+    void become(List&& other)
+    {
+        if (other.empty())
+            return;
+
+        m_end.set_next(other.m_end.next());
+        other.m_end.next()->set_previous(&m_end);
+        other.m_end.set_next(&other.m_end);
+
+        m_end.set_previous(other.m_end.previous());
+        other.m_end.previous()->set_next(&m_end);
+        other.m_end.set_previous(&other.m_end);
+
+        swap(m_size, other.m_size);
+
+        set_nodes_owner_pointer(nullptr);
+        set_nodes_owner_pointer(this);
+    }
 
 private:
     StandaloneListNode<T> m_end;
@@ -389,6 +482,7 @@ public:
     void set_previous(StandaloneListNode* previous) { m_previous = previous; }
 
     [[nodiscard]] bool is_on_a_list() const { return m_my_list != nullptr; }
+    [[nodiscard]] List<T>* list() const { return m_my_list; }
 
     void pop_off()
     {
@@ -495,15 +589,30 @@ void List<T, typename enable_if<is_base_of_v<StandaloneListNode<T>, T>>::type>::
 }
 
 template <typename T>
-List<T, typename enable_if<is_base_of_v<StandaloneListNode<T>, T>>::type>::~List()
+void List<T, typename enable_if<is_base_of_v<StandaloneListNode<T>, T>>::type>::set_nodes_owner_pointer(List* owner)
 {
     auto* next_node = m_end.next();
 
     for (size_t i = 0; i < m_size; ++i) {
         auto* current_node = next_node;
         next_node = next_node->next();
-        current_node->set_my_list(nullptr);
+        current_node->set_my_list(owner);
     }
+}
+
+template <typename T>
+List<T, typename enable_if<is_base_of_v<StandaloneListNode<T>, T>>::type>::List()
+    : m_end(&m_end, &m_end)
+{
+    m_end.set_my_list(this);
+}
+
+template <typename T>
+List<T, typename enable_if<is_base_of_v<StandaloneListNode<T>, T>>::type>::List(List&& other)
+    : m_end(&m_end, &m_end)
+{
+    m_end.set_my_list(this);
+    become(move(other));
 }
 
 }

@@ -456,6 +456,9 @@ public:
     template <typename T>
     static Asserter<T> that(T value, std::string_view file, size_t line) { return Asserter<T>(value, file, line); }
     #define that(value) that(value, __FILE__, __LINE__)
+
+    static void never_reached(std::string_view why, std::string_view file, size_t line) { throw FailedAssertion(why, file, line); }
+    #define never_reached(why) never_reached(why, __FILE__, __LINE__)
 };
 
 class Deletable {
