@@ -292,6 +292,8 @@ public:
             next_node = next_node->next();
             delete current_node;
         }
+
+        m_size = 0;
     }
 
     ~List()
@@ -430,7 +432,11 @@ public:
     [[nodiscard]] size_t size() const { return m_size; }
     [[nodiscard]] bool empty() const { return size() == 0; }
 
-    void clear() { set_nodes_owner_pointer(nullptr); }
+    void clear()
+    {
+        set_nodes_owner_pointer(nullptr);
+        m_size = 0;
+    }
     
     ~List() { clear(); }
 
