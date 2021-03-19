@@ -271,12 +271,11 @@ public:
 
     void clear()
     {
-        if (is_small())
-            m_small_string[0] = '\0';
-        else
+        if (!is_small())
             delete[] m_big_string.data;
 
         m_size = 0;
+        copy_memory("\0", m_small_string, 1);
     }
 
     ~String()
