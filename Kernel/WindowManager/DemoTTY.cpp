@@ -312,7 +312,7 @@ void DemoTTY::execute_command()
         write("video-mode - get current video mode information\n"_sv);
         write("cpu - get CPU information\n"_sv);
         write("acpi - dump all detected acpi tables\n"_sv);
-        write("timer - get the primary system timer model\n"_sv);
+        write("klog - dump all kernel logs\n"_sv);
         write("pci - dump all detected PCIe devices\n"_sv);
         write("devices - dump all system devices\n"_sv);
         write("ahci - dump AHCI state\n"_sv);
@@ -323,10 +323,6 @@ void DemoTTY::execute_command()
     } else if (m_current_command == "kvr"_sv) {
         write("\nKernel virtual regions dump:\n");
         write(MemoryManager::the().kernel_virtual_regions_debug_dump().to_view());
-        write("\n");
-    } else if (m_current_command == "timer"_sv) {
-        write("\nCurrent primary timer: ");
-        write(Timer::primary().device_model());
         write("\n");
     } else if (m_current_command == "devices"_sv) {
         auto category = static_cast<Device::Category>(0);
@@ -381,6 +377,11 @@ void DemoTTY::execute_command()
             category = static_cast<Device::Category>(static_cast<size_t>(category) + 1);
         }
 
+        write("\n");
+    } else if (m_current_command == "klog"_sv) {
+        LOCK_GUARD(MemorySink::lock());
+        write("\n");
+        write(MemorySink::data().to_view());
         write("\n");
     } else if (m_current_command.empty()) {
         write("\n");

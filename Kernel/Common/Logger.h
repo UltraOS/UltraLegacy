@@ -36,6 +36,50 @@ public:
     void write(StringView string) override { Serial::write<Serial::Port::COM1>(string); }
 };
 
+class MemorySink : public LogSink {
+public:
+    void write(StringView string) override
+    {
+        if (!HeapAllocator::is_initialized() || HeapAllocator::is_deadlocked())
+            return;
+        if (runtime::is_in_panic())
+            return;
+        if (!s_data)
+            initialize();
+        if (string.starts_with("[\33"_sv))
+            return;
+
+        LOCK_GUARD(*s_lock);
+        (*s_data) += string;
+    }
+
+    static InterruptSafeSpinLock& lock()
+    {
+        ASSERT(s_lock != nullptr);
+        return *s_lock;
+    }
+
+    static const String& data()
+    {
+        ASSERT(s_data != nullptr);
+        return *s_data;
+    }
+
+private:
+    void initialize()
+    {
+        if (!HeapAllocator::is_initialized())
+            return;
+
+        s_data = new String;
+        s_lock = new InterruptSafeSpinLock;
+    }
+
+private:
+    inline static String* s_data;
+    inline static InterruptSafeSpinLock* s_lock;
+};
+
 template <size_t MaxSinks>
 class StaticSinkHolder {
 public:
@@ -85,6 +129,7 @@ public:
             s_sinks->construct<E9LogSink>();
 
         s_sinks->construct<SerialSink>();
+        s_sinks->construct<MemorySink>();
     }
 
     static bool is_initialized() { return s_sinks && s_write_lock; }
