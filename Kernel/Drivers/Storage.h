@@ -2,6 +2,8 @@
 
 #include "Device.h"
 #include "Memory/MemoryManager.h"
+#include "Multitasking/Blocker.h"
+#include "Multitasking/Scheduler.h"
 
 namespace kernel {
 
@@ -54,8 +56,37 @@ public:
         }
     };
 
+    class AsyncRequest {
+    public:
+        enum class Type {
+            READ,
+            WRITE
+        };
+
+        AsyncRequest(Address virtual_address, LBARange lba_range, Type type);
+
+        bool begin();
+        void wait();
+        void complete();
+
+        Type type() const { return m_type; }
+        Address virtual_address() const { return m_virtual_address; }
+        LBARange lba_range() const { return m_lba_range; }
+
+    private:
+        DiskIOBlocker m_blocker;
+
+        Address m_virtual_address;
+        LBARange m_lba_range;
+        Type m_type;
+        
+        Atomic<bool> m_is_completed { false };
+    };
+
+    virtual void submit_request(AsyncRequest&) = 0;
     virtual void read_synchronous(Address into_virtual_address, LBARange) = 0;
     virtual void write_synchronous(Address from_virtual_address, LBARange) = 0;
+
     virtual Info query_info() const = 0;
 };
 

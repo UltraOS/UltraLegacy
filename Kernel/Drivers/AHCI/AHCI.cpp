@@ -5,6 +5,7 @@
 #include "Interrupts/Timer.h"
 #include "Multitasking/Scheduler.h"
 #include "Structures.h"
+#include "Memory/Utilities.h"
 
 #ifdef ULTRA_32
 
@@ -32,6 +33,7 @@ AHCI::AHCI(const PCI::DeviceInfo& info)
     : ::kernel::Device(Category::CONTROLLER)
     , PCI::Device(info)
     , IRQHandler(IRQHandler::Type::MSI)
+    , m_ports()
 {
     enable_memory_space();
     make_bus_master();
@@ -291,7 +293,6 @@ void AHCI::enable_dma_engines_for_port(size_t index)
 void AHCI::handle_irq(RegisterState&)
 {
     volatile auto port_status = m_hba->interrupt_pending_status;
-    m_hba->interrupt_pending_status = port_status;
 
     for (size_t i = 0; i < 32; ++i) {
         if (!IS_BIT_SET(port_status, i))
@@ -302,10 +303,65 @@ void AHCI::handle_irq(RegisterState&)
 
         panic_if_port_error(port_status, port_read<PortSATAError>(i));
 
-        u32 x;
-        copy_memory(&port_status, &x, 4);
+        handle_port_irq(i);
+    }
 
-        log("AHCI") << "got an irq for port " << i << " status=" << x;
+    m_hba->interrupt_pending_status = port_status;
+}
+
+void AHCI::handle_port_irq(size_t port_index)
+{
+    log("AHCI") << "handling IRQ for port " << port_index;
+
+    auto& port = m_ports[port_index];
+    LOCK_GUARD(port.state_access_lock);
+
+    volatile auto command_status = m_hba->ports[port_index].command_issue;
+
+    for (size_t bit = 0; bit < m_command_slots_per_port; ++bit)
+    {
+        // A command has been completed
+        if (port.slot_map.bit_at(bit) && !IS_BIT_SET(command_status, bit)) {
+            log("AHCI") << "command " << bit << " is completed";
+
+            log() << "Bytes: " << port.command_list->commands[0].physical_region_descriptor_byte_count;
+
+            auto* req = port.slot_to_request[bit];
+
+            if (!req)
+                continue;
+
+            // Complete current OP
+            req->queued_ops.pop_front();
+
+            // We're done here
+            if (req->queued_ops.empty()) {
+                port.slot_to_request[bit] = nullptr;
+                req->pop_off();
+                req->request->complete();
+                delete req;
+
+                // Lets check if we have any other queued requests
+                if (port.request_queue.empty()) {
+                    // No pending requests, so this slot is now free :)
+                    port.deallocate_slot(bit);
+                    continue;
+                } else { // We had a pending requests, set it to the current slot and execute
+                    auto& new_req = port.request_queue.front();
+                    port.slot_to_request[bit] = &new_req;
+
+                    auto& op = req->queued_ops.front();
+                    op.command_slot = bit;
+                    execute(op);
+                    continue;
+                }
+            } else { // Request has even more OPs
+                auto& op = req->queued_ops.front();
+                op.command_slot = bit;
+                execute(op);
+                continue;
+            }
+        }
     }
 }
 
@@ -334,7 +390,7 @@ void AHCI::identify_sata_port(size_t index)
 
     SET_DWORDS_TO_ADDRESS(prdt_0.data_base, prdt_0.data_upper, identify_base);
 
-    synchronous_complete_command(index, command_slot_for_identify);
+    synchronous_wait_for_command_completion(index, command_slot_for_identify);
 
     auto convert_ata_string = [](String& ata) {
         for (size_t i = 0; i < ata.size() - 1; i += 2)
@@ -454,60 +510,78 @@ void AHCI::identify_sata_port(size_t index)
     MemoryManager::the().free_page(Page(identify_base));
 }
 
-DynamicArray<Range> AHCI::accumulate_contiguous_physical_ranges(Address virtual_address, size_t byte_length, size_t max_bytes_per_range)
-{
-    ASSERT(virtual_address > MemoryManager::kernel_address_space_base);
-    auto& address_space = AddressSpace::of_kernel();
-
-    DynamicArray<Range> contiguous_ranges;
-
-    Address current_address = virtual_address;
-    Range current_range {};
-
-    while (byte_length) {
-        byte_length -= min(Page::size, byte_length);
-
-        auto physical_address = address_space.physical_address_of(current_address);
-        ASSERT(physical_address);
-
-        if (current_range) {
-            if (current_range.end() == physical_address) {
-                current_range.extend_by(Page::size);
-            } else {
-                contiguous_ranges.append(current_range);
-                current_range = { physical_address, Page::size };
-            }
-        } else {
-            current_range = { physical_address, Page::size };
-        }
-
-        if (current_range.length() == max_bytes_per_range) {
-            contiguous_ranges.append(current_range);
-            current_range.reset();
-        }
-
-        current_address += Page::size;
-    }
-
-    contiguous_ranges.append(current_range);
-
-    return contiguous_ranges;
-}
-
 void AHCI::read_synchronous(size_t port, Address into_virtual_address, LBARange range)
 {
-    do_synchronous_operation(port, OP::Type::READ, into_virtual_address, range);
+    auto ops = build_ops(port, OP::Type::READ, into_virtual_address, range, false);
+    synchronous_execute(port, ops);
 }
 
 void AHCI::write_synchronous(size_t port, Address from_virtual_address, LBARange range)
 {
-    do_synchronous_operation(port, OP::Type::WRITE, from_virtual_address, range);
+    auto ops = build_ops(port, OP::Type::WRITE, from_virtual_address, range, false);
+    synchronous_execute(port, ops);
 }
 
-void AHCI::do_synchronous_operation(size_t port, OP::Type op, Address virtual_address, LBARange range)
+void AHCI::synchronous_execute(size_t port_index, List<OP>& ops)
+{
+    auto& port = m_ports[port_index];
+
+    // Spin forever until we can allocate a slot
+    Optional<size_t> slot {};
+    while (!slot) {
+        {
+            LOCK_GUARD(port.state_access_lock);
+            slot = port.allocate_slot();
+        }
+
+        if (!slot.has_value())
+            Scheduler::the().yield();
+    }
+
+    while (!ops.empty())
+    {
+        auto& op = ops.front();
+        op.command_slot = slot.value();
+
+        execute(op);
+        
+        ops.pop_front();
+    }
+
+    LOCK_GUARD(port.state_access_lock);
+    port.deallocate_slot(slot.value());
+}
+
+void AHCI::process_async_request(size_t port_index, StorageDevice::AsyncRequest& request)
+{
+    using RT = StorageDevice::AsyncRequest::Type;
+    using OT = OP::Type;
+
+    auto& port = m_ports[port_index];
+
+    auto ops = build_ops(port_index, request.type() == RT::READ ? OT::READ : OT::WRITE, request.virtual_address(), request.lba_range(), true);
+
+    auto& qr = *new PortState::QueuedRequest();
+    qr.request = &request;
+    qr.queued_ops = move(ops);
+    port.request_queue.insert_back(qr);
+
+    LOCK_GUARD(port.state_access_lock);
+    auto slot = port.allocate_slot();
+
+    // All slots were busy, our request will be automatically launched as soon as
+    // a slot is released.
+    if (!slot)
+        return;
+
+    port.slot_to_request[slot.value()] = &qr;
+    execute(qr.queued_ops.front());
+}
+
+List<AHCI::OP> AHCI::build_ops(size_t port, OP::Type op, Address virtual_address, LBARange lba_range, bool is_async)
 {
     auto& state = state_of_port(port);
-    ASSERT(state.lba_count >= range.length());
+    ASSERT(state.lba_count >= lba_range.length());
 
     // PRDT entry limitation (22 bits for byte count)
     size_t max_bytes_per_op = 4 * MB;
@@ -516,62 +590,62 @@ void AHCI::do_synchronous_operation(size_t port, OP::Type op, Address virtual_ad
     if (!state.supports_48bit_lba)
         max_bytes_per_op = state.logical_sector_size * 256;
 
-    size_t bytes_to_read = range.length() * state.logical_sector_size;
+    size_t bytes_to_read = lba_range.length() * state.logical_sector_size;
     auto ranges = accumulate_contiguous_physical_ranges(virtual_address, bytes_to_read, max_bytes_per_op);
 
     static constexpr size_t max_prdt_entries = (Page::size - CommandTable::size) / PRDTEntry::size;
 
     auto* ranges_begin = ranges.data();
-    size_t count = ranges.size();
+    size_t ranges_count = ranges.size();
+
+    List<OP> ops;
 
     OP operation {};
     operation.type = op;
     operation.port = port;
-    operation.is_async = false;
+    operation.is_async = is_async;
 
-    while (count) {
+    while (ranges_count) {
         size_t bytes_for_this_op = 0;
-        operation.physical_ranges = { ranges_begin, 0 };
 
         while (bytes_for_this_op < max_bytes_per_op && ranges_begin != ranges.end() && operation.physical_ranges.size() < max_prdt_entries) {
+            if (bytes_for_this_op + ranges_begin->length() > max_bytes_per_op)
+                break;
+
             bytes_for_this_op += ranges_begin->length();
+            operation.physical_ranges.append(*ranges_begin);
             ranges_begin++;
-            operation.physical_ranges.expand_by(1);
         }
 
         if (bytes_for_this_op == 0)
             break;
 
-        count -= operation.physical_ranges.size();
+        ranges_count -= operation.physical_ranges.size();
 
         ASSERT((bytes_for_this_op % state.logical_sector_size) == 0);
-        bytes_for_this_op = min(bytes_for_this_op, state.logical_sector_size * range.length());
+        bytes_for_this_op = min(bytes_for_this_op, state.logical_sector_size * lba_range.length());
         auto lba_count_for_this_batch = bytes_for_this_op / state.logical_sector_size;
+        bytes_to_read -= bytes_for_this_op;
 
-        operation.lba_range.set_begin(range.begin());
+        operation.lba_range.set_begin(lba_range.begin());
         operation.lba_range.set_length(lba_count_for_this_batch);
 
-        range.advance_begin_by(lba_count_for_this_batch);
+        lba_range.advance_begin_by(lba_count_for_this_batch);
 
-        execute(operation);
+        ops.append_back(operation);
+        operation.physical_ranges.clear();
     }
+
+    return ops;
 }
 
 void AHCI::execute(OP& op)
 {
-    log("AHCI") << "executing op " << op.type_to_string() << " lba range: "
-                << op.lba_range << " " << op.physical_ranges.size() << " physical range(s)";
+    log("AHCI") << "executing op " << op.type_to_string() << " | lba range: "
+                << op.lba_range << " | " << op.physical_ranges.size() << " physical range(s) | slot " << op.command_slot;
 
     auto& port = m_ports[op.port];
-
-    auto slot = port.allocate_slot();
-
-    while (!slot) {
-        Scheduler::the().yield();
-        slot = port.allocate_slot();
-    }
-
-    auto& ch = port.command_list->commands[slot.value()];
+    auto& ch = port.command_list->commands[op.command_slot];
 
     ch.physical_region_descriptor_table_length = op.physical_ranges.size();
     ch.write = static_cast<u8>(op.type);
@@ -623,15 +697,13 @@ void AHCI::execute(OP& op)
         SET_DWORDS_TO_ADDRESS(prdt_entry.data_base, prdt_entry.data_upper, phys_range.begin());
     }
 
-    command_table->prdt_entries[prdt_entry_index - 1].interrupt_on_completion = op.is_async;
-
-    if (!op.is_async) {
-        synchronous_complete_command(op.port, slot.value());
-        port.deallocate_slot(slot.value());
-    }
+    if (!op.is_async)
+        synchronous_wait_for_command_completion(op.port, op.command_slot);
+    else
+        m_hba->ports[op.port].command_issue = 1 << op.command_slot;
 }
 
-void AHCI::synchronous_complete_command(size_t port, size_t slot)
+void AHCI::synchronous_wait_for_command_completion(size_t port, size_t slot)
 {
     auto command_bit = 1 << slot;
 
@@ -648,8 +720,6 @@ void AHCI::synchronous_complete_command(size_t port, size_t slot)
 
     if (m_hba->ports[port].command_issue & command_bit)
         runtime::panic("AHCI: command failed to complete within 500ms");
-
-    panic_if_port_error(port_read<PortInterruptStatus>(port), port_read<PortSATAError>(port));
 }
 
 void AHCI::panic_if_port_error(PortInterruptStatus status, PortSATAError error)

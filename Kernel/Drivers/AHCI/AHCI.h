@@ -29,15 +29,41 @@ public:
 
     static void autodetect(const DynamicArray<PCI::DeviceInfo>&);
 
+    struct OP {
+        enum class Type {
+            READ = 0,
+            WRITE = 1
+        } type;
+
+        StringView type_to_string() const
+        {
+            switch (type) {
+                case Type::READ:
+                    return "READ"_sv;
+                case Type::WRITE:
+                    return "WRITE"_sv;
+                default:
+                    return "INVALID"_sv;
+            }
+        }
+
+        bool is_async;
+        size_t port;
+        size_t command_slot;
+        LBARange lba_range;
+
+        DynamicArray<Range> physical_ranges;
+    };
+
     struct PortState {
+        // ---- immutable state (no locking needed) ----
         enum class Type : u32 {
             NONE = 0xDEADBEEF,
             SATA = 0x00000101,
             ATAPI = 0xEB140101,
             ENCLOSURE_MANAGEMENT_BRIDGE = 0xC33C0101,
             PORT_MULTIPLIER = 0x96690101
-        } type
-            = Type::NONE;
+        } type = Type::NONE;
 
         StringView type_to_string();
 
@@ -61,10 +87,20 @@ public:
         String serial_number;
         String model_string;
 
+        // ---- mutable state (state_access_lock must be held) ----
         DynamicBitArray slot_map;
 
         Optional<size_t> allocate_slot();
         void deallocate_slot(size_t);
+
+        struct QueuedRequest : StandaloneListNode<QueuedRequest> {
+            StorageDevice::AsyncRequest* request;
+            List<OP> queued_ops;
+        };
+        
+        List<QueuedRequest> request_queue;
+        QueuedRequest* slot_to_request[32] {};
+        InterruptSafeSpinLock state_access_lock;
     };
 
     PortState& state_of_port(size_t index)
@@ -75,6 +111,8 @@ public:
 
     void read_synchronous(size_t port, Address into_virtual_address, LBARange);
     void write_synchronous(size_t port, Address from_virtual_address, LBARange);
+
+    void process_async_request(size_t port, StorageDevice::AsyncRequest& request);
 
 private:
     void perform_bios_handoff();
@@ -94,40 +132,16 @@ private:
     void wait_for_port_ready(size_t index);
 
     void handle_irq(RegisterState&) override;
+    void handle_port_irq(size_t port);
     void enable_irq() override { ASSERT_NEVER_REACHED(); }
     void disable_irq() override { ASSERT_NEVER_REACHED(); }
 
     // SATA spec says "Wait up to 10 milliseconds for SStatus.DET = 3h" but we'll wait for 20
     static constexpr size_t phy_wait_timeout = 20 * Time::nanoseconds_in_millisecond;
 
-    struct OP {
-        enum class Type {
-            READ = 0,
-            WRITE = 1
-        } type;
-
-        StringView type_to_string() const
-        {
-            switch (type) {
-            case Type::READ:
-                return "READ"_sv;
-            case Type::WRITE:
-                return "WRITE"_sv;
-            default:
-                return "INVALID"_sv;
-            }
-        }
-
-        bool is_async;
-        size_t port;
-        LBARange lba_range;
-
-        Span<Range> physical_ranges;
-    };
-
-    DynamicArray<Range> accumulate_contiguous_physical_ranges(Address, size_t byte_length, size_t max_bytes_per_range);
-    void do_synchronous_operation(size_t port, OP::Type, Address virtual_address, LBARange);
-    void synchronous_complete_command(size_t port, size_t slot);
+    List<OP> build_ops(size_t port, OP::Type, Address virtual_address, LBARange, bool is_async);
+    void synchronous_wait_for_command_completion(size_t port, size_t slot);
+    void synchronous_execute(size_t port, List<OP>& ops);
     void execute(OP&);
 
     template <typename T>
@@ -150,7 +164,7 @@ private:
 private:
     TypedMapping<volatile HBA> m_hba;
 
-    PortState m_ports[32] {};
+    PortState m_ports[32] { };
     u8 m_command_slots_per_port { 0 };
     bool m_supports_64bit { false };
 };
