@@ -2,6 +2,7 @@
 
 #include "Drivers/DeviceManager.h"
 #include "Drivers/Storage.h"
+#include "Utilities.h"
 #include "FAT32.h"
 
 namespace kernel {
@@ -50,7 +51,7 @@ void VFS::load_all_partitions(StorageDevice& device)
     auto signature = *Address(lba0_data + offset_to_mbr_signature).as_pointer<u16>();
     if (signature != mbr_partition_signature) {
         warning() << "VFS: device " << device.device_model() << " contains an invalid MBR signature "
-                  << format::as_hex << "(expected: " << mbr_partition_signature << " got: " << signature;
+                  << format::as_hex << "(expected: " << mbr_partition_signature << " got: " << signature << ")";
         MemoryManager::the().free_virtual_region(*lba0_region);
         return;
     }
@@ -119,76 +120,12 @@ String VFS::generate_prefix(StorageDevice& device)
     return prefix;
 }
 
-Optional<Pair<StringView, StringView>> VFS::split_prefix_and_path(StringView path)
-{
-    Pair<StringView, StringView> prefix_to_path;
-
-    auto pref = path.find("::");
-
-    if (pref) {
-        prefix_to_path.set_first(StringView(path.data(), pref.value()));
-        prefix_to_path.set_second(StringView(path.data() + pref.value(), path.size() - pref.value()));
-    } else {
-        prefix_to_path.set_second(path);
-    }
-
-    auto validate_prefix = [] (StringView prefix)
-    {
-        if (prefix.empty())
-            return true;
-
-        for (char c : prefix) {
-            if (!((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')))
-                return false;
-        }
-
-        return true;
-    };
-
-    auto validate_path  = [] (StringView path)
-    {
-        if (path.empty())
-            return false;
-
-        if (!path.starts_with("/"_sv))
-            return false;
-
-        static constexpr char valid_decoy = 'a';
-
-        for (size_t i = 0; i < path.size(); ++i) {
-            char lhs = i ? path[i - 1] : valid_decoy;
-            char rhs = i < path.size() - 1 ? path[i + 1] : valid_decoy;
-            char cur = path[i];
-
-            if (cur == '/' && (lhs == '/' || rhs == '/'))
-                return false;
-
-            if (cur == '.' && (lhs == '.' && rhs == '.'))
-                return false;
-        }
-
-        return true;
-    };
-
-    if (!validate_prefix(prefix_to_path.first()))
-        return {};
-    if (!validate_path(path))
-        return {};
-
-    return prefix_to_path;
-}
-
-bool VFS::is_valid_path(StringView path)
-{
-    return split_prefix_and_path(path).has_value();
-}
-
-RefPtr<FileDescription> VFS::open(StringView path, FileDescription::Mode mode)
+Pair<ErrorCode, RefPtr<FileDescription>> VFS::open(StringView path, FileDescription::Mode mode)
 {
     auto split_path = split_prefix_and_path(path);
 
     if (!split_path)
-        return {};
+        return { ErrorCode::BAD_PATH, RefPtr<FileDescription>() };
 
     auto& prefix_to_path = split_path.value();
 
@@ -197,101 +134,106 @@ RefPtr<FileDescription> VFS::open(StringView path, FileDescription::Mode mode)
     if (fs == m_prefix_to_fs.end())
         return {};
 
-    auto* file = fs->second()->open(prefix_to_path.second());
-    if (!file)
-        return {};
+    auto code_to_file = fs->second()->open(prefix_to_path.second());
+    if (code_to_file.first().is_error())
+        return { code_to_file.first(), RefPtr<FileDescription>() };
 
-    return RefPtr<FileDescription>::create(*file, mode);
+    return { ErrorCode::NO_ERROR, RefPtr<FileDescription>::create(*code_to_file.second(), mode) };
 }
 
-void VFS::close(FileDescription& fd)
+ErrorCode VFS::close(FileDescription& fd)
 {
     auto& file = fd.raw_file();
-    file.fs().close(file);
+    auto code = file.fs().close(file);
 
-    fd.mark_as_closed();
+    if (code.is_success())
+        fd.mark_as_closed();
+
+    return code;
 }
 
-bool VFS::remove(StringView path)
+ErrorCode VFS::remove(StringView path)
 {
     auto split_path = split_prefix_and_path(path);
 
     if (!split_path)
-        return false;
+        return ErrorCode::BAD_PATH;
 
     auto& prefix_to_path = split_path.value();
 
     auto fs = m_prefix_to_fs.find(prefix_to_path.first());
 
     if (fs == m_prefix_to_fs.end())
-        return false;
+        return ErrorCode::DISK_NOT_FOUND;
 
     return fs->second()->remove(prefix_to_path.second());
 }
 
-void VFS::create(StringView file_path, File::Attributes attributes)
+ErrorCode VFS::create(StringView file_path, File::Attributes attributes)
 {
     auto split_path = split_prefix_and_path(file_path);
 
     if (!split_path)
-        return;
+        return ErrorCode::BAD_PATH;
 
     auto& prefix_to_path = split_path.value();
 
     auto fs = m_prefix_to_fs.find(prefix_to_path.first());
 
     if (fs == m_prefix_to_fs.end())
-        return;
+        return ErrorCode::DISK_NOT_FOUND;
 
-    fs->second()->create(prefix_to_path.second(), attributes);
+    return fs->second()->create(prefix_to_path.second(), attributes);
 }
 
-void VFS::move(StringView path, StringView new_path)
+ErrorCode VFS::move(StringView path, StringView new_path)
 {
     auto split_path_old = split_prefix_and_path(path);
     auto split_path_new = split_prefix_and_path(new_path);
 
     if (!split_path_old || !split_path_new)
-        return;
+        return ErrorCode::BAD_PATH;
     
     auto& prefix_to_path_old = split_path_old.value();
     auto& prefix_to_path_new = split_path_new.value();
 
-    if (prefix_to_path_new.first() != prefix_to_path_old.first()) {
+    auto fs_1 = m_prefix_to_fs.find(prefix_to_path_new.first());
+    auto fs_2 = m_prefix_to_fs.find(prefix_to_path_old.first());
+
+    if (fs_1 == m_prefix_to_fs.end() || fs_2 == m_prefix_to_fs.end())
+        return ErrorCode::DISK_NOT_FOUND;
+
+    if (fs_1->second() != fs_2->second()) {
         warning() << "VFS: tried to move files cross FS, currently not implemented :(";
-        return;
+        return ErrorCode::UNSUPPORTED;
     }
 
-    auto fs = m_prefix_to_fs.find(prefix_to_path_new.first());
-
-    if (fs == m_prefix_to_fs.end())
-        return;
-
-    fs->second()->move(prefix_to_path_old.second(), prefix_to_path_new.second());
+    return fs_1->second()->move(prefix_to_path_old.second(), prefix_to_path_new.second());
 }
 
-void VFS::copy(StringView path, StringView new_path)
+ErrorCode VFS::copy(StringView path, StringView new_path)
 {
     auto split_path_old = split_prefix_and_path(path);
     auto split_path_new = split_prefix_and_path(new_path);
 
     if (!split_path_old || !split_path_new)
-        return;
+        return ErrorCode::BAD_PATH;
 
     auto& prefix_to_path_old = split_path_old.value();
     auto& prefix_to_path_new = split_path_new.value();
+    
+    auto fs_1 = m_prefix_to_fs.find(prefix_to_path_new.first());
+    auto fs_2 = m_prefix_to_fs.find(prefix_to_path_old.first());
 
-    if (prefix_to_path_new.first() != prefix_to_path_old.first()) {
+    if (fs_1 == m_prefix_to_fs.end() || fs_2 == m_prefix_to_fs.end())
+        return ErrorCode::DISK_NOT_FOUND;
+
+    if (fs_1->second() != fs_2->second()) {
         warning() << "VFS: tried to copy files cross FS, currently not implemented :(";
-        return;
+        return ErrorCode::UNSUPPORTED;
     }
 
-    auto fs = m_prefix_to_fs.find(prefix_to_path_new.first());
-
-    if (fs == m_prefix_to_fs.end())
-        return;
-
-    fs->second()->copy(prefix_to_path_old.second(), prefix_to_path_new.second());
+    return fs_1->second()->copy(prefix_to_path_old.second(), prefix_to_path_new.second());
 }
 
 }

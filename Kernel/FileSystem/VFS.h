@@ -8,6 +8,7 @@
 #include "FileSystem.h"
 #include "File.h"
 #include "FileDescription.h"
+#include "Core/ErrorCode.h"
 
 namespace kernel {
 
@@ -27,23 +28,19 @@ public:
         return *s_instance;
     }
 
-    RefPtr<FileDescription> open(StringView path, FileDescription::Mode);
-    void close(FileDescription&);
-    bool remove(StringView path);
-    void create(StringView file_path, File::Attributes);
-    
-    void move(StringView path, StringView new_path);
-    void copy(StringView path, StringView new_path);
+    Pair<ErrorCode, RefPtr<FileDescription>> open(StringView path, FileDescription::Mode);
+    ErrorCode close(FileDescription&);
+    ErrorCode remove(StringView path);
+    ErrorCode create(StringView file_path, File::Attributes);
 
-    static bool is_valid_path(StringView);
+    ErrorCode move(StringView path, StringView new_path);
+    ErrorCode copy(StringView path, StringView new_path);
     
 private:
     void load_all_partitions(StorageDevice&);
     void load_mbr_partitions(StorageDevice&, Address virtual_mbr);
 
     String generate_prefix(StorageDevice&);
-
-    static Optional<Pair<StringView, StringView>> split_prefix_and_path(StringView path);
 
 private:
     Map<String, RefPtr<FileSystem>, Less<>> m_prefix_to_fs;

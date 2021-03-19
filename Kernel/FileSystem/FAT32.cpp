@@ -13,35 +13,35 @@ FAT32::File::File(StringView name, FileSystem& filesystem, Attributes attributes
 {
 }
 
-FAT32::BaseFile* FAT32::open(StringView)
+Pair<ErrorCode, FAT32::BaseFile*> FAT32::open(StringView)
 {
-    return nullptr;
+    return { ErrorCode::UNSUPPORTED, nullptr };
 }
 
-void FAT32::close(BaseFile&)
+ErrorCode FAT32::close(BaseFile&)
 {
+    return ErrorCode::UNSUPPORTED;
 }
 
-bool FAT32::remove(StringView)
+ErrorCode FAT32::remove(StringView)
 {
-    return false;
+    return ErrorCode::UNSUPPORTED;
 }
 
-void FAT32::create(StringView, File::Attributes)
+ErrorCode FAT32::create(StringView, File::Attributes)
 {
-
+    return ErrorCode::UNSUPPORTED;
 }
 
 
-void FAT32::move(StringView, StringView)
+ErrorCode FAT32::move(StringView, StringView)
 {
-
+    return ErrorCode::UNSUPPORTED;
 }
 
-void FAT32::copy(StringView, StringView)
+ErrorCode FAT32::copy(StringView, StringView)
 {
-
+    return ErrorCode::UNSUPPORTED;
 }
-
 
 }

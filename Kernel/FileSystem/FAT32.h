@@ -19,13 +19,13 @@ public:
 
     FAT32(StorageDevice&, LBARange);
 
-    BaseFile* open(StringView path) override;
-    void close(BaseFile&) override;
-    bool remove(StringView path) override;
-    void create(StringView file_path, File::Attributes) override;
+    Pair<ErrorCode, BaseFile*> open(StringView path) override;
+    ErrorCode close(BaseFile&) override;
+    ErrorCode remove(StringView path) override;
+    ErrorCode create(StringView file_path, File::Attributes) override;
 
-    void move(StringView path, StringView new_path) override;
-    void copy(StringView path, StringView new_path) override;
+    ErrorCode move(StringView path, StringView new_path) override;
+    ErrorCode copy(StringView path, StringView new_path) override;
 };
 
 }
