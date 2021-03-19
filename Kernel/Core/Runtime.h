@@ -9,6 +9,7 @@ namespace kernel::runtime {
 
 void ensure_loaded_correctly();
 void init_global_objects();
+bool is_in_panic();
 
 class KernelSymbolTable {
 public:

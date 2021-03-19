@@ -152,6 +152,12 @@ size_t dump_backtrace(ptr_t* into, size_t max_depth, Address base_pointer)
     return current_depth;
 }
 
+static Atomic<bool> in_panic;
+bool is_in_panic()
+{
+    return in_panic;
+}
+
 [[noreturn]] void panic(const char* reason, const RegisterState* registers)
 {
     static constexpr auto panic_message = "KERNEL PANIC!"_sv;
@@ -160,9 +166,8 @@ size_t dump_backtrace(ptr_t* into, size_t max_depth, Address base_pointer)
 
     Interrupts::disable();
 
-    // TODO: make this bool atomic
-    static bool in_panic = false;
-    if (in_panic) {
+    bool expected = false;
+    if (!in_panic.compare_and_exchange(&expected, true)) {
         error() << "Panicked while inside panic: " << reason;
         hang();
     }
