@@ -36,6 +36,8 @@ public:
 
     static bool is_deadlocked();
 
+    static bool is_initialized() { return s_heap_block != nullptr; }
+
 private:
     static InterruptSafeSpinLock& allocation_lock();
     static InterruptSafeSpinLock& refill_lock();

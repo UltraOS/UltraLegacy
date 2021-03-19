@@ -314,7 +314,11 @@ void HeapAllocator::free(void* ptr)
                 scaled_id = allocation_id;
                 allocation_id >>= bit_index;
 
-                ASSERT(allocation_id != 0);
+                if (allocation_id == 0) {
+                    StackStringBuilder str;
+                    str << "HeapAllocator: double free at address " << ptr;
+                    runtime::panic(str.data());
+                }
             } else {
                 if ((control_byte & (0b11 << bit_index)) != scaled_id)
                     break;
