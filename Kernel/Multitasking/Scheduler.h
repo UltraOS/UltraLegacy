@@ -29,6 +29,7 @@ public:
     RefPtr<Process> unregister_process(u32 id);
 
     void register_thread(Thread*);
+    void requeue_unblocked_thread(Thread*);
 
     struct Stats {
         DynamicArray<Pair<u32, StringView>> processor_to_task;
@@ -55,7 +56,7 @@ private:
     Set<RefPtr<Process>, Less<>> m_processes; // sorted by pid
 
     MultiSet<Thread*, Thread::WakeTimePtrComparator> m_sleeping_threads; // sorted by wake-up time
-
+    
     List<Thread> m_deferred_deleted_dead_threads;
 
     // A simplified version of the O(1) scheduler

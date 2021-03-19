@@ -7,6 +7,8 @@
 #include "TSS.h"
 #include "WindowManager/Window.h"
 
+#include "Blocker.h"
+
 namespace kernel {
 
 class Thread : public StandaloneListNode<Thread> {
@@ -19,7 +21,9 @@ public:
     enum class State {
         RUNNING,
         DEAD,
+        DELAYED_DEAD, // in case a thread was blocked with a non-cancellable blocker (like DMA read) when it was killed
         BLOCKED,
+        SLEEPING,
         READY,
     };
 
@@ -59,23 +63,21 @@ public:
         return *m_user_stack;
     }
 
-    bool sleep(u64 until)
-    {
-        auto expected = State::RUNNING;
-        if (!m_state.compare_and_exchange(&expected, State::BLOCKED))
-            return false;
+    bool sleep(u64 until);
+    bool block(Blocker* blocker);
+    void unblock();
+    Thread::State exit();
 
-        m_wake_up_time = until;
-        return true;
-    }
-
-    void exit() { m_state = State::DEAD; }
+    InterruptSafeSpinLock& state_lock() { return m_state_lock; }
 
     void wake_up() { m_state = State::READY; }
     [[nodiscard]] u64 wakeup_time() const { return m_wake_up_time; }
 
-    [[nodiscard]] bool is_sleeping() const { return m_state == State::BLOCKED; }
+    // not thread safe
+    [[nodiscard]] bool is_sleeping() const { return m_state == State::SLEEPING; }
+    [[nodiscard]] bool is_blocked() const { return m_state == State::BLOCKED; }
     [[nodiscard]] bool is_dead() const { return m_state == State::DEAD; }
+    [[nodiscard]] bool is_delayed_dead() const { return m_state == State::DELAYED_DEAD; }
     [[nodiscard]] bool is_running() const { return m_state == State::RUNNING; }
     [[nodiscard]] bool is_ready() const { return m_state == State::READY; }
 
@@ -127,10 +129,13 @@ private:
 
     ControlBlock m_control_block { 0 };
 
-    Atomic<State> m_state { State::READY };
+    InterruptSafeSpinLock m_state_lock;
+    State m_state { State::READY };
     IsSupervisor m_is_supervisor { IsSupervisor::NO };
 
     u64 m_wake_up_time { 0 };
+    
+    Blocker* m_blocker { nullptr };
 
     Set<RefPtr<Window>, Less<>> m_windows;
 };

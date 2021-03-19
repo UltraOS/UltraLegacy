@@ -3,6 +3,8 @@
 #include "Interrupts/IDT.h"
 #include "Process.h"
 #include "Thread.h"
+#include "Scheduler.h"
+#include "TaskFinalizer.h"
 
 namespace kernel {
 
@@ -119,6 +121,9 @@ bool Thread::is_main() const
 
 void Thread::activate()
 {
+    LOCK_GUARD(m_state_lock);
+    ASSERT(m_state == State::READY);
+
     m_state = State::RUNNING;
 
     if (is_supervisor() == IsSupervisor::NO)
@@ -132,9 +137,68 @@ void Thread::activate()
 
 void Thread::deactivate()
 {
+    LOCK_GUARD(m_state_lock);
+
     if (!is_running())
         return;
 
     m_state = State::READY;
 }
+
+bool Thread::sleep(u64 until)
+{
+    LOCK_GUARD(m_state_lock);
+
+    if (!is_running())
+        return false;
+
+    m_wake_up_time = until;
+    m_state = State::SLEEPING;
+    return true;
+}
+
+bool Thread::block(Blocker* blocker)
+{
+    LOCK_GUARD(m_state_lock);
+
+    if (!is_running())
+        return false;
+
+    m_blocker = blocker;
+    m_state = State::BLOCKED;
+    return true;
+}
+
+void Thread::unblock()
+{
+    LOCK_GUARD(m_state_lock);
+
+    // someone attempted to kill us while we were blocked by a non-cancellable blocker
+    if (m_state == State::DELAYED_DEAD) {
+        TaskFinalizer::the().free_thread(*this);
+        return;
+    } else if (m_state == State::DEAD) { // someone killed us before we could unblock
+        return;
+    }
+
+    m_blocker = nullptr;
+    m_state = State::READY;
+    Scheduler::the().requeue_unblocked_thread(this);
+}
+
+Thread::State Thread::exit()
+{
+    LOCK_GUARD(m_state_lock);
+
+    auto current_state = m_state;
+
+    if (m_blocker && !m_blocker->is_cancellable()) {
+        m_state = State::DELAYED_DEAD;
+        return m_state; // return new state instead of old to indicate a non-cancellable block
+    }
+
+    m_state = State::DEAD;
+    return current_state;
+}
+
 }
