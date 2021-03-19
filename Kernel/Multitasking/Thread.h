@@ -134,7 +134,7 @@ private:
     IsSupervisor m_is_supervisor { IsSupervisor::NO };
 
     u64 m_wake_up_time { 0 };
-    
+
     Blocker* m_blocker { nullptr };
 
     Set<RefPtr<Window>, Less<>> m_windows;

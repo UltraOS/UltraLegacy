@@ -437,7 +437,7 @@ public:
         set_nodes_owner_pointer(nullptr);
         m_size = 0;
     }
-    
+
     ~List() { clear(); }
 
 private:

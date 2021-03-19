@@ -4,8 +4,8 @@
 #include "Core/Runtime.h"
 #include "Macros.h"
 #include "Memory.h"
-#include "Optional.h"
 #include "Memory/Range.h"
+#include "Optional.h"
 #include "Utilities.h"
 
 namespace kernel {

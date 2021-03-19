@@ -3,12 +3,12 @@
 #include "Common/Macros.h"
 #include "Common/Map.h"
 #include "Common/RefPtr.h"
+#include "Core/ErrorCode.h"
 #include "Core/Runtime.h"
 #include "Drivers/Storage.h"
-#include "FileSystem.h"
 #include "File.h"
 #include "FileDescription.h"
-#include "Core/ErrorCode.h"
+#include "FileSystem.h"
 
 namespace kernel {
 
@@ -35,7 +35,7 @@ public:
 
     ErrorCode move(StringView path, StringView new_path);
     ErrorCode copy(StringView path, StringView new_path);
-    
+
 private:
     void load_all_partitions(StorageDevice&);
     void load_mbr_partitions(StorageDevice&, Address virtual_mbr);

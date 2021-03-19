@@ -35,18 +35,18 @@ public:
         static StringView medium_type_to_string(MediumType medium_type)
         {
             switch (medium_type) {
-                case MediumType::HDD:
-                    return "HDD"_sv;
-                case MediumType::SSD:
-                    return "SSD"_sv;
-                case MediumType::CD:
-                    return "CD"_sv;
-                case MediumType::USB:
-                    return "USB"_sv;
-                case MediumType::REMOTE:
-                    return "REMOTE"_sv;
-                default:
-                    return "UNKNOWN"_sv;
+            case MediumType::HDD:
+                return "HDD"_sv;
+            case MediumType::SSD:
+                return "SSD"_sv;
+            case MediumType::CD:
+                return "CD"_sv;
+            case MediumType::USB:
+                return "USB"_sv;
+            case MediumType::REMOTE:
+                return "REMOTE"_sv;
+            default:
+                return "UNKNOWN"_sv;
             }
         }
 
@@ -79,7 +79,7 @@ public:
         Address m_virtual_address;
         LBARange m_lba_range;
         Type m_type;
-        
+
         Atomic<bool> m_is_completed { false };
     };
 

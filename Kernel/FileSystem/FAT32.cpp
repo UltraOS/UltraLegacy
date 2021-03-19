@@ -33,7 +33,6 @@ ErrorCode FAT32::create(StringView, File::Attributes)
     return ErrorCode::UNSUPPORTED;
 }
 
-
 ErrorCode FAT32::move(StringView, StringView)
 {
     return ErrorCode::UNSUPPORTED;

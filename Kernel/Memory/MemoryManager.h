@@ -1,5 +1,6 @@
 #pragma once
 
+#include "AddressSpace.h"
 #include "Common/DynamicArray.h"
 #include "Common/DynamicBitArray.h"
 #include "Common/List.h"
@@ -17,7 +18,6 @@
 
 namespace kernel {
 
-class AddressSpace;
 class PageFault;
 
 // defined in Architecture/X/Entrypoint.asm

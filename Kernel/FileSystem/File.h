@@ -32,7 +32,7 @@ public:
 
     virtual size_t read(void* buffer, size_t offset, size_t size) = 0;
     virtual size_t write(void* buffer, size_t offset, size_t size) = 0;
-    
+
     // TODO: this is a bit naive and doesn't use locking whatsoever
     bool is_directory() const { return (m_attributes & Attributes::IS_DIRECTORY) == Attributes::IS_DIRECTORY; }
     Attributes attributes() const { return m_attributes; }
@@ -47,5 +47,5 @@ private:
     Attributes m_attributes;
     InterruptSafeSpinLock m_lock;
 };
-    
+
 }

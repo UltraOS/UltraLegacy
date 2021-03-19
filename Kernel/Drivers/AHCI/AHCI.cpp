@@ -3,9 +3,9 @@
 #include "Common/Logger.h"
 #include "Drivers/PCI/Access.h"
 #include "Interrupts/Timer.h"
+#include "Memory/Utilities.h"
 #include "Multitasking/Scheduler.h"
 #include "Structures.h"
-#include "Memory/Utilities.h"
 
 #ifdef ULTRA_32
 
@@ -298,10 +298,10 @@ void AHCI::handle_irq(RegisterState&)
         if (!IS_BIT_SET(port_status, i))
             continue;
 
-        auto port_status = port_read<PortInterruptStatus>(i);
-        port_write(i, port_status);
+        auto interrupt_status = port_read<PortInterruptStatus>(i);
+        port_write(i, interrupt_status);
 
-        panic_if_port_error(port_status, port_read<PortSATAError>(i));
+        panic_if_port_error(interrupt_status, port_read<PortSATAError>(i));
 
         handle_port_irq(i);
     }
@@ -318,8 +318,7 @@ void AHCI::handle_port_irq(size_t port_index)
 
     volatile auto command_status = m_hba->ports[port_index].command_issue;
 
-    for (size_t bit = 0; bit < m_command_slots_per_port; ++bit)
-    {
+    for (size_t bit = 0; bit < m_command_slots_per_port; ++bit) {
         // A command has been completed
         if (port.slot_map.bit_at(bit) && !IS_BIT_SET(command_status, bit)) {
             log("AHCI") << "command " << bit << " is completed";
@@ -538,13 +537,12 @@ void AHCI::synchronous_execute(size_t port_index, List<OP>& ops)
             Scheduler::the().yield();
     }
 
-    while (!ops.empty())
-    {
+    while (!ops.empty()) {
         auto& op = ops.front();
         op.command_slot = slot.value();
 
         execute(op);
-        
+
         ops.pop_front();
     }
 

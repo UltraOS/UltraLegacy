@@ -34,7 +34,7 @@ void StorageDevice::AsyncRequest::wait()
 void StorageDevice::AsyncRequest::complete()
 {
     ASSERT(!m_is_completed);
-    
+
     m_is_completed = true;
     m_blocker.unblock();
 }

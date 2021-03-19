@@ -2,8 +2,8 @@
 
 #include "Drivers/DeviceManager.h"
 #include "Drivers/Storage.h"
-#include "Utilities.h"
 #include "FAT32.h"
+#include "Utilities.h"
 
 namespace kernel {
 
@@ -20,8 +20,7 @@ VFS::VFS()
 void VFS::load_all_partitions(StorageDevice& device)
 {
     auto info = device.query_info();
-    if (info.lba_size != 512 && info.lba_size != 4096)
-    {
+    if (info.lba_size != 512 && info.lba_size != 4096) {
         warning() << "VFS: device " << device.device_model() << " has an unsupported lba size of " << info.lba_size;
         return;
     }
@@ -29,7 +28,7 @@ void VFS::load_all_partitions(StorageDevice& device)
     auto lba0_region = MemoryManager::the().allocate_kernel_private_anywhere("LBA0"_sv, Page::size);
     auto& lba0 = *static_cast<PrivateVirtualRegion*>(lba0_region.get());
     lba0.preallocate_range();
-    
+
     auto lba_count = Page::size / info.lba_size;
     ASSERT(lba_count != 0); // just in case lba size is somehow greater than page size
 
@@ -193,7 +192,7 @@ ErrorCode VFS::move(StringView path, StringView new_path)
 
     if (!split_path_old || !split_path_new)
         return ErrorCode::BAD_PATH;
-    
+
     auto& prefix_to_path_old = split_path_old.value();
     auto& prefix_to_path_new = split_path_new.value();
 
@@ -221,7 +220,7 @@ ErrorCode VFS::copy(StringView path, StringView new_path)
 
     auto& prefix_to_path_old = split_path_old.value();
     auto& prefix_to_path_new = split_path_new.value();
-    
+
     auto fs_1 = m_prefix_to_fs.find(prefix_to_path_new.first());
     auto fs_2 = m_prefix_to_fs.find(prefix_to_path_old.first());
 

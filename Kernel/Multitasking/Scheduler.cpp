@@ -138,7 +138,7 @@ void Scheduler::kill_current_thread()
             auto this_thread = find_sleeping_thread(thread.get());
             m_sleeping_threads.remove(this_thread);
             TaskFinalizer::the().free_thread(*thread);
-        } else if (previous_state == Thread::State::BLOCKED) {  // thread was blocked by a cancellable blocker
+        } else if (previous_state == Thread::State::BLOCKED) { // thread was blocked by a cancellable blocker
             TaskFinalizer::the().free_thread(*thread);
         } else if (thread->is_on_a_list()) {
             thread->pop_off();

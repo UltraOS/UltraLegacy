@@ -16,10 +16,10 @@ size_t FileDescription::read(void* buffer, size_t size)
 
     if (m_is_closed)
         return 0;
-    
+
     auto read_bytes = m_file.read(buffer, m_offset, size);
     m_offset += read_bytes;
-    
+
     return read_bytes;
 }
 

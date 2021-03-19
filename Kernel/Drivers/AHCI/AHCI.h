@@ -38,12 +38,12 @@ public:
         StringView type_to_string() const
         {
             switch (type) {
-                case Type::READ:
-                    return "READ"_sv;
-                case Type::WRITE:
-                    return "WRITE"_sv;
-                default:
-                    return "INVALID"_sv;
+            case Type::READ:
+                return "READ"_sv;
+            case Type::WRITE:
+                return "WRITE"_sv;
+            default:
+                return "INVALID"_sv;
             }
         }
 
@@ -63,7 +63,8 @@ public:
             ATAPI = 0xEB140101,
             ENCLOSURE_MANAGEMENT_BRIDGE = 0xC33C0101,
             PORT_MULTIPLIER = 0x96690101
-        } type = Type::NONE;
+        } type
+            = Type::NONE;
 
         StringView type_to_string();
 
@@ -97,7 +98,7 @@ public:
             StorageDevice::AsyncRequest* request;
             List<OP> queued_ops;
         };
-        
+
         List<QueuedRequest> request_queue;
         QueuedRequest* slot_to_request[32] {};
         InterruptSafeSpinLock state_access_lock;
@@ -164,7 +165,7 @@ private:
 private:
     TypedMapping<volatile HBA> m_hba;
 
-    PortState m_ports[32] { };
+    PortState m_ports[32] {};
     u8 m_command_slots_per_port { 0 };
     bool m_supports_64bit { false };
 };

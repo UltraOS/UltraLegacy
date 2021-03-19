@@ -1,14 +1,13 @@
 #pragma once
 
-#include "File.h"
 #include "Common/Types.h"
+#include "File.h"
 
 namespace kernel {
 
 class FileDescription {
 public:
-    enum class Mode
-    {
+    enum class Mode {
         READ,
         WRITE,
     };
@@ -31,5 +30,5 @@ private:
     size_t m_offset { 0 };
     bool m_is_closed { false };
 };
-    
+
 }

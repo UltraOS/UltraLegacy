@@ -44,7 +44,8 @@ inline bool is_valid_prefix(StringView prefix)
     return true;
 }
 
-inline Optional<Pair<StringView, StringView>> split_prefix_and_path(StringView path) {
+inline Optional<Pair<StringView, StringView>> split_prefix_and_path(StringView path)
+{
     Pair<StringView, StringView> prefix_to_path;
 
     auto pref = path.find("::");

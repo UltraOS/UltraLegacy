@@ -2,9 +2,9 @@
 
 #include "Interrupts/IDT.h"
 #include "Process.h"
-#include "Thread.h"
 #include "Scheduler.h"
 #include "TaskFinalizer.h"
+#include "Thread.h"
 
 namespace kernel {
 
