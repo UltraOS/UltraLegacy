@@ -18,6 +18,8 @@ Panic screen
 - WC cached framebuffer for fast rendering on real hardware
 - Multicore RR preemptive O(1) scheduler
 - PS/2 controller driver + keyboard & mouse
+- AHCI driver with async read queue and full controller initialization according
+  to the specification. Confirmed to work on all emulators and many real computers.
 - Own BIOS bootloader
 - Fully modern C++17 kernel
 - Almost everything in kernel/Common is fully covered by unit tests
