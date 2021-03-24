@@ -323,8 +323,6 @@ void AHCI::handle_port_irq(size_t port_index)
         if (port.slot_map.bit_at(bit) && !IS_BIT_SET(command_status, bit)) {
             log("AHCI") << "command " << bit << " is completed";
 
-            log() << "Bytes: " << port.command_list->commands[0].physical_region_descriptor_byte_count;
-
             auto* req = port.slot_to_request[bit];
 
             if (!req)
@@ -572,6 +570,7 @@ void AHCI::process_async_request(size_t port_index, StorageDevice::AsyncRequest&
     if (!slot)
         return;
 
+    qr.queued_ops.front().command_slot = slot.value();
     port.slot_to_request[slot.value()] = &qr;
     execute(qr.queued_ops.front());
 }
