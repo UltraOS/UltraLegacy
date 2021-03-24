@@ -182,7 +182,6 @@ void Thread::unblock()
     }
 
     m_blocker = nullptr;
-    m_state = State::READY;
     Scheduler::the().requeue_unblocked_thread(this);
 }
 

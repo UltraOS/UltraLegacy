@@ -12,12 +12,6 @@ InterruptSafeSpinLock Scheduler::s_queues_lock;
 
 Scheduler* Scheduler::s_instance;
 
-Scheduler::Scheduler()
-    : m_expired_threads(new List<Thread>())
-    , m_preemtable_threads(new List<Thread>())
-{
-}
-
 void Scheduler::inititalize()
 {
     s_instance = new Scheduler();
@@ -70,7 +64,7 @@ void Scheduler::wake_ready_threads()
         auto* ready_thread = *thread_itr;
         m_sleeping_threads.remove(thread_itr++);
         ready_thread->wake_up();
-        m_expired_threads->insert_back(*ready_thread);
+        m_ready_threads.insert_back(*ready_thread);
     }
 }
 
@@ -189,12 +183,20 @@ void Scheduler::register_thread(Thread* thread)
 void Scheduler::requeue_unblocked_thread(Thread* thread)
 {
     LOCK_GUARD(s_queues_lock);
-    register_thread_unchecked(thread);
+
+    if (thread->is_on_a_list()) {
+        ASSERT(thread->list() == &m_blocked_threads);
+        thread->pop_off();
+        thread->set_state(Thread::State::READY);
+        register_thread_unchecked(thread);
+    } else { // thread was already running
+        thread->set_state(Thread::State::RUNNING);
+    }
 }
 
 void Scheduler::register_thread_unchecked(Thread* thread)
 {
-    m_expired_threads->insert_back(*thread);
+    m_ready_threads.insert_back(*thread);
 }
 
 Scheduler& Scheduler::the()
@@ -224,14 +226,10 @@ Scheduler::Stats Scheduler::stats() const
 
 Thread* Scheduler::pick_next_thread()
 {
-    if (m_preemtable_threads->empty()) {
-        if (m_expired_threads->empty())
-            return &CPU::current().idle_task();
+    if (m_ready_threads.empty())
+        return &CPU::current().idle_task();
 
-        swap(m_preemtable_threads, m_expired_threads);
-    }
-
-    return &m_preemtable_threads->pop_front();
+    return &m_ready_threads.pop_front();
 }
 
 void Scheduler::pick_next()
@@ -249,9 +247,11 @@ void Scheduler::pick_next()
     wake_ready_threads();
 
     // if current thread is not dead/sleeping/blocked we put it back on the expired queue
-    if ((current_thread->is_running() || current_thread->is_ready()) && current_thread != &CPU::current().idle_task())
-        m_expired_threads->insert_back(*current_thread);
-    else if (current_thread->is_dead()) {
+    if ((current_thread->is_running() || current_thread->is_ready()) && current_thread != &CPU::current().idle_task()) {
+        m_ready_threads.insert_back(*current_thread);
+    } else if (current_thread->is_blocked()) {
+        m_blocked_threads.insert_back(*current_thread);
+    } else if (current_thread->is_dead()) {
         current_thread->state_lock().unlock(interrupt_state_unused);
         kill_current_thread();
     }

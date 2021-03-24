@@ -12,7 +12,7 @@
 namespace kernel {
 
 class Scheduler {
-    MAKE_SINGLETON(Scheduler);
+    MAKE_SINGLETON(Scheduler) = default;
 
 public:
     static void inititalize();
@@ -57,11 +57,9 @@ private:
 
     MultiSet<Thread*, Thread::WakeTimePtrComparator> m_sleeping_threads; // sorted by wake-up time
 
+    List<Thread> m_blocked_threads;
     List<Thread> m_deferred_deleted_dead_threads;
-
-    // A simplified version of the O(1) scheduler
-    List<Thread>* m_expired_threads;
-    List<Thread>* m_preemtable_threads;
+    List<Thread> m_ready_threads;
 
     static InterruptSafeSpinLock s_queues_lock;
 

@@ -80,6 +80,7 @@ public:
     [[nodiscard]] bool is_delayed_dead() const { return m_state == State::DELAYED_DEAD; }
     [[nodiscard]] bool is_running() const { return m_state == State::RUNNING; }
     [[nodiscard]] bool is_ready() const { return m_state == State::READY; }
+    void set_state(State state) { m_state = state; }
 
     bool should_be_woken_up() const { return m_wake_up_time <= Timer::nanoseconds_since_boot(); }
 
