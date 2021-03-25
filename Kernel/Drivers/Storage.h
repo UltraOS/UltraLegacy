@@ -65,7 +65,16 @@ public:
 
         AsyncRequest(Address virtual_address, LBARange lba_range, Type type);
 
-        bool begin();
+        static AsyncRequest make_read(Address virtual_address, LBARange lba_range)
+        {
+            return { virtual_address, lba_range, Type::READ };
+        }
+
+        static AsyncRequest make_write(Address virtual_address, LBARange lba_range)
+        {
+            return { virtual_address, lba_range, Type::WRITE };
+        }
+
         void wait();
         void complete();
 

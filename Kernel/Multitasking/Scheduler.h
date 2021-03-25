@@ -22,14 +22,15 @@ public:
 
     void yield();
     void sleep(u64 wake_time);
+    void block(Blocker&);
+    void unblock(Blocker&);
     [[noreturn]] void exit(size_t);
     [[noreturn]] void crash();
 
     void register_process(RefPtr<Process>);
     RefPtr<Process> unregister_process(u32 id);
 
-    void register_thread(Thread*);
-    void requeue_unblocked_thread(Thread*);
+    void register_thread(Thread&);
 
     struct Stats {
         DynamicArray<Pair<u32, StringView>> processor_to_task;
@@ -38,8 +39,7 @@ public:
     Stats stats() const;
 
 private:
-    // The 5 functions below assume s_queues_lock is held by the caller
-    void register_thread_unchecked(Thread*); // Doesn't check if ID of owner is registered
+    // The 4 functions below assume s_queues_lock is held by the caller
     void wake_ready_threads();
     Thread* pick_next_thread();
     void kill_current_thread();
@@ -57,7 +57,6 @@ private:
 
     MultiSet<Thread*, Thread::WakeTimePtrComparator> m_sleeping_threads; // sorted by wake-up time
 
-    List<Thread> m_blocked_threads;
     List<Thread> m_deferred_deleted_dead_threads;
     List<Thread> m_ready_threads;
 

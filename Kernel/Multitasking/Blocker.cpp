@@ -1,4 +1,5 @@
 #include "Blocker.h"
+#include "Scheduler.h"
 #include "Thread.h"
 
 namespace kernel {
@@ -9,14 +10,22 @@ Blocker::Blocker(Thread& blocked_thread, Type type)
 {
 }
 
-bool Blocker::block()
+Blocker::Result Blocker::block()
 {
-    return m_thread.block(this);
+    Scheduler::the().block(*this);
+    return m_result;
 }
 
 void Blocker::unblock()
 {
-    m_thread.unblock();
+    Scheduler::the().unblock(*this);
+}
+
+void Blocker::set_result(Result result)
+{
+    auto expected = Result::UNDEFINED;
+    if (m_result.compare_and_exchange(&expected, result))
+        m_should_block = false;
 }
 
 DiskIOBlocker::DiskIOBlocker(Thread& blocked_thread)

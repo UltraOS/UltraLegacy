@@ -95,11 +95,11 @@ start:
 
     mov rax, TO_PHYSICAL(kernel_pdpt) + (PRESENT | READWRITE)
     mov [rdi + 511 * 8], rax
-    
+
     mov rdi, direct_map_pdt_gb0
     mov rbx, 0x0000000000000000 + (PRESENT | READWRITE | HUGEPAGE)
     mov rcx, ENTRY_COUNT * 4 ; 4 tables
-    
+
     set_one:
         mov [rdi], rbx
         add  rbx, HUGEPAGE_SIZE

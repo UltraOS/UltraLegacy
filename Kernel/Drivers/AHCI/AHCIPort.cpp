@@ -21,13 +21,7 @@ void AHCIPort::write_synchronous(Address from_virtual_address, LBARange range)
 
 void AHCIPort::submit_request(StorageDevice::AsyncRequest& request)
 {
-    Interrupts::ScopedDisabler d;
-    if (!request.begin())
-        return;
-
     m_controller.process_async_request(m_index, request);
-
-    request.wait();
 }
 
 StringView AHCIPort::device_model() const

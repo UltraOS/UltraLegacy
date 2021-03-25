@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Common/Atomic.h"
+
 namespace kernel {
 
 class Thread;
@@ -10,25 +12,40 @@ public:
         DISK_IO,
     };
 
+    enum class Result {
+        UNDEFINED,
+        UNBLOCKED,
+        INTERRUPTED,
+        TIMEOUT
+    };
+
     Blocker(Thread& blocked_thread, Type type);
     Type type() const { return m_type; }
 
-    bool block();
+    Result block();
+
     void unblock();
-    virtual bool is_cancellable() { return true; }
+    void set_result(Result);
+    bool should_block() { return m_should_block; }
+
+    Thread& thread() { return m_thread; }
+
+    virtual bool is_interruptable() { return true; }
 
     virtual ~Blocker() = default;
 
 private:
     Thread& m_thread;
     Type m_type;
+    Atomic<Result> m_result { Result::UNDEFINED };
+    bool m_should_block { true };
 };
 
 class DiskIOBlocker : public Blocker {
 public:
     DiskIOBlocker(Thread& blocked_thread);
 
-    virtual bool is_cancellable() { return false; }
+    virtual bool is_interruptable() { return false; }
 };
 
 }

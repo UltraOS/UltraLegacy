@@ -31,25 +31,9 @@ void Scheduler::sleep(u64 wake_time)
 {
     Interrupts::ScopedDisabler d;
 
-    auto* current_thread = Thread::current();
-    bool success = false;
+    Thread::current()->sleep(wake_time);
 
-    {
-        LOCK_GUARD(s_queues_lock);
-
-        success = current_thread->sleep(wake_time);
-
-        if (success)
-            m_sleeping_threads.emplace(current_thread);
-    }
-
-    if (success)
-        save_state_and_schedule();
-    else
-        // If sleep() fails we assume the thread's state
-        // is set to dead, therefore we can afford to call
-        // pick_next() and not save the state of the thread.
-        pick_next();
+    save_state_and_schedule();
 }
 
 void Scheduler::wake_ready_threads()
@@ -90,11 +74,9 @@ void Scheduler::free_deferred_threads()
 void Scheduler::kill_current_thread()
 {
     auto* current_thread = Thread::current();
+    current_thread->set_state(Thread::State::DEAD);
 
     if (!current_thread->is_main()) {
-        ASSERT(current_thread->is_dead());
-        // We have to defer freeing of this thread, otherwise
-        // it becomes a race condition between scheduler and task finalizer
         m_deferred_deleted_dead_threads.insert_back(*current_thread);
         return;
     }
@@ -114,27 +96,22 @@ void Scheduler::kill_current_thread()
     // Killing the main thread so we also have to kill every other thread
     LOCK_GUARD(current_thread->owner().lock());
     for (const auto& thread : current_thread->owner().threads()) {
-        auto previous_state = thread->exit();
-
-        // Thread we just tried to kill was blocked with a non-cancellable blocker,
-        // so we don't try to free it ourselves. Instead it will be done once the thread
-        // is unblocked.
-        if (previous_state == Thread::State::DELAYED_DEAD)
-            continue;
-
         if (thread.get() == current_thread) {
             m_deferred_deleted_dead_threads.insert_back(*current_thread);
             continue;
         }
 
+        thread->exit();
+
         // since this thread is not running we can afford to free it right away
-        if (previous_state == Thread::State::SLEEPING) {
+        if (thread->is_sleeping()) {
             auto this_thread = find_sleeping_thread(thread.get());
             m_sleeping_threads.remove(this_thread);
             TaskFinalizer::the().free_thread(*thread);
-        } else if (previous_state == Thread::State::BLOCKED) { // thread was blocked by a cancellable blocker
-            TaskFinalizer::the().free_thread(*thread);
-        } else if (thread->is_on_a_list()) {
+        } else if (thread->is_blocked()) {
+            if (thread->interrupt())
+                m_ready_threads.insert_back(*thread);
+        } else if (thread->is_ready()) {
             thread->pop_off();
             TaskFinalizer::the().free_thread(*thread);
         } // else thread is currently running, kill once it gets preempted OR thread is already dead
@@ -155,7 +132,7 @@ void Scheduler::register_process(RefPtr<Process> process)
     m_processes.emplace(process);
 
     for (auto& thread : process->threads())
-        register_thread_unchecked(thread.get());
+        m_ready_threads.insert_back(*thread);
 }
 
 RefPtr<Process> Scheduler::unregister_process(u32 id)
@@ -171,32 +148,38 @@ RefPtr<Process> Scheduler::unregister_process(u32 id)
     return ref;
 }
 
-void Scheduler::register_thread(Thread* thread)
+void Scheduler::register_thread(Thread& thread)
 {
     LOCK_GUARD(s_queues_lock);
 
-    ASSERT(m_processes.contains(thread->owner().id()));
-
-    register_thread_unchecked(thread);
+    ASSERT(m_processes.contains(thread.owner().id()));
+    m_ready_threads.insert_back(thread);
 }
 
-void Scheduler::requeue_unblocked_thread(Thread* thread)
+void Scheduler::block(Blocker& blocker)
+{
+    Interrupts::ScopedDisabler d;
+
+    Thread::current()->block(&blocker);
+
+    save_state_and_schedule();
+}
+
+void Scheduler::unblock(Blocker& blocker)
 {
     LOCK_GUARD(s_queues_lock);
 
-    if (thread->is_on_a_list()) {
-        ASSERT(thread->list() == &m_blocked_threads);
-        thread->pop_off();
-        thread->set_state(Thread::State::READY);
-        register_thread_unchecked(thread);
-    } else { // thread was already running
-        thread->set_state(Thread::State::RUNNING);
+    auto& thread = blocker.thread();
+
+    if (!thread.is_blocked()) {
+        // Looks like we got unblocked too fast, the scheduler should
+        // automatically unblock the thread once it gets into pick_next().
+        blocker.set_result(Blocker::Result::UNBLOCKED);
+        return;
     }
-}
 
-void Scheduler::register_thread_unchecked(Thread* thread)
-{
-    m_ready_threads.insert_back(*thread);
+    thread.unblock();
+    m_ready_threads.insert_back(thread);
 }
 
 Scheduler& Scheduler::the()
@@ -240,23 +223,35 @@ void Scheduler::pick_next()
 
     auto* current_thread = Thread::current();
 
-    bool interrupt_state_unused = false;
-    current_thread->state_lock().lock(interrupt_state_unused);
-
     free_deferred_threads();
     wake_ready_threads();
 
-    // if current thread is not dead/sleeping/blocked we put it back on the expired queue
-    if ((current_thread->is_running() || current_thread->is_ready()) && current_thread != &CPU::current().idle_task()) {
-        m_ready_threads.insert_back(*current_thread);
-    } else if (current_thread->is_blocked()) {
-        m_blocked_threads.insert_back(*current_thread);
-    } else if (current_thread->is_dead()) {
-        current_thread->state_lock().unlock(interrupt_state_unused);
+    auto requested_state = current_thread->requested_state();
+
+    if (current_thread->should_die() && !current_thread->is_invulnerable())
         kill_current_thread();
+    else if (requested_state != Thread::State::UNDEFINED) {
+        switch (requested_state) {
+        case Thread::State::SLEEPING:
+            current_thread->set_state(Thread::State::SLEEPING);
+            m_sleeping_threads.emplace(current_thread);
+            break;
+        case Thread::State::BLOCKED:
+            if (current_thread->blocker()->should_block())
+                current_thread->set_state(Thread::State::BLOCKED);
+            else // got unblocked too early
+                current_thread->unblock();
+            break;
+        default:
+            ASSERT_NEVER_REACHED();
+        }
+
+        current_thread->request_state(Thread::State::UNDEFINED, requested_state);
     }
 
-    current_thread->state_lock().unlock(interrupt_state_unused);
+    if (current_thread->is_running() && current_thread != &CPU::current().idle_task())
+        m_ready_threads.insert_back(*current_thread);
+
     auto* next_thread = pick_next_thread();
 
     if (current_thread != next_thread) {

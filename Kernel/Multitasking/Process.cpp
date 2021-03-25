@@ -59,7 +59,7 @@ void Process::create_thread(Address entrypoint, size_t stack_size)
     }
 
     m_threads.emplace(thread);
-    Scheduler::the().register_thread(thread.get());
+    Scheduler::the().register_thread(*thread);
 }
 
 Process::Process(AddressSpace& address_space, IsSupervisor is_supervisor, StringView name)

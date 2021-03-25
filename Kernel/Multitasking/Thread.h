@@ -19,9 +19,9 @@ public:
     friend class Process;
 
     enum class State {
+        UNDEFINED,
         RUNNING,
         DEAD,
-        DELAYED_DEAD, // in case a thread was blocked with a non-cancellable blocker (like DMA read) when it was killed
         BLOCKED,
         SLEEPING,
         READY,
@@ -63,26 +63,35 @@ public:
         return *m_user_stack;
     }
 
-    bool sleep(u64 until);
-    bool block(Blocker* blocker);
-    void unblock();
-    Thread::State exit();
+    bool should_die() const { return m_should_die; }
+    bool is_invulnerable() const { return m_is_invulnerable; }
+    void set_invulnerable(bool value) { m_is_invulnerable = value; }
 
-    InterruptSafeSpinLock& state_lock() { return m_state_lock; }
+    bool request_state(State new_state, State expected = State::UNDEFINED)
+    {
+        return m_requested_state.compare_and_exchange(&expected, new_state);
+    }
 
-    void wake_up() { m_state = State::READY; }
-    [[nodiscard]] u64 wakeup_time() const { return m_wake_up_time; }
+    State requested_state() { return m_requested_state; }
 
-    // not thread safe
-    [[nodiscard]] bool is_sleeping() const { return m_state == State::SLEEPING; }
-    [[nodiscard]] bool is_blocked() const { return m_state == State::BLOCKED; }
-    [[nodiscard]] bool is_dead() const { return m_state == State::DEAD; }
-    [[nodiscard]] bool is_delayed_dead() const { return m_state == State::DELAYED_DEAD; }
-    [[nodiscard]] bool is_running() const { return m_state == State::RUNNING; }
-    [[nodiscard]] bool is_ready() const { return m_state == State::READY; }
-    void set_state(State state) { m_state = state; }
+    class ScopedInvulnerability {
+    public:
+        ScopedInvulnerability(Thread& thread = *current())
+            : m_thread(thread)
+            , m_previous_value(thread.is_invulnerable())
+        {
+            thread.set_invulnerable(true);
+        }
 
-    bool should_be_woken_up() const { return m_wake_up_time <= Timer::nanoseconds_since_boot(); }
+        ~ScopedInvulnerability()
+        {
+            m_thread.set_invulnerable(m_previous_value);
+        }
+
+    private:
+        Thread& m_thread;
+        bool m_previous_value { false };
+    };
 
     Set<RefPtr<Window>, Less<>>& windows() { return m_windows; }
     void add_window(RefPtr<Window> window) { m_windows.emplace(window); }
@@ -120,6 +129,44 @@ private:
     Thread(Process& owner);
     Thread(Process& owner, RefPtr<VirtualRegion> kernel_stack, RefPtr<VirtualRegion> user_stack, IsSupervisor);
 
+    friend class Scheduler;
+    void sleep(u64 until)
+    {
+        m_wake_up_time = until;
+        request_state(State::SLEEPING);
+    }
+
+    void block(Blocker* blocker)
+    {
+        ASSERT(m_blocker == nullptr);
+        ASSERT(blocker != nullptr);
+        set_blocker(blocker);
+        request_state(Thread::State::BLOCKED);
+    }
+
+    // NOTE: Important invariant
+    // All member functions in the following block must only be called with Scheduler::s_queues_lock held.
+    // ---------------------------------------------------------------------------------------------------
+    void unblock();
+    bool interrupt();
+    void exit() { m_should_die = true; }
+
+    void wake_up() { m_state = State::READY; }
+    [[nodiscard]] u64 wakeup_time() const { return m_wake_up_time; }
+
+    [[nodiscard]] bool is_sleeping() const { return m_state == State::SLEEPING; }
+    [[nodiscard]] bool is_blocked() const { return m_state == State::BLOCKED; }
+    [[nodiscard]] bool is_dead() const { return m_state == State::DEAD; }
+    [[nodiscard]] bool is_running() const { return m_state == State::RUNNING; }
+    [[nodiscard]] bool is_ready() const { return m_state == State::READY; }
+    void set_state(State state) { m_state = state; }
+
+    void set_blocker(Blocker* blocker) { m_blocker = blocker; }
+    Blocker* blocker() const { return m_blocker; }
+
+    bool should_be_woken_up() const { return m_wake_up_time <= Timer::nanoseconds_since_boot(); }
+    // ---------------------------------------------------------------------------------------------------
+
 private:
     u32 m_id { 0 };
 
@@ -130,13 +177,16 @@ private:
 
     ControlBlock m_control_block { 0 };
 
-    InterruptSafeSpinLock m_state_lock;
     State m_state { State::READY };
     IsSupervisor m_is_supervisor { IsSupervisor::NO };
 
     u64 m_wake_up_time { 0 };
 
     Blocker* m_blocker { nullptr };
+
+    Atomic<State> m_requested_state { State::UNDEFINED };
+    Atomic<bool> m_should_die { false };
+    bool m_is_invulnerable { false };
 
     Set<RefPtr<Window>, Less<>> m_windows;
 };

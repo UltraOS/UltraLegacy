@@ -2,7 +2,7 @@
 
 #include "Drivers/DeviceManager.h"
 #include "Drivers/Storage.h"
-#include "FAT32.h"
+#include "FAT32/FAT32.h"
 #include "Utilities.h"
 
 namespace kernel {
@@ -32,7 +32,9 @@ void VFS::load_all_partitions(StorageDevice& device)
     auto lba_count = Page::size / info.lba_size;
     ASSERT(lba_count != 0); // just in case lba size is somehow greater than page size
 
-    device.read_synchronous(lba0.virtual_range().begin(), { 0, lba_count });
+    auto request = StorageDevice::AsyncRequest::make_read(lba0_region->virtual_range().begin(), { 0, lba_count });
+    device.submit_request(request);
+    request.wait();
 
     static constexpr StringView gpt_signature = "EFI PART"_sv;
     static constexpr size_t offset_to_gpt_signature = 512;
