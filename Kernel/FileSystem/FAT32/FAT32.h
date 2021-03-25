@@ -1,7 +1,8 @@
 #pragma once
 
-#include "File.h"
-#include "FileSystem.h"
+#include "FileSystem/File.h"
+#include "FileSystem/FileSystem.h"
+#include "Structures.h"
 
 namespace kernel {
 
@@ -26,6 +27,9 @@ public:
 
     ErrorCode move(StringView path, StringView new_path) override;
     ErrorCode copy(StringView path, StringView new_path) override;
+
+private:
+    EBPB m_ebpb;
 };
 
 }

@@ -24,21 +24,22 @@ set(CMAKE_EXE_LINKER_FLAGS  "-T ${PROJECT_SOURCE_DIR}/Architecture/${ARCH_FOLDER
 
 set(CMAKE_ASM_NASM_COMPILE_OBJECT "<CMAKE_ASM_NASM_COMPILER> <FLAGS> -o <OBJECT> <SOURCE>")
 
-FILE(GLOB CPP_FILES "${PROJECT_SOURCE_DIR}/*cpp"               "${PROJECT_SOURCE_DIR}/*h"
-                    "${PROJECT_SOURCE_DIR}/Core/*cpp"          "${PROJECT_SOURCE_DIR}/Core/*h"
-                    "${PROJECT_SOURCE_DIR}/Common/*cpp"        "${PROJECT_SOURCE_DIR}/Common/*h"
-                    "${PROJECT_SOURCE_DIR}/Interrupts/*cpp"    "${PROJECT_SOURCE_DIR}/Interrupts/*h"
-                    "${PROJECT_SOURCE_DIR}/Memory/*cpp"        "${PROJECT_SOURCE_DIR}/Memory/*h"
-                    "${PROJECT_SOURCE_DIR}/Multitasking/*cpp"  "${PROJECT_SOURCE_DIR}/Multitasking/*h"
-                    "${PROJECT_SOURCE_DIR}/Time/*cpp"          "${PROJECT_SOURCE_DIR}/Time/*h"
-                    "${PROJECT_SOURCE_DIR}/Drivers/*cpp"       "${PROJECT_SOURCE_DIR}/Drivers/*h"
-                    "${PROJECT_SOURCE_DIR}/Drivers/Video/*cpp" "${PROJECT_SOURCE_DIR}/Drivers/Video/*h"
-                    "${PROJECT_SOURCE_DIR}/Drivers/PS2/*cpp"   "${PROJECT_SOURCE_DIR}/Drivers/PS2/*h"
-                    "${PROJECT_SOURCE_DIR}/Drivers/PCI/*cpp"   "${PROJECT_SOURCE_DIR}/Drivers/PCI/*h"
-                    "${PROJECT_SOURCE_DIR}/Drivers/AHCI/*cpp"   "${PROJECT_SOURCE_DIR}/Drivers/AHCI/*h"
-                    "${PROJECT_SOURCE_DIR}/WindowManager/*cpp" "${PROJECT_SOURCE_DIR}/WindowManager/*h"
-                    "${PROJECT_SOURCE_DIR}/ACPI/*cpp"          "${PROJECT_SOURCE_DIR}/ACPI/*h"
-                    "${PROJECT_SOURCE_DIR}/FileSystem/*cpp"    "${PROJECT_SOURCE_DIR}/FileSystem/*h")
+FILE(GLOB CPP_FILES "${PROJECT_SOURCE_DIR}/*cpp"                  "${PROJECT_SOURCE_DIR}/*h"
+                    "${PROJECT_SOURCE_DIR}/Core/*cpp"             "${PROJECT_SOURCE_DIR}/Core/*h"
+                    "${PROJECT_SOURCE_DIR}/Common/*cpp"           "${PROJECT_SOURCE_DIR}/Common/*h"
+                    "${PROJECT_SOURCE_DIR}/Interrupts/*cpp"       "${PROJECT_SOURCE_DIR}/Interrupts/*h"
+                    "${PROJECT_SOURCE_DIR}/Memory/*cpp"           "${PROJECT_SOURCE_DIR}/Memory/*h"
+                    "${PROJECT_SOURCE_DIR}/Multitasking/*cpp"     "${PROJECT_SOURCE_DIR}/Multitasking/*h"
+                    "${PROJECT_SOURCE_DIR}/Time/*cpp"             "${PROJECT_SOURCE_DIR}/Time/*h"
+                    "${PROJECT_SOURCE_DIR}/Drivers/*cpp"          "${PROJECT_SOURCE_DIR}/Drivers/*h"
+                    "${PROJECT_SOURCE_DIR}/Drivers/Video/*cpp"    "${PROJECT_SOURCE_DIR}/Drivers/Video/*h"
+                    "${PROJECT_SOURCE_DIR}/Drivers/PS2/*cpp"      "${PROJECT_SOURCE_DIR}/Drivers/PS2/*h"
+                    "${PROJECT_SOURCE_DIR}/Drivers/PCI/*cpp"      "${PROJECT_SOURCE_DIR}/Drivers/PCI/*h"
+                    "${PROJECT_SOURCE_DIR}/Drivers/AHCI/*cpp"     "${PROJECT_SOURCE_DIR}/Drivers/AHCI/*h"
+                    "${PROJECT_SOURCE_DIR}/WindowManager/*cpp"    "${PROJECT_SOURCE_DIR}/WindowManager/*h"
+                    "${PROJECT_SOURCE_DIR}/ACPI/*cpp"             "${PROJECT_SOURCE_DIR}/ACPI/*h"
+                    "${PROJECT_SOURCE_DIR}/FileSystem/*cpp"       "${PROJECT_SOURCE_DIR}/FileSystem/*h"
+                    "${PROJECT_SOURCE_DIR}/FileSystem/FAT32/*cpp" "${PROJECT_SOURCE_DIR}/FileSystem/FAT32/*h")
 
 
 FILE(GLOB ASM_FILES "${PROJECT_SOURCE_DIR}/Architecture/${ARCH_FOLDER}/*asm")
