@@ -512,6 +512,14 @@ MemoryManager::VR MemoryManager::allocate_kernel_private_anywhere(StringView pur
     return region;
 }
 
+MemoryManager::VR MemoryManager::allocate_dma_buffer(StringView purpose, size_t length)
+{
+    auto region = allocate_kernel_private_anywhere(purpose, length);
+    static_cast<PrivateVirtualRegion*>(region.get())->preallocate_range(false);
+
+    return region;
+}
+
 MemoryManager::VR MemoryManager::allocate_user_private(StringView purpose, const Range& range, AddressSpace& address_space)
 {
     ASSERT(&address_space != &AddressSpace::of_kernel());
