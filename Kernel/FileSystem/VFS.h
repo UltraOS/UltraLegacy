@@ -16,6 +16,8 @@ class VFS {
     MAKE_SINGLETON(VFS);
 
 public:
+    static constexpr StringView boot_fs_prefix = ""_sv;
+
     static void initialize()
     {
         ASSERT(s_instance == nullptr);

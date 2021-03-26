@@ -25,12 +25,9 @@ void VFS::load_all_partitions(StorageDevice& device)
         return;
     }
 
-    auto lba0_region = MemoryManager::the().allocate_kernel_private_anywhere("LBA0"_sv, Page::size);
-    auto& lba0 = *static_cast<PrivateVirtualRegion*>(lba0_region.get());
-    lba0.preallocate_range();
+    auto lba0_region = MemoryManager::the().allocate_dma_buffer("LBA0"_sv, Page::size);
 
     auto lba_count = Page::size / info.lba_size;
-    ASSERT(lba_count != 0); // just in case lba size is somehow greater than page size
 
     auto request = StorageDevice::AsyncRequest::make_read(lba0_region->virtual_range().begin(), { 0, lba_count });
     device.submit_request(request);
@@ -38,7 +35,7 @@ void VFS::load_all_partitions(StorageDevice& device)
 
     static constexpr StringView gpt_signature = "EFI PART"_sv;
     static constexpr size_t offset_to_gpt_signature = 512;
-    auto lba0_data = lba0.virtual_range().begin().as_pointer<char>();
+    auto lba0_data = lba0_region->virtual_range().begin().as_pointer<char>();
 
     if (StringView(lba0_data + offset_to_gpt_signature, gpt_signature.size()) == gpt_signature) {
         warning() << "VFS: detected a GPT-partitioned device " << device.device_model()
@@ -58,7 +55,7 @@ void VFS::load_all_partitions(StorageDevice& device)
     }
 
     log() << "VFS: detected an MBR formatted storage device " << device.device_model();
-    load_mbr_partitions(device, lba0.virtual_range().begin());
+    load_mbr_partitions(device, lba0_region->virtual_range().begin());
 
     // TODO: set boot FS
 
@@ -90,14 +87,28 @@ void VFS::load_mbr_partitions(StorageDevice& device, Address virtual_mbr)
             continue;
         }
 
+        RefPtr<FileSystem> fs {};
+
         switch (partition->type) {
         case lba_fat_32_partition_type:
             log() << "Partition " << i << " FAT32 LBA mode, starting lba: "
                   << partition->first_lba << " length: " << partition->lba_count;
-            m_prefix_to_fs[generate_prefix(device)] = new FAT32(device, { partition->first_lba, partition->lba_count });
+
+            fs = FAT32::create(device, { partition->first_lba, partition->lba_count });
+
             break;
         default:
             log() << "Partition " << i << " has unknown type " << format::as_hex << partition->type << ", skipped";
+        }
+
+        if (!fs)
+            continue;
+
+        auto prefix = generate_prefix(device);
+        m_prefix_to_fs[prefix] = fs;
+        if (!m_prefix_to_fs.contains(""_sv)) {
+            log("VFS") << prefix.to_view() << " set as primary fs";
+            m_prefix_to_fs[String(boot_fs_prefix)] = fs;
         }
     }
 }
