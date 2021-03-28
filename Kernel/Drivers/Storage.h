@@ -18,8 +18,8 @@ public:
 
     struct Info {
         StringView drive_model;
-        u64 lba_count;
-        size_t lba_size;
+        u64 logical_block_count;
+        size_t logical_block_size;
         size_t optimal_read_size;
 
         enum class MediumType {

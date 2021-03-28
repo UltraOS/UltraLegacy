@@ -22,7 +22,7 @@ bool FAT32::try_initialize()
 
     auto ebpb_region = MemoryManager::the().allocate_dma_buffer("EBPB", ebpb_offset + EBPB::size);
     auto info = associated_device().query_info();
-    auto lba_count = info.optimal_read_size / info.lba_size;
+    auto lba_count = info.optimal_read_size / info.logical_block_size;
     ASSERT(lba_count != 0);
 
     auto request = StorageDevice::AsyncRequest::make_read(ebpb_region->virtual_range().begin(), { lba_range().begin(), lba_count });

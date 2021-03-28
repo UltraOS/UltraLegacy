@@ -452,12 +452,12 @@ void AHCI::identify_sata_port(size_t index)
     }
 
     if (port.supports_48bit_lba) {
-        copy_memory(&data[lba48_offset], &port.lba_count, 8);
+        copy_memory(&data[lba48_offset], &port.logical_block_count, 8);
     } else {
-        copy_memory(&data[lba_offset], &port.lba_count, 4);
+        copy_memory(&data[lba_offset], &port.logical_block_count, 4);
     }
 
-    log("AHCI") << "drive lba count " << port.lba_count << " supports 48-bit lba? " << port.supports_48bit_lba;
+    log("AHCI") << "drive lba count " << port.logical_block_count << " supports 48-bit lba? " << port.supports_48bit_lba;
 
     // defaults are 256 words per sector
     port.logical_sector_size = 512;
@@ -578,7 +578,7 @@ void AHCI::process_async_request(size_t port_index, StorageDevice::AsyncRequest&
 List<AHCI::OP> AHCI::build_ops(size_t port, OP::Type op, Address virtual_address, LBARange lba_range, bool is_async)
 {
     auto& state = state_of_port(port);
-    ASSERT(state.lba_count >= lba_range.length());
+    ASSERT(state.logical_block_count >= lba_range.length());
 
     // PRDT entry limitation (22 bits for byte count)
     size_t max_bytes_per_op = 4 * MB;

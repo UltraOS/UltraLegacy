@@ -4,6 +4,7 @@
 #include "Common/Types.h"
 
 namespace kernel {
+
 struct PACKED EBPB {
     // BPB
     u16 bytes_per_sector;

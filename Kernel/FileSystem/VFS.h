@@ -40,7 +40,7 @@ public:
 
 private:
     void load_all_partitions(StorageDevice&);
-    void load_mbr_partitions(StorageDevice&, Address virtual_mbr);
+    void load_mbr_partitions(StorageDevice&, Address virtual_mbr, size_t sector_offset = 0);
 
     String generate_prefix(StorageDevice&);
 

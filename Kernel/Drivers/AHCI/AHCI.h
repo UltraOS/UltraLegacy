@@ -75,7 +75,7 @@ public:
 
         size_t logical_sector_size;
         size_t physical_sector_size;
-        u64 lba_count;
+        u64 logical_block_count;
         bool supports_48bit_lba;
 
         StorageDevice::Info::MediumType medium_type;

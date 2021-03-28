@@ -20,14 +20,14 @@ VFS::VFS()
 void VFS::load_all_partitions(StorageDevice& device)
 {
     auto info = device.query_info();
-    if (info.lba_size != 512 && info.lba_size != 4096) {
-        warning() << "VFS: device " << device.device_model() << " has an unsupported lba size of " << info.lba_size;
+    if (info.logical_block_size != 512 && info.logical_block_size != 4096) {
+        warning() << "VFS: device " << device.device_model() << " has an unsupported block size of " << info.logical_block_size;
         return;
     }
 
     auto lba0_region = MemoryManager::the().allocate_dma_buffer("LBA0"_sv, Page::size);
 
-    auto lba_count = Page::size / info.lba_size;
+    auto lba_count = Page::size / info.logical_block_size;
 
     auto request = StorageDevice::AsyncRequest::make_read(lba0_region->virtual_range().begin(), { 0, lba_count });
     device.submit_request(request);
@@ -62,21 +62,23 @@ void VFS::load_all_partitions(StorageDevice& device)
     MemoryManager::the().free_virtual_region(*lba0_region);
 }
 
-void VFS::load_mbr_partitions(StorageDevice& device, Address virtual_mbr)
+void VFS::load_mbr_partitions(StorageDevice& device, Address virtual_mbr, size_t sector_offset)
 {
     static constexpr size_t offset_to_partitions = 0x01BE;
     virtual_mbr += offset_to_partitions;
 
     static constexpr u8 empty_partition_type = 0x00;
     static constexpr u8 lba_fat_32_partition_type = 0x0C;
+    static constexpr u8 chs_fat_32_partition_type = 0x0B;
+    static constexpr u8 ebr_partition_type = 0x05;
 
     struct PACKED MBRPartitionEntry {
         u8 status;
         u8 chs_begin[3];
         u8 type;
         u8 chs_end[3];
-        u32 first_lba;
-        u32 lba_count;
+        u32 first_block;
+        u32 block_count;
     };
 
     auto* partition = virtual_mbr.as_pointer<MBRPartitionEntry>();
@@ -90,13 +92,31 @@ void VFS::load_mbr_partitions(StorageDevice& device, Address virtual_mbr)
         RefPtr<FileSystem> fs {};
 
         switch (partition->type) {
-        case lba_fat_32_partition_type:
-            log() << "Partition " << i << " FAT32 LBA mode, starting lba: "
-                  << partition->first_lba << " length: " << partition->lba_count;
+        case chs_fat_32_partition_type:
+        case lba_fat_32_partition_type: {
+            auto first_block = partition->first_block + sector_offset;
 
-            fs = FAT32::create(device, { partition->first_lba, partition->lba_count });
+            log() << "Partition " << i << " type FAT32, starting lba: "
+                  << first_block << " length: " << partition->block_count;
+
+            fs = FAT32::create(device, { first_block, partition->block_count });
 
             break;
+        }
+        case ebr_partition_type: {
+            log() << "Partition " << i << " type EBR, looking at chain...";
+
+            auto region = MemoryManager::the().allocate_dma_buffer("EBR"_sv, Page::size);
+            auto ebr_offset = partition->first_block + sector_offset;
+            auto req = StorageDevice::AsyncRequest::make_read(region->virtual_range().begin(), { ebr_offset, 1 });
+            device.submit_request(req);
+            req.wait();
+
+            load_mbr_partitions(device, region->virtual_range().begin(), ebr_offset);
+
+            MemoryManager::the().free_virtual_region(*region);
+            break;
+        }
         default:
             log() << "Partition " << i << " has unknown type " << format::as_hex << partition->type << ", skipped";
         }
