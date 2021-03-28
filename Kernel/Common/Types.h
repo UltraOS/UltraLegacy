@@ -108,6 +108,8 @@ public:
     constexpr operator underlying_pointer_type() const { return m_ptr; }
 
     void operator+=(size_t offset) { m_ptr += offset; }
+    void operator|=(underlying_pointer_type value) { m_ptr |= value; }
+    void operator&=(underlying_pointer_type value) { m_ptr &= value; }
 
 private:
     SizeT m_ptr { 0 };
