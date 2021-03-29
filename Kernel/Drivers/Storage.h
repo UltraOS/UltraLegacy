@@ -28,6 +28,7 @@ public:
             CD,
             USB,
             REMOTE,
+            RAM,
 
             LAST
         } medium_type;
@@ -45,6 +46,8 @@ public:
                 return "USB"_sv;
             case MediumType::REMOTE:
                 return "REMOTE"_sv;
+            case MediumType::RAM:
+                return "RAM"_sv;
             default:
                 return "UNKNOWN"_sv;
             }
