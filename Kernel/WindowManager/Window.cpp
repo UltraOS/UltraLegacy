@@ -206,14 +206,8 @@ void Window::invalidate_rects_based_on_drag_delta(const Rect& new_rect) const
 
 void Window::push_window_event(const Event& event)
 {
-    static constexpr size_t max_event_queue_size = 16;
-
     LOCK_GUARD(m_event_queue_lock);
-
-    if (m_event_queue.size() >= max_event_queue_size)
-        return;
-
-    m_event_queue.append(event);
+    m_event_queue.enqueue(event);
 }
 
 void Window::close()

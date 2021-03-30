@@ -3,6 +3,7 @@
 #include "Bitmap.h"
 #include "Common/DynamicArray.h"
 #include "Common/List.h"
+#include "Common/CircularBuffer.h"
 #include "Event.h"
 #include "Memory/VirtualRegion.h"
 #include "Rect.h"
@@ -75,8 +76,18 @@ public:
 
     void push_window_event(const Event&);
 
-    InterruptSafeSpinLock& event_queue_lock() { return m_event_queue_lock; }
-    DynamicArray<Event>& event_queue() { return m_event_queue; }
+    Event pop_event()
+    {
+        LOCK_GUARD(m_event_queue_lock);
+
+        if (m_event_queue.empty()) {
+            Event e {};
+            e.type = Event::Type::EMPTY;
+            return e;
+        }
+
+        return m_event_queue.dequeue();
+    }
 
     [[nodiscard]] const String& title() const { return m_title; }
 
@@ -135,8 +146,9 @@ private:
     InterruptSafeSpinLock m_dirty_rect_lock;
     DynamicArray<Rect> m_dirty_rects;
 
+    static constexpr size_t max_event_queue_size = 16;
     InterruptSafeSpinLock m_event_queue_lock;
-    DynamicArray<Event> m_event_queue;
+    CircularBuffer<Event, max_event_queue_size> m_event_queue;
 
     static Window* s_currently_focused;
 };

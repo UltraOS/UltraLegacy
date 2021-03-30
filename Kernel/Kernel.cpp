@@ -106,17 +106,17 @@ void process_with_windows()
     window->invalidate_part_of_view_rect({ 0, 0, 200, 100 });
 
     while (true) {
-        {
-            LOCK_GUARD(window->event_queue_lock());
-            for (auto& event : window->event_queue()) {
-                if (event.type == Event::Type::WINDOW_SHOULD_CLOSE) {
-                    lock_guard.~LockGuard();
-                    window->close();
-                    Scheduler::the().exit(0);
-                }
+        auto event = window->pop_event();
+
+        for (;;) {
+            if (event.type == Event::Type::EMPTY) {
+                break;
+            } else if (event.type == Event::Type::WINDOW_SHOULD_CLOSE) {
+                window->close();
+                Scheduler::the().exit(0);
             }
 
-            window->event_queue().clear();
+            event = window->pop_event();
         }
 
         sleep::for_milliseconds(100);

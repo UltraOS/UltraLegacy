@@ -69,10 +69,12 @@ void DemoTTY::tick()
         m_cursor_is_shown = false;
     }
 
-    LOCK_GUARD(m_window->event_queue_lock());
+    auto event = m_window->pop_event();
 
-    for (auto& event : m_window->event_queue()) {
+    for (;;) {
         switch (event.type) {
+        case Event::Type::EMPTY:
+            return;
         case Event::Type::KEY_STATE: {
             if (event.vk_state.state == VKState::RELEASED)
                 break;
@@ -120,9 +122,9 @@ void DemoTTY::tick()
         default:
             break;
         }
-    }
 
-    m_window->event_queue().clear();
+        event = m_window->pop_event();
+    }
 }
 
 void DemoTTY::clear_screen()
@@ -286,7 +288,7 @@ void DemoTTY::execute_command()
 
             info_string << "\nPort " << i;
             info_string << "\nType: " << port.type_to_string() << "\n";
-            info_string << "LBA: " << port.lba_count << " supports 48-bit lba? " << port.supports_48bit_lba << "\n";
+            info_string << "LBA: " << port.logical_block_count << " supports 48-bit lba? " << port.supports_48bit_lba << "\n";
             info_string << "Logical sector size: " << port.logical_sector_size << "\n";
             info_string << "Physical sector size: " << port.physical_sector_size << "\n";
             info_string << "Offset into physical: " << port.lba_offset_into_physical_sector << "\n";
@@ -294,7 +296,7 @@ void DemoTTY::execute_command()
             info_string << "Serial: " << port.serial_number << "\n";
             info_string << "ATA version: " << port.ata_major << ":" << port.ata_minor << "\n";
             info_string << "Medium type: " << StorageDevice::Info::medium_type_to_string(port.medium_type) << "\n";
-            info_string << "Size: " << (port.logical_sector_size * port.lba_count) / MB << " MB \n";
+            info_string << "Size: " << (port.logical_sector_size * port.logical_block_count) / MB << " MB \n";
         }
 
         write(info_string.to_view());

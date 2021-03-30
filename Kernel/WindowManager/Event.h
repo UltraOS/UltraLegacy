@@ -34,6 +34,7 @@ struct Event {
     using VKStateChange = decltype(vk_state);
 
     enum class Type : uint8_t {
+        EMPTY,
         MOUSE_MOVE,
         BUTTON_STATE,
         MOUSE_SCROLL,
