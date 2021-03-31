@@ -214,6 +214,7 @@ void Window::close()
 {
     WindowManager::the().remove_window(*this);
     m_state = State::CLOSED;
+    MemoryManager::the().free_virtual_region(*m_surface_region);
     m_owner.windows().remove(this);
 }
 

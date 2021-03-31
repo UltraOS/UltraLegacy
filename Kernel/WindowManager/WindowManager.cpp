@@ -48,7 +48,6 @@ void WindowManager::remove_window(Window& window)
     }
 
     Compositor::the().add_dirty_rect(window.full_translated_rect());
-    MemoryManager::the().free_virtual_region(window.surface_region());
 }
 
 void WindowManager::run()

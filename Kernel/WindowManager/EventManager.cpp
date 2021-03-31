@@ -12,10 +12,12 @@ EventManager EventManager::s_instance;
 
 void EventManager::dispatch_pending()
 {
-    LOCK_GUARD(m_event_queue_lock);
+    for (;;) {
+        auto event = pop_event();
 
-    for (auto& event : m_event_queue) {
         switch (event.type) {
+        case Event::Type::EMPTY:
+            return;
         case Event::Type::BUTTON_STATE:
             update_state_of_key(event.vk_state.vkey, event.vk_state.state);
             if (event.vk_state.state == VKState::PRESSED)
@@ -63,20 +65,25 @@ void EventManager::dispatch_pending()
             ASSERT_NEVER_REACHED();
         }
     }
-
-    m_event_queue.clear();
 }
 
 void EventManager::push_event(const Event& event)
 {
     LOCK_GUARD(m_event_queue_lock);
+    m_event_queue.enqueue(event);
+}
 
-    if (m_event_queue.size() >= max_event_queue_size) {
-        warning() << "EventManager: event queue too big, skipping event";
-        return;
+Event EventManager::pop_event()
+{
+    LOCK_GUARD(m_event_queue_lock);
+
+    if (m_event_queue.empty()) {
+        Event e {};
+        e.type = Event::Type::EMPTY;
+        return e;
     }
 
-    m_event_queue.append(event);
+    return m_event_queue.dequeue();
 }
 
 void EventManager::update_state_of_key(VK key, VKState state)

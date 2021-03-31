@@ -15,7 +15,7 @@ public:
 
     void enqueue(T&& elem)
     {
-        m_buffer[m_end] = std::move(elem);
+        m_buffer[m_end] = move(elem);
         on_element_enqueued();
     }
 
@@ -65,9 +65,9 @@ private:
     }
 
 private:
-    size_t m_end = 0;
-    size_t m_begin = 0;
-    size_t m_enqueued_count = 0;
+    size_t m_end { 0 };
+    size_t m_begin { 0 };
+    size_t m_enqueued_count { 0 };
 
     StaticArray<T, Size> m_buffer;
 };

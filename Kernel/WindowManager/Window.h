@@ -1,9 +1,9 @@
 #pragma once
 
 #include "Bitmap.h"
+#include "Common/CircularBuffer.h"
 #include "Common/DynamicArray.h"
 #include "Common/List.h"
-#include "Common/CircularBuffer.h"
 #include "Event.h"
 #include "Memory/VirtualRegion.h"
 #include "Rect.h"

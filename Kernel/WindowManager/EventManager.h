@@ -12,12 +12,7 @@
 namespace kernel {
 
 class EventManager {
-    static constexpr size_t max_event_queue_size = 64;
-
-    MAKE_SINGLETON(EventManager)
-        : m_event_queue(max_event_queue_size)
-    {
-    }
+    MAKE_SINGLETON(EventManager) = default;
 
 public:
     static EventManager& the() { return s_instance; }
@@ -40,10 +35,13 @@ private:
     void generate_button_state_event(VK, VKState);
     void generate_char_typed_if_applicable(VK);
 
+    Event pop_event();
+
 private:
     InterruptSafeSpinLock m_event_queue_lock;
 
-    DynamicArray<Event> m_event_queue;
+    static constexpr size_t max_event_queue_size = 64;
+    CircularBuffer<Event, max_event_queue_size> m_event_queue;
 
     Mouse::Packet m_last_mouse_state {};
 
