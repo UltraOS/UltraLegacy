@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Common/Types.h"
+#include "Common/Utilities.h"
 #include "Core/Runtime.h"
 
 namespace kernel {
@@ -34,6 +35,6 @@ public:
     T* end() { return &back() + 1; }
 
 private:
-    T m_elements[Size];
+    T m_elements[Size] {};
 };
 }
