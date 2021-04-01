@@ -63,8 +63,9 @@ public:
             ATAPI = 0xEB140101,
             ENCLOSURE_MANAGEMENT_BRIDGE = 0xC33C0101,
             PORT_MULTIPLIER = 0x96690101
-        } type
-            = Type::NONE;
+        };
+
+        Type type { Type::NONE };
 
         StringView type_to_string();
 

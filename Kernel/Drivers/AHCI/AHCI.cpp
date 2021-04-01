@@ -334,7 +334,6 @@ void AHCI::handle_port_irq(size_t port_index)
             // We're done here
             if (req->queued_ops.empty()) {
                 port.slot_to_request[bit] = nullptr;
-                req->pop_off();
                 req->request->complete();
                 delete req;
 
@@ -343,21 +342,23 @@ void AHCI::handle_port_irq(size_t port_index)
                     // No pending requests, so this slot is now free :)
                     port.deallocate_slot(bit);
                     continue;
-                } else { // We had a pending requests, set it to the current slot and execute
-                    auto& new_req = port.request_queue.front();
-                    port.slot_to_request[bit] = &new_req;
-
-                    auto& op = req->queued_ops.front();
-                    op.command_slot = bit;
-                    execute(op);
-                    continue;
                 }
-            } else { // Request has even more OPs
-                auto& op = req->queued_ops.front();
+
+                // We had a pending requests, set it to the current slot and execute
+                auto& new_req = port.request_queue.pop_front();
+                port.slot_to_request[bit] = &new_req;
+
+                auto& op = new_req.queued_ops.front();
                 op.command_slot = bit;
                 execute(op);
                 continue;
             }
+
+            // Request has even more OPs
+            auto& op = req->queued_ops.front();
+            op.command_slot = bit;
+            execute(op);
+            continue;
         }
     }
 }
@@ -560,15 +561,18 @@ void AHCI::process_async_request(size_t port_index, StorageDevice::AsyncRequest&
     auto& qr = *new PortState::QueuedRequest();
     qr.request = &request;
     qr.queued_ops = move(ops);
-    port.request_queue.insert_back(qr);
 
-    LOCK_GUARD(port.state_access_lock);
-    auto slot = port.allocate_slot();
+    Optional<size_t> slot;
+    {
+        LOCK_GUARD(port.state_access_lock);
+        slot = port.allocate_slot();
 
-    // All slots were busy, our request will be automatically launched as soon as
-    // a slot is released.
-    if (!slot)
-        return;
+        if (!slot) {
+            // All slots were busy, our request will be automatically launched as soon as a slot is released.
+            port.request_queue.insert_back(qr);
+            return;
+        }
+    }
 
     qr.queued_ops.front().command_slot = slot.value();
     port.slot_to_request[slot.value()] = &qr;
