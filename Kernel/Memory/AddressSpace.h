@@ -93,6 +93,8 @@ public:
     static Quad<size_t, size_t, size_t, size_t> virtual_address_as_paging_indices(Address virtual_address);
 #endif
 
+    void local_unmap_page(Address virtual_address);
+    void local_unmap_range(const Range&);
     void unmap_page(Address virtual_address);
     void unmap_range(const Range&);
 
@@ -100,8 +102,9 @@ public:
 
     bool is_active();
     void make_active();
-    void flush_all();
-    void flush_at(Address virtual_address);
+    void invalidate_all();
+    void invalidate_range(Range virtual_range);
+    void invalidate_at(Address virtual_address);
 
 private:
     void map_page_directory_entry(size_t index, Address physical_address, IsSupervisor);

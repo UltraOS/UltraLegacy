@@ -19,6 +19,40 @@ namespace kernel {
 Atomic<size_t> CPU::s_alive_counter;
 Map<u32, CPU::LocalData> CPU::s_processors;
 
+CPU::LocalData::LocalData(u32 id)
+    : m_id(id)
+{
+    m_is_online = new Atomic<bool>(false);
+    m_request_lock = new InterruptSafeSpinLock;
+}
+
+IPICommunicator::Request* CPU::LocalData::pop_request()
+{
+    bool interrupt_state = false;
+    m_request_lock->lock(interrupt_state, __FILE__, __LINE__);
+
+    IPICommunicator::Request* request = nullptr;
+
+    if (!m_requests.empty())
+        request = m_requests.dequeue();
+
+    m_request_lock->unlock(interrupt_state);
+    return request;
+}
+
+void CPU::LocalData::push_request(IPICommunicator::Request& request)
+{
+    bool interrupt_state = false;
+    m_request_lock->lock(interrupt_state, __FILE__, __LINE__);
+
+    if (m_requests.full())
+        runtime::panic("IPI request queue full");
+
+    m_requests.enqueue(&request);
+
+    m_request_lock->unlock(interrupt_state);
+}
+
 Thread& CPU::LocalData::idle_task()
 {
     return **m_idle_process->threads().begin();
@@ -49,12 +83,13 @@ void CPU::MSR::write(u32 index)
 
 void CPU::initialize()
 {
-    if (supports_smp()) {
-        auto my_id = LAPIC::my_id();
-        s_processors.emplace(make_pair(my_id, LocalData(my_id)));
-    } else {
-        s_processors.emplace(make_pair(0, LocalData(0)));
-    }
+    u32 bsp_id = 0;
+
+    if (supports_smp())
+        bsp_id = LAPIC::my_id();
+
+    auto res = s_processors.emplace(make_pair(bsp_id, LocalData(bsp_id)));
+    res.first()->second().bring_online();
 
     ++s_alive_counter;
 }
@@ -100,8 +135,9 @@ void CPU::start_all_processors()
 
         auto& this_processor = CPU::at_id(lapic.id);
 
-        while (!this_processor.is_online())
-            ;
+        while (!this_processor.is_online()) {
+            pause();
+        }
     }
 
     // now LAPIC is the primary timer
@@ -138,8 +174,8 @@ CPU::LocalData& CPU::current()
 
 u32 CPU::current_id()
 {
-    if (is_initialized())
-        return current().id();
+    if (is_initialized() && supports_smp())
+        return LAPIC::my_id();
 
     return 0;
 }

@@ -344,7 +344,7 @@ void AHCI::handle_port_irq(size_t port_index)
                     continue;
                 }
 
-                // We had a pending requests, set it to the current slot and execute
+                // We had a pending request, set it to the current slot and execute
                 auto& new_req = port.request_queue.pop_front();
                 port.slot_to_request[bit] = &new_req;
 

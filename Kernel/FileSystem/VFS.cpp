@@ -57,8 +57,6 @@ void VFS::load_all_partitions(StorageDevice& device)
     log() << "VFS: detected an MBR formatted storage device " << device.device_model();
     load_mbr_partitions(device, lba0_region->virtual_range().begin());
 
-    // TODO: set boot FS
-
     MemoryManager::the().free_virtual_region(*lba0_region);
 }
 

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Common/Utilities.h"
 #include "Common/StaticArray.h"
 
 namespace kernel {

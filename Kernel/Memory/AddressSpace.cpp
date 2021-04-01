@@ -74,7 +74,7 @@ void AddressSpace::inititalize()
         s_of_kernel->entry_at(i).set_physical_address(MemoryManager::the().allocate_page().address()).make_supervisor_present();
     }
 
-    s_of_kernel->flush_all();
+    s_of_kernel->invalidate_all();
     s_of_kernel->allocator().reset_with(
         MemoryManager::the().kernel_address_space_free_base(),
         MemoryManager::the().kernel_address_space_free_ceiling());
@@ -225,7 +225,7 @@ void AddressSpace::map_page(Address virtual_address, Address physical_address, I
     else
         entry.make_user_present();
 
-    flush_at(virtual_address);
+    invalidate_at(virtual_address);
 }
 
 #elif defined(ULTRA_64)
@@ -376,8 +376,30 @@ void AddressSpace::map_huge_range(Range virtual_range, Range physical_range, IsS
 }
 #endif
 
-#ifdef ULTRA_32
 void AddressSpace::unmap_page(Address virtual_address)
+{
+    Interrupts::ScopedDisabler d;
+
+    local_unmap_page(virtual_address);
+
+    IPICommunicator::RangeInvalidationRequest req({ virtual_address, Page::size });
+    IPICommunicator::the().post_request(req);
+    req.wait_for_completion();
+}
+
+void AddressSpace::unmap_range(const Range& range)
+{
+    Interrupts::ScopedDisabler d;
+
+    local_unmap_range(range);
+
+    IPICommunicator::RangeInvalidationRequest req(range);
+    IPICommunicator::the().post_request(req);
+    req.wait_for_completion();
+}
+
+#ifdef ULTRA_32
+void AddressSpace::local_unmap_page(Address virtual_address)
 {
     ASSERT(is_active());
     ASSERT_PAGE_ALIGNED(virtual_address);
@@ -393,10 +415,10 @@ void AddressSpace::unmap_page(Address virtual_address)
 #endif
 
     pt_at(page_table_index).entry_at(page_entry_index).set_present(false);
-    flush_at(virtual_address);
+    invalidate_at(virtual_address);
 }
 #elif defined(ULTRA_64)
-void AddressSpace::unmap_page(Address virtual_address)
+void AddressSpace::local_unmap_page(Address virtual_address)
 {
     ASSERT_PAGE_ALIGNED(virtual_address);
 
@@ -414,12 +436,11 @@ void AddressSpace::unmap_page(Address virtual_address)
         .entry_at(indices.fourth())
         .set_present(false);
 
-    // TODO: TLB shootdown on all cpus
-    flush_at(virtual_address);
+    invalidate_at(virtual_address);
 }
 #endif
 
-void AddressSpace::unmap_range(const Range& range)
+void AddressSpace::local_unmap_range(const Range& range)
 {
     ASSERT_PAGE_ALIGNED(range.begin());
 
@@ -427,7 +448,7 @@ void AddressSpace::unmap_range(const Range& range)
 
     for (size_t i = 0; i < page_count; ++i) {
         auto offset = i * Page::size;
-        unmap_page(range.begin() + offset);
+        local_unmap_page(range.begin() + offset);
     }
 }
 
@@ -484,16 +505,22 @@ void AddressSpace::make_active()
     if (is_active())
         return;
 
-    flush_all();
+    invalidate_all();
 }
 
-void AddressSpace::flush_all()
+void AddressSpace::invalidate_all()
 {
     asm volatile("mov %0, %%cr3" ::"a"(physical_address())
                  : "memory");
 }
 
-void AddressSpace::flush_at(Address virtual_address)
+void AddressSpace::invalidate_range(Range virtual_range)
+{
+    for (auto address = virtual_range.begin(); address < virtual_range.end(); address += Page::size)
+        invalidate_at(address);
+}
+
+void AddressSpace::invalidate_at(Address virtual_address)
 {
 #ifdef ADDRESS_SPACE_DEBUG
     log() << "AddressSpace: flushing the page at vaddr " << virtual_address;

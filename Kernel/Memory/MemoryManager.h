@@ -213,6 +213,43 @@ public:
     [[nodiscard]] Page allocate_page(bool should_zero = true);
     void free_page(const Page& page);
 
+    // Should only be used publically for performance critical operations
+#ifdef ULTRA_32
+    class ScopedPageMapping {
+    public:
+        explicit ScopedPageMapping(Address physical_address)
+        {
+            m_pointer = MemoryManager::the().quickmap_page(physical_address);
+        }
+
+        ~ScopedPageMapping() { MemoryManager::the().unquickmap_page(raw()); }
+
+        Address raw() { return m_pointer; }
+        u8* as_pointer() { return m_pointer; }
+
+    private:
+        u8* m_pointer { nullptr };
+    };
+#elif defined(ULTRA_64)
+    class ScopedPageMapping {
+    public:
+        explicit ScopedPageMapping(Address physical_address)
+            : m_pointer(physical_to_virtual(physical_address).as_pointer<u8>())
+        {
+        }
+
+        Address raw() { return m_pointer; }
+        u8* as_pointer() { return m_pointer; }
+
+    private:
+        u8* m_pointer;
+    };
+#endif
+
+    u8* quickmap_page(const Page&);
+    u8* quickmap_page(Address);
+    void unquickmap_page(Address);
+
     String kernel_virtual_regions_debug_dump();
 
 private:
@@ -226,31 +263,6 @@ private:
 
     PhysicalRegion* physical_region_responsible_for_page(const Page&);
     VirtualRegion* virtual_region_responsible_for_address(Address);
-
-private:
-// Not needed for 64 bit as we have all the phys memory mapped
-#ifdef ULTRA_32
-    u8* quickmap_page(const Page&);
-    u8* quickmap_page(Address);
-    void unquickmap_page(Address);
-
-    class ScopedPageMapping {
-    public:
-        explicit ScopedPageMapping(Address physical_address)
-        {
-            m_pointer = MemoryManager::the().quickmap_page(physical_address);
-        }
-
-        ~ScopedPageMapping() { MemoryManager::the().unquickmap_page(raw()); }
-
-        Address raw() { return m_pointer; }
-
-        u8* as_pointer() { return m_pointer; }
-
-    private:
-        u8* m_pointer { nullptr };
-    };
-#endif
 
 private:
     static MemoryManager* s_instance;

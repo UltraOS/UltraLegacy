@@ -171,12 +171,27 @@ void MemoryManager::unquickmap_page(Address virtual_address)
 
     auto slot = (virtual_address - m_quickmap_range.begin()) / Page::size;
 
-    AddressSpace::current().unmap_page(virtual_address);
+    AddressSpace::current().local_unmap_page(virtual_address);
 
     LOCK_GUARD(m_quickmap_lock);
     ASSERT(m_quickmap_slots.bit_at(slot) == true);
     m_quickmap_slots.set_bit(slot, false);
 }
+#elif defined(ULTRA_64)
+
+u8* MemoryManager::quickmap_page(const Page& page)
+{
+    return physical_to_virtual(page.address()).as_pointer<u8>();
+}
+
+u8* MemoryManager::quickmap_page(Address address)
+{
+    return physical_to_virtual(address).as_pointer<u8>();
+}
+
+// no-op
+void unquickmap_page(Address) { }
+
 #endif
 
 Page MemoryManager::allocate_page(bool should_zero)
@@ -195,6 +210,7 @@ Page MemoryManager::allocate_page(bool should_zero)
 #endif
 
 #ifdef ULTRA_32
+            Interrupts::ScopedDisabler d;
             ScopedPageMapping mapping(page->address());
 
             zero_memory(mapping.as_pointer(), Page::size);
@@ -341,6 +357,7 @@ void MemoryManager::handle_page_fault(const RegisterState& registers, const Page
 void MemoryManager::inititalize(AddressSpace& directory)
 {
 #ifdef ULTRA_32
+    Interrupts::ScopedDisabler d;
     // map the directory's physical page somewhere temporarily
     ScopedPageMapping new_directory_mapping(directory.physical_address());
     ScopedPageMapping current_directory_mapping(AddressSpace::current().physical_address());
@@ -666,19 +683,22 @@ void MemoryManager::free_virtual_region(VirtualRegion& vr)
     bool interrupt_state = false;
     vr.lock().lock(interrupt_state, __FILE__, __LINE__, CPU::current_id());
 
+    if (vr.is_supervisor() == IsSupervisor::YES) {
+        LOCK_GUARD(m_virtual_region_lock);
+        m_kernel_virtual_regions.remove(vr.virtual_range().begin());
+    }
+
+    // Technically this is only needed if kernel virtual region OR
+    // user virtual region for a process with multiple threads.
+    // Otherwise we can afford unmap_local
+    AddressSpace::current().unmap_range(vr.virtual_range());
+
     if (vr.is_private()) {
         auto& pvr = static_cast<PrivateVirtualRegion&>(vr);
 
         for (auto& page : pvr.m_owned_pages)
             free_page(page);
     }
-
-    if (vr.is_supervisor() == IsSupervisor::YES) {
-        LOCK_GUARD(m_virtual_region_lock);
-        m_kernel_virtual_regions.remove(vr.virtual_range().begin());
-    }
-
-    AddressSpace::current().unmap_range(vr.virtual_range());
 
     // This means we're freeing this region early, before having initialized everything
     if (!CPU::is_initialized() || !Scheduler::is_initialized()) {
@@ -713,14 +733,15 @@ void MemoryManager::free_all_virtual_regions(Process& process)
         if (vr->is_private()) {
             auto* pvr = static_cast<PrivateVirtualRegion*>(vr.get());
 
-            for (auto& page : pvr->m_owned_pages)
-                free_page(page);
-
             if (pvr->is_supervisor() == IsSupervisor::YES) {
                 LOCK_GUARD(m_virtual_region_lock);
                 AddressSpace::of_kernel().unmap_range(vr->virtual_range());
                 m_kernel_virtual_regions.remove(pvr->virtual_range().begin());
             }
+
+            for (auto& page : pvr->m_owned_pages)
+                free_page(page);
+
         } else if (vr->is_non_owning() && vr->is_supervisor() == IsSupervisor::YES) {
             AddressSpace::of_kernel().unmap_range(vr->virtual_range());
         } else {

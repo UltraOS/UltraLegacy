@@ -175,8 +175,9 @@ bool is_in_panic()
 
     error() << panic_message << "\n";
 
+    IPICommunicator::HangRequest request {};
     if (InterruptController::is_initialized())
-        IPICommunicator::the().hang_all_cores();
+        IPICommunicator::the().post_request(request);
 
     Rect surface_rect;
     Point center;

@@ -16,15 +16,55 @@ public:
 
     static void initialize();
 
+    class Request {
+    public:
+        enum class Type {
+            HANG,
+            INVALIDATE_RANGE,
+        };
+
+        virtual Type type() const = 0;
+
+        void complete() { --m_completion_countdown; }
+        void increment_completion_countdown() { ++m_completion_countdown; }
+
+        void wait_for_completion();
+
+        virtual ~Request() = default;
+
+    public:
+        Atomic<size_t> m_completion_countdown { 0 };
+    };
+
+    class HangRequest final : public Request {
+        Type type() const override { return Type::HANG; }
+    };
+
+    class RangeInvalidationRequest final : public Request {
+    public:
+        RangeInvalidationRequest(Range virtual_range)
+            : m_virtual_range(virtual_range)
+        {
+        }
+
+        Type type() const override { return Type::INVALIDATE_RANGE; }
+        Range virtual_range() const { return m_virtual_range; }
+
+    private:
+        Range m_virtual_range;
+    };
+
     static IPICommunicator& the()
     {
         ASSERT(s_instance != nullptr);
         return *s_instance;
     }
 
-    void send_ipi(u8 dest);
-    void hang_all_cores();
+    void post_request(Request&);
+    void process_pending();
 
+private:
+    void send_ipi(u8 dest);
     void handle_interrupt(RegisterState&) override;
 
 private:

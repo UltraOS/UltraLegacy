@@ -1,16 +1,19 @@
 #pragma once
 
 #include "Common/Atomic.h"
+#include "Common/CircularBuffer.h"
 #include "Common/Map.h"
 #include "Common/RefPtr.h"
 #include "Common/String.h"
 #include "Common/Types.h"
+#include "Interrupts/IPICommunicator.h"
 
 namespace kernel {
 
 class Thread;
 class TSS;
 class Process;
+class InterruptSafeSpinLock;
 
 class CPU {
     MAKE_STATIC(CPU)
@@ -61,11 +64,7 @@ public:
 
     class LocalData {
     public:
-        explicit LocalData(u32 id)
-            : m_id(id)
-        {
-            m_is_online = new Atomic<bool>(false);
-        }
+        explicit LocalData(u32 id);
 
         [[nodiscard]] u32 id() const { return m_id; }
 
@@ -91,12 +90,19 @@ public:
         void bring_online();
         bool is_online() const { return *m_is_online; }
 
+        IPICommunicator::Request* pop_request();
+        void push_request(IPICommunicator::Request&);
+
     private:
-        u32 m_id;
+        u32 m_id { 0 };
         RefPtr<Process> m_idle_process;
         Thread* m_current_thread { nullptr };
         TSS* m_tss { nullptr };
         Atomic<bool>* m_is_online { nullptr };
+
+        static constexpr size_t max_ipi_requests = 32;
+        InterruptSafeSpinLock* m_request_lock { nullptr };
+        CircularBuffer<IPICommunicator::Request*, max_ipi_requests> m_requests;
     };
 
     static Map<u32, LocalData>& processors() { return s_processors; }
