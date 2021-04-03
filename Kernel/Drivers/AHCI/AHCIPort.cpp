@@ -19,9 +19,11 @@ void AHCIPort::write_synchronous(Address from_virtual_address, LBARange range)
     m_controller.write_synchronous(m_index, from_virtual_address, range);
 }
 
-void AHCIPort::submit_request(StorageDevice::AsyncRequest& request)
+void AHCIPort::submit_request(StorageDevice::Request& request)
 {
-    m_controller.process_async_request(m_index, request);
+    ASSERT(request.type() == Request::Type::ASYNC);
+
+    m_controller.process_async_request(m_index, static_cast<AsyncRequest&>(request));
 }
 
 StringView AHCIPort::device_model() const

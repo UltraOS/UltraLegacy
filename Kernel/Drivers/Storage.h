@@ -59,43 +59,80 @@ public:
         }
     };
 
-    class AsyncRequest {
+    class Request {
     public:
-        enum class Type {
+        enum class OP {
             READ,
             WRITE
         };
 
-        AsyncRequest(Address virtual_address, LBARange lba_range, Type type);
+        enum class Type {
+            ASYNC,
+            RAMDISK
+        };
+
+        Request(Address virtual_address, OP op, Type type);
+
+        [[nodiscard]] OP op() const { return m_op; }
+        [[nodiscard]] Type type() const { return m_type; }
+        [[nodiscard]] Address virtual_address() const { return m_virtual_address; }
+
+        ~Request() = default;
+
+    private:
+        Address m_virtual_address;
+        OP m_op;
+        Type m_type;
+    };
+
+    class AsyncRequest : public Request {
+    public:
+        AsyncRequest(Address virtual_address, LBARange lba_range, OP op);
 
         static AsyncRequest make_read(Address virtual_address, LBARange lba_range)
         {
-            return { virtual_address, lba_range, Type::READ };
+            return { virtual_address, lba_range, OP::READ };
         }
 
         static AsyncRequest make_write(Address virtual_address, LBARange lba_range)
         {
-            return { virtual_address, lba_range, Type::WRITE };
+            return { virtual_address, lba_range, OP::WRITE };
         }
 
         void wait();
         void complete();
 
-        Type type() const { return m_type; }
-        Address virtual_address() const { return m_virtual_address; }
-        LBARange lba_range() const { return m_lba_range; }
+        [[nodiscard]] LBARange lba_range() const { return m_lba_range; }
 
     private:
         DiskIOBlocker m_blocker;
-
-        Address m_virtual_address;
         LBARange m_lba_range;
-        Type m_type;
-
         Atomic<bool> m_is_completed { false };
     };
 
-    virtual void submit_request(AsyncRequest&) = 0;
+    class RamdiskRequest : public Request {
+    public:
+        RamdiskRequest(Address virtual_address, size_t byte_offset, size_t byte_count, OP op);
+
+        static RamdiskRequest make_read(Address virtual_address, size_t byte_offset, size_t byte_count)
+        {
+            return { virtual_address, byte_offset, byte_count, OP::READ };
+        }
+
+        static RamdiskRequest make_write(Address virtual_address, size_t byte_offset, size_t byte_count)
+        {
+            return { virtual_address, byte_offset, byte_count, OP::WRITE };
+        }
+
+        [[nodiscard]] size_t offset() const { return m_offset; }
+        [[nodiscard]] size_t byte_count() const { return m_byte_count; }
+
+    private:
+        size_t m_offset { 0 };
+        size_t m_byte_count { 0 };
+    };
+
+    virtual void submit_request(Request&) = 0;
     virtual void read_synchronous(Address into_virtual_address, LBARange) = 0;
     virtual void write_synchronous(Address from_virtual_address, LBARange) = 0;
 

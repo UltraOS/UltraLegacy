@@ -10,7 +10,7 @@ class AHCIPort : public StorageDevice {
 public:
     AHCIPort(AHCI& parent, size_t index);
 
-    void submit_request(AsyncRequest&) override;
+    void submit_request(Request&) override;
     void read_synchronous(Address into_virtual_address, LBARange) override;
     void write_synchronous(Address from_virtual_address, LBARange) override;
 

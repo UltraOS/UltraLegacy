@@ -551,12 +551,12 @@ void AHCI::synchronous_execute(size_t port_index, List<OP>& ops)
 
 void AHCI::process_async_request(size_t port_index, StorageDevice::AsyncRequest& request)
 {
-    using RT = StorageDevice::AsyncRequest::Type;
+    using RT = StorageDevice::AsyncRequest::OP;
     using OT = OP::Type;
 
     auto& port = m_ports[port_index];
 
-    auto ops = build_ops(port_index, request.type() == RT::READ ? OT::READ : OT::WRITE, request.virtual_address(), request.lba_range(), true);
+    auto ops = build_ops(port_index, request.op() == RT::READ ? OT::READ : OT::WRITE, request.virtual_address(), request.lba_range(), true);
 
     auto& qr = *new PortState::QueuedRequest();
     qr.request = &request;
