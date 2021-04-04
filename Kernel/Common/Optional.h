@@ -46,6 +46,18 @@ public:
         return Optional<T>(in_place, forward<Args>(args)...);
     }
 
+    template <typename... Args>
+    T& emplace(Args&&... args)
+    {
+        if (has_value())
+            reset();
+
+        m_has_value = true;
+        new (pointer()) T(forward<Args>(args)...);
+
+        return *pointer();
+    }
+
     constexpr Optional& operator=(const Optional& other)
     {
         if (this == &other)
