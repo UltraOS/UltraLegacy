@@ -117,7 +117,7 @@ void HeapAllocator::refill_if_needed(size_t bytes_left)
     log() << "HeapAllocator: bytes_left = " << bytes_left << ", refilling...";
 
     auto region = MemoryManager::the().allocate_kernel_private_anywhere("kernel heap block"_sv, MemoryManager::kernel_first_heap_block_size);
-    static_cast<PrivateVirtualRegion*>(region.get())->preallocate_range();
+    static_cast<PrivateVirtualRegion*>(region.get())->preallocate_entire();
 
     auto& range = region->virtual_range();
     feed_block(range.begin().as_pointer<void>(), range.length());

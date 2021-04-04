@@ -8,9 +8,14 @@ PrivateVirtualRegion::PrivateVirtualRegion(Range range, Properties properties, S
 {
 }
 
-void PrivateVirtualRegion::preallocate_range(bool zeroed)
+void PrivateVirtualRegion::preallocate_entire(bool zeroed)
 {
     MemoryManager::the().preallocate(*this, zeroed);
+}
+
+void PrivateVirtualRegion::preallocate_specific(Range virtual_range, bool zeroed)
+{
+    MemoryManager::the().preallocate_specific(*this, virtual_range, zeroed);
 }
 
 void PrivateVirtualRegion::store_page(Page page)

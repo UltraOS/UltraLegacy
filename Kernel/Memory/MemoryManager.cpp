@@ -396,9 +396,21 @@ void MemoryManager::set_quickmap_range(const Range& range)
 
 void MemoryManager::preallocate(PrivateVirtualRegion& region, bool should_zero)
 {
+    preallocate_specific(region, {}, should_zero);
+}
+
+void MemoryManager::preallocate_specific(PrivateVirtualRegion& region, Range requested_range, bool should_zero)
+{
     LOCK_GUARD(region.lock());
 
-    const auto& range = region.virtual_range();
+    auto range = requested_range;
+
+    // empty range means preallocate the entire region
+    if (range.empty()) {
+        range = region.virtual_range();
+    } else {
+        ASSERT(region.virtual_range().contains(range));
+    }
 
     ASSERT_PAGE_ALIGNED(range.begin());
 
@@ -407,6 +419,7 @@ void MemoryManager::preallocate(PrivateVirtualRegion& region, bool should_zero)
 
     if (region.is_stack()) {
         ASSERT(page_count > 1);
+        ASSERT(requested_range.empty());
         page_start = 1;
     }
 
@@ -484,7 +497,7 @@ MemoryManager::VR MemoryManager::allocate_kernel_stack(StringView purpose, size_
         m_kernel_virtual_regions.emplace(region);
     }
     // kernel stack is always preallocated as we don't want to triple fault in the page fault handler
-    static_cast<PrivateVirtualRegion*>(region.get())->preallocate_range();
+    static_cast<PrivateVirtualRegion*>(region.get())->preallocate_entire();
 
     return region;
 }
@@ -532,7 +545,7 @@ MemoryManager::VR MemoryManager::allocate_kernel_private_anywhere(StringView pur
 MemoryManager::VR MemoryManager::allocate_dma_buffer(StringView purpose, size_t length)
 {
     auto region = allocate_kernel_private_anywhere(purpose, length);
-    static_cast<PrivateVirtualRegion*>(region.get())->preallocate_range(false);
+    static_cast<PrivateVirtualRegion*>(region.get())->preallocate_entire(false);
 
     return region;
 }

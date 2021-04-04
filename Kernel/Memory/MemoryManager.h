@@ -260,6 +260,7 @@ private:
 
     friend class PrivateVirtualRegion;
     void preallocate(PrivateVirtualRegion&, bool should_zero = true);
+    void preallocate_specific(PrivateVirtualRegion&, Range pages, bool should_zero);
 
     PhysicalRegion* physical_region_responsible_for_page(const Page&);
     VirtualRegion* virtual_region_responsible_for_address(Address);

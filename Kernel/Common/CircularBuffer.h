@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Common/Utilities.h"
 #include "Common/StaticArray.h"
+#include "Common/Utilities.h"
 
 namespace kernel {
 

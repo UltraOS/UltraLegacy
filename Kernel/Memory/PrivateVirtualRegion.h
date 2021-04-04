@@ -10,7 +10,8 @@ class PrivateVirtualRegion : public VirtualRegion {
 public:
     PrivateVirtualRegion(Range range, Properties properties, StringView name);
 
-    void preallocate_range(bool zeroed = true);
+    void preallocate_entire(bool zeroed = true);
+    void preallocate_specific(Range, bool zeroed = true);
 
 private:
     friend class MemoryManager;
