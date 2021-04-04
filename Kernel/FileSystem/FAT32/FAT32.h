@@ -1,5 +1,6 @@
 #pragma once
 
+#include "FileSystem/DiskCache.h"
 #include "FileSystem/File.h"
 #include "FileSystem/FileSystem.h"
 #include "Structures.h"
@@ -34,6 +35,10 @@ private:
 
 private:
     EBPB m_ebpb;
+    Optional<FSINFO> m_fsinfo;
+    size_t m_cluster_count;
+    DiskCache* m_fat_cache;
+    DiskCache* m_data_cache;
 };
 
 }

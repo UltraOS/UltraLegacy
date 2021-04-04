@@ -39,4 +39,19 @@ struct PACKED EBPB {
 };
 
 static_assert(sizeof(EBPB) == EBPB::size, "Incorrect size of EBPB");
+
+struct PACKED FSINFO {
+    char signature_1[4];
+    uint8_t reserved_1[480];
+    char signature_2[4];
+    uint32_t free_cluster_count;
+    uint32_t last_allocater_cluster;
+    uint8_t reserved_2[12];
+    char signature_3[4];
+
+    static constexpr size_t size = 512;
+};
+
+static_assert(sizeof(FSINFO) == FSINFO::size, "Incorrect size of FSINFO");
+
 }
