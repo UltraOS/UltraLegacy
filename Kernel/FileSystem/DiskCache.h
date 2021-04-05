@@ -10,12 +10,9 @@ namespace kernel {
 // - Cache behavior in respect to block size/fs block size:
 //       If logical sector size is 512:
 //           If FS block is under 4K:
-//               If partition is aligned to FS blocks per page:
-//                   Starting LBA is aligned down to 8 LBA boundary, and FS blocks per page are
-//                   read from disk and cached. (e.g if it's a read of FS block 1 of size 1024 (LBA 2),
-//                   it's aligned down to LBA 0 and blocks 0 -> 8 are read and FS blocks 0 -> 3 are cached)
-//               If partition is not aligned to FS blocks per page:
-//                   No alignment is performed and FS blocks per page are read and cached.
+//              Starting LBA is aligned down to 8 LBA boundary, and FS blocks per page are
+//              read from disk and cached. (e.g if it's a read of FS block 1 of size 1024 (LBA 2),
+//              it's aligned down to LBA 0 and blocks 0 -> 8 are read and FS blocks 0 -> 3 are cached)
 //           If FS block is over 4K:
 //               Any read is done exactly as requested and no alignment or extra caching is performed.
 //       If logical sector size is 4K:
@@ -36,6 +33,8 @@ public:
 
     void read_one(u64 block_index, size_t offset, size_t bytes, void* buffer);
     void write_one(u64 block_index, size_t offset, size_t bytes, void* buffer);
+    void flush_all();
+    void flush_specific(u64 block_index);
 
 private:
     static constexpr size_t no_caching_required = 0;
@@ -43,6 +42,7 @@ private:
     u64 block_to_first_lba(u64 block_index) const;
     u64 block_to_first_lba_within_fs(u64 block_index) const;
     LBARange block_to_lba_range(u64 block_index) const;
+    u64 block_index_to_cached_index(u64 block_index);
 
     struct CachedBlock : public StandaloneListNode<CachedBlock> {
         Address virtual_address_and_dirty_bit { nullptr };
@@ -57,6 +57,7 @@ private:
     CachedBlock* evict_one();
     Pair<CachedBlock*, size_t> cached_block(u64 block_index);
     Address allocate_next_block_buffer();
+    void flush_block(CachedBlock& block);
 
 private:
     StorageDevice& m_device;

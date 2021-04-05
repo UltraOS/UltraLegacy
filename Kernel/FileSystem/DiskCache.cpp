@@ -63,6 +63,11 @@ LBARange DiskCache::block_to_lba_range(u64 block_index) const
     return { m_fs_lba_range.begin() + lba, logical_blocks_per_cache_block };
 }
 
+u64 DiskCache::block_index_to_cached_index(u64 block_index)
+{
+    return block_index & ~(m_fs_blocks_per_io - 1);
+}
+
 Address DiskCache::allocate_next_block_buffer()
 {
     auto next_address = m_region->virtual_range().begin() + m_offset_within_region;
@@ -75,7 +80,7 @@ Address DiskCache::allocate_next_block_buffer()
 Pair<DiskCache::CachedBlock*, size_t> DiskCache::cached_block(u64 block_index)
 {
     auto original_index = block_index;
-    block_index &= ~(m_fs_blocks_per_io - 1);
+    block_index = block_index_to_cached_index(block_index);
     auto offset = (original_index - block_index) * m_fs_block_size;
 
     auto block = m_block_to_cache.find(block_index);
@@ -110,13 +115,8 @@ DiskCache::CachedBlock* DiskCache::evict_one()
 {
     auto& block_to_evict = m_cached_blocks.pop_back();
 
-    if (block_to_evict.is_dirty()) {
-        auto range = block_to_lba_range(block_to_evict.first_block);
-        auto request = StorageDevice::AsyncRequest::make_write(block_to_evict.virtual_address(), range);
-        m_device.submit_request(request);
-        request.wait();
-        block_to_evict.mark_clean();
-    }
+    if (block_to_evict.is_dirty())
+        flush_block(block_to_evict);
 
     m_block_to_cache.remove(block_to_evict.first_block);
     block_to_evict.first_block = 0;
@@ -160,5 +160,53 @@ void DiskCache::write_one(u64 block_index, size_t offset, size_t bytes, void* bu
     copy_memory(buffer, begin.as_pointer<void>(), bytes);
     block_and_offset.first()->mark_dirty();
 }
+
+void DiskCache::flush_block(CachedBlock& block)
+{
+    if (!block.is_dirty())
+        return;
+
+    auto range = block_to_lba_range(block.first_block);
+    auto request = StorageDevice::AsyncRequest::make_write(block.virtual_address(), range);
+    m_device.submit_request(request);
+    request.wait();
+    block.mark_clean();
+}
+
+void DiskCache::flush_all()
+{
+    if (m_io_size == no_caching_required)
+        return;
+
+    size_t flushed_count = 0;
+
+    for (auto& block : m_cached_blocks) {
+        if (!block.is_dirty())
+            continue;
+
+        flush_block(block);
+        ++flushed_count;
+    }
+
+    if (flushed_count)
+        log("DiskCache") << "flushed " << flushed_count << " blocks";
+}
+
+void DiskCache::flush_specific(u64 block_index)
+{
+    if (m_io_size == no_caching_required)
+        return;
+
+    auto aligned_index = block_index_to_cached_index(block_index);
+
+    auto cached_block = m_block_to_cache.find(aligned_index);
+    if (cached_block == m_block_to_cache.end()) {
+        warning() << "DiskCache: was asked to flush uncached block " << block_index;
+        return;
+    }
+
+    flush_block(*cached_block->second());
+}
+
 
 }
