@@ -35,7 +35,7 @@ public:
     static Stats stats();
 
     static bool is_deadlocked();
-
+    static bool is_being_refilled() { return s_is_being_refilled; }
     static bool is_initialized() { return s_heap_block != nullptr; }
 
 private:
@@ -62,5 +62,6 @@ private:
 
     inline static size_t s_calls_to_allocate;
     inline static size_t s_calls_to_free;
+    inline static bool s_is_being_refilled;
 };
 }

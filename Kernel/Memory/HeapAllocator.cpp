@@ -106,6 +106,8 @@ void HeapAllocator::refill_if_needed(size_t bytes_left)
     if (bytes_left > upper_allocation_threshold)
         return;
 
+    s_is_being_refilled = true;
+
     if (!MemoryManager::is_initialized() || !AddressSpace::is_initialized()) {
         if (bytes_left == 0)
             runtime::panic("HeapAllocator: ran out of initial heap memory before MM initialization!");
@@ -121,6 +123,8 @@ void HeapAllocator::refill_if_needed(size_t bytes_left)
 
     auto& range = region->virtual_range();
     feed_block(range.begin().as_pointer<void>(), range.length());
+
+    s_is_being_refilled = false;
 }
 
 void* HeapAllocator::allocate(size_t bytes)
