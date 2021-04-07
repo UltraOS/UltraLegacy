@@ -25,5 +25,5 @@ BPB:
     unused_3                   db 0
     extended_boot_signature    db 0
     volume_id                  dd 0
-    volume_label               db "UltraVolume"
+    volume_label               db "NO NAME    "
     filesystem                 db "FAT32   "

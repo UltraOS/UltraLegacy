@@ -264,8 +264,8 @@ PDT_GB3: equ 0x16000
 
 %endif
 
-kernel_file db "Kernel  bin"
-ksyms_file  db "KSyms   map"
+kernel_file db "KERNEL  BIN"
+ksyms_file  db "KSYMS   MAP"
 
 kernel_sector: times SECTOR_SIZE db 0
 gdt_ptr:

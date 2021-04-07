@@ -62,7 +62,7 @@ main:
 
 %include "Common.inc"
 
-kernel_loader_file:     db "UKLoaderbin"
+kernel_loader_file:     db "UKLOADERBIN"
 no_file_error:          db "Couldn't find the kernel loader file!", CR, LF, 0
 
 boot_context:
