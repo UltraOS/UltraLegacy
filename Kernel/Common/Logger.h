@@ -40,8 +40,13 @@ class MemorySink : public LogSink {
 public:
     void write(StringView string) override
     {
-        if (!HeapAllocator::is_initialized() || HeapAllocator::is_deadlocked())
+        if (!HeapAllocator::is_initialized())
             return;
+        if (HeapAllocator::is_deadlocked())
+            return;
+        if (HeapAllocator::is_being_refilled())
+            return;
+
         if (runtime::is_in_panic())
             return;
         if (!s_data)
@@ -202,8 +207,14 @@ private:
     bool m_interrupt_state { false };
     bool m_should_unlock;
 
-    static inline StaticSinkHolder<3>* s_sinks;
+    static inline DefaultSinkHolder* s_sinks;
     static inline InterruptSafeSpinLock* s_write_lock;
+};
+
+class DummyLogger {
+public:
+    template <typename T>
+    StreamingFormatter::enable_if_default_serializable_t<T, DummyLogger> operator<<(T) { return *this; }
 };
 
 inline Logger info()
@@ -215,11 +226,41 @@ inline Logger info()
     return logger;
 }
 
+inline Logger info(StringView prefix)
+{
+    auto logger = info();
+
+    logger.write(prefix);
+    logger.write(": "_sv);
+
+    return logger;
+}
+
+inline Logger log()
+{
+    return info();
+}
+
+inline Logger log(StringView prefix)
+{
+    return info(prefix);
+}
+
 inline Logger warning()
 {
     Logger logger;
 
     logger.write(Logger::warn_prefix);
+
+    return logger;
+}
+
+inline Logger warning(StringView prefix)
+{
+    auto logger = warning();
+
+    logger.write(prefix);
+    logger.write(": "_sv);
 
     return logger;
 }
@@ -233,15 +274,14 @@ inline Logger error()
     return logger;
 }
 
-inline Logger log(StringView prefix = ""_sv)
+inline Logger error(StringView prefix)
 {
-    auto logger = info();
+    auto logger = error();
 
-    if (!prefix.empty()) {
-        logger.write(prefix);
-        logger.write(": "_sv);
-    }
+    logger.write(prefix);
+    logger.write(": "_sv);
 
     return logger;
 }
+
 }
