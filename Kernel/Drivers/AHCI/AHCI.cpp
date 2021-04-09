@@ -27,6 +27,14 @@
 
 #endif
 
+#define AHCI_LOG log("AHCI")
+
+#ifdef AHCI_DEBUG_MODE
+#define AHCI_DEBUG log("AHCI")
+#else
+#define AHCI_DEBUG DummyLogger()
+#endif
+
 namespace kernel {
 
 AHCI::AHCI(const PCI::DeviceInfo& info)
@@ -54,14 +62,14 @@ AHCI::AHCI(const PCI::DeviceInfo& info)
     ghc.interrupt_enable = true;
     hba_write(ghc);
 
-    log("AHCI") << "enabling MSI for interrupt vector " << interrupt_vector();
+    AHCI_LOG << "enabling MSI for interrupt vector " << interrupt_vector();
     enable_msi(interrupt_vector());
 
     auto cap = hba_read<CAP>();
     m_supports_64bit = cap.supports_64bit_addressing;
     m_command_slots_per_port = cap.number_of_command_slots + 1;
 
-    log("AHCI") << "detected " << m_command_slots_per_port << " command slots per port";
+    AHCI_LOG << "detected " << m_command_slots_per_port << " command slots per port";
 
     initialize_ports();
 }
@@ -133,7 +141,7 @@ void AHCI::initialize_ports()
 {
     auto implemented_ports = m_hba->ports_implemented;
 
-    log("AHCI") << "detected " << __builtin_popcount(implemented_ports) << " implemented ports";
+    AHCI_LOG << "detected " << __builtin_popcount(implemented_ports) << " implemented ports";
 
     for (size_t i = 0; i < 32; ++i) {
         if (!(implemented_ports & SET_BIT(i)))
@@ -201,17 +209,17 @@ void AHCI::initialize_port(size_t index)
     port.type = type_of_port(index);
 
     if (port.type == PortState::Type::NONE) {
-        log("AHCI") << "port " << index << " doesn't have a device attached";
+        AHCI_DEBUG << "port " << index << " doesn't have a device attached";
         return;
     } else if (port.type != PortState::Type::SATA) {
-        log("AHCI") << "port " << index << " has type \"" << port.type_to_string() << "\", which is currently not supported";
+        AHCI_LOG << "port " << index << " has type \"" << port.type_to_string() << "\", which is currently not supported";
 
         if (port.type == PortState::Type::ATAPI)
             port.medium_type = StorageDevice::Info::MediumType::CD;
 
         return;
     } else {
-        log("AHCI") << "detected device of type \"" << port.type_to_string() << "\" on port " << index;
+        AHCI_LOG << "detected device of type \"" << port.type_to_string() << "\" on port " << index;
     }
 
     identify_sata_port(index);
@@ -224,7 +232,7 @@ void AHCI::initialize_port(size_t index)
 
     m_ports[index].slot_map.set_size(m_command_slots_per_port);
 
-    log() << "AHCI: successfully intitialized port " << index;
+    AHCI_LOG << "successfully intitialized port " << index;
     (new AHCIPort(*this, index))->make_child_of(this);
 }
 
@@ -233,7 +241,7 @@ void AHCI::disable_dma_engines_for_port(size_t index)
     auto cmd = port_read<PortCommandAndStatus>(index);
 
     if (!cmd.start && !cmd.command_list_running && !cmd.fis_receive_enable && !cmd.fis_receive_running) {
-        log("AHCI") << "DMA engines for port " << index << " are already off";
+        AHCI_DEBUG << "DMA engines for port " << index << " are already off";
         return;
     }
 
@@ -266,7 +274,7 @@ void AHCI::disable_dma_engines_for_port(size_t index)
     if (cmd.fis_receive_running)
         runtime::panic("AHCI: a port failed to enter idle state in 500ms");
 
-    log("AHCI") << "successfully disabled DMA engines for port " << index;
+    AHCI_DEBUG << "successfully disabled DMA engines for port " << index;
 }
 
 void AHCI::enable_dma_engines_for_port(size_t index)
@@ -311,7 +319,7 @@ void AHCI::handle_irq(RegisterState&)
 
 void AHCI::handle_port_irq(size_t port_index)
 {
-    log("AHCI") << "handling IRQ for port " << port_index;
+    AHCI_DEBUG << "handling IRQ for port " << port_index;
 
     auto& port = m_ports[port_index];
     LOCK_GUARD(port.state_access_lock);
@@ -321,7 +329,7 @@ void AHCI::handle_port_irq(size_t port_index)
     for (size_t bit = 0; bit < m_command_slots_per_port; ++bit) {
         // A command has been completed
         if (port.slot_map.bit_at(bit) && !IS_BIT_SET(command_status, bit)) {
-            log("AHCI") << "command " << bit << " is completed";
+            AHCI_DEBUG << "command " << bit << " is completed";
 
             auto* req = port.slot_to_request[bit];
 
@@ -429,9 +437,9 @@ void AHCI::identify_sata_port(size_t index)
     port.ata_major = data[major_version_offset];
     port.ata_minor = data[minor_version_offset];
 
-    log("AHCI") << "ata version " << port.ata_major << ":" << port.ata_minor;
-    log("AHCI") << "model \"" << port.model_string.c_string() << "\"";
-    log("AHCI") << "serial number \"" << port.serial_number.c_string() << "\"";
+    AHCI_LOG << "ata version " << port.ata_major << ":" << port.ata_minor;
+    AHCI_LOG << "model \"" << port.model_string.c_string() << "\"";
+    AHCI_LOG << "serial number \"" << port.serial_number.c_string() << "\"";
 
     auto command_and_features = data[command_and_feature_set_1_offset];
 
@@ -458,7 +466,7 @@ void AHCI::identify_sata_port(size_t index)
         copy_memory(&data[lba_offset], &port.logical_block_count, 4);
     }
 
-    log("AHCI") << "drive lba count " << port.logical_block_count << " supports 48-bit lba? " << port.supports_48bit_lba;
+    AHCI_LOG << "drive lba count " << port.logical_block_count << " supports 48-bit lba? " << port.supports_48bit_lba;
 
     // defaults are 256 words per sector
     port.logical_sector_size = 512;
@@ -500,10 +508,10 @@ void AHCI::identify_sata_port(size_t index)
     else
         port.medium_type = StorageDevice::Info::MediumType::HDD;
 
-    log("AHCI") << "device rotation rate: " << data[media_rotation_rate_offset];
-    log("AHCI") << "physical sector size: " << port.physical_sector_size;
-    log("AHCI") << "logical sector size: " << port.logical_sector_size;
-    log("AHCI") << "lba offset into physical: " << port.lba_offset_into_physical_sector;
+    AHCI_LOG << "device rotation rate: " << data[media_rotation_rate_offset];
+    AHCI_LOG << "physical sector size: " << port.physical_sector_size;
+    AHCI_LOG << "logical sector size: " << port.logical_sector_size;
+    AHCI_LOG << "lba offset into physical: " << port.lba_offset_into_physical_sector;
 
     MemoryManager::the().free_page(Page(identify_base));
 }
@@ -642,7 +650,7 @@ List<AHCI::OP> AHCI::build_ops(size_t port, OP::Type op, Address virtual_address
 
 void AHCI::execute(OP& op)
 {
-    log("AHCI") << "executing op " << op.type_to_string() << " | lba range: "
+    AHCI_DEBUG << "executing op " << op.type_to_string() << " | lba range: "
                 << op.lba_range << " | " << op.physical_ranges.size() << " physical range(s) | slot " << op.command_slot;
 
     auto& port = m_ports[op.port];
@@ -789,7 +797,7 @@ void AHCI::reset_port(size_t index)
 
     m_hba->ports[index].error = 0xFFFFFFFF;
 
-    log("AHCI") << "successfully reset port " << index;
+    AHCI_LOG << "successfully reset port " << index;
 }
 
 void AHCI::hba_reset()
@@ -872,7 +880,7 @@ void AHCI::hba_reset()
     MemoryManager::the().free_page(Page(fis_receive_page));
     MemoryManager::the().free_page(Page(command_list_page));
 
-    log() << "AHCI: succesfully reset HBA";
+    AHCI_LOG << "AHCI: succesfully reset HBA";
 }
 
 void AHCI::wait_for_port_ready(size_t index)
@@ -943,7 +951,7 @@ void AHCI::autodetect(const DynamicArray<PCI::DeviceInfo>& devices)
         if (programming_interface != device.programming_interface)
             continue;
 
-        log() << "AHCI: detected a new controller -> " << device;
+        AHCI_LOG << "AHCI: detected a new controller -> " << device;
         new AHCI(device);
     }
 }
