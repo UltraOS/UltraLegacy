@@ -8,6 +8,9 @@ class FileSystem;
 
 class File {
 public:
+    static constexpr size_t max_name_length = 255;
+    static constexpr size_t small_name_length = 11; // 8 + 3
+
     enum class Attributes : u32 {
         IS_DIRECTORY = SET_BIT(0),
         // security-related stuff?...
