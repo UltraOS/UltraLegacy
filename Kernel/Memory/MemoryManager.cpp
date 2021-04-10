@@ -12,8 +12,21 @@
 #include "Page.h"
 #include "PhysicalRegion.h"
 
-#define MEMORY_MANAGER_DEBUG
-// #define MEMORY_MANAGER_SUPER_DEBUG
+#define MEMORY_MANAGER_DEBUG_MODE
+
+#define MM_LOG log("MemoryManager")
+
+#ifdef MEMORY_MANAGER_DEBUG_MODE
+#define MM_DEBUG log("MemoryManager")
+#else
+#define MM_DEBUG DummyLogger()
+#endif
+
+#ifdef MEMORY_MANAGER_DEBUG_MODE_EX
+#define MM_DEBUG_EX log("MemoryManager")
+#else
+#define MM_DEBUG_EX DummyLogger()
+#endif
 
 namespace kernel {
 
@@ -82,11 +95,9 @@ MemoryManager::MemoryManager()
     static constexpr Address64 lowest_allowed_physical_address = 1 * MB;
     static constexpr Address64 highest_allowed_physical_address = Page::round_down(max_memory_address.raw());
 
-#ifdef MEMORY_MANAGER_DEBUG
-    log() << "MemoryManager: constraining physical ranges by "
-          << lowest_allowed_physical_address << " -> "
-          << highest_allowed_physical_address;
-#endif
+    MM_DEBUG << "constraining physical ranges by "
+             << lowest_allowed_physical_address << " -> "
+             << highest_allowed_physical_address;
 
     auto first_viable_range = lower_bound(
         m_memory_map.begin(),
@@ -107,10 +118,8 @@ MemoryManager::MemoryManager()
             lowest_allowed_physical_address,
             highest_allowed_physical_address);
 
-#ifdef MEMORY_MANAGER_DEBUG
-        log() << "MemoryManager: Transformed range\n       "
-              << *range << "\n       into\n       " << potential_range << "\n";
-#endif
+        MM_DEBUG << "Transformed range\n       "
+                 << *range << "\n       into\n       " << potential_range << "\n";
 
         if (potential_range.length() < Page::size)
             continue;
@@ -118,20 +127,27 @@ MemoryManager::MemoryManager()
         auto allocator_range = Range::from_two_pointers(Address(potential_range.begin()), Address(potential_range.end()));
         auto& this_region = *m_physical_regions.emplace(UniquePtr<PhysicalRegion>::create(allocator_range));
 
-#ifdef MEMORY_MANAGER_DEBUG
-        log() << "MemoryManager: New physical region: " << this_region;
-#endif
+        MM_LOG << "New physical region: " << this_region;
 
         m_initial_physical_bytes += this_region.free_page_count() * Page::size;
     }
 
-    log() << "MemoryManager: Total free physical memory: "
-          << bytes_to_megabytes(m_initial_physical_bytes.load()) << " MB ("
-          << m_initial_physical_bytes / Page::size << " pages) ";
+    MM_LOG << "Total free physical memory: "
+           << bytes_to_megabytes(m_initial_physical_bytes.load()) << " MB ("
+           << m_initial_physical_bytes / Page::size << " pages) ";
 
     m_free_physical_bytes = m_initial_physical_bytes;
     m_initial_physical_bytes += kernel_image_size;
     m_initial_physical_bytes += kernel_first_heap_block_size;
+
+    static constexpr size_t lowest_sane_ram_amount = 64 * MB;
+    if (m_initial_physical_bytes < lowest_sane_ram_amount) {
+        StackStringBuilder<256> error_str;
+        error_str << "RAM size sanity check failed: detected "
+                  << m_initial_physical_bytes.load() << " bytes, expected at least "
+                  << lowest_sane_ram_amount;
+        runtime::panic(error_str.data());
+    }
 }
 
 #ifdef ULTRA_32
@@ -151,9 +167,7 @@ u8* MemoryManager::quickmap_page(Address physical_address)
 
     Address virtual_address = m_quickmap_range.begin() + slot.value() * Page::size;
 
-#ifdef MEMORY_MANAGER_SUPER_DEBUG
-    log() << "MemoryManager: quickmapping vaddr " << virtual_address << " to " << physical_address;
-#endif
+    MM_DEBUG_EX << "quickmapping vaddr " << virtual_address << " to " << physical_address;
 
     AddressSpace::current().map_page(virtual_address, physical_address);
 
@@ -205,9 +219,7 @@ Page MemoryManager::allocate_page(bool should_zero)
         m_free_physical_bytes -= Page::size;
 
         if (should_zero) {
-#ifdef MEMORY_MANAGER_SUPER_DEBUG
-            log() << "MemoryManager: zeroing the page at physaddr " << page.address();
-#endif
+            MM_DEBUG_EX << "zeroing the page at physaddr " << page->address();
 
 #ifdef ULTRA_32
             Interrupts::ScopedDisabler d;
@@ -223,7 +235,7 @@ Page MemoryManager::allocate_page(bool should_zero)
         return *page;
     }
 
-    runtime::panic("MemoryManager: Out of physical memory!");
+    runtime::panic("Out of physical memory!");
 }
 
 PhysicalRegion* MemoryManager::physical_region_responsible_for_page(const Page& page)
@@ -293,13 +305,13 @@ void MemoryManager::handle_page_fault(const RegisterState& registers, const Page
 {
     if (!is_initialized()) {
         StackStringBuilder error_string;
-        error_string << "MemoryManager: unexpected early page fault " << fault;
+        error_string << "unexpected early page fault " << fault;
         runtime::panic(error_string.data(), &registers);
     }
 
     auto panic = [&registers, &fault]() {
         String error_string;
-        error_string << "MemoryManager: unexpected page fault on core " << CPU::current_id() << fault;
+        error_string << "unexpected page fault on core " << CPU::current_id() << fault;
         runtime::panic(error_string.data(), &registers);
     };
 
@@ -333,7 +345,7 @@ void MemoryManager::handle_page_fault(const RegisterState& registers, const Page
                 String error_string;
                 auto* thread = Thread::current();
 
-                error_string << "MemoryManager: Stack overflow! Thread "
+                error_string << "Stack overflow! Thread "
                              << thread << " (" << thread->owner().name().to_view()
                              << ") on core " << CPU::current_id();
 
@@ -341,8 +353,8 @@ void MemoryManager::handle_page_fault(const RegisterState& registers, const Page
             }
         }
 
-        log() << "MemoryManager: Handling expected page fault\n"
-              << fault;
+        MM_DEBUG_EX << "Handling expected page fault\n"
+                    << fault;
 
         auto page = self.allocate_page();
         private_region.store_page(page);
@@ -362,9 +374,8 @@ void MemoryManager::inititalize(AddressSpace& directory)
     ScopedPageMapping new_directory_mapping(directory.physical_address());
     ScopedPageMapping current_directory_mapping(AddressSpace::current().physical_address());
 
-#ifdef MEMORY_MANAGER_DEBUG
-    log() << "MemoryManager: Setting up kernel mappings for the directory at physaddr " << directory.physical_address();
-#endif
+    MM_DEBUG << "Setting up kernel mappings for the directory at physaddr " << directory.physical_address();
+
     auto byte_offset = kernel_first_table_index * AddressSpace::Table::entry_size;
     auto bytes_to_copy = (kernel_last_table_index - kernel_first_table_index + 1) * AddressSpace::Table::entry_size;
     copy_memory(current_directory_mapping.raw().as_pointer<u8>() + byte_offset,
@@ -423,7 +434,7 @@ void MemoryManager::preallocate_specific(PrivateVirtualRegion& region, Range req
         page_start = 1;
     }
 
-    log() << "MemoryManager: force allocating " << page_count << " physical pages...";
+    MM_DEBUG_EX << "force allocating " << page_count << " physical pages...";
 
     region.owned_pages().reserve(page_count);
 
@@ -687,7 +698,7 @@ void MemoryManager::allocate_initial_kernel_regions()
 
 void MemoryManager::free_virtual_region(VirtualRegion& vr)
 {
-    log() << "MemoryManager: Freeing virtual region \"" << vr.name().to_view() << "\"";
+    MM_DEBUG << "Freeing virtual region \"" << vr.name().to_view() << "\"";
 
     ASSERT(!vr.is_eternal());
     ASSERT(!vr.is_shared()); // TODO
