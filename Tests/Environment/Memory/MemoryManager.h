@@ -25,7 +25,7 @@ private:
 
 class PrivateVirtualRegion : public VirtualRegion {
 public:
-    void preallocate_range(bool = true) { }
+    void preallocate_entire(bool = true) { }
 };
 
 class MemoryManager {
