@@ -22,7 +22,7 @@ struct PACKED EBPB {
 
     // EBPB
     u32 sectors_per_fat;
-    u16 drive_description;
+    u16 ext_flags;
     u16 version;
     u32 root_dir_cluster;
     u16 fs_information_sector;
@@ -42,16 +42,106 @@ static_assert(sizeof(EBPB) == EBPB::size, "Incorrect size of EBPB");
 
 struct PACKED FSINFO {
     char signature_1[4];
-    uint8_t reserved_1[480];
+    u8 reserved_1[480];
     char signature_2[4];
-    uint32_t free_cluster_count;
-    uint32_t last_allocater_cluster;
-    uint8_t reserved_2[12];
+    u32 free_cluster_count;
+    u32 last_allocated_cluster;
+    u8 reserved_2[12];
     char signature_3[4];
 
     static constexpr size_t size = 512;
 };
 
 static_assert(sizeof(FSINFO) == FSINFO::size, "Incorrect size of FSINFO");
+
+struct PACKED DirectoryEntry {
+    char filename[8];
+    char extension[3];
+
+    enum class Attributes : u8 {
+        READ_ONLY = SET_BIT(0),
+        HIDDEN = SET_BIT(1),
+        SYSTEM = SET_BIT(2),
+        VOLUME_LABEL = SET_BIT(3),
+        SUBDIRECTORY = SET_BIT(4),
+        ARCHIVE = SET_BIT(5),
+        DEVICE = SET_BIT(6)
+    } attributes;
+
+    friend Attributes operator&(Attributes l, Attributes r)
+    {
+        return static_cast<Attributes>(static_cast<u8>(l) & static_cast<u8>(r));
+    }
+
+    enum class CaseInfo : u8 {
+        LOWERCASE_NAME = SET_BIT(3),
+        LOWERCASE_EXTENSION = SET_BIT(4)
+    } case_info;
+
+    friend CaseInfo operator&(CaseInfo l, CaseInfo r)
+    {
+        return static_cast<CaseInfo>(static_cast<u8>(l) & static_cast<u8>(r));
+    }
+
+    u8 created_ms;
+    u16 created_time;
+    u16 created_date;
+    u16 last_accessed_date;
+    u16 cluster_high;
+    u16 last_modified_time;
+    u16 last_modified_date;
+    u16 cluster_low;
+    u32 size;
+
+    bool is_read_only() const { return (attributes & Attributes::READ_ONLY) == Attributes::READ_ONLY; }
+    bool is_hidden() const { return (attributes & Attributes::HIDDEN) == Attributes::HIDDEN; }
+    bool is_system() const { return (attributes & Attributes::SYSTEM) == Attributes::SYSTEM; }
+    bool is_volume_label() const { return (attributes & Attributes::VOLUME_LABEL) == Attributes::VOLUME_LABEL; }
+    bool is_directory() const { return (attributes & Attributes::SUBDIRECTORY) == Attributes::SUBDIRECTORY; };
+    bool is_archive() const { return (attributes & Attributes::ARCHIVE) == Attributes::ARCHIVE; }
+    bool is_device() const { return (attributes & Attributes::DEVICE) == Attributes::DEVICE; }
+    bool is_long_name() const { return (attributes & static_cast<Attributes>(0x0F)) == static_cast<Attributes>(0x0F); }
+
+    bool is_lowercase_name() const { return (case_info & CaseInfo::LOWERCASE_NAME) == CaseInfo::LOWERCASE_NAME; }
+    bool is_lowercase_extension() const { return (case_info & CaseInfo::LOWERCASE_EXTENSION) == CaseInfo::LOWERCASE_EXTENSION; }
+
+    static constexpr u8 deleted_mark = 0xE5;
+    bool is_deleted() const { return static_cast<u8>(filename[0]) == deleted_mark; }
+
+    static constexpr u8 last_entry_mark = 0x00;
+    bool is_last_entry() const { return static_cast<u8>(filename[0]) == last_entry_mark; }
+
+    static DirectoryEntry from_storage(void* storage)
+    {
+        DirectoryEntry entry;
+        copy_memory(storage, &entry, sizeof(DirectoryEntry));
+
+        return entry;
+    }
+};
+
+struct PACKED LongNameDirectoryEntry {
+    u8 sequence_number;
+    u16 name_1[5];
+    u8 attributes;
+    u8 type;
+    u8 checksum;
+    u16 name_2[6];
+    u16 first_cluster;
+    u16 name_3[2];
+
+    static LongNameDirectoryEntry from_normal(DirectoryEntry& directory_entry)
+    {
+        return bit_cast<LongNameDirectoryEntry>(directory_entry);
+    }
+
+    static LongNameDirectoryEntry from_storage(void* storage)
+    {
+        LongNameDirectoryEntry entry;
+        copy_memory(storage, &entry, sizeof(LongNameDirectoryEntry));
+
+        return entry;
+    }
+};
 
 }
