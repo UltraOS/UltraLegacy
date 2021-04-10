@@ -40,7 +40,6 @@ private:
     static constexpr size_t no_caching_required = 0;
 
     u64 block_to_first_lba(u64 block_index) const;
-    u64 block_to_first_lba_within_fs(u64 block_index) const;
     LBARange block_to_lba_range(u64 block_index) const;
     u64 block_index_to_cached_index(u64 block_index);
 

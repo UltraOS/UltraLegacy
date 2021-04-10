@@ -1,6 +1,17 @@
 #include "DiskCache.h"
 #include "Memory/MemoryManager.h"
 
+#define DC_DEBUG_MODE
+
+#define DC_LOG log("DiskCache")
+#define DC_WARN warning("DiskCache")
+
+#ifdef DC_DEBUG_MODE
+#define DC_DEBUG log("DiskCache")
+#else
+#define DC_DEBUG DummyLogger()
+#endif
+
 namespace kernel {
 
 DiskCache::DiskCache(StorageDevice& device, LBARange filesystem_lba_range, size_t filesystem_block_size, size_t block_capacity)
@@ -29,12 +40,17 @@ DiskCache::DiskCache(StorageDevice& device, LBARange filesystem_lba_range, size_
 
     m_fs_blocks_per_io = m_io_size / m_fs_block_size;
 
-    auto region = MemoryManager::the().allocate_kernel_private_anywhere("DiskCache", m_fs_block_size * m_capacity);
+    auto region = MemoryManager::the().allocate_kernel_private_anywhere("DiskCache", m_fs_block_size * block_capacity);
     m_region = static_cast<PrivateVirtualRegion*>(region.get());
 
+    // capacity is measured in pages, not in FS blocks, unless FS block is over 4K
+    m_capacity /= m_fs_blocks_per_io;
+
+    DC_DEBUG << "cache block capacity is " << m_capacity << ", a cache block is " << m_fs_blocks_per_io << " FS blocks";
+
     if (!m_fs_lba_range.begin() % 8 && info.logical_block_size == 512) {
-        warning() << "DiskCache: partition starts at an unaligned logical block "
-                  << filesystem_lba_range.begin() << ", expect poor performance";
+        DC_WARN << "partition starts at an unaligned logical block "
+                << filesystem_lba_range.begin() << ", expect poor performance";
     }
 }
 
@@ -44,11 +60,6 @@ u64 DiskCache::block_to_first_lba(u64 block_index) const
     offset /= m_logical_block_size;
 
     return offset;
-}
-
-u64 DiskCache::block_to_first_lba_within_fs(u64 block_index) const
-{
-    return m_fs_lba_range.begin() + block_to_first_lba(block_index);
 }
 
 LBARange DiskCache::block_to_lba_range(u64 block_index) const
@@ -100,6 +111,8 @@ Pair<DiskCache::CachedBlock*, size_t> DiskCache::cached_block(u64 block_index)
     }
 
     auto lba_range = block_to_lba_range(block_index);
+    ASSERT(m_fs_lba_range.contains(lba_range));
+
     auto request = StorageDevice::AsyncRequest::make_read(new_cached_block->virtual_address(), lba_range);
     m_device.submit_request(request);
     request.wait();
@@ -114,6 +127,8 @@ Pair<DiskCache::CachedBlock*, size_t> DiskCache::cached_block(u64 block_index)
 DiskCache::CachedBlock* DiskCache::evict_one()
 {
     auto& block_to_evict = m_cached_blocks.pop_back();
+
+    DC_DEBUG << "evicting cached block " << block_to_evict.first_block;
 
     if (block_to_evict.is_dirty())
         flush_block(block_to_evict);
@@ -166,7 +181,11 @@ void DiskCache::flush_block(CachedBlock& block)
     if (!block.is_dirty())
         return;
 
+    DC_DEBUG << "flushing block " << block.first_block;
+
     auto range = block_to_lba_range(block.first_block);
+    ASSERT(m_fs_lba_range.contains(range));
+
     auto request = StorageDevice::AsyncRequest::make_write(block.virtual_address(), range);
     m_device.submit_request(request);
     request.wait();
@@ -189,7 +208,7 @@ void DiskCache::flush_all()
     }
 
     if (flushed_count)
-        log("DiskCache") << "flushed " << flushed_count << " blocks";
+        DC_LOG << "flushed " << flushed_count << " blocks";
 }
 
 void DiskCache::flush_specific(u64 block_index)
@@ -201,7 +220,7 @@ void DiskCache::flush_specific(u64 block_index)
 
     auto cached_block = m_block_to_cache.find(aligned_index);
     if (cached_block == m_block_to_cache.end()) {
-        warning() << "DiskCache: was asked to flush uncached block " << block_index;
+        DC_WARN << "was asked to flush uncached block " << block_index;
         return;
     }
 
