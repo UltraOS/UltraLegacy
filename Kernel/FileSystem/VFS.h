@@ -7,6 +7,7 @@
 #include "Core/Runtime.h"
 #include "Drivers/Storage.h"
 #include "File.h"
+#include "Directory.h"
 #include "FileDescription.h"
 #include "FileSystem.h"
 
