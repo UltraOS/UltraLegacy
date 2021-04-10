@@ -28,8 +28,8 @@ void StorageDevice::AsyncRequest::complete()
 {
     ASSERT(!m_is_completed);
 
-    m_is_completed = true;
     m_blocker.unblock();
+    m_is_completed = true;
 }
 
 StorageDevice::RamdiskRequest::RamdiskRequest(Address virtual_address, size_t byte_offset, size_t byte_count, OP op)
