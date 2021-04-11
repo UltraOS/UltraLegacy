@@ -88,19 +88,7 @@ public:
 
     void lock(const char* file = nullptr, size_t line = 0, size_t core_id = 0) ALWAYS_INLINE
     {
-        if (!file)
-            file = "<unspecified>";
-
-        lock_t expected = unlocked;
-
-        while (!m_lock.compare_and_exchange(&expected, locked)) {
-            did_fail_to_acquire();
-
-            expected = unlocked;
-            pause();
-        }
-
-        did_acquire_lock(file, line, core_id);
+        do_lock(file, line, core_id, false);
     }
 
     void unlock() ALWAYS_INLINE { m_lock.store(unlocked, MemoryOrder::RELEASE); }
@@ -121,6 +109,30 @@ public:
         return true;
     }
 
+protected:
+    void do_lock(const char* file, size_t line, size_t core_id, bool service_interrupts) ALWAYS_INLINE
+    {
+        if (!file)
+            file = "<unspecified>";
+
+        lock_t expected = unlocked;
+
+        while (!m_lock.compare_and_exchange(&expected, locked)) {
+            did_fail_to_acquire();
+
+            // Service IPIs/IRQs/whatever while waiting
+            if (service_interrupts) {
+                Interrupts::enable();
+                Interrupts::disable();
+            }
+
+            expected = unlocked;
+            pause();
+        }
+
+        did_acquire_lock(file, line, core_id);
+    }
+
 private:
     Atomic<size_t> m_lock;
 };
@@ -134,7 +146,7 @@ public:
         interrupt_state = Interrupts::are_enabled();
         Interrupts::disable();
 
-        SpinLock::lock(file, line, core_id);
+        SpinLock::do_lock(file, line, core_id, interrupt_state);
     }
 
     void unlock(bool interrupt_state) ALWAYS_INLINE
@@ -169,6 +181,22 @@ public:
 
     void lock(const char* file = nullptr, size_t line = 0) ALWAYS_INLINE
     {
+        do_lock(file, line, false);
+    }
+
+    void unlock() ALWAYS_INLINE
+    {
+        ASSERT(m_depth > 0);
+
+        if (--m_depth == 0)
+            m_lock.store(unlocked, MemoryOrder::RELEASE);
+    }
+
+    size_t depth() const { return m_depth; }
+
+protected:
+    void do_lock(const char* file, size_t line, bool service_interrupts) ALWAYS_INLINE
+    {
         if (!file)
             file = "<unspecified>";
 
@@ -184,6 +212,12 @@ public:
 
             did_fail_to_acquire();
 
+            // Service IPIs/IRQs/whatever while waiting
+            if (service_interrupts) {
+                Interrupts::enable();
+                Interrupts::disable();
+            }
+
             expected = unlocked;
             asm("pause");
         }
@@ -192,16 +226,6 @@ public:
 
         ++m_depth;
     }
-
-    void unlock() ALWAYS_INLINE
-    {
-        ASSERT(m_depth > 0);
-
-        if (--m_depth == 0)
-            m_lock.store(unlocked, MemoryOrder::RELEASE);
-    }
-
-    size_t depth() const { return m_depth; }
 
 private:
     size_t m_depth { 0 };
@@ -217,7 +241,7 @@ public:
         interrupt_state = Interrupts::are_enabled();
         Interrupts::disable();
 
-        RecursiveSpinLock::lock(file, line);
+        RecursiveSpinLock::do_lock(file, line, interrupt_state);
     }
 
     void unlock(bool interrupt_state) ALWAYS_INLINE
