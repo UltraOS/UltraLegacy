@@ -108,8 +108,8 @@ struct PACKED DirectoryEntry {
     static constexpr u8 deleted_mark = 0xE5;
     bool is_deleted() const { return static_cast<u8>(filename[0]) == deleted_mark; }
 
-    static constexpr u8 last_entry_mark = 0x00;
-    bool is_last_entry() const { return static_cast<u8>(filename[0]) == last_entry_mark; }
+    static constexpr u8 end_of_directory_mark = 0x00;
+    bool is_end_of_directory() const { return static_cast<u8>(filename[0]) == end_of_directory_mark; }
 
     static DirectoryEntry from_storage(void* storage)
     {
@@ -118,17 +118,26 @@ struct PACKED DirectoryEntry {
 
         return entry;
     }
+
+    static constexpr size_t size_in_bytes = 32;
 };
 
+static constexpr size_t bytes_per_ucs2_char = 2;
+
 struct PACKED LongNameDirectoryEntry {
+    static constexpr size_t name_1_characters = 5;
+    static constexpr size_t name_2_characters = 6;
+    static constexpr size_t name_3_characters = 2;
+    static constexpr size_t characters_per_entry = name_1_characters + name_2_characters + name_3_characters;
+
     u8 sequence_number;
-    u16 name_1[5];
+    u8 name_1[name_1_characters * bytes_per_ucs2_char];
     u8 attributes;
     u8 type;
     u8 checksum;
-    u16 name_2[6];
+    u8 name_2[name_2_characters * bytes_per_ucs2_char];
     u16 first_cluster;
-    u16 name_3[2];
+    u8 name_3[name_3_characters * bytes_per_ucs2_char];
 
     static LongNameDirectoryEntry from_normal(DirectoryEntry& directory_entry)
     {
@@ -142,6 +151,17 @@ struct PACKED LongNameDirectoryEntry {
 
         return entry;
     }
+
+    static constexpr u8 sequence_bits_mask = 0b11111;
+    u8 extract_sequence_number() { return sequence_number & sequence_bits_mask; }
+
+    static constexpr u8 last_logical_entry_bit = SET_BIT(6);
+    bool is_last_logical() { return sequence_number & last_logical_entry_bit; }
+
+    static constexpr size_t size_in_bytes = 32;
 };
+
+static_assert(sizeof(DirectoryEntry) == DirectoryEntry::size_in_bytes, "Incorrect directory entry size");
+static_assert(sizeof(LongNameDirectoryEntry) == LongNameDirectoryEntry::size_in_bytes, "Incorrect long name directory entry size");
 
 }

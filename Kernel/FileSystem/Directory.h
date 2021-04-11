@@ -16,7 +16,7 @@ public:
 
     struct Entry {
         char name[File::max_name_length + 1];
-        char small_name[File::max_name_length + 1];
+        char small_name[File::small_name_length + 1];
         File::Attributes attributes;
         u64 size;
 
@@ -25,9 +25,7 @@ public:
         bool empty() const { return name[0] == '\0'; }
     };
 
-    virtual bool has_next() = 0;
     virtual Entry next() = 0;
-    virtual Entry previous() = 0;
 
     FileSystem& fs() { return m_fs; }
 
