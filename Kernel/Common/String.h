@@ -114,6 +114,31 @@ public:
         return length;
     }
 
+    static void to_lower(char* str, size_t size)
+    {
+        static constexpr i32 offset_to_lower = 'a' - 'A';
+        static_assert(offset_to_lower > 0, "Negative lower to upper offset");
+
+        for (size_t i = 0; i < size; ++i) {
+            if (str[i] >= 'A' && str[i] <= 'Z')
+                str[i] += offset_to_lower;
+        }
+    }
+
+    template <size_t N>
+    static void to_lower(char (&array)[N])
+    {
+        to_lower(array, N);
+    }
+
+    void to_lower()
+    {
+        if (empty())
+            return;
+
+        to_lower(data(), size());
+    }
+
     char* data() { return is_small() ? m_small_string : m_big_string.data; }
     [[nodiscard]] const char* data() const { return is_small() ? m_small_string : m_big_string.data; }
 
@@ -373,6 +398,12 @@ private:
 class StringView {
 public:
     StringView() = default;
+
+    template <size_t N>
+    static constexpr StringView from_char_array(char (&array)[N])
+    {
+        return StringView(array, N);
+    }
 
     bool starts_with(StringView string)
     {

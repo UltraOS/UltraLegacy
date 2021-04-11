@@ -108,7 +108,7 @@ void ACPI::collect_all_sdts()
         auto* this_table = this_table_mapping.get();
 
         bool checksum_ok = verify_checksum(this_table, length_of_table);
-        auto signature_string = StringView(this_table->signature, 4);
+        auto signature_string = StringView::from_char_array(this_table->signature);
 
         if (checksum_ok) {
             log() << "ACPI: table " << signature_string << " @ " << table_address << " checksum OK";
