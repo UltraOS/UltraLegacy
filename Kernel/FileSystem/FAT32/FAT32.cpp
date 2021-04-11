@@ -17,6 +17,7 @@ RefPtr<FileSystem> FAT32::create(StorageDevice& associated_device, LBARange lba_
     if (fat32->try_initialize())
         return { static_cast<FileSystem*>(fat32) };
 
+    delete fat32;
     return {};
 }
 
