@@ -399,6 +399,12 @@ class StringView {
 public:
     StringView() = default;
 
+    StringView(const char* begin, const char* end)
+        : m_string(begin)
+        , m_size(end - begin)
+    {
+    }
+
     template <size_t N>
     static constexpr StringView from_char_array(char (&array)[N])
     {
