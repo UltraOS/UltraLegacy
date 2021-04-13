@@ -13,6 +13,9 @@ struct ErrorCode {
         BAD_PATH = 3,
         DISK_NOT_FOUND = 4,
         UNSUPPORTED = 5,
+        NO_SUCH_FILE,
+        IS_DIRECTORY,
+        IS_FILE
     } value { NO_ERROR };
 
     ErrorCode() = default;
@@ -39,6 +42,12 @@ struct ErrorCode {
             return "Disk Not Found"_sv;
         case UNSUPPORTED:
             return "Request Unsupported"_sv;
+        case NO_SUCH_FILE:
+            return "No Such File"_sv;
+        case IS_DIRECTORY:
+            return "Is a Directory"_sv;
+        case IS_FILE:
+            return "Is a File"_sv;
         default:
             return "<Unknown code>"_sv;
         }
