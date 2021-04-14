@@ -138,8 +138,9 @@ private:
     void enable_irq() override { ASSERT_NEVER_REACHED(); }
     void disable_irq() override { ASSERT_NEVER_REACHED(); }
 
-    // SATA spec says "Wait up to 10 milliseconds for SStatus.DET = 3h" but we'll wait for 20
-    static constexpr size_t phy_wait_timeout = 20 * Time::nanoseconds_in_millisecond;
+    // SATA spec says "Wait up to 10 milliseconds for SStatus.DET = 3h" but we'll wait for 50.
+    // E.g VMWare emulates a 30ms reset delay.
+    static constexpr size_t phy_wait_timeout = 50 * Time::nanoseconds_in_millisecond;
 
     List<OP> build_ops(size_t port, OP::Type, Address virtual_address, LBARange, bool is_async);
     void synchronous_wait_for_command_completion(size_t port, size_t slot);
