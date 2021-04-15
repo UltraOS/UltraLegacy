@@ -22,6 +22,10 @@ set(CMAKE_CXX_FLAGS_DEBUG   ${CXX_FLAGS})
 set(CMAKE_CXX_FLAGS_RELEASE ${CXX_FLAGS})
 set(CMAKE_EXE_LINKER_FLAGS  "-T ${PROJECT_SOURCE_DIR}/Architecture/${ARCH_FOLDER}/Linker.ld ${LINKER_FLAGS}")
 
+if (NOT WIN32)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-builtin-macro-redefined -D'__FILE__=\"$(subst $(realpath ${CMAKE_SOURCE_DIR})/,,$(abspath $<))\"'")
+endif ()
+
 set(CMAKE_ASM_NASM_COMPILE_OBJECT "<CMAKE_ASM_NASM_COMPILER> <FLAGS> -o <OBJECT> <SOURCE>")
 
 FILE(GLOB CPP_FILES "${PROJECT_SOURCE_DIR}/*cpp"                  "${PROJECT_SOURCE_DIR}/*h"
