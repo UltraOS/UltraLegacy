@@ -131,12 +131,13 @@ namespace Interrupts {
 
     inline bool are_enabled()
     {
-        return CPU::flags() & CPU::FLAGS::INTERRUPTS;
+        return (CPU::flags() & CPU::FLAGS::INTERRUPTS) == CPU::FLAGS::INTERRUPTS;
     }
 
     inline void enable()
     {
         sti();
+        asm volatile("nop" ::: "memory");
     }
 
     inline void disable()

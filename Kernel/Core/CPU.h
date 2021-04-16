@@ -30,7 +30,7 @@ public:
         CPUID = SET_BIT(21),
     };
 
-    friend bool operator&(FLAGS l, FLAGS r) { return static_cast<size_t>(l) & static_cast<size_t>(r); }
+    friend FLAGS operator&(FLAGS l, FLAGS r) { return static_cast<FLAGS>(static_cast<size_t>(l) & static_cast<size_t>(r)); }
 
     struct ID {
         explicit ID(u32 function);
