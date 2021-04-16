@@ -22,27 +22,33 @@ serialize(ColorT color)
 #define private public
 #include "Common/RedBlackTree.h"
 #include "Common/Set.h"
+#include "Memory/Range.h"
 
 template <typename T, typename Compare = kernel::Less<T>>
 using rbtree = kernel::detail::RedBlackTree<kernel::detail::SetTraits<T, Compare, false>>;
 
 template <typename TreeNodeT>
-void recursive_verify_one(TreeNodeT parent, TreeNodeT child)
+void recursive_verify_one(TreeNodeT parent, TreeNodeT child, size_t& counter)
 {
+    ++counter;
     Assert::that(child->parent).is_equal(parent);
 
-    if (child->is_left_child())
+    if (child->is_left_child()) {
         Assert::that(parent->left).is_equal(child);
-    else
+        Assert::that(parent->value).is_greater_than(child->value);
+    } else {
         Assert::that(parent->right).is_equal(child);
+        Assert::that(child->value).is_greater_than(parent->value);
+    }
 
     if (child->color == std::remove_pointer_t<TreeNodeT>::Color::RED)
         Assert::that(child->color).is_not_equal(parent->color);
 
     if (child->left)
-        recursive_verify_one(child, child->left);
+        recursive_verify_one(child, child->left, counter);
+
     if (child->right)
-        recursive_verify_one(child, child->right);
+        recursive_verify_one(child, child->right, counter);
 }
 
 template <typename TreeT>
@@ -53,10 +59,14 @@ void verify_tree_structure(const TreeT& tree)
 
     Assert::that(tree.m_root->parent).is_equal(tree.super_root_as_value_node());
 
+    size_t counter = 1;
+
     if (tree.m_root->left)
-        recursive_verify_one(tree.m_root, tree.m_root->left);
+        recursive_verify_one(tree.m_root, tree.m_root->left, counter);
     if (tree.m_root->right)
-        recursive_verify_one(tree.m_root, tree.m_root->right);
+        recursive_verify_one(tree.m_root, tree.m_root->right, counter);
+
+    Assert::that(tree.size()).is_equal(counter);
 }
 
 template <typename TreeNodeT>
@@ -729,4 +739,72 @@ TEST(TransparentComparator) {
     Assert::that(number_3->get()->x).is_equal(3);
     Assert::that(transparent_tree.get(3)->x).is_equal(3);
     Assert::that(transparent_tree.contains(3)).is_true();
+}
+
+TEST(Case6ColorInheritance) {
+    using kernel::Range;
+
+    rbtree<kernel::Range> tree;
+
+    using ValueNode = rbtree<kernel::Range>::ValueNode;
+    using Color = rbtree<kernel::Range>::ValueNode::Color;
+
+    auto* five = new ValueNode(Range::from_two_pointers(0xFFFF800100DD9000, 0xFFFF800100DE2000));
+    five->color = Color::BLACK;
+    tree.m_root = five;
+
+    // left side
+    auto* three = tree.m_root->left = new ValueNode(Range::from_two_pointers(0xFFFF800100D76000, 0xFFFF800100D88000));
+    three->parent = tree.m_root;
+    three->color = Color::RED;
+
+    auto* one = three->left = new ValueNode(Range::from_two_pointers(0xFFFF800100000000, 0xFFFF800100D52000));
+    one->parent = three;
+    one->color = Color::BLACK;
+
+    auto* two = one->right = new ValueNode(Range::from_two_pointers(0xFFFF800100D5B000, 0xFFFF800100D6D000));
+    two->parent = one;
+    two->color = Color::RED;
+
+    auto* four = three->right = new ValueNode(Range::from_two_pointers(0xFFFF800100D91000, 0xFFFF800100D9A000));
+    four->parent = three;
+    four->color = Color::BLACK;
+
+    // right side
+    auto* seven = tree.m_root->right = new ValueNode(Range::from_two_pointers(0xFFFF800100E60000, 0xFFFF800100E69000));
+    seven->color = Color::RED;
+    seven->parent = tree.m_root;
+
+    auto* six = seven->left = new ValueNode(Range::from_two_pointers(0xFFFF800100DF4000, 0xFFFF800100E57000));
+    six->parent = seven;
+    six->color = Color::BLACK;
+
+    auto* nine = seven->right = new ValueNode(Range::from_two_pointers(0xFFFFFFFF80000000, 0xFFFFFFFF80800000));
+    nine->parent = seven;
+    nine->color = Color::BLACK;
+
+    auto* eight = nine->left = new ValueNode(Range::from_two_pointers(0xFFFF800100ED5000, 0xFFFF800100F92000));
+    eight->parent = nine;
+    eight->color = Color::RED;
+
+    tree.m_size = 9;
+    tree.m_root->parent = tree.super_root_as_value_node();
+    tree.m_super_root.left = one;
+    tree.m_super_root.right = nine;
+
+    tree.remove_node(six);
+
+    Assert::that(one->color).is_equal(Color::BLACK);
+    Assert::that(two->color).is_equal(Color::RED);
+    Assert::that(three->color).is_equal(Color::RED);
+    Assert::that(four->color).is_equal(Color::BLACK);
+    Assert::that(five->color).is_equal(Color::BLACK);
+    Assert::that(seven->color).is_equal(Color::BLACK);
+    Assert::that(eight->color).is_equal(Color::RED);
+    Assert::that(nine->color).is_equal(Color::BLACK);
+
+    Assert::that(eight->left).is_equal(seven);
+    Assert::that(eight->right).is_equal(nine);
+
+    verify_tree_structure(tree);
 }

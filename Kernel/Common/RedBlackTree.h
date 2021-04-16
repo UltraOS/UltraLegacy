@@ -1083,6 +1083,7 @@ private:
             sibling_color == ValueNode::Color::BLACK &&
             sibling_right_child_color == ValueNode::Color::RED) { // black sibling, red right child
 
+            sibling->color = parent->color;
             parent->color = ValueNode::Color::BLACK;
             sibling->right->color = ValueNode::Color::BLACK;
             node->color = ValueNode::Color::BLACK;
@@ -1097,6 +1098,7 @@ private:
             sibling_color == ValueNode::Color::BLACK &&
             sibling_left_child_color == ValueNode::Color::RED) { // black sibling, red left child
 
+            sibling->color = parent->color;
             parent->color = ValueNode::Color::BLACK;
             sibling->left->color = ValueNode::Color::BLACK;
             node->color = ValueNode::Color::BLACK;
