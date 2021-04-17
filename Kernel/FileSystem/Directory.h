@@ -8,9 +8,12 @@ class FileSystem;
 
 class Directory
 {
+    MAKE_NONCOPYABLE(Directory);
+    MAKE_NONMOVABLE(Directory);
 public:
-    Directory(FileSystem& fs)
-        : m_fs(fs)
+    Directory(FileSystem& fs, File& associated_file)
+        : m_fs(&fs)
+        , m_file(&associated_file)
     {
     }
 
@@ -27,12 +30,17 @@ public:
 
     virtual Entry next() = 0;
 
-    FileSystem& fs() { return m_fs; }
+    FileSystem& fs() { return *m_fs; }
+    const FileSystem& fs() const { return *m_fs; }
 
-    ~Directory() = default;
+    File& file() { return *m_file; }
+    const File& file() const { return *m_file; }
+
+    virtual ~Directory() = default;
 
 private:
-    FileSystem& m_fs;
+    FileSystem* m_fs;
+    File* m_file;
 };
 
 

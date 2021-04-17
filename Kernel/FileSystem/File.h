@@ -7,6 +7,8 @@ namespace kernel {
 class FileSystem;
 
 class File {
+    MAKE_NONCOPYABLE(File);
+    MAKE_NONMOVABLE(File);
 public:
     static constexpr size_t max_name_length = 255;
     static constexpr size_t small_name_length = 12; // 8 + (.) + 3
@@ -27,25 +29,28 @@ public:
     }
 
     File(StringView name, FileSystem& filesystem, Attributes attributes)
-        : m_name(name)
-        , m_filesystem(filesystem)
+        : m_filesystem(filesystem)
         , m_attributes(attributes)
     {
+        copy_memory(name.data(), m_name, name.size());
+        m_name[name.size()] = '\0';
     }
 
     virtual size_t read(void* buffer, size_t offset, size_t size) = 0;
     virtual size_t write(void* buffer, size_t offset, size_t size) = 0;
 
-    // TODO: this is a bit naive and doesn't use locking whatsoever
     bool is_directory() const { return (m_attributes & Attributes::IS_DIRECTORY) == Attributes::IS_DIRECTORY; }
     Attributes attributes() const { return m_attributes; }
     StringView name() const { return m_name; }
     FileSystem& fs() { return m_filesystem; }
+    virtual size_t size() const = 0;
+
+    InterruptSafeSpinLock& lock() { return m_lock; }
 
     virtual ~File() = default;
 
 private:
-    StringView m_name;
+    char m_name[max_name_length + 1];
     FileSystem& m_filesystem;
     Attributes m_attributes;
     InterruptSafeSpinLock m_lock;

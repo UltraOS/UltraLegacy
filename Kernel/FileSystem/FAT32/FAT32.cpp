@@ -1,8 +1,10 @@
 #include "FAT32.h"
+#include "FileSystem/Utilities.h"
 
 #define FAT32_LOG log("FAT32")
 #define FAT32_WARN warning("FAT32")
 
+#define FAT32_DEBUG_MODE
 #ifdef FAT32_DEBUG_MODE
 #define FAT32_DEBUG log("FAT32")
 #else
@@ -26,11 +28,15 @@ FAT32::FAT32(StorageDevice& associated_device, LBARange lba_range)
 {
 }
 
-FAT32::Directory::Directory(FileSystem& filesystem, u32 first_cluster)
-    : BaseDirectory(filesystem)
-    , m_first_cluster(first_cluster)
-    , m_current_cluster(first_cluster)
+FAT32::Directory::Directory(FileSystem& filesystem, File& directory_file, bool owns_file)
+    : BaseDirectory(filesystem, directory_file)
+    , m_current_cluster(first_cluster())
+    , m_owns_file(owns_file)
 {
+    ASSERT(file().is_directory());
+
+    if (m_current_cluster == free_cluster)
+        m_exhausted = true;
 }
 
 u32 FAT32::pure_cluster_value(u32 value)
@@ -47,6 +53,10 @@ bool FAT32::Directory::fetch_next(void* into)
 
     auto& fs = fs_as_fat32();
 
+    bool interrupt_state = false;
+    if (m_owns_file)
+        file().lock().lock(interrupt_state, __FILE__, __LINE__, CPU::current_id());
+
     if (m_offset_within_cluster == fs.bytes_per_cluster()) {
         m_current_cluster = fs.fat_entry_at(m_current_cluster);
 
@@ -54,6 +64,10 @@ bool FAT32::Directory::fetch_next(void* into)
 
         if (type == FATEntryType::END_OF_CHAIN) {
             m_exhausted = true;
+
+            if (m_owns_file)
+                file().lock().unlock(interrupt_state);
+
             return false;
         } else if (type != FATEntryType::LINK) {
             String error_string;
@@ -64,22 +78,30 @@ bool FAT32::Directory::fetch_next(void* into)
         m_offset_within_cluster = 0;
     }
 
-    fs.m_data_cache->read_one(pure_cluster_value(m_current_cluster), m_offset_within_cluster, DirectoryEntry::size_in_bytes, into);
+    fs.locked_read(pure_cluster_value(m_current_cluster), m_offset_within_cluster, DirectoryEntry::size_in_bytes, into);
     m_offset_within_cluster += DirectoryEntry::size_in_bytes;
+
+    if (m_owns_file)
+        file().lock().unlock(interrupt_state);
 
     return true;
 }
 
 FAT32::Directory::Entry FAT32::Directory::next()
 {
-    Entry out {};
+    return static_cast<Entry>(next_native());
+}
+
+FAT32::Directory::NativeEntry FAT32::Directory::next_native()
+{
+    NativeEntry out {};
 
     if (m_exhausted)
         return out;
 
-    DirectoryEntry normal_entry;
+    DirectoryEntry normal_entry {};
 
-    auto process_normal_entry = [](DirectoryEntry& in, Entry& out, bool is_small)
+    auto process_normal_entry = [](DirectoryEntry& in, NativeEntry& out, bool is_small)
     {
         if (in.is_lowercase_name())
             String::to_lower(in.filename);
@@ -102,6 +124,7 @@ FAT32::Directory::Entry FAT32::Directory::next()
         }
 
         out.size = in.size;
+        out.first_file_cluster = (in.cluster_high << 16) | in.cluster_low;
 
         if (in.is_directory())
             out.attributes = File::Attributes::IS_DIRECTORY;
@@ -145,6 +168,10 @@ FAT32::Directory::Entry FAT32::Directory::next()
         if (normal_entry.is_device())
             continue;
 
+        out.first_entry_cluster = m_current_cluster;
+        out.offset_of_first_sequence = m_offset_within_cluster - DirectoryEntry::size_in_bytes;
+        out.sequence_count = 0;
+
         auto is_long = normal_entry.is_long_name();
 
         if (!is_long && normal_entry.is_volume_label())
@@ -157,6 +184,7 @@ FAT32::Directory::Entry FAT32::Directory::next()
 
         auto long_entry = LongNameDirectoryEntry::from_normal(normal_entry);
         auto initial_sequence_number = long_entry.extract_sequence_number();
+        out.sequence_count = initial_sequence_number;
 
         static constexpr u8 max_sequence_number = 20;
         ASSERT(initial_sequence_number <= max_sequence_number);
@@ -346,6 +374,8 @@ bool FAT32::try_initialize()
 
     MemoryManager::the().free_virtual_region(*meta_region);
 
+    m_root_directory = open_or_incref("root directory"_sv, File::Attributes::IS_DIRECTORY, m_ebpb.root_dir_cluster, 0);
+
     return true;
 }
 
@@ -410,6 +440,8 @@ bool FAT32::parse_fsinfo(FSINFO& fsinfo)
 
 u32 FAT32::fat_entry_at(u32 index)
 {
+    LOCK_GUARD(m_fat_cache_lock);
+
     u32 value = 0;
     m_fat_cache->read_one(index, 0, sizeof(u32), &value);
 
@@ -418,28 +450,216 @@ u32 FAT32::fat_entry_at(u32 index)
 
 void FAT32::set_fat_entry_at(u32 index, u32 value)
 {
+    LOCK_GUARD(m_fat_cache_lock);
+
     m_fat_cache->write_one(index, 0, sizeof(u32), &value);
 }
 
-FAT32::File::File(StringView name, FileSystem& filesystem, Attributes attributes, u32 first_cluster)
+void FAT32::locked_read(u64 block_index, size_t offset, size_t bytes, void* buffer)
+{
+    LOCK_GUARD(m_data_lock);
+    m_data_cache->read_one(block_index, offset, bytes, buffer);
+}
+
+void FAT32::locked_write(u64 block_index, size_t offset, size_t bytes, void* buffer)
+{
+    LOCK_GUARD(m_data_lock);
+    m_data_cache->write_one(block_index, offset, bytes, buffer);
+}
+
+FAT32::File::File(StringView name, FileSystem& filesystem, Attributes attributes, u32 first_cluster, u32 size)
     : BaseFile(name, filesystem, attributes)
     , m_first_cluster(first_cluster)
+    , m_size(size)
 {
 }
 
-Pair<ErrorCode, FAT32::BaseDirectory*> FAT32::open_directory(StringView)
+size_t FAT32::File::read(void* buffer, size_t offset, size_t size)
 {
-    return { ErrorCode::UNSUPPORTED, nullptr };
+    LOCK_GUARD(lock());
+
+    if (offset > this->size())
+        return 0;
+
+    auto& fs = fs_as_fat32();
+
+    auto cluster_offset = offset / fs.bytes_per_cluster();
+    auto offset_within_cluster = offset - (cluster_offset / fs.bytes_per_cluster());
+    auto bytes_left_after_offset = this->size() - offset;
+
+    size_t bytes_to_read = min(size, bytes_left_after_offset);
+    size_t bytes_read = bytes_to_read;
+    size_t clusters_to_read = ceiling_divide<size_t>(bytes_to_read, fs.bytes_per_cluster());
+
+    u32 current_cluster = m_first_cluster;
+
+    auto safe_next_of = [&fs] (u32 cluster)
+    {
+        cluster = fs.fat_entry_at(cluster);
+        ASSERT(fs.entry_type_of_fat_value(cluster) == FATEntryType::LINK);
+        return cluster;
+    };
+
+    while (cluster_offset--)
+        current_cluster = safe_next_of(current_cluster);
+
+    u8* byte_buffer = reinterpret_cast<u8*>(buffer);
+
+    while (clusters_to_read--) {
+        auto bytes_to_read_for_this_cluster = min<size_t>(bytes_to_read, fs.bytes_per_cluster());
+        fs.locked_read(pure_cluster_value(current_cluster), offset_within_cluster, bytes_to_read_for_this_cluster, byte_buffer);
+        byte_buffer += bytes_to_read_for_this_cluster;
+        bytes_to_read -= bytes_to_read_for_this_cluster;
+
+        if (clusters_to_read)
+            current_cluster = safe_next_of(current_cluster);
+    }
+
+    return bytes_read;
 }
 
-Pair<ErrorCode, FAT32::BaseFile*> FAT32::open(StringView)
+size_t FAT32::File::write(void*, size_t, size_t)
 {
-    return { ErrorCode::UNSUPPORTED, nullptr };
+    return 0;
 }
 
-ErrorCode FAT32::close(BaseFile&)
+FAT32::File* FAT32::open_or_incref(StringView name, File::Attributes attributes, u32 first_cluster, u64 size)
 {
-    return ErrorCode::UNSUPPORTED;
+    FAT32_DEBUG << "opening file \"" << name << "\" cluster " << first_cluster;
+
+    LOCK_GUARD(m_map_lock);
+    auto it = m_cluster_to_file.find(first_cluster);
+
+    if (it != m_cluster_to_file.end()) {
+        auto& open_file = it->second();
+
+        open_file.refcount++;
+
+        FAT32_DEBUG << "file \"" << name << "\" was already open, new refcount " << open_file.refcount;
+
+        return open_file.ptr;
+    }
+
+    FAT32_DEBUG << "opened file \"" << name << "\"";
+    OpenFile open_file;
+    open_file.ptr = new File(name, *this, attributes, first_cluster, size);
+    open_file.refcount = 1;
+
+    m_cluster_to_file[first_cluster] = open_file;
+    return open_file.ptr;
+}
+
+Pair<ErrorCode, FAT32::File*> FAT32::open_file_from_path(StringView path, OnlyIf constraint)
+{
+    auto* cur_file = m_root_directory;
+    File* next_file = nullptr;
+
+    for (auto node : IterablePath(path)) {
+        if (next_file) {
+            close(*cur_file);
+            cur_file = next_file;
+            next_file = nullptr;
+        }
+
+        LOCK_GUARD(cur_file->lock());
+
+        bool node_found = false;
+
+        if ((cur_file->attributes() & File::Attributes::IS_DIRECTORY) != File::Attributes::IS_DIRECTORY) {
+            close(*cur_file);
+            return {ErrorCode::IS_FILE, nullptr};
+        }
+
+        Directory dir(*this, *cur_file, false);
+
+        for (;;) {
+            auto entry = dir.next_native();
+
+            if (entry.empty())
+                break;
+
+            if (entry.name_view() != node)
+                continue;
+
+            next_file = open_or_incref(entry.name_view(), entry.attributes, entry.first_file_cluster, entry.size);
+
+            node_found = true;
+            break;
+        }
+
+        if (!node_found)
+            break;
+    }
+
+    close(*cur_file);
+
+    if (!next_file)
+        return {ErrorCode::NO_SUCH_FILE, nullptr };
+
+    if (constraint == OnlyIf::FILE && next_file->is_directory()) {
+        close(*next_file);
+        return { ErrorCode::IS_DIRECTORY, nullptr };
+    } else if (constraint == OnlyIf::DIRECTORY && !next_file->is_directory()) {
+        close(*next_file);
+        return { ErrorCode::IS_FILE, nullptr };
+    }
+
+    return { ErrorCode::NO_ERROR, next_file };
+}
+
+Pair<ErrorCode, FAT32::BaseDirectory*> FAT32::open_directory(StringView path)
+{
+    auto error_to_file = open_file_from_path(path, OnlyIf::DIRECTORY);
+
+    return { error_to_file.first(), new Directory(*this, *error_to_file.second(), true) };
+}
+
+Pair<ErrorCode, FAT32::BaseFile*> FAT32::open(StringView path)
+{
+    auto error_to_file = open_file_from_path(path, OnlyIf::FILE);
+
+    return { error_to_file.first(), static_cast<BaseFile*>(error_to_file.second()) };
+}
+
+ErrorCode FAT32::close(BaseFile& file)
+{
+    if (&file == m_root_directory) {
+        FAT32_DEBUG << "tried to close root directory, ignored";
+        return ErrorCode::NO_ERROR;
+    }
+
+    auto& f = static_cast<File&>(file);
+    FAT32_DEBUG << "closing file \"" << f.name() << "\"";
+
+    LOCK_GUARD(m_map_lock);
+
+    auto it = m_cluster_to_file.find(f.first_cluster());
+    if (it == m_cluster_to_file.end()) {
+        String error_str;
+        error_str << "FAT32: close() called on an unknown file " << file.name() << " cluster " << f.first_cluster();
+        runtime::panic(error_str.c_string());
+    }
+
+    auto& open_file = it->second();
+    if (--open_file.refcount == 0)
+    {
+        FAT32_DEBUG << "no more references for file \"" << f.name() << "\", closed";
+        // Ideally we should call flush on any cached file clusters,
+        // but it might be too expensive to fetch all the file clusters
+        // and completely unnecessary if file wasn't read/written for example.
+        m_cluster_to_file.remove(it);
+    } else {
+        FAT32_DEBUG << "file \"" << f.name() << "\" still has " << open_file.refcount << " reference(s)";
+    }
+
+    return ErrorCode::NO_ERROR;
+}
+
+ErrorCode FAT32::close_directory(BaseDirectory& dir)
+{
+    delete &dir;
+
+    return ErrorCode::NO_ERROR;
 }
 
 ErrorCode FAT32::remove(StringView)

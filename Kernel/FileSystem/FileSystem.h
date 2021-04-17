@@ -19,6 +19,7 @@ public:
     virtual Pair<ErrorCode, File*> open(StringView path) = 0;
     virtual Pair<ErrorCode, Directory*> open_directory(StringView path) = 0;
     virtual ErrorCode close(File&) = 0;
+    virtual ErrorCode close_directory(Directory&) = 0;
     virtual ErrorCode remove(StringView path) = 0;
     virtual ErrorCode create(StringView file_path, File::Attributes) = 0;
 
