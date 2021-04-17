@@ -20,6 +20,8 @@ DiskCache::DiskCache(StorageDevice& device, LBARange filesystem_lba_range, size_
     , m_fs_block_size(filesystem_block_size)
     , m_capacity(block_capacity)
 {
+    ASSERT(block_capacity != 0);
+
     auto info = device.query_info();
 
     ASSERT(info.logical_block_size == 512 || info.logical_block_size == 4096);
@@ -29,7 +31,9 @@ DiskCache::DiskCache(StorageDevice& device, LBARange filesystem_lba_range, size_
     // Filesystem is entirely in RAM, no need to cache IO.
     if (info.medium_type == StorageDevice::Info::MediumType::RAM) {
         m_io_size = 0;
+        return;
     }
+
     if (m_fs_block_size >= Page::size) {
         ASSERT_PAGE_ALIGNED(m_fs_block_size);
         m_io_size = m_fs_block_size;
@@ -45,6 +49,7 @@ DiskCache::DiskCache(StorageDevice& device, LBARange filesystem_lba_range, size_
 
     // capacity is measured in pages, not in FS blocks, unless FS block is over 4K
     m_capacity /= m_fs_blocks_per_io;
+    ASSERT(m_capacity != 0);
 
     DC_DEBUG << "cache block capacity is " << m_capacity << ", a cache block is " << m_fs_blocks_per_io << " FS blocks";
 
@@ -226,6 +231,5 @@ void DiskCache::flush_specific(u64 block_index)
 
     flush_block(*cached_block->second());
 }
-
 
 }
