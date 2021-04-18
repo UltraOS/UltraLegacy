@@ -61,9 +61,7 @@ Optional<MP::PCIIRQ> MP::try_deduce_pci_irq_number(u8 bus, u8 device)
     auto configuration_table_linear = MemoryManager::physical_to_virtual(s_floating_pointer->configuration_table_pointer);
     auto& configuration_table = *configuration_table_linear.as_pointer<MP::ConfigurationTable>();
 
-    static constexpr auto mp_configuration_table_signature = "PCMP"_sv;
-
-    if (configuration_table.signature != mp_configuration_table_signature)
+    if (configuration_table.signature != configuration_table_signature)
         return {};
 
     Address entry_address = &configuration_table + 1;
@@ -184,9 +182,7 @@ SMPData* MP::parse_configuration_table(FloatingPointer* fp_table)
 
     auto& configuration_table = *configuration_table_linear.as_pointer<MP::ConfigurationTable>();
 
-    static constexpr auto mp_configuration_table_signature = "PCMP"_sv;
-
-    if (configuration_table.signature != mp_configuration_table_signature) {
+    if (configuration_table.signature != configuration_table_signature) {
         warning() << "MP: incorrect configuration table signature, ignoring the rest of the table...";
         return nullptr;
     }

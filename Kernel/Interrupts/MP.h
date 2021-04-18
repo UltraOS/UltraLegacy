@@ -154,6 +154,8 @@ public:
         char type_string[6];
     };
 
+    static constexpr auto configuration_table_signature = "PCMP"_sv;
+
 private:
     static FloatingPointer* find_floating_pointer_table();
     static SMPData* parse_configuration_table(FloatingPointer*);
