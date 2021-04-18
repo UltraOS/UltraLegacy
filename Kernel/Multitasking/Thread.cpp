@@ -144,6 +144,8 @@ void Thread::deactivate()
 
 void Thread::unblock()
 {
+    ASSERT(m_blocker != nullptr);
+
     if (m_blocker->should_block())
         m_blocker->set_result(Blocker::Result::UNBLOCKED);
 

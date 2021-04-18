@@ -40,7 +40,11 @@ public:
 
     [[nodiscard]] State state() const { return m_state; }
 
-    static Thread* current() { return CPU::current().current_thread(); }
+    static Thread* current()
+    {
+        Interrupts::ScopedDisabler d;
+        return CPU::current().current_thread();
+    }
 
     [[nodiscard]] ControlBlock* control_block() { return &m_control_block; }
 
@@ -160,6 +164,26 @@ private:
     [[nodiscard]] bool is_running() const { return m_state == State::RUNNING; }
     [[nodiscard]] bool is_ready() const { return m_state == State::READY; }
     void set_state(State state) { m_state = state; }
+
+    StringView state_to_string()
+    {
+        switch (state()) {
+            case State::UNDEFINED:
+                return "UNDEFINED"_sv;
+            case State::RUNNING:
+                return "RUNNING"_sv;
+            case State::DEAD:
+                return "DEAD"_sv;
+            case State::BLOCKED:
+                return "BLOCKED"_sv;
+            case State::SLEEPING:
+                return "SLEEPING"_sv;
+            case State::READY:
+                return "READY"_sv;
+            default:
+                return "INVALID"_sv;
+        }
+    }
 
     void set_blocker(Blocker* blocker) { m_blocker = blocker; }
     Blocker* blocker() const { return m_blocker; }
