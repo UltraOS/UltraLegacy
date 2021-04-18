@@ -11,6 +11,16 @@ class MP {
 public:
     static SMPData* parse();
 
+    struct PCIIRQ {
+        u8 device_number;
+        u8 ioapic_id;
+        u8 ioapic_pin;
+        TriggerMode trigger_mode;
+        Polarity polarity;
+    };
+
+    static Optional<PCIIRQ> try_deduce_pci_irq_number(u8 bus, u8 device);
+
     enum class EntryType : u8 {
         PROCESSOR,
         BUS,

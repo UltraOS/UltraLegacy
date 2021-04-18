@@ -1,5 +1,6 @@
 #include "MP.h"
 #include "Common/Logger.h"
+#include "Common/DynamicArray.h"
 #include "Memory/MemoryManager.h"
 
 namespace kernel {
@@ -19,6 +20,97 @@ SMPData* MP::parse()
           << MemoryManager::virtual_to_physical(s_floating_pointer);
 
     return parse_configuration_table(s_floating_pointer);
+}
+
+Optional<MP::PCIIRQ> MP::try_deduce_pci_irq_number(u8 bus, u8 device)
+{
+    static bool did_try = false;
+
+    if (!s_floating_pointer) {
+        if (did_try)
+            return {};
+
+        did_try = true;
+
+        if (!(s_floating_pointer = find_floating_pointer_table()))
+            return {};
+    }
+
+    static Map<u8, DynamicArray<PCIIRQ>>* ioapic_mappings;
+
+    auto try_to_find_irq_from_bus_and_device = [] (u8 bus, u8 device) -> Optional<PCIIRQ>
+    {
+        auto this_bus = ioapic_mappings->find(bus);
+
+        if (this_bus == ioapic_mappings->end())
+            return {};
+
+        for (auto& irq : this_bus->second()) {
+            if (irq.device_number == device)
+                return irq;
+        }
+
+        return {};
+    };
+
+    if (ioapic_mappings)
+        return try_to_find_irq_from_bus_and_device(bus, device);
+
+    ioapic_mappings = new Map<u8, DynamicArray<PCIIRQ>>();
+
+    auto configuration_table_linear = MemoryManager::physical_to_virtual(s_floating_pointer->configuration_table_pointer);
+    auto& configuration_table = *configuration_table_linear.as_pointer<MP::ConfigurationTable>();
+
+    static constexpr auto mp_configuration_table_signature = "PCMP"_sv;
+
+    if (configuration_table.signature != mp_configuration_table_signature)
+        return {};
+
+    Address entry_address = &configuration_table + 1;
+
+    for (size_t i = 0; i < configuration_table.entry_count; ++i) {
+        EntryType type = *entry_address.as_pointer<MP::EntryType>();
+
+        switch (type) {
+        case EntryType::BUS: {
+            auto& bus = *entry_address.as_pointer<BusEntry>();
+
+            if (StringView(bus.type_string, 3) != "PCI"_sv)
+                break;
+
+            (*ioapic_mappings)[bus.id] = {};
+            break;
+
+        }
+        case EntryType::IO_INTERRUPT_ASSIGNMENT: {
+            auto& assignment = *entry_address.as_pointer<InterruptEntry>();
+
+            auto bus = ioapic_mappings->find(assignment.source_bus_id);
+            if (bus == ioapic_mappings->end())
+                break;
+
+            PCIIRQ irq {};
+            irq.polarity = assignment.polarity;
+            irq.trigger_mode = assignment.trigger_mode;
+            irq.ioapic_id = assignment.destination_ioapic_id;
+            irq.ioapic_pin = assignment.destination_ioapic_pin;
+
+            static constexpr u8 device_number_bit_offset = 2;
+            irq.device_number = (assignment.source_bus_irq >> device_number_bit_offset);
+
+            log() << "found " << irq.device_number << " -> " << irq.ioapic_pin;
+
+            bus->second().append(irq);
+            break;
+        }
+        default:
+            break;
+        }
+
+        entry_address += sizeof_entry(type);
+    }
+
+    return try_to_find_irq_from_bus_and_device(bus, device);
 }
 
 MP::FloatingPointer* MP::find_floating_pointer_table()
