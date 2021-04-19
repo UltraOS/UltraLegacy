@@ -22,7 +22,7 @@ SMPData* MP::parse()
     return parse_configuration_table(s_floating_pointer);
 }
 
-Optional<MP::PCIIRQ> MP::try_deduce_pci_irq_number(u8 bus, u8 device)
+Optional<PCIIRQ> MP::try_deduce_pci_irq_number(u8 bus, u8 device)
 {
     static bool did_try = false;
 
@@ -95,8 +95,6 @@ Optional<MP::PCIIRQ> MP::try_deduce_pci_irq_number(u8 bus, u8 device)
 
             static constexpr u8 device_number_bit_offset = 2;
             irq.device_number = (assignment.source_bus_irq >> device_number_bit_offset);
-
-            log() << "found " << irq.device_number << " -> " << irq.ioapic_pin;
 
             bus->second().append(irq);
             break;

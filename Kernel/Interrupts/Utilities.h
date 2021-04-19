@@ -54,6 +54,14 @@ struct IRQ {
     TriggerMode trigger_mode;
 };
 
+struct PCIIRQ {
+    u8 device_number;
+    u8 ioapic_id;
+    u8 ioapic_pin;
+    TriggerMode trigger_mode;
+    Polarity polarity;
+};
+
 struct LAPICInfo {
     struct NMI {
         Polarity polarity;
