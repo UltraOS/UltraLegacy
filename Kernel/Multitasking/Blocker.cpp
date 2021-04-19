@@ -33,4 +33,9 @@ DiskIOBlocker::DiskIOBlocker(Thread& blocked_thread)
 {
 }
 
+MutexBlocker::MutexBlocker(Thread& blocked_thread)
+    : Blocker(blocked_thread, Type::MUTEX)
+{
+}
+
 }

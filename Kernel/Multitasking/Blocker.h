@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Common/Atomic.h"
+#include "Common/List.h"
 
 namespace kernel {
 
@@ -10,6 +11,7 @@ class Blocker {
 public:
     enum class Type {
         DISK_IO,
+        MUTEX
     };
 
     enum class Result {
@@ -46,6 +48,11 @@ public:
     DiskIOBlocker(Thread& blocked_thread);
 
     virtual bool is_interruptable() { return false; }
+};
+
+class MutexBlocker : public Blocker, public StandaloneListNode<MutexBlocker> {
+public:
+    MutexBlocker(Thread& blocked_thread);
 };
 
 }
