@@ -149,6 +149,11 @@ void PCI::Device::clear_interrupts_disabled()
     access().write16(location(), PCI::command_register_offset, raw);
 }
 
+u16 PCI::Device::legacy_pci_irq_line()
+{
+    return access().read8(location(), PCI::legacy_irq_line_offset);
+}
+
 Access& PCI::access()
 {
     ASSERT(s_access != nullptr);

@@ -23,6 +23,7 @@ public:
     static constexpr u32 class_offset = 0xB;
     static constexpr u32 subordinate_bus_offset = 0x1A;
     static constexpr u32 capability_pointer_offset = 0x34;
+    static constexpr u32 legacy_irq_line_offset = 0x3C;
 
     static constexpr u8 bridge_device_class = 0x6;
     static constexpr u8 pci_to_pci_bridge_subclass = 0x4;
@@ -188,6 +189,8 @@ public:
         void enable_io_space();
         void enable_msi(u16 vector);
         void clear_interrupts_disabled();
+
+        u16 legacy_pci_irq_line();
 
     private:
         DeviceInfo m_info;
