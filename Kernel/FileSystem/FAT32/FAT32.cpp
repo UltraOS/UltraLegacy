@@ -53,9 +53,8 @@ bool FAT32::Directory::fetch_next(void* into)
 
     auto& fs = fs_as_fat32();
 
-    bool interrupt_state = false;
     if (m_owns_file)
-        file().lock().lock(interrupt_state, __FILE__, __LINE__, CPU::current_id());
+        file().lock().lock();
 
     if (m_offset_within_cluster == fs.bytes_per_cluster()) {
         m_current_cluster = fs.fat_entry_at(m_current_cluster);
@@ -66,7 +65,7 @@ bool FAT32::Directory::fetch_next(void* into)
             m_exhausted = true;
 
             if (m_owns_file)
-                file().lock().unlock(interrupt_state);
+                file().lock().unlock();
 
             return false;
         } else if (type != FATEntryType::LINK) {
@@ -82,7 +81,7 @@ bool FAT32::Directory::fetch_next(void* into)
     m_offset_within_cluster += DirectoryEntry::size_in_bytes;
 
     if (m_owns_file)
-        file().lock().unlock(interrupt_state);
+        file().lock().unlock();
 
     return true;
 }

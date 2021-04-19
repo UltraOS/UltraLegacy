@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Common/Lock.h"
+#include "Multitasking/Mutex.h"
 
 namespace kernel {
 
@@ -45,7 +45,7 @@ public:
     FileSystem& fs() { return m_filesystem; }
     virtual size_t size() const = 0;
 
-    InterruptSafeSpinLock& lock() { return m_lock; }
+    Mutex& lock() { return m_lock; }
 
     virtual ~File() = default;
 
@@ -53,7 +53,7 @@ private:
     char m_name[max_name_length + 1];
     FileSystem& m_filesystem;
     Attributes m_attributes;
-    InterruptSafeSpinLock m_lock;
+    Mutex m_lock;
 };
 
 }

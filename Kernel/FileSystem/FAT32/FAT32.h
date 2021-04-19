@@ -4,6 +4,7 @@
 #include "FileSystem/File.h"
 #include "FileSystem/Directory.h"
 #include "FileSystem/FileSystem.h"
+#include "Multitasking/Mutex.h"
 #include "Structures.h"
 
 namespace kernel {
@@ -134,9 +135,9 @@ private:
         size_t refcount { 0 };
     };
 
-    InterruptSafeSpinLock m_map_lock;
-    InterruptSafeSpinLock m_fat_cache_lock;
-    InterruptSafeSpinLock m_data_lock;
+    Mutex m_map_lock;
+    Mutex m_fat_cache_lock;
+    Mutex m_data_lock;
     Map<u32, OpenFile> m_cluster_to_file;
 };
 

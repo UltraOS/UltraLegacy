@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Common/Types.h"
+#include "Multitasking/Mutex.h"
 #include "File.h"
 
 namespace kernel {
@@ -24,7 +25,7 @@ private:
     File& raw_file() { return m_file; }
     void mark_as_closed();
 
-    InterruptSafeSpinLock m_lock;
+    Mutex m_lock;
     File& m_file;
     Mode m_mode;
     size_t m_offset { 0 };

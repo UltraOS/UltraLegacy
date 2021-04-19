@@ -22,6 +22,7 @@ public:
     static void initialize()
     {
         ASSERT(s_instance == nullptr);
+        Thread::ScopedInvulnerability i;
         s_instance = new VFS;
     }
 

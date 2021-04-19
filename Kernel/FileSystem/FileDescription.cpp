@@ -8,8 +8,6 @@ FileDescription::FileDescription(File& file, Mode mode)
 {
 }
 
-// FIXME: All of this shouldn't use spin locks at all, and instead cause the thread to block
-//        until the file can be interacted with again.
 size_t FileDescription::read(void* buffer, size_t size)
 {
     LOCK_GUARD(m_lock);
