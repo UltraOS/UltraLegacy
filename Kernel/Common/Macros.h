@@ -6,7 +6,7 @@
 
 #define USED __attribute__((used))
 
-#define SET_BIT(x) (1u << (x))
+#define SET_BIT(x) (1ul << (x))
 
 #define IS_BIT_SET(mask, x) ((mask)&SET_BIT(x))
 
@@ -27,9 +27,9 @@
 
 #define pause __builtin_ia32_pause
 
-#define KB (1024ull)
-#define MB (1024ull * KB)
-#define GB (1024ull * MB)
+#define KB (1024ul)
+#define MB (1024ul * KB)
+#define GB (1024ul * MB)
 
 #define MAKE_NONCOPYABLE(class_name)        \
     class_name(const class_name&) = delete; \
