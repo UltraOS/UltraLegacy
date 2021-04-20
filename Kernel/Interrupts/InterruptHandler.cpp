@@ -34,4 +34,21 @@ MonoInterruptHandler::~MonoInterruptHandler()
     IVectorAllocator::the().free_vector(interrupt_vector());
 }
 
+u16 DynamicInterruptHandler::allocate_one(u16 vector, bool user_callable)
+{
+    if (vector == any_vector)
+        vector = IVectorAllocator::the().allocate_vector();
+    else
+        IVectorAllocator::the().allocate_vector(vector);
+
+    InterruptManager::register_dynamic_handler(*this, vector, user_callable);
+
+    return vector;
+}
+
+void DynamicInterruptHandler::free_one(u16 vector)
+{
+    InterruptManager::unregister_dynamic_handler(*this, vector);
+}
+
 }

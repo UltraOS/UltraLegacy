@@ -298,9 +298,12 @@ void AHCI::enable_dma_engines_for_port(size_t index)
     port_write(index, cmd);
 }
 
-void AHCI::handle_irq(RegisterState&)
+bool AHCI::handle_irq(RegisterState&)
 {
     volatile auto port_status = m_hba->interrupt_pending_status;
+
+    if (port_status == 0)
+        return false;
 
     for (size_t i = 0; i < 32; ++i) {
         if (!IS_BIT_SET(port_status, i))
@@ -315,6 +318,8 @@ void AHCI::handle_irq(RegisterState&)
     }
 
     m_hba->interrupt_pending_status = port_status;
+
+    return true;
 }
 
 void AHCI::handle_port_irq(size_t port_index)
@@ -943,6 +948,10 @@ void AHCI::perform_bios_handoff()
 
 void AHCI::autodetect(const DynamicArray<PCI::DeviceInfo>& devices)
 {
+    // Cannot use MSIs
+    if (InterruptController::is_legacy_mode())
+        return;
+
     for (const auto& device : devices) {
         if (class_code != device.class_code)
             continue;

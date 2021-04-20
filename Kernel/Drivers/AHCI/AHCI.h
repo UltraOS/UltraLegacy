@@ -133,7 +133,7 @@ private:
     void panic_if_port_error(PortInterruptStatus, PortSATAError);
     void wait_for_port_ready(size_t index);
 
-    void handle_irq(RegisterState&) override;
+    bool handle_irq(RegisterState&) override;
     void handle_port_irq(size_t port);
     void enable_irq() override { ASSERT_NEVER_REACHED(); }
     void disable_irq() override { ASSERT_NEVER_REACHED(); }

@@ -216,92 +216,95 @@ PS2Keyboard::PS2Keyboard(PS2Controller* parent, PS2Controller::Channel channel)
     enable_irq();
 }
 
-void PS2Keyboard::handle_action()
+bool PS2Keyboard::handle_action()
 {
-    while (data_available()) {
-        static constexpr u8 key_released_bit = SET_BIT(7);
-        static constexpr u8 raw_key_mask = SET_BIT(7) - 1;
+    if (!data_available())
+        return false;
 
-        auto scancode = read_data();
+    static constexpr u8 key_released_bit = SET_BIT(7);
+    static constexpr u8 raw_key_mask = SET_BIT(7) - 1;
 
-        switch (m_state) {
-        case State::E0:
-            if (scancode == 0x2A || scancode == 0xB7) {
-                m_state = State::PRINT_SCREEN_1;
-                continue;
-            }
+    auto scancode = read_data();
+
+    switch (m_state) {
+    case State::E0:
+        if (scancode == 0x2A || scancode == 0xB7) {
+            m_state = State::PRINT_SCREEN_1;
             break;
-        case State::PRINT_SCREEN_1:
-            if (scancode == 0xE0) {
-                m_state = State::E0_REPEAT;
-                continue;
-            }
-            m_state = State::NORMAL;
-            break;
-        case State::E0_REPEAT:
-            static constexpr u8 prt_sc_pressed_code = 0x37;
-            static constexpr u8 prt_sc_released_code = 0xAA;
-
-            if (scancode == prt_sc_pressed_code)
-                EventManager::the().post_action({ VK::PRT_SC, VKState::PRESSED });
-            else if (scancode == prt_sc_released_code) {
-                EventManager::the().post_action({ VK::PRT_SC, VKState::RELEASED });
-            } else
-                warning() << "PS2Keyboard: expected a prt sc scancode 0x37/0xAA, got " << format::as_hex << scancode;
-
-            m_state = State::NORMAL;
-            continue;
-        case State::NORMAL:
-            if (scancode == 0xE0)
-                m_state = State::E0;
-            else if (scancode == 0xE1)
-                m_state = State::E1;
-            else
-                break;
-
-            continue;
-        case State::E1:
-            if (scancode == 0x1D)
-                m_state = State::PAUSE_1;
-            continue;
-        case State::PAUSE_1:
-            if (scancode == 0x45)
-                m_state = State::PAUSE_2;
-            continue;
-        case State::PAUSE_2:
-            if (scancode == 0xE1)
-                m_state = State::E1_REPEAT;
-            continue;
-        case State::E1_REPEAT:
-            if (scancode == 0x9D)
-                m_state = State::PAUSE_3;
-            continue;
-        case State::PAUSE_3:
-            if (scancode == 0xC5) {
-                EventManager::the().post_action({ VK::PAUSE_BREAK, VKState::PRESSED });
-                EventManager::the().post_action({ VK::PAUSE_BREAK, VKState::RELEASED });
-            }
-
-            m_state = State::NORMAL;
-            continue;
-        default:
-            ASSERT_NEVER_REACHED();
         }
+        break;
+    case State::PRINT_SCREEN_1:
+        if (scancode == 0xE0) {
+            m_state = State::E0_REPEAT;
+            break;
+        }
+        m_state = State::NORMAL;
+        break;
+    case State::E0_REPEAT:
+        static constexpr u8 prt_sc_pressed_code = 0x37;
+        static constexpr u8 prt_sc_released_code = 0xAA;
 
-        bool released = scancode & key_released_bit;
-        auto raw_key = scancode & raw_key_mask;
+        if (scancode == prt_sc_pressed_code)
+            EventManager::the().post_action({ VK::PRT_SC, VKState::PRESSED });
+        else if (scancode == prt_sc_released_code) {
+            EventManager::the().post_action({ VK::PRT_SC, VKState::RELEASED });
+        } else
+            warning() << "PS2Keyboard: expected a prt sc scancode 0x37/0xAA, got " << format::as_hex << scancode;
 
-        if (m_state == State::NORMAL) {
-            EventManager::the().post_action(
-                { single_byte_keys[raw_key], released ? VKState::RELEASED : VKState::PRESSED });
-        } else if (m_state == State::E0) {
-            EventManager::the().post_action(
-                { multi_byte_keys[raw_key], released ? VKState::RELEASED : VKState::PRESSED });
-        } else {
-            warning() << "PS2Keyboard: unexpected state " << static_cast<u8>(m_state);
+        m_state = State::NORMAL;
+        break;
+    case State::NORMAL:
+        if (scancode == 0xE0)
+            m_state = State::E0;
+        else if (scancode == 0xE1)
+            m_state = State::E1;
+        else
+            break;
+
+        break;
+    case State::E1:
+        if (scancode == 0x1D)
+            m_state = State::PAUSE_1;
+        break;
+    case State::PAUSE_1:
+        if (scancode == 0x45)
+            m_state = State::PAUSE_2;
+        break;
+    case State::PAUSE_2:
+        if (scancode == 0xE1)
+            m_state = State::E1_REPEAT;
+        break;
+    case State::E1_REPEAT:
+        if (scancode == 0x9D)
+            m_state = State::PAUSE_3;
+        break;
+    case State::PAUSE_3:
+        if (scancode == 0xC5) {
+            EventManager::the().post_action({ VK::PAUSE_BREAK, VKState::PRESSED });
+            EventManager::the().post_action({ VK::PAUSE_BREAK, VKState::RELEASED });
         }
 
         m_state = State::NORMAL;
+        break;
+    default:
+        ASSERT_NEVER_REACHED();
     }
+
+    bool released = scancode & key_released_bit;
+    auto raw_key = scancode & raw_key_mask;
+
+    if (m_state == State::NORMAL) {
+        EventManager::the().post_action(
+            { single_byte_keys[raw_key], released ? VKState::RELEASED : VKState::PRESSED });
+    } else if (m_state == State::E0) {
+        EventManager::the().post_action(
+            { multi_byte_keys[raw_key], released ? VKState::RELEASED : VKState::PRESSED });
+    } else {
+        warning() << "PS2Keyboard: unexpected state " << static_cast<u8>(m_state);
+    }
+
+    m_state = State::NORMAL;
+
+    return true;
 }
 }

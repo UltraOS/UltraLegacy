@@ -161,9 +161,12 @@ void PS2Mouse::parse_packet()
     m_packet_bytes = 0;
 }
 
-void PS2Mouse::handle_action()
+bool PS2Mouse::handle_action()
 {
-    while (data_available())
-        append_packet_data(read_data());
+    if (!data_available())
+        return false;
+
+    append_packet_data(read_data());
+    return true;
 }
 }

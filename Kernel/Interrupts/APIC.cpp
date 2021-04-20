@@ -24,6 +24,16 @@ void APIC::clear_all() { }
 
 void APIC::enable_irq_for(const IRQHandler& handler)
 {
+    if (handler.is_non_msi_pci()) {
+        auto& pci_handler = static_cast<const NonMSIPCIIRQHandler&>(handler);
+
+        auto& routing = pci_handler.routing_info();
+        ASSERT(routing.has_value());
+
+        IOAPIC::map_non_msi_pci(*routing, pci_handler.interrupt_vector());
+        return;
+    }
+
     ASSERT(handler.irq_handler_type() == IRQHandler::Type::LEGACY);
 
     auto& irqs = smp_data().legacy_irqs_to_info;

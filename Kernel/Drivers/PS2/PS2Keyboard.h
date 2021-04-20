@@ -13,7 +13,7 @@ public:
     [[nodiscard]] StringView device_model() const override { return "PS2 Keyboard"_sv; }
 
 private:
-    void handle_action() override;
+    bool handle_action() override;
 
 private:
     enum State {

@@ -21,13 +21,15 @@ PIC::SpuriousHandler::SpuriousHandler(bool master)
 {
 }
 
-void PIC::SpuriousHandler::handle_irq(RegisterState&)
+bool PIC::SpuriousHandler::handle_irq(RegisterState&)
 {
     if (is_irq_being_serviced(legacy_irq_number()))
-        return;
+        return false;
 
     if (legacy_irq_number() == spurious_slave)
         IO::out8<master_command>(end_of_interrupt_code);
+
+    return true;
 }
 
 void PIC::ensure_disabled()

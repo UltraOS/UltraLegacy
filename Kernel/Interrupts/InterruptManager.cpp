@@ -4,6 +4,8 @@
 #include "IPICommunicator.h"
 #include "IVectorAllocator.h"
 #include "SyscallDispatcher.h"
+#include "IRQManager.h"
+#include "Common/Logger.h"
 
 namespace kernel {
 
@@ -108,6 +110,16 @@ void InterruptManager::unregister_handler(InterruptHandler& handler)
     default:
         ASSERT_NEVER_REACHED();
     }
+}
+
+void InterruptManager::register_dynamic_handler(DynamicInterruptHandler& handler, u16 vector, bool user_callable)
+{
+    set_handler_for_vector(vector, handler, user_callable);
+}
+
+void InterruptManager::unregister_dynamic_handler(DynamicInterruptHandler& handler, u16 vector)
+{
+    remove_handler_for_vector(vector, handler);
 }
 
 #define INTERRUPT_HANDLER_SYMBOL(index) extern "C" void interrupt##index##_handler()
@@ -384,6 +396,7 @@ void InterruptManager::initialize_all()
     ExceptionDispatcher::initialize();
     SyscallDispatcher::initialize();
     IPICommunicator::initialize();
+    IRQManager::initialize();
 }
 
 }

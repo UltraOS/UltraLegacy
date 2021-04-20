@@ -23,7 +23,7 @@ public:
     [[nodiscard]] PS2Controller::Channel channel() const { return m_channel; }
 
 protected:
-    virtual void handle_action() = 0;
+    virtual bool handle_action() = 0;
 
     template <typename CommandT>
     void send_command(CommandT command)
@@ -43,7 +43,7 @@ protected:
     u8 read_data() { return m_controller->read_data(); }
 
 private:
-    void handle_irq(RegisterState&) override { handle_action(); }
+    bool handle_irq(RegisterState&) override { return handle_action(); }
 
 private:
     PS2Controller* m_controller;

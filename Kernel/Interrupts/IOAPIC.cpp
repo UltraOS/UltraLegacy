@@ -75,6 +75,30 @@ void IOAPIC::RedirectionEntry::apply_to(Address address, u8 irq_index)
     write_register(address, higher_register, redirection_entry_as_u32[1]);
 }
 
+void IOAPIC::map_non_msi_pci(const PCIIRQ& irq, u8 to_index)
+{
+    for (auto& ioapic : InterruptController::smp_data().ioapics) {
+        if (ioapic.id != irq.ioapic_id)
+            continue;
+
+        RedirectionEntry re {};
+        re.index = to_index;
+        re.delivery_mode = DeliveryMode::FIXED;
+        re.destination_mode = DestinationMode::PHYSICAL;
+        re.pin_polarity = irq.polarity == Polarity::ACTIVE_HIGH ? PinPolarity::ACTIVE_HIGH : PinPolarity::ACTIVE_LOW;
+        re.trigger_mode = irq.trigger_mode == decltype(irq.trigger_mode)::EDGE ? TriggerMode::EDGE : TriggerMode::LEVEL;
+        re.is_disabled = false;
+        re.lapic_id = InterruptController::smp_data().bsp_lapic_id;
+        re.apply_to(ioapic.address, irq.ioapic_pin);
+
+        return;
+    }
+
+    String error_string;
+    error_string << "Failed to find IOAPIC with id " << irq.ioapic_id;
+    runtime::panic(error_string.c_string());
+}
+
 void IOAPIC::map_legacy_irq(const IRQ& irq, u8 to_index)
 {
     RedirectionEntry re {};

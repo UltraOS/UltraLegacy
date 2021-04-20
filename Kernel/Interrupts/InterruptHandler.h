@@ -13,6 +13,7 @@ public:
     enum class Type {
         RANGED,
         MONO,
+        DYNAMIC
     };
 
     virtual Type interrupt_handler_type() const = 0;
@@ -53,6 +54,16 @@ public:
 private:
     bool m_user_callable { false };
     u16 m_vector { 0 };
+};
+
+class DynamicInterruptHandler : public InterruptHandler {
+public:
+    DynamicInterruptHandler() = default;
+
+    Type interrupt_handler_type() const override { return Type::DYNAMIC; }
+
+    u16 allocate_one(u16 vector = any_vector, bool user_callable = false);
+    void free_one(u16);
 };
 
 }

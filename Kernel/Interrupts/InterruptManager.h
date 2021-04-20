@@ -17,6 +17,9 @@ public:
     static void register_handler(InterruptHandler&);
     static void unregister_handler(InterruptHandler&);
 
+    static void register_dynamic_handler(DynamicInterruptHandler&, u16 vector, bool user_callable);
+    static void unregister_dynamic_handler(DynamicInterruptHandler&, u16 vector);
+
 private:
     static void set_handler_for_vector(u16 vector, InterruptHandler&, bool user_callable);
     static void remove_handler_for_vector(u16 vector, InterruptHandler& owner);

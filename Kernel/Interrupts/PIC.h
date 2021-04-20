@@ -43,7 +43,7 @@ private:
         static constexpr u16 spurious_slave = 15;
 
         SpuriousHandler(bool master);
-        void handle_irq(RegisterState&) override;
+        bool handle_irq(RegisterState&) override;
     };
 
 private:

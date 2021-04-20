@@ -27,7 +27,7 @@ public:
 
 private:
     void detect_subtype();
-    void handle_action() override;
+    bool handle_action() override;
 
     [[nodiscard]] u8 bytes_in_packet() const;
 

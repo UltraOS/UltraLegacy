@@ -55,9 +55,10 @@ public:
     virtual void disable() = 0;
 
 private:
-    void handle_irq(RegisterState& registers) override
+    bool handle_irq(RegisterState& registers)
     {
         on_tick(registers, CPU::current().is_bsp());
+        return true;
     }
 
     void on_tick(const RegisterState&, bool is_bsp);
