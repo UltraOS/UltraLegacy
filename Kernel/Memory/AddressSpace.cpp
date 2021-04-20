@@ -532,6 +532,8 @@ void AddressSpace::invalidate_at(Address virtual_address)
 
 AddressSpace& AddressSpace::current()
 {
+    Interrupts::ScopedDisabler d;
+
     if (!CPU::is_initialized() || !CPU::current().current_thread())
         return AddressSpace::of_kernel();
 
