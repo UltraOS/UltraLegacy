@@ -64,18 +64,20 @@ void IPICommunicator::post_request(Request& request)
     auto current_id = CPU::current_id();
 
     for (auto& cpu : CPU::processors()) {
-        if (cpu.second().id() == current_id || !cpu.second().is_online())
+        if (cpu.id() == current_id || !cpu.is_online())
             continue;
 
         request.increment_completion_countdown();
 
-        cpu.second().push_request(request);
-        send_ipi(cpu.second().id());
+        cpu.push_request(request);
+        send_ipi(cpu.id());
     }
 }
 
 void IPICommunicator::process_pending()
 {
+    ASSERT(!Interrupts::are_enabled());
+
     auto& current_cpu = CPU::current();
 
     while (auto* request = current_cpu.pop_request()) {

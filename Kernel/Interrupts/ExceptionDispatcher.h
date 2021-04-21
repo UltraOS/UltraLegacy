@@ -16,7 +16,7 @@ class ExceptionDispatcher final : public RangedInterruptHandler {
     MAKE_SINGLETON(ExceptionDispatcher);
 
 public:
-    static constexpr size_t exception_count = 20;
+    static constexpr size_t exception_count = 32;
 
     static void initialize();
 

@@ -49,6 +49,7 @@ void IRQManager::handle_interrupt(RegisterState& registers)
     auto vec = registers.interrupt_number;
 
     auto& handlers = m_vec_to_handlers[vec];
+    ASSERT(!handlers.empty());
 
     for (auto& handler : handlers) {
         if (handler.handle_irq(registers))
