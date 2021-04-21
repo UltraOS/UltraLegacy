@@ -265,7 +265,7 @@ public:
     ~LockGuard() ALWAYS_INLINE { m_lock.unlock(); }
 
 private:
-    RecursiveSpinLock& m_lock;
+    LockT& m_lock;
 };
 
 template <>
