@@ -5,7 +5,7 @@
 #include "Common/Map.h"
 #include "Common/RefPtr.h"
 #include "Common/String.h"
-#include "Common/Types.h"
+#include "Common/List.h"
 #include "Interrupts/IPICommunicator.h"
 
 namespace kernel {
@@ -62,7 +62,7 @@ public:
     static size_t processor_count() { return s_processors.size(); }
     static size_t alive_processor_count() { return s_alive_counter; }
 
-    class LocalData {
+    class LocalData : public StandaloneListNode<LocalData> {
     public:
         explicit LocalData(u32 id);
 
@@ -82,7 +82,7 @@ public:
         void set_tss(TSS& tss) { m_tss = &tss; }
 
         // bsp is always the first processor
-        bool is_bsp() const { return this == &s_processors.begin()->second(); }
+        bool is_bsp() const { return this == &s_processors.front(); }
 
         void set_idle_task(RefPtr<Process> process) { m_idle_process = process; }
         Thread& idle_task();
@@ -105,7 +105,7 @@ public:
         CircularBuffer<IPICommunicator::Request*, max_ipi_requests> m_requests;
     };
 
-    static Map<u32, LocalData>& processors() { return s_processors; }
+    static List<LocalData>& processors() { return s_processors; }
 
     static LocalData& current();
     static LocalData& at_id(u32);
@@ -117,6 +117,9 @@ private:
 
 private:
     static Atomic<size_t> s_alive_counter;
-    static Map<u32, LocalData> s_processors;
+    static List<LocalData> s_processors;
+
+    static constexpr u32 max_lapic_id = 255;
+    static LocalData* s_id_to_processor[max_lapic_id + 1];
 };
 }

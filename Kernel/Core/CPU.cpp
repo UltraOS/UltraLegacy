@@ -17,7 +17,8 @@
 namespace kernel {
 
 Atomic<size_t> CPU::s_alive_counter;
-Map<u32, CPU::LocalData> CPU::s_processors;
+List<CPU::LocalData> CPU::s_processors;
+CPU::LocalData* CPU::s_id_to_processor[CPU::max_lapic_id + 1] {};
 
 CPU::LocalData::LocalData(u32 id)
     : m_id(id)
@@ -88,8 +89,9 @@ void CPU::initialize()
     if (supports_smp())
         bsp_id = LAPIC::my_id();
 
-    auto res = s_processors.emplace(make_pair(bsp_id, LocalData(bsp_id)));
-    res.first()->second().bring_online();
+    auto cpu = s_id_to_processor[bsp_id] = new LocalData(bsp_id);
+    s_processors.insert_back(*cpu);
+    cpu->bring_online();
 
     ++s_alive_counter;
 }
@@ -124,7 +126,8 @@ void CPU::start_all_processors()
         if (lapic.id == bsp_id)
             continue;
 
-        s_processors.emplace(make_pair(lapic.id, LocalData(lapic.id)));
+        auto cpu = s_id_to_processor[lapic.id] = new LocalData(lapic.id);
+        s_processors.insert_back(*cpu);
     }
 
     for (const auto& lapic : lapics) {
@@ -147,15 +150,13 @@ void CPU::start_all_processors()
 
 CPU::LocalData& CPU::at_id(u32 id)
 {
-    auto cpu = s_processors.find(id);
-
-    if (cpu == s_processors.end()) {
+    if (id > max_lapic_id || !s_id_to_processor[id]) {
         String error_string;
         error_string << "CPU: Couldn't find the local data for cpu " << id;
         runtime::panic(error_string.data());
     }
 
-    return cpu->second();
+    return *s_id_to_processor[id];
 }
 
 CPU::LocalData& CPU::current()
@@ -183,7 +184,9 @@ u32 CPU::current_id()
 void CPU::LocalData::bring_online()
 {
     ASSERT(*m_is_online == false);
-    ASSERT(LAPIC::my_id() == m_id);
+
+    if (supports_smp())
+        ASSERT(LAPIC::my_id() == m_id);
 
     *m_is_online = true;
 }
