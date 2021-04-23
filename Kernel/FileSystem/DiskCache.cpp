@@ -181,6 +181,24 @@ void DiskCache::write_one(u64 block_index, size_t offset, size_t bytes, void* bu
     block_and_offset.first()->mark_dirty();
 }
 
+void DiskCache::zero_fill_one(u64 block_index)
+{
+    if (m_io_size == no_caching_required) {
+        auto full_offset = block_index * m_fs_block_size;
+        auto* zeroed_buf = new u8[m_fs_block_size]{};
+        auto req = StorageDevice::RamdiskRequest::make_write(zeroed_buf, 0, m_fs_block_size);
+        m_device.submit_request(req);
+        delete[] zeroed_buf;
+        return;
+    }
+
+    auto block_and_offset = cached_block(block_index);
+    auto begin = block_and_offset.first()->virtual_address();
+    begin += block_and_offset.second();
+    zero_memory(begin.as_pointer<void>(), m_fs_block_size);
+    block_and_offset.first()->mark_dirty();
+}
+
 void DiskCache::flush_block(CachedBlock& block)
 {
     if (!block.is_dirty())

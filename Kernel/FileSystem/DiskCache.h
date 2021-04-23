@@ -33,6 +33,7 @@ public:
 
     void read_one(u64 block_index, size_t offset, size_t bytes, void* buffer);
     void write_one(u64 block_index, size_t offset, size_t bytes, void* buffer);
+    void zero_fill_one(u64 block_index);
     void flush_all();
     void flush_specific(u64 block_index);
 
