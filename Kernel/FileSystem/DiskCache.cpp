@@ -186,7 +186,7 @@ void DiskCache::zero_fill_one(u64 block_index)
     if (m_io_size == no_caching_required) {
         auto full_offset = block_index * m_fs_block_size;
         auto* zeroed_buf = new u8[m_fs_block_size]{};
-        auto req = StorageDevice::RamdiskRequest::make_write(zeroed_buf, 0, m_fs_block_size);
+        auto req = StorageDevice::RamdiskRequest::make_write(zeroed_buf, full_offset, m_fs_block_size);
         m_device.submit_request(req);
         delete[] zeroed_buf;
         return;
