@@ -86,13 +86,15 @@ void TaskFinalizer::do_free_thread(Thread& thread)
     if (thread.is_supervisor() == IsSupervisor::NO)
         MemoryManager::the().free_virtual_region(thread.user_stack());
 
-    LOCK_GUARD(owner.lock());
-    auto& threads = owner.threads();
-    threads.remove(thread.id()); // thread gets freed here
+    {
+        LOCK_GUARD(owner.lock());
+        auto& threads = owner.threads();
+        threads.remove(thread.id()); // thread gets freed here
 
-    // We're done here, there are still some threads this process owns
-    if (!owner.threads().empty())
-        return;
+        // We're done here, there are still some threads this process owns
+        if (!owner.threads().empty())
+            return;
+    }
 
     // Process doesn't have any more threads attached to it, we can free it
     m_processes_to_free.append_back(Scheduler::the().unregister_process(owner.id()));
