@@ -30,6 +30,9 @@ public:
 
     DynamicArray& operator=(const DynamicArray& other)
     {
+        if (this == &other)
+            return *this;
+
         become(other);
 
         return *this;
@@ -37,6 +40,9 @@ public:
 
     DynamicArray& operator=(DynamicArray&& other)
     {
+        if (this == &other)
+            return *this;
+
         become(forward<DynamicArray>(other));
 
         return *this;
@@ -208,6 +214,11 @@ private:
 
     void become(const DynamicArray& other)
     {
+        if (other.empty()) {
+            clear();
+            return;
+        }
+
         destroy_data();
         grow_by(other.size());
 
