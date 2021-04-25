@@ -201,8 +201,8 @@ Scheduler::Stats Scheduler::stats() const
 
     LOCK_GUARD(s_queues_lock);
 
-    for (auto& id_to_cpu : CPU::processors())
-        stats_per_cpu.processor_to_task.emplace(id_to_cpu.first(), id_to_cpu.second().current_thread()->owner().name().to_view());
+    for (auto& cpu : CPU::processors())
+        stats_per_cpu.processor_to_task.emplace(cpu.id(), cpu.current_thread()->owner().name().to_view());
 
     return stats_per_cpu;
 }
