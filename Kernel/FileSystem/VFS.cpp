@@ -4,6 +4,7 @@
 #include "Drivers/Storage.h"
 #include "FAT32/FAT32.h"
 #include "Utilities.h"
+#include "Multitasking/Sleep.h"
 
 namespace kernel {
 
@@ -124,7 +125,7 @@ void VFS::load_mbr_partitions(StorageDevice& device, Address virtual_mbr, size_t
 
         auto prefix = generate_prefix(device);
         m_prefix_to_fs[prefix] = fs;
-        if (!m_prefix_to_fs.contains(""_sv)) {
+        if (!m_prefix_to_fs.contains(boot_fs_prefix)) {
             log("VFS") << prefix.to_view() << " set as primary fs";
             m_prefix_to_fs[String(boot_fs_prefix)] = fs;
         }
@@ -199,6 +200,23 @@ ErrorCode VFS::remove(StringView path)
     return fs->second()->remove(prefix_to_path.second());
 }
 
+ErrorCode VFS::remove_directory(StringView path)
+{
+    auto split_path = split_prefix_and_path(path);
+
+    if (!split_path)
+        return ErrorCode::BAD_PATH;
+
+    auto& prefix_to_path = split_path.value();
+
+    auto fs = m_prefix_to_fs.find(prefix_to_path.first());
+
+    if (fs == m_prefix_to_fs.end())
+        return ErrorCode::DISK_NOT_FOUND;
+
+    return fs->second()->remove_directory(prefix_to_path.second());
+}
+
 ErrorCode VFS::create(StringView file_path, File::Attributes attributes)
 {
     auto split_path = split_prefix_and_path(file_path);
@@ -214,6 +232,25 @@ ErrorCode VFS::create(StringView file_path, File::Attributes attributes)
         return ErrorCode::DISK_NOT_FOUND;
 
     return fs->second()->create(prefix_to_path.second(), attributes);
+}
+
+ErrorCode VFS::create_directory(StringView file_path, File::Attributes attributes)
+{
+    auto split_path = split_prefix_and_path(file_path);
+
+    attributes |= File::Attributes::IS_DIRECTORY;
+
+    if (!split_path)
+        return ErrorCode::BAD_PATH;
+
+    auto& prefix_to_path = split_path.value();
+
+    auto fs = m_prefix_to_fs.find(prefix_to_path.first());
+
+    if (fs == m_prefix_to_fs.end())
+        return ErrorCode::DISK_NOT_FOUND;
+
+    return fs->second()->create_directory(prefix_to_path.second(), attributes);
 }
 
 ErrorCode VFS::move(StringView path, StringView new_path)
@@ -264,6 +301,28 @@ ErrorCode VFS::copy(StringView path, StringView new_path)
     }
 
     return fs_1->second()->copy(prefix_to_path_old.second(), prefix_to_path_new.second());
+}
+
+void VFS::sync_all()
+{
+    for (auto& fs : m_prefix_to_fs) {
+        if (fs.first() == ""_sv)
+            continue;
+
+        fs.second()->sync();
+    }
+}
+
+void VFS::sync_thread()
+{
+    Thread::current()->set_invulnerable(true);
+
+    static constexpr size_t sync_timeout_seconds = 30;
+
+    for (;;) {
+        sleep::for_seconds(sync_timeout_seconds);
+        VFS::the().sync_all();
+    }
 }
 
 }

@@ -107,9 +107,11 @@ struct PACKED DirectoryEntry {
 
     static constexpr u8 deleted_mark = 0xE5;
     bool is_deleted() const { return static_cast<u8>(filename[0]) == deleted_mark; }
+    void mark_as_deleted() { *reinterpret_cast<u8*>(filename) = deleted_mark; }
 
     static constexpr u8 end_of_directory_mark = 0x00;
     bool is_end_of_directory() const { return static_cast<u8>(filename[0]) == end_of_directory_mark; }
+    void mark_as_end_of_directory() { *reinterpret_cast<u8*>(filename) = end_of_directory_mark; }
 
     static DirectoryEntry from_storage(void* storage)
     {

@@ -24,7 +24,11 @@ public:
         ASSERT(s_instance == nullptr);
         Thread::ScopedInvulnerability i;
         s_instance = new VFS;
+
+        Process::create_supervisor(sync_thread, "sync task");
     }
+
+    [[noreturn]] static void sync_thread();
 
     static VFS& the()
     {
@@ -35,10 +39,14 @@ public:
     Pair<ErrorCode, RefPtr<FileDescription>> open(StringView path, FileDescription::Mode);
     ErrorCode close(FileDescription&);
     ErrorCode remove(StringView path);
+    ErrorCode remove_directory(StringView path);
     ErrorCode create(StringView file_path, File::Attributes);
+    ErrorCode create_directory(StringView file_path, File::Attributes);
 
     ErrorCode move(StringView path, StringView new_path);
     ErrorCode copy(StringView path, StringView new_path);
+
+    void sync_all();
 
 private:
     void load_all_partitions(StorageDevice&);

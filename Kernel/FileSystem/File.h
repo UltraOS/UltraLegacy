@@ -28,6 +28,12 @@ public:
         return static_cast<Attributes>(static_cast<u32>(l) | static_cast<u32>(r));
     }
 
+    friend Attributes& operator|=(Attributes& l, Attributes r)
+    {
+        l = static_cast<Attributes>(static_cast<u32>(l) | static_cast<u32>(r));
+        return l;
+    }
+
     File(StringView name, FileSystem& filesystem, Attributes attributes)
         : m_filesystem(filesystem)
         , m_attributes(attributes)

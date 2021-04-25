@@ -29,6 +29,7 @@ public:
     };
 
     virtual Entry next() = 0;
+    virtual void rewind() = 0;
 
     FileSystem& fs() { return *m_fs; }
     const FileSystem& fs() const { return *m_fs; }
