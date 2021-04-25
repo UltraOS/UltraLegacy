@@ -13,9 +13,12 @@ struct ErrorCode {
         BAD_PATH = 3,
         DISK_NOT_FOUND = 4,
         UNSUPPORTED = 5,
-        NO_SUCH_FILE,
-        IS_DIRECTORY,
-        IS_FILE
+        NO_SUCH_FILE = 6,
+        IS_DIRECTORY = 7,
+        IS_FILE = 8,
+        FILE_IS_BUSY = 9,
+        FILE_ALREADY_EXISTS = 10,
+        NAME_TOO_LONG = 11,
     } value { NO_ERROR };
 
     ErrorCode() = default;
@@ -48,6 +51,12 @@ struct ErrorCode {
             return "Is a Directory"_sv;
         case IS_FILE:
             return "Is a File"_sv;
+        case FILE_IS_BUSY:
+            return "File Is Busy"_sv;
+        case FILE_ALREADY_EXISTS:
+            return "File Already Exists"_sv;
+        case NAME_TOO_LONG:
+            return "Name Is Too Long"_sv;
         default:
             return "<Unknown code>"_sv;
         }
