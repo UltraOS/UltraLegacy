@@ -1,6 +1,7 @@
 #include "IVectorAllocator.h"
 #include "IDT.h"
 #include "Utilities.h"
+#include "Common/Lock.h"
 
 namespace kernel {
 
@@ -13,12 +14,15 @@ void IVectorAllocator::initialize()
 }
 
 IVectorAllocator::IVectorAllocator()
+    : m_lock(new InterruptSafeSpinLock)
 {
     m_allocation_map.set_size(IDT::entry_count);
 }
 
 void IVectorAllocator::allocate_vector(u16 vector)
 {
+    LOCK_GUARD(*m_lock);
+
     auto can_allocate = !m_allocation_map.bit_at(vector);
     ASSERT(can_allocate == true);
 
@@ -27,6 +31,8 @@ void IVectorAllocator::allocate_vector(u16 vector)
 
 u16 IVectorAllocator::allocate_vector()
 {
+    LOCK_GUARD(*m_lock);
+
     static constexpr size_t allocation_base = legacy_irq_base + legacy_irq_count;
 
     auto bit = m_allocation_map.find_bit_starting_at_offset(false, allocation_base);
@@ -46,6 +52,8 @@ void IVectorAllocator::allocate_range(VectorRange range)
 
 void IVectorAllocator::free_vector(u16 vector)
 {
+    LOCK_GUARD(*m_lock);
+
     auto bit = m_allocation_map.bit_at(vector);
     ASSERT(bit == true);
 

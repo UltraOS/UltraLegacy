@@ -27,7 +27,7 @@ private:
     static void handle_interrupt(RegisterState*) USED;
 
 private:
-    static InterruptHandler* s_handlers[IDT::entry_count];
+    static Atomic<InterruptHandler*> s_handlers[IDT::entry_count];
 };
 
 }

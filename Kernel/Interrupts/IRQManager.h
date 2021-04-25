@@ -5,6 +5,7 @@
 #include "InterruptHandler.h"
 #include "IRQHandler.h"
 #include "IDT.h"
+#include "Common/Lock.h"
 
 namespace kernel {
 
@@ -30,6 +31,8 @@ private:
     void handle_interrupt(RegisterState& registers) override;
 
 private:
+    InterruptSafeSpinLock m_lock;
+
     List<IRQHandler> m_vec_to_handlers[IDT::entry_count] {};
     static IRQManager* s_instance;
 };

@@ -9,6 +9,8 @@ namespace kernel {
 using VectorRange = BasicRange<u16>;
 inline static constexpr u16 any_vector = 0xFFFF;
 
+class InterruptSafeSpinLock;
+
 class IVectorAllocator {
     MAKE_SINGLETON(IVectorAllocator);
 
@@ -29,6 +31,7 @@ public:
     void free_range(VectorRange);
 
 private:
+    InterruptSafeSpinLock* m_lock { nullptr };
     DynamicBitArray m_allocation_map;
 
     static IVectorAllocator* s_instance;

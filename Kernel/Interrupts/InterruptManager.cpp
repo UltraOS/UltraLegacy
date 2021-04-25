@@ -6,10 +6,11 @@
 #include "SyscallDispatcher.h"
 #include "IRQManager.h"
 #include "Common/Logger.h"
+#include "Common/Lock.h"
 
 namespace kernel {
 
-InterruptHandler* InterruptManager::s_handlers[IDT::entry_count];
+Atomic<InterruptHandler*> InterruptManager::s_handlers[IDT::entry_count] {};
 
 void InterruptManager::handle_interrupt(RegisterState* registers)
 {
@@ -21,7 +22,7 @@ void InterruptManager::handle_interrupt(RegisterState* registers)
         runtime::panic(error_str.c_string());
     }
 
-    auto* handler = s_handlers[interrupt_number];
+    InterruptHandler* handler = s_handlers[interrupt_number].load();
 
     if (handler == nullptr) {
         String error_str;
@@ -40,7 +41,7 @@ void InterruptManager::set_handler_for_vector(u16 vector, InterruptHandler& hand
         runtime::panic(error_str.c_string());
     }
 
-    if (s_handlers[vector])
+    if (s_handlers[vector].load())
         runtime::panic("InterruptHandler: tried to register a handler for an already managed interrupt!");
 
     s_handlers[vector] = &handler;
@@ -57,7 +58,7 @@ void InterruptManager::remove_handler_for_vector(u16 vector, InterruptHandler& o
         runtime::panic(error_str.c_string());
     }
 
-    if (s_handlers[vector] != &owner)
+    if (s_handlers[vector].load() != &owner)
         runtime::panic("InterruptHandler: tried to unregister a non-registered handler!");
 
     s_handlers[vector] = nullptr;

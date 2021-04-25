@@ -8,6 +8,8 @@ IRQManager* IRQManager::s_instance;
 
 void IRQManager::register_handler(IRQHandler& handler, u16 requested_vector)
 {
+    LOCK_GUARD(m_lock);
+
     if (requested_vector == any_vector) {
         ASSERT(handler.irq_handler_type() != IRQHandler::Type::LEGACY);
 
@@ -35,6 +37,8 @@ void IRQManager::register_handler(IRQHandler& handler, u16 requested_vector)
 
 void IRQManager::unregister_handler(IRQHandler& handler)
 {
+    LOCK_GUARD(m_lock);
+
     handler.pop_off();
 
     auto& other_handlers = m_vec_to_handlers[handler.interrupt_vector()];
@@ -46,6 +50,10 @@ void IRQManager::unregister_handler(IRQHandler& handler)
 
 void IRQManager::handle_interrupt(RegisterState& registers)
 {
+    // FIXME: technically there's a race condition here if devices are
+    //        registered and removed at runtime after initialization,
+    //        but we don't really support that right now so it's not that important.
+
     auto vec = registers.interrupt_number;
 
     auto& handlers = m_vec_to_handlers[vec];
