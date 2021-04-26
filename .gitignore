@@ -18,6 +18,7 @@ Tests/Environment/*
 !Tests/Environment/Core/Runtime.h
 !Tests/Environment/Memory/MemoryManager.h
 !Tests/Environment/Drivers/Video/.keep
+!Tests/Environment/FileSystem/
 
 # Misc files/extensions that we always ignore
 .idea/
