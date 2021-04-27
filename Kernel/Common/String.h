@@ -125,10 +125,27 @@ public:
         }
     }
 
+    static void to_upper(char* str, size_t size)
+    {
+        static constexpr i32 offset_to_upper = 'a' - 'A';
+        static_assert(offset_to_upper > 0, "Negative lower to upper offset");
+
+        for (size_t i = 0; i < size; ++i) {
+            if (str[i] >= 'a' && str[i] <= 'z')
+                str[i] -= offset_to_upper;
+        }
+    }
+
     template <size_t N>
     static void to_lower(char (&array)[N])
     {
         to_lower(array, N);
+    }
+
+    template <size_t N>
+    static void to_upper(char (&array)[N])
+    {
+        to_upper(array, N);
     }
 
     void to_lower()
@@ -137,6 +154,14 @@ public:
             return;
 
         to_lower(data(), size());
+    }
+
+    void to_upper()
+    {
+        if (empty())
+            return;
+
+        to_upper(data(), size());
     }
 
     char* data() { return is_small() ? m_small_string : m_big_string.data; }
@@ -450,6 +475,37 @@ public:
 
             if (k == string.size())
                 return i;
+        }
+
+        return {};
+    }
+
+    Optional<size_t> find_last(StringView string)
+    {
+        if (string.size() > size())
+            return {};
+        if (string.empty())
+            return 0;
+
+        for (size_t i = (size() - 1); i >= (string.size() - 1); i--) {
+            if (i > size())
+                return {};
+
+            if (at(i) != string[string.size() - 1])
+                continue;
+
+            size_t j = i;
+            size_t k = string.size() - 1;
+
+            while (k < string.size()) {
+                if (at(j--) != string[k])
+                    break;
+
+                k--;
+            }
+
+            if (k > string.size())
+                return i - (string.size() - 1);
         }
 
         return {};
