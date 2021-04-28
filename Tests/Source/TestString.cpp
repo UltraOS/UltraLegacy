@@ -171,8 +171,26 @@ TEST(Find) {
     Assert::that(str1.find(str1).value_or(-1)).is_equal(0);
 }
 
-TEST(Strip) {
+TEST(FindLast) {
+    kernel::StringView str1 = ".....";
+    kernel::StringView str2 = "";
+    kernel::StringView str3 = ".";
+    kernel::StringView str4 = "HeLLo";
+    kernel::StringView str5 = "CLoSeASD";
+    kernel::StringView str6 = "CLoSeRASD";
 
+    Assert::that(str1.find_last(str3).value_or(-1)).is_equal(str1.size() - 1);
+    Assert::that(str1.find_last(str2).value_or(-1)).is_equal(str1.size());
+    Assert::that(str3.find_last(str1).value_or(-1)).is_equal(-1);
+    Assert::that(str4.find_last(str4).value_or(-1)).is_equal(0);
+    Assert::that(str2.find_last(str2).value_or(-1)).is_equal(0);
+    Assert::that(str5.find_last("ASD").value_or(-1)).is_equal(5);
+    Assert::that(str6.find_last("ASD").value_or(-1)).is_equal(6);
+    Assert::that(str5.find_last("CLoSeR").value_or(-1)).is_equal(-1);
+    Assert::that(str6.find_last("CLoSeR").value_or(-1)).is_equal(0);
+}
+
+TEST(Strip) {
     kernel::String str1 = "ASD";
     kernel::String str2 = " A  ";
     kernel::String str3 = "  X";
@@ -206,4 +224,50 @@ TEST(Strip) {
 
     str8.strip();
     Assert::that(str8).is_equal("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+}
+
+TEST(ToLower) {
+    kernel::String str1 = "lower_str!@#$%MZAxerfcSD";
+    kernel::String str2 = "";
+    kernel::String str3 = "ASDDSSMVPE!$123456ABCD69";
+    kernel::String str4 = "A";
+    kernel::String str5 = "a";
+
+    str1.to_lower();
+    Assert::that(str1).is_equal("lower_str!@#$%mzaxerfcsd");
+
+    str2.to_lower();
+    Assert::that(str2).is_equal("");
+
+    str3.to_lower();
+    Assert::that(str3).is_equal("asddssmvpe!$123456abcd69");
+
+    str4.to_lower();
+    Assert::that(str4).is_equal("a");
+
+    str5.to_lower();
+    Assert::that(str5).is_equal("a");
+}
+
+TEST(ToUpper) {
+    kernel::String str1 = "lower_str!@#$%MZAxerfcSD";
+    kernel::String str2 = "";
+    kernel::String str3 = "Asddldfg043MVpE!$123456ABcD69";
+    kernel::String str4 = "A";
+    kernel::String str5 = "a";
+
+    str1.to_upper();
+    Assert::that(str1).is_equal("LOWER_STR!@#$%MZAXERFCSD");
+
+    str2.to_upper();
+    Assert::that(str2).is_equal("");
+
+    str3.to_upper();
+    Assert::that(str3).is_equal("ASDDLDFG043MVPE!$123456ABCD69");
+
+    str4.to_upper();
+    Assert::that(str4).is_equal("A");
+
+    str5.to_upper();
+    Assert::that(str5).is_equal("A");
 }
