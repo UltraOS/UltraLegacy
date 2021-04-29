@@ -114,26 +114,48 @@ public:
         return length;
     }
 
-    static void to_lower(char* str, size_t size)
+    static bool is_upper(char c)
+    {
+        return c >= 'A' && c <= 'Z';
+    }
+
+    static bool is_lower(char c)
+    {
+        return c >= 'a' && c <= 'z';
+    }
+
+    static char to_lower(char c)
     {
         static constexpr i32 offset_to_lower = 'a' - 'A';
         static_assert(offset_to_lower > 0, "Negative lower to upper offset");
 
-        for (size_t i = 0; i < size; ++i) {
-            if (str[i] >= 'A' && str[i] <= 'Z')
-                str[i] += offset_to_lower;
-        }
+        if (is_upper(c))
+            return c + offset_to_lower;
+
+        return c;
     }
 
-    static void to_upper(char* str, size_t size)
+    static void to_lower(char* str, size_t size)
+    {
+        for (size_t i = 0; i < size; ++i)
+            str[i] = to_lower(str[i]);
+    }
+
+    static char to_upper(char c)
     {
         static constexpr i32 offset_to_upper = 'a' - 'A';
         static_assert(offset_to_upper > 0, "Negative lower to upper offset");
 
-        for (size_t i = 0; i < size; ++i) {
-            if (str[i] >= 'a' && str[i] <= 'z')
-                str[i] -= offset_to_upper;
-        }
+        if (is_lower(c))
+            return c - offset_to_upper;
+
+        return c;
+    }
+
+    static void to_upper(char* str, size_t size)
+    {
+        for (size_t i = 0; i < size; ++i)
+            str[i] = to_upper(str[i]);
     }
 
     template <size_t N>
@@ -780,6 +802,21 @@ inline bool operator<(const String& l, StringView r)
 inline bool operator<(StringView l, const String& r)
 {
     return l < r.to_view();
+}
+
+inline bool case_insensitive_equals(StringView l, StringView r)
+{
+    if (l.size() != r.size())
+        return false;
+
+    for (size_t i = 0; i < l.size(); ++i) {
+        if (String::to_lower(l[i]) == String::to_lower(r[i]))
+            continue;
+
+        return false;
+    }
+
+    return true;
 }
 
 }
