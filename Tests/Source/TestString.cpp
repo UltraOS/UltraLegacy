@@ -226,6 +226,33 @@ TEST(Strip) {
     Assert::that(str8).is_equal("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
 }
 
+TEST(Rstrip) {
+    kernel::String str1 = "";
+    kernel::String str2 = " A  ";
+    kernel::String str3 = "  X........";
+    kernel::String str4 = "X..";
+    kernel::String str5 = ".....XXX   Y... ";
+    kernel::String str6 = "...";
+
+    str1.rstrip();
+    Assert::that(str1).is_equal("");
+
+    str2.rstrip();
+    Assert::that(str2).is_equal(" A");
+
+    str3.rstrip('.');
+    Assert::that(str3).is_equal("  X");
+
+    str4.rstrip('.');
+    Assert::that(str4).is_equal("X");
+
+    str5.rstrip('.');
+    Assert::that(str5).is_equal(".....XXX   Y... ");
+
+    str6.rstrip('.');
+    Assert::that(str6).is_equal("");
+}
+
 TEST(ToLower) {
     kernel::String str1 = "lower_str!@#$%MZAxerfcSD";
     kernel::String str2 = "";
@@ -270,4 +297,15 @@ TEST(ToUpper) {
 
     str5.to_upper();
     Assert::that(str5).is_equal("A");
+}
+
+TEST(CaseInsensitiveCompare) {
+    kernel::StringView str1 = "helloWorld";
+    kernel::StringView str2 = "HELLOwORLd";
+    kernel::StringView str3 = "";
+
+    Assert::that(kernel::case_insensitive_equals(str1, str2)).is_true();
+    Assert::that(kernel::case_insensitive_equals(str2, str3)).is_false();
+    Assert::that(kernel::case_insensitive_equals(str1, str1)).is_true();
+    Assert::that(kernel::case_insensitive_equals(str2, str2)).is_true();
 }

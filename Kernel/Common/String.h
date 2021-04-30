@@ -246,13 +246,13 @@ public:
     void append(const String& other);
 
     // FIXME: feels a bit Q&D
-    void strip()
+    void strip(char c = ' ')
     {
         if (empty())
             return;
 
         size_t i = 0;
-        while (i < size() && at(i) == ' ')
+        while (i < size() && at(i) == c)
             i++;
 
         if (i == size()) {
@@ -261,7 +261,7 @@ public:
         }
 
         size_t j = size() - 1;
-        while (j > i && at(j) == ' ')
+        while (j > i && at(j) == c)
             j--;
 
         if (i == 0 && j == size() - 1)
@@ -269,6 +269,31 @@ public:
 
         String copy = *this;
         construct_from(copy.data() + i, j - i + 1);
+    }
+
+    void rstrip(char c = ' ')
+    {
+        if (empty())
+            return;
+
+        size_t i = size();
+        while (i-- > 0) {
+            if (at(i) == c)
+                continue;
+
+            break;
+        }
+
+        if (i == size() - 1)
+            return;
+
+        if (i > size()) {
+            clear();
+            return;
+        }
+
+        String copy = *this;
+        construct_from(copy.data(), i + 1);
     }
 
     String operator+(const String& other)
@@ -507,7 +532,7 @@ public:
         if (string.size() > size())
             return {};
         if (string.empty())
-            return 0;
+            return size();
 
         for (size_t i = (size() - 1); i >= (string.size() - 1); i--) {
             if (i > size())
