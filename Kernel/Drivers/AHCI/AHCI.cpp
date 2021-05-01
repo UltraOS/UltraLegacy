@@ -885,7 +885,7 @@ void AHCI::hba_reset()
     MemoryManager::the().free_page(Page(fis_receive_page));
     MemoryManager::the().free_page(Page(command_list_page));
 
-    AHCI_LOG << "AHCI: succesfully reset HBA";
+    AHCI_LOG << "succesfully reset HBA";
 }
 
 void AHCI::wait_for_port_ready(size_t index)
@@ -917,7 +917,7 @@ void AHCI::perform_bios_handoff()
     if (hba_read<CAP2>().bios_handoff == false)
         return;
 
-    log() << "AHCI: Performing BIOS handoff...";
+    AHCI_LOG << "Performing BIOS handoff...";
 
     auto handoff = hba_read<BIOSHandoffControlAndStatus>();
     handoff.os_owned_semaphore = true;
@@ -960,7 +960,7 @@ void AHCI::autodetect(const DynamicArray<PCI::DeviceInfo>& devices)
         if (programming_interface != device.programming_interface)
             continue;
 
-        AHCI_LOG << "AHCI: detected a new controller -> " << device;
+        AHCI_LOG << "detected a new controller -> " << device;
         new AHCI(device);
     }
 }
