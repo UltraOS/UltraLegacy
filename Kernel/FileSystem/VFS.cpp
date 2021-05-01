@@ -163,7 +163,7 @@ Pair<ErrorCode, RefPtr<FileDescription>> VFS::open(StringView path, FileDescript
     auto fs = m_prefix_to_fs.find(prefix_to_path.first);
 
     if (fs == m_prefix_to_fs.end())
-        return {};
+        return { ErrorCode::DISK_NOT_FOUND, RefPtr<FileDescription>() };
 
     auto code_to_file = fs->second->open(prefix_to_path.second);
     if (code_to_file.first.is_error())
