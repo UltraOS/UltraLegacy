@@ -96,18 +96,18 @@ public:
 
     Iterator push(const Key& value)
     {
-        return Base::push(value).first();
+        return Base::push(value).first;
     }
 
     Iterator push(Key&& value)
     {
-        return Base::push(move(value)).first();
+        return Base::push(move(value)).first;
     }
 
     template <typename... Args>
     Iterator emplace(Args&&... args)
     {
-        return Base::emplace(forward<Args>(args)...).first();
+        return Base::emplace(forward<Args>(args)...).first;
     }
 };
 

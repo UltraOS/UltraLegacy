@@ -66,11 +66,13 @@ public:
 
     struct HumanReadable {
         u16 year;
-        Month month;
+        u8 month;
         u8 day;
         u8 hour;
         u8 minute;
         u8 second;
+
+        Month month_as_enum() const { return static_cast<Month>(month); }
     };
 
     static constexpr StringView month_to_string(Month month)

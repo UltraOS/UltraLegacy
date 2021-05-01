@@ -125,7 +125,7 @@ u8 Time::days_in_month(Month month, u16 of_year)
 Time::time_t Time::to_unix(const HumanReadable& time)
 {
     return days_in_years_since_epoch_before(time.year) * seconds_in_day
-        + days_in_months_since_start_of(time.year, time.month) * seconds_in_day + (time.day - 1) * seconds_in_day
+        + days_in_months_since_start_of(time.year, time.month_as_enum()) * seconds_in_day + (time.day - 1) * seconds_in_day
         + time.hour * seconds_in_hour + time.minute * seconds_in_minute + time.second;
 }
 
@@ -134,7 +134,7 @@ Time::HumanReadable Time::from_unix(time_t time)
     HumanReadable hr_time {};
     hr_time.year = epoch_year;
     hr_time.day = 1;
-    hr_time.month = Month::January;
+    hr_time.month = 1;
 
     static constexpr auto seconds_in_year = seconds_in_day * 365;
     static constexpr auto seconds_in_leap_year = seconds_in_day * 366;
@@ -151,7 +151,7 @@ Time::HumanReadable Time::from_unix(time_t time)
     }
 
     for (;;) {
-        auto seconds_in_this_month = days_in_month(hr_time.month++, hr_time.year) * seconds_in_day;
+        auto seconds_in_this_month = days_in_month(static_cast<Month>(hr_time.month++), hr_time.year) * seconds_in_day;
 
         if (time < seconds_in_this_month) {
             --hr_time.month;

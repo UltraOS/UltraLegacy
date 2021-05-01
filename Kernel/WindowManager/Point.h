@@ -20,14 +20,14 @@ public:
 
     constexpr void move_by(T x, T y)
     {
-        this->first() += x;
-        this->second() += y;
+        this->first += x;
+        this->second += y;
     }
 
     constexpr void move_by(BasicPoint other)
     {
-        this->first() += other.first();
-        this->second() += other.second();
+        this->first += other.first;
+        this->second += other.second;
     }
 
     constexpr BasicPoint moved_by(BasicPoint other)
@@ -39,11 +39,11 @@ public:
 
     constexpr BasicPoint operator-() const
     {
-        return BasicPoint(-this->first(), -this->second());
+        return BasicPoint(-this->first, -this->second);
     }
 
-    constexpr T x() const { return this->first(); }
-    constexpr T y() const { return this->second(); }
+    constexpr T x() const { return this->first; }
+    constexpr T y() const { return this->second; }
 };
 
 using Point = BasicPoint<ssize_t>;

@@ -238,10 +238,10 @@ SMPData* ACPI::generate_smp_data()
                   << " polarity: " << to_string(lapic_nmi->polarity)
                   << " | trigger mode: " << to_string(lapic_nmi->trigger_mode);
 
-            Pair<u8, LAPICInfo::NMI> nmi;
-            nmi.set_first(lapic_nmi->acpi_uid);
+            Pair<u8, LAPICInfo::NMI> nmi {};
+            nmi.first = lapic_nmi->acpi_uid;
 
-            auto& info = nmi.second();
+            auto& info = nmi.second;
             info.lint = lapic_nmi->lint_number;
             info.polarity = lapic_nmi->polarity == Polarity::CONFORMING ? Polarity::ACTIVE_HIGH : lapic_nmi->polarity;
             info.trigger_mode = lapic_nmi->trigger_mode == TriggerMode::CONFORMING ? TriggerMode::EDGE : lapic_nmi->trigger_mode;
@@ -260,16 +260,16 @@ SMPData* ACPI::generate_smp_data()
     static constexpr u8 all_processors_uid = 0xFF;
 
     if (!lapic_uid_to_nmi.empty()) {
-        if (lapic_uid_to_nmi[0].first() == all_processors_uid) { // single NMI entry for all LAPICs
+        if (lapic_uid_to_nmi[0].first == all_processors_uid) { // single NMI entry for all LAPICs
             ASSERT(lapic_uid_to_nmi.size() == 1);
 
             for (auto& lapic : smp_info->lapics)
-                lapic.nmi_connection = lapic_uid_to_nmi[0].second();
+                lapic.nmi_connection = lapic_uid_to_nmi[0].second;
         } else {
             for (auto& nmi_entry : lapic_uid_to_nmi) {
                 auto& lapics = smp_info->lapics;
 
-                auto uid = nmi_entry.first();
+                auto uid = nmi_entry.first;
 
                 auto lapic = linear_search_for(lapics.begin(), lapics.end(),
                     [uid](const LAPICInfo& info) {
@@ -281,7 +281,7 @@ SMPData* ACPI::generate_smp_data()
                 if (lapic == lapics.end())
                     continue;
 
-                lapic->nmi_connection = nmi_entry.second();
+                lapic->nmi_connection = nmi_entry.second;
             }
         }
     }

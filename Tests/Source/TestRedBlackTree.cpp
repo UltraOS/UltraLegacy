@@ -689,13 +689,13 @@ TEST(ReturnedIterator) {
     rbtree<int> tree;
 
     auto res = tree.emplace(1);
-    Assert::that(*res.first()).is_equal(1);
-    Assert::that(res.second()).is_true();
+    Assert::that(*res.first).is_equal(1);
+    Assert::that(res.second).is_true();
 
 
     auto res1 = tree.emplace(1);
-    Assert::that(res1.first()).is_equal(res.first());
-    Assert::that(res1.second()).is_false();
+    Assert::that(res1.first).is_equal(res.first);
+    Assert::that(res1.second).is_false();
 }
 
 #include "Common/UniquePtr.h"

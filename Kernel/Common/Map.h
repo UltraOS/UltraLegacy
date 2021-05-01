@@ -25,7 +25,7 @@ namespace detail {
 
             bool operator()(const ValueType& l, const ValueType& r)
             {
-                return m_comparator(l.first(), r.first());
+                return m_comparator(l.first, r.first);
             }
 
         private:
@@ -34,7 +34,7 @@ namespace detail {
 
         static const KeyType& extract_key(const ValueType& value)
         {
-            return value.first();
+            return value.first;
         }
     };
 
@@ -77,43 +77,43 @@ public:
     template <typename KeyT, typename Compare = Comparator, typename = typename Compare::is_transparent>
     const Value& get(const KeyT& key) const
     {
-        return Base::find(key)->second();
+        return Base::find(key)->second;
     }
 
     const Value& get(const Key& key) const
     {
-        return Base::find(key)->second();
+        return Base::find(key)->second;
     }
 
     template <typename KeyT, typename Compare = Comparator, typename = typename Compare::is_transparent>
     Value& get(const KeyT& key)
     {
-        return Base::find(key)->second();
+        return Base::find(key)->second;
     }
 
     Value& get(const Key& key)
     {
-        return Base::find(key)->second();
+        return Base::find(key)->second;
     }
 
     Value& operator[](const Key& key)
     {
         if (Base::contains(key))
-            return Base::find(key)->second();
+            return Base::find(key)->second;
 
         auto value = make_pair(key, Value());
 
-        return Base::emplace(move(value)).first()->second();
+        return Base::emplace(move(value)).first->second;
     }
 
     Value& operator[](Key&& key)
     {
         if (Base::contains(key))
-            return Base::find(key)->second();
+            return Base::find(key)->second;
 
         auto value = make_pair(move(key), Value());
 
-        return Base::emplace(move(value)).first()->second();
+        return Base::emplace(move(value)).first->second;
     }
 };
 

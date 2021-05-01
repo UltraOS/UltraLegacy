@@ -21,7 +21,7 @@ GenericVideoDevice::GenericVideoDevice(const VideoMode& video_mode)
 
     for (Address current_address = range.begin(); current_address < range.end(); current_address += Page::size) {
         auto indices = AddressSpace::virtual_address_as_paging_indices(current_address);
-        AddressSpace::of_kernel().pt_at(indices.first()).entry_at(indices.second()).set_pat_index(wc_pat_index, true);
+        AddressSpace::of_kernel().pt_at(indices.first).entry_at(indices.second).set_pat_index(wc_pat_index, true);
         AddressSpace::of_kernel().invalidate_at(current_address);
     }
 
@@ -37,9 +37,9 @@ GenericVideoDevice::GenericVideoDevice(const VideoMode& video_mode)
          current_address += Page::huge_size) {
         auto indices = AddressSpace::virtual_address_as_paging_indices(current_address);
         AddressSpace::of_kernel()
-            .pdpt_at(indices.first())
-            .pdt_at(indices.second())
-            .entry_at(indices.third())
+            .pdpt_at(indices.first)
+            .pdt_at(indices.second)
+            .entry_at(indices.third)
             .set_pat_index(wc_pat_index, false);
         AddressSpace::of_kernel().invalidate_at(current_address);
     }

@@ -19,6 +19,7 @@ struct ErrorCode {
         FILE_IS_BUSY = 9,
         FILE_ALREADY_EXISTS = 10,
         NAME_TOO_LONG = 11,
+        BAD_FILENAME = 12,
     } value { NO_ERROR };
 
     ErrorCode() = default;
@@ -57,6 +58,8 @@ struct ErrorCode {
             return "File Already Exists"_sv;
         case NAME_TOO_LONG:
             return "Name Is Too Long"_sv;
+        case BAD_FILENAME:
+            return "Filename Is Bad"_sv;
         default:
             return "<Unknown code>"_sv;
         }

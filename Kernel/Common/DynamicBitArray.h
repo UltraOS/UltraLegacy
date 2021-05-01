@@ -63,7 +63,7 @@ public:
         for (size_t index = offset; index < m_bit_count; ++index) {
             auto loc = location_of_bit(index);
 
-            if ((m_bits[loc.first()] & SET_BIT(loc.second())) == of_value)
+            if ((m_bits[loc.first] & SET_BIT(loc.second)) == of_value)
                 return index;
         }
 
@@ -111,12 +111,12 @@ public:
 
         auto location = location_of_bit(index);
 
-        auto& unit = m_bits[location.first()];
+        auto& unit = m_bits[location.first];
 
         if (to)
-            unit |= bit_as_mask(location.second());
+            unit |= bit_as_mask(location.second);
         else
-            unit &= ~bit_as_mask(location.second());
+            unit &= ~bit_as_mask(location.second);
     }
 
     void set_range_to_number(size_t at_index, size_t count, size_t number)
@@ -140,9 +140,9 @@ public:
     {
         auto location = location_of_bit(index);
 
-        auto& unit = m_bits[location.first()];
+        auto& unit = m_bits[location.first];
 
-        return unit & bit_as_mask(location.second());
+        return unit & bit_as_mask(location.second);
     }
 
     size_t range_as_number(size_t index, size_t length) const

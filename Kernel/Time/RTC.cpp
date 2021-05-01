@@ -37,7 +37,7 @@ void RTC::synchronize_system_clock()
     original_time.minute = CMOS::read<minutes_register>();
     original_time.hour = CMOS::read<hours_register>();
     original_time.day = CMOS::read<day_register>();
-    original_time.month = static_cast<Time::Month>(CMOS::read<month_register>());
+    original_time.month = CMOS::read<month_register>();
     original_time.year = CMOS::read<year_register>();
     // TODO: read century register if present
 
@@ -52,7 +52,7 @@ void RTC::synchronize_system_clock()
         original_time.minute = CMOS::read<minutes_register>();
         original_time.hour   = CMOS::read<hours_register>();
         original_time.day    = CMOS::read<day_register>();
-        original_time.month  = static_cast<Time::Month>(CMOS::read<month_register>());
+        original_time.month  = CMOS::read<month_register>();
         original_time.year   = CMOS::read<year_register>();
         // TODO: read century register if present
     } while (original_time.second != additional_time.second ||
@@ -67,7 +67,7 @@ void RTC::synchronize_system_clock()
         original_time.minute = bcd_to_binary(original_time.minute);
         original_time.hour = bcd_to_binary(original_time.hour);
         original_time.day = bcd_to_binary(original_time.day);
-        original_time.month = static_cast<Time::Month>(bcd_to_binary(static_cast<u8>(original_time.month)));
+        original_time.month = bcd_to_binary(original_time.month);
         original_time.year = bcd_to_binary(original_time.year);
     }
 

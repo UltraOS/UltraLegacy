@@ -45,7 +45,7 @@ Optional<PCIIRQ> MP::try_deduce_pci_irq_number(u8 bus, u8 device)
         if (this_bus == ioapic_mappings->end())
             return {};
 
-        for (auto& irq : this_bus->second()) {
+        for (auto& irq : this_bus->second) {
             if (irq.device_number == device)
                 return irq;
         }
@@ -96,7 +96,7 @@ Optional<PCIIRQ> MP::try_deduce_pci_irq_number(u8 bus, u8 device)
             static constexpr u8 device_number_bit_offset = 2;
             irq.device_number = (assignment.source_bus_irq >> device_number_bit_offset);
 
-            bus->second().append(irq);
+            bus->second.append(irq);
             break;
         }
         default:
@@ -276,9 +276,9 @@ SMPData* MP::parse_configuration_table(FloatingPointer* fp_table)
                   << " pin: " << interrupt.destination_ioapic_pin << "\n";
 
             if (type == EntryType::LOCAL_INTERRUPT_ASSIGNMENT && interrupt.interrupt_type == InterruptEntry::Type::NMI) {
-                Pair<u8, LAPICInfo::NMI> nmi;
-                nmi.set_first(interrupt.destination_lapic_id);
-                auto& info = nmi.second();
+                Pair<u8, LAPICInfo::NMI> nmi {};
+                nmi.first = interrupt.destination_lapic_id;
+                auto& info = nmi.second;
                 info.polarity = interrupt.polarity == Polarity::CONFORMING ? Polarity::ACTIVE_HIGH : interrupt.polarity;
                 info.trigger_mode = interrupt.trigger_mode == TriggerMode::CONFORMING ? TriggerMode::EDGE : interrupt.trigger_mode;
                 info.lint = interrupt.destination_lapic_lint;
@@ -341,15 +341,15 @@ SMPData* MP::parse_configuration_table(FloatingPointer* fp_table)
     static constexpr u8 all_processors_uid = 0xFF;
 
     if (!lapic_id_to_nmi.empty()) {
-        if (lapic_id_to_nmi[0].first() == all_processors_uid) { // single NMI entry for all LAPICs
+        if (lapic_id_to_nmi[0].first == all_processors_uid) { // single NMI entry for all LAPICs
             ASSERT(lapic_id_to_nmi.size() == 1);
 
             for (auto& lapic : smp_info->lapics)
-                lapic.nmi_connection = lapic_id_to_nmi[0].second();
+                lapic.nmi_connection = lapic_id_to_nmi[0].second;
         } else {
             for (auto& nmi_entry : lapic_id_to_nmi) {
                 auto& lapics = smp_info->lapics;
-                auto id = nmi_entry.first();
+                auto id = nmi_entry.first;
 
                 auto lapic = linear_search_for(lapics.begin(), lapics.end(),
                     [id](const LAPICInfo& info) {
@@ -360,7 +360,7 @@ SMPData* MP::parse_configuration_table(FloatingPointer* fp_table)
                 if (lapic == lapics.end())
                     continue;
 
-                lapic->nmi_connection = nmi_entry.second();
+                lapic->nmi_connection = nmi_entry.second;
             }
         }
     }

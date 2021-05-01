@@ -54,10 +54,10 @@ public:
 
     void initialize();
 
-    u8 rsdp_revision() const { return m_rsdp ? m_rsdp->revision : 0xFF; }
+    [[nodiscard]] u8 rsdp_revision() const { return m_rsdp ? m_rsdp->revision : 0xFF; }
 
-    TableInfo* get_table_info(StringView signature);
-    const DynamicArray<TableInfo>& tables() const { return m_tables; }
+    [[nodiscard]] TableInfo* get_table_info(StringView signature);
+    [[nodiscard]] const DynamicArray<TableInfo>& tables() const { return m_tables; }
 
     struct PACKED MADT {
         enum class Flags : u32 {
@@ -109,7 +109,7 @@ public:
             u8 id;
             Flags flags;
 
-            bool should_be_ignored() const
+            [[nodiscard]] bool should_be_ignored() const
             {
                 return !((flags & Flags::ENABLED) ^ (flags & Flags::ONLINE_CAPABLE));
             }
@@ -178,11 +178,11 @@ public:
     SMPData* generate_smp_data();
 
 private:
-    bool verify_checksum(Address virtual_address, size_t length);
     bool find_rsdp();
     void collect_all_sdts();
 
-    size_t length_of_table_from_physical_address(Address physical);
+    static bool verify_checksum(Address virtual_address, size_t length);
+    static size_t length_of_table_from_physical_address(Address physical);
 
 private:
     RSDP* m_rsdp { nullptr };

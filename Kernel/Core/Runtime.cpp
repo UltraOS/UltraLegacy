@@ -210,31 +210,31 @@ bool is_in_panic()
 
     for (char c : panic_message) {
         TRY_PAINT(draw_char(panic_offset, c, font_color, Color::transparent()));
-        panic_offset.first() += Painter::font_width;
+        panic_offset.first += Painter::font_width;
     }
 
     Logger bt_logger(false);
-    offset.first() = initial_x;
+    offset.first = initial_x;
 
     auto write_string = [&](StringView string) {
         bt_logger << string;
         for (char c : StringView(string)) {
             if (c == '\n') {
-                offset.second() += Painter::font_height;
-                offset.first() = initial_x;
+                offset.second += Painter::font_height;
+                offset.first = initial_x;
 
                 continue;
             }
 
             TRY_PAINT(draw_char(offset, c, font_color, Color::transparent()));
-            offset.first() += Painter::font_width;
+            offset.first += Painter::font_width;
         }
     };
 
     write_string(reason);
 
-    offset.second() += Painter::font_height * 2;
-    offset.first() = initial_x;
+    offset.second += Painter::font_height * 2;
+    offset.first = initial_x;
 
     bt_logger << "\n\n"_sv;
 

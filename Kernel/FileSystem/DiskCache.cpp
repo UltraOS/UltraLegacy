@@ -101,7 +101,7 @@ Pair<DiskCache::CachedBlock*, size_t> DiskCache::cached_block(u64 block_index)
 
     auto block = m_block_to_cache.find(block_index);
     if (block != m_block_to_cache.end()) {
-        auto* cached_entry = block->second();
+        auto* cached_entry = block->second;
         cached_entry->pop_off();
         m_cached_blocks.insert_front(*cached_entry);
         return { cached_entry, offset };
@@ -155,8 +155,8 @@ void DiskCache::read_one(u64 block_index, size_t offset, size_t bytes, void* buf
 
     auto block_and_offset = cached_block(block_index);
 
-    auto begin = block_and_offset.first()->virtual_address();
-    begin += block_and_offset.second();
+    auto begin = block_and_offset.first->virtual_address();
+    begin += block_and_offset.second;
     begin += offset;
 
     copy_memory(begin.as_pointer<void>(), buffer, bytes);
@@ -173,12 +173,12 @@ void DiskCache::write_one(u64 block_index, size_t offset, size_t bytes, void* bu
 
     auto block_and_offset = cached_block(block_index);
 
-    auto begin = block_and_offset.first()->virtual_address();
-    begin += block_and_offset.second();
+    auto begin = block_and_offset.first->virtual_address();
+    begin += block_and_offset.second;
     begin += offset;
 
     copy_memory(buffer, begin.as_pointer<void>(), bytes);
-    block_and_offset.first()->mark_dirty();
+    block_and_offset.first->mark_dirty();
 }
 
 void DiskCache::zero_fill_one(u64 block_index)
@@ -193,10 +193,10 @@ void DiskCache::zero_fill_one(u64 block_index)
     }
 
     auto block_and_offset = cached_block(block_index);
-    auto begin = block_and_offset.first()->virtual_address();
-    begin += block_and_offset.second();
+    auto begin = block_and_offset.first->virtual_address();
+    begin += block_and_offset.second;
     zero_memory(begin.as_pointer<void>(), m_fs_block_size);
-    block_and_offset.first()->mark_dirty();
+    block_and_offset.first->mark_dirty();
 }
 
 void DiskCache::flush_block(CachedBlock& block)
@@ -247,7 +247,7 @@ void DiskCache::flush_specific(u64 block_index)
         return;
     }
 
-    flush_block(*cached_block->second());
+    flush_block(*cached_block->second);
 }
 
 }

@@ -123,19 +123,19 @@ void AddressSpace::early_map_page(Address virtual_address, Address physical_addr
     ASSERT_PAGE_ALIGNED(virtual_address);
     auto indices = virtual_address_as_paging_indices(virtual_address);
 #ifdef ULTRA_32
-    ASSERT(kernel_entry_at(indices.first()).is_present());
+    ASSERT(kernel_entry_at(indices.first).is_present());
 
-    kernel_pt_at(indices.first()).entry_at(indices.second()).set_physical_address(physical_address).make_supervisor_present();
+    kernel_pt_at(indices.first).entry_at(indices.second).set_physical_address(physical_address).make_supervisor_present();
 
 #elif defined(ULTRA_64)
-    ASSERT(kernel_entry_at(indices.first()).is_present());
-    ASSERT(kernel_pdpt_at(indices.first()).entry_at(indices.second()).is_present());
-    ASSERT(kernel_pdpt_at(indices.first()).pdt_at(indices.second()).entry_at(indices.third()).is_present());
+    ASSERT(kernel_entry_at(indices.first).is_present());
+    ASSERT(kernel_pdpt_at(indices.first).entry_at(indices.second).is_present());
+    ASSERT(kernel_pdpt_at(indices.first).pdt_at(indices.second).entry_at(indices.third).is_present());
 
-    kernel_pdpt_at(indices.first())
-        .pdt_at(indices.second())
-        .pt_at(indices.third())
-        .entry_at(indices.fourth())
+    kernel_pdpt_at(indices.first)
+        .pdt_at(indices.second)
+        .pt_at(indices.third)
+        .entry_at(indices.fourth)
         .set_physical_address(physical_address)
         .make_supervisor_present();
 #endif
@@ -164,12 +164,12 @@ void AddressSpace::early_map_huge_page(Address virtual_address, Address physical
 
     auto indices = virtual_address_as_paging_indices(virtual_address);
 
-    ASSERT(kernel_entry_at(indices.first()).is_present());
-    ASSERT(kernel_pdpt_at(indices.first()).entry_at(indices.second()).is_present());
+    ASSERT(kernel_entry_at(indices.first).is_present());
+    ASSERT(kernel_pdpt_at(indices.first).entry_at(indices.second).is_present());
 
-    auto& entry = kernel_pdpt_at(indices.first())
-                      .pdt_at(indices.second())
-                      .entry_at(indices.third());
+    auto& entry = kernel_pdpt_at(indices.first)
+                      .pdt_at(indices.second)
+                      .entry_at(indices.third);
 
     entry.set_physical_address(physical_address);
     entry.make_supervisor_present();
@@ -202,8 +202,8 @@ void AddressSpace::map_page(Address virtual_address, Address physical_address, I
     LOCK_GUARD(m_lock);
 
     auto indices = virtual_address_as_paging_indices(virtual_address);
-    auto& page_table_index = indices.first();
-    auto& page_entry_index = indices.second();
+    auto& page_table_index = indices.first;
+    auto& page_entry_index = indices.second;
 
     if (!entry_at(page_table_index).is_present()) {
 #ifdef ADDRESS_SPACE_DEBUG
@@ -244,12 +244,12 @@ void AddressSpace::map_page(Address virtual_address, Address physical_address, I
 
     auto indices = virtual_address_as_paging_indices(virtual_address);
 
-    if (!entry_at(indices.first()).is_present()) {
+    if (!entry_at(indices.first).is_present()) {
 #ifdef ADDRESS_SPACE_DEBUG
-        log() << "AddressSpace: tried to access a non-present pdpt " << indices.first() << ", allocating...";
+        log() << "AddressSpace: tried to access a non-present pdpt " << indices.first << ", allocating...";
 #endif
         auto page = m_physical_pages.emplace(MemoryManager::the().allocate_page());
-        auto& entry = entry_at(indices.first());
+        auto& entry = entry_at(indices.first);
         entry.set_physical_address(page.address());
         if (is_supervisor == IsSupervisor::YES)
             entry.make_supervisor_present();
@@ -257,12 +257,12 @@ void AddressSpace::map_page(Address virtual_address, Address physical_address, I
             entry.make_user_present();
     }
 
-    if (!pdpt_at(indices.first()).entry_at(indices.second()).is_present()) {
+    if (!pdpt_at(indices.first).entry_at(indices.second).is_present()) {
 #ifdef ADDRESS_SPACE_DEBUG
-        log() << "AddressSpace: tried to access a non-present pdt " << indices.second() << ", allocating...";
+        log() << "AddressSpace: tried to access a non-present pdt " << indices.second << ", allocating...";
 #endif
         auto page = m_physical_pages.emplace(MemoryManager::the().allocate_page());
-        auto& entry = pdpt_at(indices.first()).entry_at(indices.second());
+        auto& entry = pdpt_at(indices.first).entry_at(indices.second);
         entry.set_physical_address(page.address());
         if (is_supervisor == IsSupervisor::YES)
             entry.make_supervisor_present();
@@ -270,12 +270,12 @@ void AddressSpace::map_page(Address virtual_address, Address physical_address, I
             entry.make_user_present();
     }
 
-    if (!pdpt_at(indices.first()).pdt_at(indices.second()).entry_at(indices.third()).is_present()) {
+    if (!pdpt_at(indices.first).pdt_at(indices.second).entry_at(indices.third).is_present()) {
 #ifdef ADDRESS_SPACE_DEBUG
-        log() << "AddressSpace: tried to access a non-present pt " << indices.second() << ", allocating...";
+        log() << "AddressSpace: tried to access a non-present pt " << indices.second << ", allocating...";
 #endif
         auto page = m_physical_pages.emplace(MemoryManager::the().allocate_page());
-        auto& entry = pdpt_at(indices.first()).pdt_at(indices.second()).entry_at(indices.third());
+        auto& entry = pdpt_at(indices.first).pdt_at(indices.second).entry_at(indices.third);
         entry.set_physical_address(page.address());
         if (is_supervisor == IsSupervisor::YES)
             entry.make_supervisor_present();
@@ -284,7 +284,7 @@ void AddressSpace::map_page(Address virtual_address, Address physical_address, I
     }
 
     auto& page_entry
-        = pdpt_at(indices.first()).pdt_at(indices.second()).pt_at(indices.third()).entry_at(indices.fourth());
+        = pdpt_at(indices.first).pdt_at(indices.second).pt_at(indices.third).entry_at(indices.fourth);
 
     page_entry.set_physical_address(physical_address);
 
@@ -307,12 +307,12 @@ void AddressSpace::map_huge_page(Address virtual_address, Address physical_addre
 
     auto indices = virtual_address_as_paging_indices(virtual_address);
 
-    if (!entry_at(indices.first()).is_present()) {
+    if (!entry_at(indices.first).is_present()) {
 #ifdef ADDRESS_SPACE_DEBUG
         log() << "AddressSpace: tried to access a non-present pdpt " << indices.first() << ", allocating...";
 #endif
         auto page = m_physical_pages.emplace(MemoryManager::the().allocate_page());
-        auto& entry = entry_at(indices.first());
+        auto& entry = entry_at(indices.first);
         entry.set_physical_address(page.address());
         if (is_supervisor == IsSupervisor::YES)
             entry.make_supervisor_present();
@@ -320,12 +320,12 @@ void AddressSpace::map_huge_page(Address virtual_address, Address physical_addre
             entry.make_user_present();
     }
 
-    if (!pdpt_at(indices.first()).entry_at(indices.second()).is_present()) {
+    if (!pdpt_at(indices.first).entry_at(indices.second).is_present()) {
 #ifdef ADDRESS_SPACE_DEBUG
-        log() << "AddressSpace: tried to access a non-present pdt " << indices.second() << ", allocating...";
+        log() << "AddressSpace: tried to access a non-present pdt " << indices.second << ", allocating...";
 #endif
         auto page = m_physical_pages.emplace(MemoryManager::the().allocate_page());
-        auto& entry = pdpt_at(indices.first()).entry_at(indices.second());
+        auto& entry = pdpt_at(indices.first).entry_at(indices.second);
         entry.set_physical_address(page.address());
         if (is_supervisor == IsSupervisor::YES)
             entry.make_supervisor_present();
@@ -333,7 +333,7 @@ void AddressSpace::map_huge_page(Address virtual_address, Address physical_addre
             entry.make_user_present();
     }
 
-    auto& page_entry = pdpt_at(indices.first()).pdt_at(indices.second()).entry_at(indices.third());
+    auto& page_entry = pdpt_at(indices.first).pdt_at(indices.second).entry_at(indices.third);
 
     page_entry.set_physical_address(physical_address);
 
@@ -407,8 +407,8 @@ void AddressSpace::local_unmap_page(Address virtual_address)
     LOCK_GUARD(m_lock);
 
     const auto indices = virtual_address_as_paging_indices(virtual_address);
-    auto& page_table_index = indices.first();
-    auto& page_entry_index = indices.second();
+    auto& page_table_index = indices.first;
+    auto& page_entry_index = indices.second;
 
 #ifdef ADDRESS_SPACE_DEBUG
     log() << "AddressSpace: unmapping the page at vaddr " << virtual_address;
@@ -430,10 +430,10 @@ void AddressSpace::local_unmap_page(Address virtual_address)
     log() << "AddressSpace: unmapping the page at vaddr " << virtual_address;
 #endif
 
-    pdpt_at(indices.first())
-        .pdt_at(indices.second())
-        .pt_at(indices.third())
-        .entry_at(indices.fourth())
+    pdpt_at(indices.first)
+        .pdt_at(indices.second)
+        .pt_at(indices.third)
+        .entry_at(indices.fourth)
         .set_present(false);
 
     invalidate_at(virtual_address);
@@ -458,16 +458,16 @@ Address AddressSpace::physical_address_of(Address virtual_address)
 
     const auto indices = virtual_address_as_paging_indices(virtual_address);
 #ifdef ULTRA_64
-    if (!entry_at(indices.first()).is_present())
+    if (!entry_at(indices.first).is_present())
         return nullptr;
-    if (!pdpt_at(indices.first()).entry_at(indices.second()).is_present())
+    if (!pdpt_at(indices.first).entry_at(indices.second).is_present())
         return nullptr;
-    if (!pdpt_at(indices.first()).pdt_at(indices.second()).entry_at(indices.third()).is_present())
+    if (!pdpt_at(indices.first).pdt_at(indices.second).entry_at(indices.third).is_present())
         return nullptr;
 
-    return pdpt_at(indices.first()).pdt_at(indices.second()).pt_at(indices.third()).entry_at(indices.fourth()).physical_address();
+    return pdpt_at(indices.first).pdt_at(indices.second).pt_at(indices.third).entry_at(indices.fourth).physical_address();
 #elif defined(ULTRA_32)
-    return pt_at(indices.first()).entry_at(indices.second()).physical_address();
+    return pt_at(indices.first).entry_at(indices.second).physical_address();
 #endif
 }
 

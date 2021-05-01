@@ -250,7 +250,7 @@ void DemoTTY::execute_command()
 
         info_string << "\n\nTasks per cpu:";
         for (auto& cpu : stats.processor_to_task)
-            info_string << "\ncpu " << cpu.first() << ": " << cpu.second() << "";
+            info_string << "\ncpu " << cpu.first << ": " << cpu.second << "";
 
         write(info_string.to_view());
         write("\n");

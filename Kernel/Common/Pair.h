@@ -11,31 +11,31 @@ public:
 
     template <typename FirstT, typename SecondT>
     Pair(FirstT&& first, SecondT&& second)
-        : m_first(forward<FirstT>(first))
-        , m_second(forward<SecondT>(second))
+        : first(forward<FirstT>(first))
+        , second(forward<SecondT>(second))
     {
     }
 
     // TODO: SFINAE based on whether FirstT & SecondT are convertable to First & Second
     template <typename FirstT, typename SecondT>
     Pair(const Pair<FirstT, SecondT>& other)
-        : m_first(other.first())
-        , m_second(other.second())
+        : first(other.first)
+        , second(other.second)
     {
     }
 
     template <typename FirstT, typename SecondT>
     Pair(Pair<FirstT, SecondT>&& other)
-        : m_first(move(other.first()))
-        , m_second(move(other.second()))
+        : first(move(other.first))
+        , second(move(other.second))
     {
     }
 
     template <typename FirstT, typename SecondT>
     Pair& operator=(const Pair<FirstT, SecondT>& other)
     {
-        m_first = other.first();
-        m_second = other.second();
+        first = other.first;
+        second = other.second;
 
         return *this;
     }
@@ -43,24 +43,14 @@ public:
     template <typename FirstT, typename SecondT>
     Pair& operator=(const Pair<FirstT, SecondT>&& other)
     {
-        m_first = move(other.first());
-        m_second = move(other.second());
+        first = move(other.first);
+        second = move(other.second);
 
         return *this;
     }
 
-    First& first() { return m_first; }
-    const First& first() const { return m_first; }
-
-    Second& second() { return m_second; }
-    const Second& second() const { return m_second; }
-
-    void set_first(const First& first) { m_first = first; }
-    void set_second(const Second& second) { m_second = second; }
-
-private:
-    First m_first;
-    Second m_second;
+    First first;
+    Second second;
 };
 
 template <typename First, typename Second, typename Third, typename Fourth>
@@ -68,30 +58,17 @@ class Quad {
 public:
     template <typename FirstT, typename SecondT, typename ThirdT, typename FourthT>
     Quad(FirstT&& first, SecondT&& second, ThirdT&& third, FourthT&& fourth)
-        : m_first(forward<FirstT>(first))
-        , m_second(forward<SecondT>(second))
-        , m_third(forward<ThirdT>(third))
-        , m_fourth(forward<FourthT>(fourth))
+        : first(forward<FirstT>(first))
+        , second(forward<SecondT>(second))
+        , third(forward<ThirdT>(third))
+        , fourth(forward<FourthT>(fourth))
     {
     }
 
-    First& first() { return m_first; }
-    const First& first() const { return m_first; }
-
-    Second& second() { return m_second; }
-    const Second& second() const { return m_second; }
-
-    Third& third() { return m_third; }
-    const Third& third() const { return m_third; }
-
-    Fourth& fourth() { return m_fourth; }
-    const Fourth& fourth() const { return m_fourth; }
-
-private:
-    First m_first;
-    Second m_second;
-    Third m_third;
-    Fourth m_fourth;
+    First first;
+    Second second;
+    Third third;
+    Fourth fourth;
 };
 
 template <typename Left, typename Right>
