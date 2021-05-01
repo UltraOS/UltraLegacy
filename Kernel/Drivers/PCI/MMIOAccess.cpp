@@ -150,8 +150,10 @@ void MMIOAccess::DeviceEnumerator::enumerate_function(u8 bus, u8 device, u8 func
 
     if (device_class == PCI::bridge_device_class && device_subclass == PCI::pci_to_pci_bridge_subclass) {
         auto subordinate_bus = read8(PCI::subordinate_bus_offset);
-        log() << "PCIe: detected subordinate bus " << subordinate_bus;
-        enumerate_bus(subordinate_bus);
+        auto secondary_bus = read8(PCI::secondary_bus_offset);
+        log() << "PCIe: detected secondary bus " << secondary_bus
+              << ", managed range: [" << secondary_bus << " -> " << subordinate_bus << "]";
+        enumerate_bus(secondary_bus);
     } else {
         auto& device = m_found_devices.emplace();
         device.location = location;
@@ -188,8 +190,6 @@ void MMIOAccess::DeviceEnumerator::enumerate_capabilities(PCI::DeviceInfo& devic
 
 void MMIOAccess::DeviceEnumerator::enumerate_device(u8 bus, u8 device)
 {
-    u8 last_function = 1;
-
     remap_base_for_device({ m_current_segment, bus, device, 0 });
 
     auto vendor_id = read16(PCI::vendor_id_offset);
@@ -200,10 +200,10 @@ void MMIOAccess::DeviceEnumerator::enumerate_device(u8 bus, u8 device)
     enumerate_function(bus, device, 0);
     auto is_multifunction = read8(PCI::header_type_offset) & PCI::multifunction_bit;
 
-    if (is_multifunction)
-        last_function = 8;
+    if (!is_multifunction)
+        return;
 
-    for (u8 function = 1; function < last_function; ++function) {
+    for (u8 function = 1; function < 8; ++function) {
         remap_base_for_device({ m_current_segment, bus, device, function });
 
         if (read16(PCI::vendor_id_offset) != PCI::invalid_vendor)

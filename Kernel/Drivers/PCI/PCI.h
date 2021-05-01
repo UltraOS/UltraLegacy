@@ -21,6 +21,7 @@ public:
     static constexpr u32 programming_interface_offset = 0x9;
     static constexpr u32 subclass_offset = 0xA;
     static constexpr u32 class_offset = 0xB;
+    static constexpr u32 secondary_bus_offset = 0x19;
     static constexpr u32 subordinate_bus_offset = 0x1A;
     static constexpr u32 capability_pointer_offset = 0x34;
     static constexpr u32 legacy_irq_line_offset = 0x3C;
