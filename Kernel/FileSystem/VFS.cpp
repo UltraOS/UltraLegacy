@@ -278,31 +278,6 @@ ErrorCode VFS::move(StringView path, StringView new_path)
     return fs_1->second->move(prefix_to_path_old.second, prefix_to_path_new.second);
 }
 
-ErrorCode VFS::copy(StringView path, StringView new_path)
-{
-    auto split_path_old = split_prefix_and_path(path);
-    auto split_path_new = split_prefix_and_path(new_path);
-
-    if (!split_path_old || !split_path_new)
-        return ErrorCode::BAD_PATH;
-
-    auto& prefix_to_path_old = split_path_old.value();
-    auto& prefix_to_path_new = split_path_new.value();
-
-    auto fs_1 = m_prefix_to_fs.find(prefix_to_path_new.first);
-    auto fs_2 = m_prefix_to_fs.find(prefix_to_path_old.first);
-
-    if (fs_1 == m_prefix_to_fs.end() || fs_2 == m_prefix_to_fs.end())
-        return ErrorCode::DISK_NOT_FOUND;
-
-    if (fs_1->second != fs_2->second) {
-        warning() << "VFS: tried to copy files cross FS, currently not implemented :(";
-        return ErrorCode::UNSUPPORTED;
-    }
-
-    return fs_1->second->copy(prefix_to_path_old.second, prefix_to_path_new.second);
-}
-
 void VFS::sync_all()
 {
     for (auto& fs : m_prefix_to_fs) {

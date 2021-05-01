@@ -1,4 +1,4 @@
-#pragma once
+\#pragma once
 
 #include "Common/Macros.h"
 #include "Common/Map.h"
@@ -44,7 +44,6 @@ public:
     ErrorCode create_directory(StringView file_path, File::Attributes);
 
     ErrorCode move(StringView path, StringView new_path);
-    ErrorCode copy(StringView path, StringView new_path);
 
     void sync_all();
 

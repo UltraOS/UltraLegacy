@@ -1555,7 +1555,7 @@ ErrorCode FAT32::create_file(StringView path, File::Attributes attributes)
     auto write_long_directory_character = [] (LongNameDirectoryEntry& entry, u16 character, size_t index)
     {
         if (index < LongNameDirectoryEntry::name_1_characters) {
-            entry.name_1[index];
+            entry.name_1[index] = character;
         } else if (index < (LongNameDirectoryEntry::name_1_characters + LongNameDirectoryEntry::name_2_characters)) {
             index -= LongNameDirectoryEntry::name_1_characters;
             entry.name_2[index] = character;
