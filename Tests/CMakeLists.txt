@@ -66,6 +66,7 @@ KERNEL_FILE(PATH "Common" FILE "CircularBuffer.h")
 KERNEL_FILE(PATH "Core"   FILE "Boot.h")
 
 KERNEL_FILE(PATH "FileSystem" FILE "Utilities.h")
+KERNEL_FILE(PATH "FileSystem/FAT32" FILE "Utilities.h")
 KERNEL_FILE(PATH "Drivers/Video" FILE "VideoMode.h")
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY         "${OUTPUT_DIRECTORY}")
