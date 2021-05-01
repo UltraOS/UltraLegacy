@@ -132,6 +132,45 @@ public:
         u32 first_cluster() const { return static_cast<const File&>(file()).first_cluster(); }
         bool is_exhausted() const { return m_exhausted; }
 
+        struct EntryCoordinates {
+            u32 cluster;
+            u32 offset_within_cluster;
+        };
+
+        class Slot {
+        public:
+            Slot(u32 offset_within_first, u32 (&clusters)[3])
+                : m_current_offset_within_cluster(offset_within_first)
+                , m_current_cluster_index(0)
+            {
+                copy_memory(clusters, m_allocated_clusters, 3 * sizeof(u32));
+            }
+
+            EntryCoordinates next_entry(u32 bytes_per_cluster)
+            {
+                if (m_current_offset_within_cluster == bytes_per_cluster) {
+                    ASSERT(m_current_cluster_index != 2);
+                    m_current_cluster_index++;
+                    m_current_offset_within_cluster = 0;
+                    ASSERT(m_allocated_clusters[m_current_cluster_index] != free_cluster);
+                }
+
+                auto ret_offset = m_current_offset_within_cluster;
+                m_current_offset_within_cluster += DirectoryEntry::size_in_bytes;
+
+                return { m_allocated_clusters[m_current_cluster_index], ret_offset };
+            }
+
+        private:
+            u32 m_current_offset_within_cluster;
+            u32 m_current_cluster_index;
+            u32 m_allocated_clusters[3];
+        };
+
+        Slot allocate_entries(size_t count);
+
+        void write_one(void* directory_entry, Slot&);
+
         ~Directory()
         {
             if (m_owns_file)
@@ -140,14 +179,6 @@ public:
 
     private:
         bool fetch_next(void* into);
-
-        struct Slot {
-            u32 offset_within_cluster;
-            u32 cluster_1;
-            u32 cluster_2;
-            u32 cluster_3;
-        };
-        Pair<ErrorCode, Slot> allocate_file_slot(StringView);
 
     private:
         u32 m_current_cluster { 0 };
@@ -166,7 +197,6 @@ public:
     ErrorCode create_directory(StringView file_path, File::Attributes) override;
 
     ErrorCode move(StringView path, StringView new_path) override;
-    ErrorCode copy(StringView path, StringView new_path) override;
 
     void sync() override;
 

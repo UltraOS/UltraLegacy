@@ -26,7 +26,6 @@ public:
     virtual ErrorCode create_directory(StringView file_path, File::Attributes) = 0;
 
     virtual ErrorCode move(StringView path, StringView new_path) = 0;
-    virtual ErrorCode copy(StringView path, StringView new_path) = 0;
 
     virtual void sync() = 0;
 

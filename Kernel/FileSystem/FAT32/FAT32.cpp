@@ -1,4 +1,5 @@
 #include "FAT32.h"
+#include "Utilities.h"
 #include "FileSystem/Utilities.h"
 #include "Memory/TypedMapping.h"
 
@@ -88,17 +89,95 @@ bool FAT32::Directory::fetch_next(void* into)
     return true;
 }
 
-Pair<ErrorCode, FAT32::Directory::Slot> FAT32::Directory::allocate_file_slot(StringView file_name)
+FAT32::Directory::Slot FAT32::Directory::allocate_entries(size_t count)
 {
-    Pair<ErrorCode, FAT32::Directory::Slot> out {};
+    auto& fs = fs_as_fat32();
 
-    if (file_name.size() > File::max_name_length) {
-        out.set_first(ErrorCode::NAME_TOO_LONG);
-        return out;
+    FAT32_DEBUG << "allocating " << count << " directory slots for directory at " << first_cluster();
+
+    u32 allocated_clusters[3] {};
+    u32 last_allocated_cluster = 0;
+    u32 last_allocated_index = 0;
+    u32 initial_offset = 0;
+
+    u32 current_cluster = first_cluster();
+    u32 current_offset = 0;
+    u32 contiguous_empty = 0;
+
+    for (;;) {
+        u8 first_byte = 0;
+        fs.locked_read(pure_cluster_value(current_cluster), current_offset, 1, &first_byte);
+
+        if (first_byte == DirectoryEntry::end_of_directory_mark || first_byte == DirectoryEntry::deleted_mark) {
+            contiguous_empty++;
+
+            FAT32_DEBUG << "entry at " << current_cluster << ", offset " << current_offset
+                        << " is empty, empty count so far is " << contiguous_empty;
+
+            if (last_allocated_cluster != current_cluster) {
+                if (initial_offset == 0)
+                    initial_offset = current_offset;
+
+                allocated_clusters[last_allocated_index++] = current_cluster;
+                last_allocated_cluster = current_cluster;
+            }
+
+            if (contiguous_empty == count)
+                return { initial_offset, allocated_clusters };
+        } else {
+            FAT32_DEBUG << "entry at " << current_cluster << ", offset " << current_offset
+                        << " is not empty, resetting contiguous count of " << contiguous_empty;
+
+            zero_memory(allocated_clusters, 3 * sizeof(u32));
+            last_allocated_cluster = 0;
+            last_allocated_index = 0;
+            initial_offset = 0;
+            contiguous_empty = 0;
+        }
+
+        current_offset += DirectoryEntry::size_in_bytes;
+
+        if (current_offset == fs.bytes_per_cluster()) {
+            current_cluster = fs.fat_entry_at(current_cluster);
+
+            if (fs.entry_type_of_fat_value(current_cluster) == FATEntryType::END_OF_CHAIN)
+                break;
+        }
     }
 
-    out.set_first(ErrorCode::UNSUPPORTED);
-    return out;
+    FAT32_DEBUG << "couldn't find exactly " << count << " contiguous free slots, found "
+                << contiguous_empty << " at the end";
+
+    auto extra_to_allocate = count - contiguous_empty;
+    auto extra_bytes = extra_to_allocate * DirectoryEntry::size_in_bytes;
+    auto clusters_to_allocate = ceiling_divide<size_t>(extra_bytes, fs.bytes_per_cluster());
+
+    FAT32_DEBUG << "allocating extra " << extra_to_allocate << " directory entries, aka "
+                << clusters_to_allocate << " cluster(s)";
+
+    auto chain = fs.allocate_cluster_chain(clusters_to_allocate, file_as_fat32().compute_last_cluster());
+
+    // We have to zero the last cluster in chain because entry count is unaligned to size
+    if (extra_bytes != (clusters_to_allocate * fs.bytes_per_cluster())) {
+        FAT32_DEBUG << "extra entries are unaligned to cluster size, zero-filling cluster "
+                    << chain.last();
+
+        fs.locked_zero_fill(pure_cluster_value(chain.last()), 1);
+    }
+
+    for (auto cluster : chain)
+        allocated_clusters[last_allocated_index++] = cluster;
+
+    return { initial_offset, allocated_clusters };
+}
+
+void FAT32::Directory::write_one(void* directory_entry, Slot& slot)
+{
+    auto& fs = fs_as_fat32();
+
+    auto coords = slot.next_entry(fs.bytes_per_cluster());
+
+    fs.locked_write(pure_cluster_value(coords.cluster), coords.offset_within_cluster, DirectoryEntry::size_in_bytes, directory_entry);
 }
 
 FAT32::Directory::Entry FAT32::Directory::next()
@@ -201,8 +280,6 @@ FAT32::Directory::NativeEntry FAT32::Directory::next_native()
         auto long_entry = LongNameDirectoryEntry::from_normal(normal_entry);
         auto initial_sequence_number = long_entry.extract_sequence_number();
         out.sequence_count = initial_sequence_number;
-
-        static constexpr u8 max_sequence_number = 20;
         ASSERT(initial_sequence_number <= max_sequence_number);
 
         auto sequence_number = initial_sequence_number;
@@ -212,6 +289,8 @@ FAT32::Directory::NativeEntry FAT32::Directory::next_native()
         size_t chars_written = 0;
 
         auto previous_cluster = m_current_cluster;
+
+        u32 checksum_array[max_sequence_number] {};
 
         for (;;) {
             // VFAT spans multiple clusters
@@ -242,6 +321,8 @@ FAT32::Directory::NativeEntry FAT32::Directory::next_native()
                 chars_written += chars;
             }
 
+            checksum_array[sequence_number - 1] = long_entry.checksum;
+
             if (sequence_number == 1) {
                 auto did_fetch = fetch_next(&normal_entry);
                 ASSERT(did_fetch);
@@ -261,6 +342,19 @@ FAT32::Directory::NativeEntry FAT32::Directory::next_native()
         out.name[chars_written] = '\0';
 
         process_normal_entry(normal_entry, out, true);
+
+        auto expected_checksum = generate_short_name_checksum(StringView(normal_entry.filename, short_name_length + short_extension_length));
+
+        for (size_t i = 0; i < initial_sequence_number; ++i) {
+            if (checksum_array[i] == expected_checksum)
+                continue;
+
+            FAT32_WARN << "VFAT name invalid checksum, expected "
+                       << format::as_hex << expected_checksum << " got " << checksum_array[i];
+
+            // TODO: ignore the entry?
+        }
+
         return out;
     }
 }
@@ -731,7 +825,7 @@ FAT32::File* FAT32::open_or_incref(StringView name, File::Attributes attributes,
     auto it = m_identifier_to_file.find(identifier);
 
     if (it != m_identifier_to_file.end()) {
-        auto& open_file = it->second();
+        auto& open_file = it->second;
 
         open_file->refcount++;
 
@@ -880,14 +974,14 @@ Pair<ErrorCode, FAT32::BaseDirectory*> FAT32::open_directory(StringView path)
 {
     auto error_to_file = open_file_from_path(path, OnlyIf::DIRECTORY);
 
-    return { error_to_file.first(), new Directory(*this, *error_to_file.second(), true) };
+    return { error_to_file.first, new Directory(*this, *error_to_file.second, true) };
 }
 
 Pair<ErrorCode, FAT32::BaseFile*> FAT32::open(StringView path)
 {
     auto error_to_file = open_file_from_path(path, OnlyIf::FILE);
 
-    return { error_to_file.first(), static_cast<BaseFile*>(error_to_file.second()) };
+    return { error_to_file.first, static_cast<BaseFile*>(error_to_file.second) };
 }
 
 ErrorCode FAT32::close(BaseFile& file)
@@ -909,7 +1003,7 @@ ErrorCode FAT32::close(BaseFile& file)
         runtime::panic(error_str.c_string());
     }
 
-    auto& open_file = it->second();
+    auto& open_file = it->second;
     if (--open_file->refcount == 0)
     {
         FAT32_DEBUG << "no more references for file \"" << f.name() << "\", closed";
@@ -1124,19 +1218,24 @@ ErrorCode FAT32::remove_directory(StringView path)
     return remove_file(path, OnlyIf::DIRECTORY);
 }
 
-ErrorCode FAT32::create_file([[maybe_unused]] StringView path, [[maybe_unused]] File::Attributes attributes)
+ErrorCode FAT32::create_file(StringView path, File::Attributes attributes)
 {
     FAT32_DEBUG << "creating file " << path;
 
-    return ErrorCode::UNSUPPORTED;
+#define RETURN_WITH_CODE(code) \
+    cur_file->lock().unlock(); \
+    close(*cur_file); \
+    return code;
 
     auto* cur_file = m_root_directory;
     File* next_file = nullptr;
 
     auto itr_path = IterablePath(path);
+    StringView current_node;
+    String new_file_name;
 
     for (;;) {
-        auto node = *itr_path;
+        current_node = *itr_path;
         ++itr_path;
 
         if (next_file) {
@@ -1145,7 +1244,7 @@ ErrorCode FAT32::create_file([[maybe_unused]] StringView path, [[maybe_unused]] 
             next_file = nullptr;
         }
 
-        LOCK_GUARD(cur_file->lock());
+        cur_file->lock().lock();
         bool keep_going = false;
 
         if ((cur_file->attributes() & File::Attributes::IS_DIRECTORY) != File::Attributes::IS_DIRECTORY) {
@@ -1156,35 +1255,354 @@ ErrorCode FAT32::create_file([[maybe_unused]] StringView path, [[maybe_unused]] 
         bool last_directory = itr_path != itr_path.end();
         Directory dir(*this, *cur_file, false);
 
+        if (last_directory) {
+            new_file_name = current_node;
+            new_file_name.strip();
+            new_file_name.rstrip('.');
+
+            FAT32_DEBUG << "Original new file name \"" << current_node
+                        << "\", after strip: \"" << new_file_name.to_view() << "\"";
+
+            if (new_file_name.empty()) {
+                RETURN_WITH_CODE(ErrorCode::BAD_FILENAME);
+            }
+
+            if (new_file_name.size() > File::max_name_length) {
+                RETURN_WITH_CODE(ErrorCode::NAME_TOO_LONG);
+            }
+        }
+
         for (;;) {
             auto entry = dir.next_native();
 
             if (entry.empty())
                 break;
 
-            if (entry.name_view() != node)
-                continue;
-
             if (last_directory) {
-                close(*cur_file);
-                return ErrorCode::FILE_ALREADY_EXISTS;
+                if (!case_insensitive_equals(new_file_name.to_view(), current_node))
+                    continue;
+
+                RETURN_WITH_CODE(ErrorCode::FILE_ALREADY_EXISTS);
             }
 
-            next_file = open_or_incref(entry.name_view(), entry.attributes, entry.identifier(), entry.first_data_cluster, entry.size);
+            if (!case_insensitive_equals(entry.name_view(), current_node))
+                continue;
+
+            next_file = open_or_incref(entry.name_view(), entry.attributes, entry.identifier(),
+                                       entry.first_data_cluster, entry.size);
             keep_going = true;
 
             break;
         }
 
-        dir.rewind();
-
         if (!keep_going)
+            break;
+
+        cur_file->lock().unlock();
+    }
+
+    // Now we have the last directory open, we can proceed to allocating the directory slot
+    Directory dir(*this, *cur_file, false);
+
+    auto [name_length, extension_length] = length_of_name_and_extension(new_file_name.to_view());
+
+    bool is_vfat = name_length > short_name_length || extension_length > short_extension_length;
+
+    bool is_name_entirely_upper = false;
+    bool is_name_entirely_lower = false;
+
+    bool is_extension_entirely_upper = false;
+    bool is_extension_entirely_lower = false;
+
+    static constexpr char minimum_allowed_ascii_value = 0x20;
+
+    static const char banned_characters[] = { '"', '*', '/', ':', '<', '>', '?', '\\', '|' };
+    static constexpr size_t banned_characters_length = sizeof(banned_characters);
+
+    static const char banned_but_allowed_in_vfat_characters[] = { '.', '+', ',', ';', '=', '[', ']' };
+    static constexpr size_t banned_but_allowed_in_vfat_characters_length = sizeof(banned_but_allowed_in_vfat_characters);
+
+    auto is_one_of = [] (char c, const char* set, size_t length) -> bool
+    {
+        for (size_t i = 0; i < length; ++i) {
+            if (c == set[i])
+                return true;
+        }
+
+        return false;
+    };
+
+    bool contains_banned = false;
+
+    for (char c : new_file_name) {
+        contains_banned |= is_one_of(c, banned_characters, banned_characters_length);
+        contains_banned |= c < minimum_allowed_ascii_value;
+
+        if (contains_banned)
             break;
     }
 
-    close(*cur_file);
-    return ErrorCode::NO_SUCH_FILE;
+    if (contains_banned) {
+        RETURN_WITH_CODE(ErrorCode::BAD_FILENAME);
+    }
+
+    auto name_view = StringView(new_file_name.data(), name_length);
+
+    if (!is_vfat) {
+        auto count_lower_and_upper_chars = [] (StringView node, size_t& lower_count, size_t& upper_count)
+        {
+            for (char c : node) {
+                lower_count += String::is_lower(c);
+                upper_count += String::is_upper(c);
+            }
+        };
+
+        size_t name_lower_chars = 0;
+        size_t name_upper_chars = 0;
+        count_lower_and_upper_chars(name_view, name_lower_chars, name_upper_chars);
+
+        is_name_entirely_lower = name_lower_chars && !name_upper_chars;
+        is_name_entirely_upper = !name_lower_chars; // name_upper_chars don't matter
+
+        if (extension_length) {
+            auto extension_view = StringView(name_view.end() + 1, extension_length);
+            size_t extension_lower_chars = 0;
+            size_t extension_upper_chars = 0;
+            count_lower_and_upper_chars(extension_view, extension_lower_chars, extension_upper_chars);
+
+            is_extension_entirely_lower = extension_lower_chars && !extension_upper_chars;
+            is_extension_entirely_upper = !extension_lower_chars; // extension_upper_chars don't matter
+        }
+
+        is_vfat = !((is_name_entirely_lower || is_name_entirely_upper) && (is_extension_entirely_lower || is_extension_entirely_upper));
+
+        if (!is_vfat) {
+            bool contains_banned_for_non_vfat = false;
+
+            for (char c : name_view) {
+                contains_banned_for_non_vfat |= is_one_of(c, banned_but_allowed_in_vfat_characters,
+                                                          banned_but_allowed_in_vfat_characters_length);
+
+                if (contains_banned_for_non_vfat)
+                    break;
+            }
+
+            if (extension_length) {
+                auto extension_view = StringView(name_view.end() + 1, extension_length);
+
+                for (char c : extension_view) {
+                    contains_banned_for_non_vfat |= is_one_of(c, banned_but_allowed_in_vfat_characters,
+                                                              banned_but_allowed_in_vfat_characters_length);
+
+                    if (contains_banned_for_non_vfat)
+                        break;
+                }
+            }
+
+            is_vfat = contains_banned_for_non_vfat;
+        }
+    }
+
+    bool is_directory = (attributes & File::Attributes::IS_DIRECTORY) == File::Attributes::IS_DIRECTORY;
+
+    auto write_normal_entry = [&] (StringView name, StringView extension, Directory::Slot& slot, u32 first_cluster = free_cluster)
+    {
+        DirectoryEntry entry {};
+
+        entry.cluster_low = first_cluster & 0xFFFF;
+        entry.cluster_high = first_cluster >> 16;
+
+        if (is_directory)
+            entry.attributes = DirectoryEntry::Attributes::SUBDIRECTORY;
+
+        if (is_name_entirely_lower)
+            entry.case_info |= DirectoryEntry::CaseInfo::LOWERCASE_NAME;
+        if (is_extension_entirely_lower)
+            entry.case_info |= DirectoryEntry::CaseInfo::LOWERCASE_EXTENSION;
+
+        size_t chars_copied = 0;
+        for (char c : name)
+            entry.filename[chars_copied++] = String::to_upper(c);
+
+        auto name_padding = short_name_length - chars_copied;
+        while (name_padding--)
+            entry.filename[chars_copied++] = ' ';
+
+        if (!extension.empty()) {
+            chars_copied = 0;
+            for (char c : extension)
+                entry.extension[chars_copied++] = String::to_upper(c);
+        }
+
+        auto extension_padding = short_extension_length - chars_copied;
+        while (extension_padding--)
+            entry.extension[chars_copied++] = ' ';
+
+        auto time = Time::now_readable();
+
+        entry.created_ms = 0;
+
+        uint16_t sec = time.second / 2;
+        uint16_t min = time.minute;
+        uint16_t hr = time.hour;
+        uint16_t yr = time.year - 1980;
+        uint16_t mt = time.month;
+        uint16_t d = time.day;
+
+        entry.created_time = (hr << 11) | (min << 5) | sec;
+        entry.created_date = (yr << 9) | (mt << 5) | d;
+        entry.last_accessed_date = entry.created_date;
+        entry.last_modified_date = entry.created_date;
+        entry.last_modified_time = entry.created_time;
+
+        dir.write_one(&entry, slot);
+    };
+
+    auto generate_dot_and_dot_dot = [&] (u32 first_cluster_of_directory, u32 first_cluster_of_previous_directory)
+    {
+        u32 clusters[3] {};
+        clusters[0] = first_cluster_of_directory;
+
+        Directory::Slot slot(0, clusters);
+
+        write_normal_entry(".", "", slot, first_cluster_of_directory);
+        write_normal_entry("..", "", slot, first_cluster_of_previous_directory);
+    };
+
+    if (!is_vfat) {
+        auto slot = dir.allocate_entries(1);
+        auto extension_view = StringView(name_view.end() + 1, extension_length);
+        u32 first_cluster = 0;
+
+        if (is_directory) {
+            first_cluster = allocate_cluster_chain(1).last();
+            generate_dot_and_dot_dot(first_cluster, cur_file->first_cluster());
+        }
+
+        write_normal_entry(name_view, extension_view, slot, first_cluster);
+
+        RETURN_WITH_CODE(ErrorCode::NO_ERROR);
+    }
+
+    // Since name is VFAT it's always upper case
+    is_name_entirely_lower = false;
+    is_extension_entirely_lower = false;
+
+    auto short_name = generate_short_name(new_file_name.to_view());
+
+    for (;;) {
+        auto entry = dir.next_native();
+
+        if (entry.empty())
+            break;
+
+        if (StringView::from_char_array(entry.small_name) == short_name) {
+            bool ok = false;
+            short_name = next_short_name(short_name, ok);
+
+            if (!ok) {
+                // TODO: this actually means that there are too many files with similar names,
+                //       but this is too rare of an error to invent a separate error code for it.
+                //       Maybe I should?
+                RETURN_WITH_CODE(ErrorCode::BAD_FILENAME);
+            }
+
+            dir.rewind();
+        }
+    }
+
+    auto entries_to_write = ceiling_divide(new_file_name.size(), LongNameDirectoryEntry::characters_per_entry);
+
+    // 1 extra for metadata
+    auto slot = dir.allocate_entries(entries_to_write + 1);
+
+    LongNameDirectoryEntry long_entry {};
+
+    auto checksum = generate_short_name_checksum(short_name);
+    long_entry.checksum = checksum;
+
+    static constexpr size_t vfat_name_attributes = 0x0F;
+    long_entry.attributes = vfat_name_attributes;
+
+    struct NamePiece {
+        const char* ptr;
+        size_t characters;
+    } pieces[max_sequence_number] {};
+
+    auto generate_name_pieces = [] (StringView name, NamePiece(&pieces)[20])
+    {
+        size_t characters_left = name.size();
+        const char* name_ptr = name.data();
+
+        for (size_t i = 0;;i++) {
+            auto characters_for_this_piece = min(LongNameDirectoryEntry::characters_per_entry, characters_left);
+            characters_left -= characters_for_this_piece;
+
+            pieces[i].ptr = name_ptr;
+            pieces[i].characters = characters_for_this_piece;
+
+            name_ptr += characters_for_this_piece;
+
+            if (characters_left == 0)
+                break;
+        }
+    };
+
+    generate_name_pieces(new_file_name.to_view(), pieces);
+
+    auto sequence_number = entries_to_write;
+
+    auto write_long_directory_character = [] (LongNameDirectoryEntry& entry, u16 character, size_t index)
+    {
+        if (index < LongNameDirectoryEntry::name_1_characters) {
+            entry.name_1[index];
+        } else if (index < (LongNameDirectoryEntry::name_1_characters + LongNameDirectoryEntry::name_2_characters)) {
+            index -= LongNameDirectoryEntry::name_1_characters;
+            entry.name_2[index] = character;
+        } else if (index < LongNameDirectoryEntry::characters_per_entry) {
+            index -= LongNameDirectoryEntry::name_1_characters + LongNameDirectoryEntry::name_2_characters;
+            entry.name_3[index] = character;
+        } else {
+            ASSERT_NEVER_REACHED();
+        }
+    };
+
+    while (sequence_number--) {
+        if ((sequence_number + 1) == entries_to_write)
+            long_entry.make_last_logical_with_sequence_number(sequence_number + 1);
+        else
+            long_entry.sequence_number = sequence_number + 1;
+
+        size_t characters_written = 0;
+        auto& this_piece = pieces[sequence_number];
+
+        for (; characters_written < this_piece.characters; ++characters_written)
+            write_long_directory_character(long_entry, this_piece.ptr[characters_written], characters_written);
+
+        if (characters_written < LongNameDirectoryEntry::characters_per_entry)
+            write_long_directory_character(long_entry, 0, ++characters_written);
+
+        while (characters_written < LongNameDirectoryEntry::characters_per_entry)
+            write_long_directory_character(long_entry, 0xFFFF, ++characters_written);
+
+        dir.write_one(&long_entry, slot);
+    }
+
+    auto short_name_view = StringView(short_name.data(), short_name_length);
+    auto short_extension_view = StringView(short_name.data() + short_name_length + 1, short_extension_length);
+
+    u32 first_cluster = 0;
+
+    if (is_directory) {
+        first_cluster = allocate_cluster_chain(1).last();
+        generate_dot_and_dot_dot(first_cluster, cur_file->first_cluster());
+    }
+
+    write_normal_entry(short_name_view, short_extension_view, slot, first_cluster);
+
+    RETURN_WITH_CODE(ErrorCode::NO_ERROR);
 }
+#undef RETURN_WITH_CODE
 
 ErrorCode FAT32::create(StringView path, File::Attributes attributes)
 {
@@ -1197,11 +1615,6 @@ ErrorCode FAT32::create_directory(StringView path, File::Attributes attributes)
 }
 
 ErrorCode FAT32::move(StringView, StringView)
-{
-    return ErrorCode::UNSUPPORTED;
-}
-
-ErrorCode FAT32::copy(StringView, StringView)
 {
     return ErrorCode::UNSUPPORTED;
 }

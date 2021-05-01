@@ -48,15 +48,15 @@ inline Optional<Pair<StringView, StringView>> split_prefix_and_path(StringView p
     auto pref = path.find("::");
 
     if (pref) {
-        prefix_to_path.set_first(StringView(path.data(), pref.value()));
-        prefix_to_path.set_second(StringView(path.data() + pref.value() + 2, path.size() - pref.value() - 2));
+        prefix_to_path.first = StringView(path.data(), pref.value());
+        prefix_to_path.second = StringView(path.data() + pref.value() + 2, path.size() - pref.value() - 2);
     } else {
-        prefix_to_path.set_second(path);
+        prefix_to_path.second = path;
     }
 
-    if (!is_valid_prefix(prefix_to_path.first()))
+    if (!is_valid_prefix(prefix_to_path.first))
         return {};
-    if (!is_valid_path(prefix_to_path.second()))
+    if (!is_valid_path(prefix_to_path.second))
         return {};
 
     return prefix_to_path;

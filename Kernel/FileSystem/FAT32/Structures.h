@@ -83,6 +83,19 @@ struct PACKED DirectoryEntry {
         return static_cast<CaseInfo>(static_cast<u8>(l) & static_cast<u8>(r));
     }
 
+    friend CaseInfo operator|(CaseInfo l, CaseInfo r)
+    {
+        return static_cast<CaseInfo>(static_cast<u8>(l) | static_cast<u8>(r));
+    }
+
+    friend CaseInfo& operator|=(CaseInfo& l, CaseInfo r)
+    {
+        auto temp = l | r;
+        l = temp;
+
+        return l;
+    }
+
     u8 created_ms;
     u16 created_time;
     u16 created_date;
@@ -159,6 +172,12 @@ struct PACKED LongNameDirectoryEntry {
 
     static constexpr u8 last_logical_entry_bit = SET_BIT(6);
     bool is_last_logical() { return sequence_number & last_logical_entry_bit; }
+
+    void make_last_logical_with_sequence_number(u8 number)
+    {
+        sequence_number |= last_logical_entry_bit;
+        sequence_number |= number;
+    }
 
     static constexpr size_t size_in_bytes = 32;
 };

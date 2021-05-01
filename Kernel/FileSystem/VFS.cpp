@@ -160,16 +160,16 @@ Pair<ErrorCode, RefPtr<FileDescription>> VFS::open(StringView path, FileDescript
 
     auto& prefix_to_path = split_path.value();
 
-    auto fs = m_prefix_to_fs.find(prefix_to_path.first());
+    auto fs = m_prefix_to_fs.find(prefix_to_path.first);
 
     if (fs == m_prefix_to_fs.end())
         return {};
 
-    auto code_to_file = fs->second()->open(prefix_to_path.second());
-    if (code_to_file.first().is_error())
-        return { code_to_file.first(), RefPtr<FileDescription>() };
+    auto code_to_file = fs->second->open(prefix_to_path.second);
+    if (code_to_file.first.is_error())
+        return { code_to_file.first, RefPtr<FileDescription>() };
 
-    return { ErrorCode::NO_ERROR, RefPtr<FileDescription>::create(*code_to_file.second(), mode) };
+    return { ErrorCode::NO_ERROR, RefPtr<FileDescription>::create(*code_to_file.second, mode) };
 }
 
 ErrorCode VFS::close(FileDescription& fd)
@@ -192,12 +192,12 @@ ErrorCode VFS::remove(StringView path)
 
     auto& prefix_to_path = split_path.value();
 
-    auto fs = m_prefix_to_fs.find(prefix_to_path.first());
+    auto fs = m_prefix_to_fs.find(prefix_to_path.first);
 
     if (fs == m_prefix_to_fs.end())
         return ErrorCode::DISK_NOT_FOUND;
 
-    return fs->second()->remove(prefix_to_path.second());
+    return fs->second->remove(prefix_to_path.second);
 }
 
 ErrorCode VFS::remove_directory(StringView path)
@@ -209,12 +209,12 @@ ErrorCode VFS::remove_directory(StringView path)
 
     auto& prefix_to_path = split_path.value();
 
-    auto fs = m_prefix_to_fs.find(prefix_to_path.first());
+    auto fs = m_prefix_to_fs.find(prefix_to_path.first);
 
     if (fs == m_prefix_to_fs.end())
         return ErrorCode::DISK_NOT_FOUND;
 
-    return fs->second()->remove_directory(prefix_to_path.second());
+    return fs->second->remove_directory(prefix_to_path.second);
 }
 
 ErrorCode VFS::create(StringView file_path, File::Attributes attributes)
@@ -226,12 +226,12 @@ ErrorCode VFS::create(StringView file_path, File::Attributes attributes)
 
     auto& prefix_to_path = split_path.value();
 
-    auto fs = m_prefix_to_fs.find(prefix_to_path.first());
+    auto fs = m_prefix_to_fs.find(prefix_to_path.first);
 
     if (fs == m_prefix_to_fs.end())
         return ErrorCode::DISK_NOT_FOUND;
 
-    return fs->second()->create(prefix_to_path.second(), attributes);
+    return fs->second->create(prefix_to_path.second, attributes);
 }
 
 ErrorCode VFS::create_directory(StringView file_path, File::Attributes attributes)
@@ -245,12 +245,12 @@ ErrorCode VFS::create_directory(StringView file_path, File::Attributes attribute
 
     auto& prefix_to_path = split_path.value();
 
-    auto fs = m_prefix_to_fs.find(prefix_to_path.first());
+    auto fs = m_prefix_to_fs.find(prefix_to_path.first);
 
     if (fs == m_prefix_to_fs.end())
         return ErrorCode::DISK_NOT_FOUND;
 
-    return fs->second()->create_directory(prefix_to_path.second(), attributes);
+    return fs->second->create_directory(prefix_to_path.second, attributes);
 }
 
 ErrorCode VFS::move(StringView path, StringView new_path)
@@ -264,18 +264,18 @@ ErrorCode VFS::move(StringView path, StringView new_path)
     auto& prefix_to_path_old = split_path_old.value();
     auto& prefix_to_path_new = split_path_new.value();
 
-    auto fs_1 = m_prefix_to_fs.find(prefix_to_path_new.first());
-    auto fs_2 = m_prefix_to_fs.find(prefix_to_path_old.first());
+    auto fs_1 = m_prefix_to_fs.find(prefix_to_path_new.first);
+    auto fs_2 = m_prefix_to_fs.find(prefix_to_path_old.first);
 
     if (fs_1 == m_prefix_to_fs.end() || fs_2 == m_prefix_to_fs.end())
         return ErrorCode::DISK_NOT_FOUND;
 
-    if (fs_1->second() != fs_2->second()) {
+    if (fs_1->second != fs_2->second) {
         warning() << "VFS: tried to move files cross FS, currently not implemented :(";
         return ErrorCode::UNSUPPORTED;
     }
 
-    return fs_1->second()->move(prefix_to_path_old.second(), prefix_to_path_new.second());
+    return fs_1->second->move(prefix_to_path_old.second, prefix_to_path_new.second);
 }
 
 ErrorCode VFS::copy(StringView path, StringView new_path)
@@ -289,27 +289,27 @@ ErrorCode VFS::copy(StringView path, StringView new_path)
     auto& prefix_to_path_old = split_path_old.value();
     auto& prefix_to_path_new = split_path_new.value();
 
-    auto fs_1 = m_prefix_to_fs.find(prefix_to_path_new.first());
-    auto fs_2 = m_prefix_to_fs.find(prefix_to_path_old.first());
+    auto fs_1 = m_prefix_to_fs.find(prefix_to_path_new.first);
+    auto fs_2 = m_prefix_to_fs.find(prefix_to_path_old.first);
 
     if (fs_1 == m_prefix_to_fs.end() || fs_2 == m_prefix_to_fs.end())
         return ErrorCode::DISK_NOT_FOUND;
 
-    if (fs_1->second() != fs_2->second()) {
+    if (fs_1->second != fs_2->second) {
         warning() << "VFS: tried to copy files cross FS, currently not implemented :(";
         return ErrorCode::UNSUPPORTED;
     }
 
-    return fs_1->second()->copy(prefix_to_path_old.second(), prefix_to_path_new.second());
+    return fs_1->second->copy(prefix_to_path_old.second, prefix_to_path_new.second);
 }
 
 void VFS::sync_all()
 {
     for (auto& fs : m_prefix_to_fs) {
-        if (fs.first() == ""_sv)
+        if (fs.first == ""_sv)
             continue;
 
-        fs.second()->sync();
+        fs.second->sync();
     }
 }
 
