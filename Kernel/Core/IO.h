@@ -32,8 +32,8 @@ public:
     {
         u8 data;
         asm volatile("inb %1, %0"
-        : "=a"(data)
-        : "Nd"(port));
+                     : "=a"(data)
+                     : "Nd"(port));
         return data;
     }
 
@@ -42,8 +42,8 @@ public:
     {
         u16 data;
         asm volatile("inw %1, %0"
-        : "=a"(data)
-        : "Nd"(port));
+                     : "=a"(data)
+                     : "Nd"(port));
         return data;
     }
 
@@ -52,8 +52,8 @@ public:
     {
         u32 data;
         asm volatile("inl %1, %0"
-        : "=a"(data)
-        : "Nd"(port));
+                     : "=a"(data)
+                     : "Nd"(port));
         return data;
     }
 
@@ -76,8 +76,8 @@ public:
     {
         u8 data;
         asm volatile("inb %1, %0"
-        : "=a"(data)
-        : "Nd"(port));
+                     : "=a"(data)
+                     : "Nd"(port));
         return data;
     }
 
@@ -85,8 +85,8 @@ public:
     {
         u16 data;
         asm volatile("inw %1, %0"
-        : "=a"(data)
-        : "Nd"(port));
+                     : "=a"(data)
+                     : "Nd"(port));
         return data;
     }
 
@@ -94,8 +94,8 @@ public:
     {
         u32 data;
         asm volatile("inl %1, %0"
-        : "=a"(data)
-        : "Nd"(port));
+                     : "=a"(data)
+                     : "Nd"(port));
         return data;
     }
 

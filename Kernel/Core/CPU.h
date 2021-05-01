@@ -2,10 +2,10 @@
 
 #include "Common/Atomic.h"
 #include "Common/CircularBuffer.h"
+#include "Common/List.h"
 #include "Common/Map.h"
 #include "Common/RefPtr.h"
 #include "Common/String.h"
-#include "Common/List.h"
 #include "Interrupts/IPICommunicator.h"
 
 namespace kernel {

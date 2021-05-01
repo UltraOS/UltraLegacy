@@ -3,8 +3,8 @@
 #include "Drivers/DeviceManager.h"
 #include "Drivers/Storage.h"
 #include "FAT32/FAT32.h"
-#include "Utilities.h"
 #include "Multitasking/Sleep.h"
+#include "Utilities.h"
 
 namespace kernel {
 

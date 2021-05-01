@@ -1,7 +1,7 @@
 #include "IVectorAllocator.h"
+#include "Common/Lock.h"
 #include "IDT.h"
 #include "Utilities.h"
-#include "Common/Lock.h"
 
 namespace kernel {
 

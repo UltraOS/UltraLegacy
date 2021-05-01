@@ -102,8 +102,8 @@ private:
     Address m_fifo_base;
     size_t m_fifo_size;
 
-    Capabilities m_caps { };
-    Capabilities2 m_caps_2 { };
+    Capabilities m_caps {};
+    Capabilities2 m_caps_2 {};
 };
 
 }

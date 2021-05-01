@@ -1,16 +1,17 @@
 #pragma once
 
-#include "Common/Map.h"
 #include "Common/List.h"
-#include "InterruptHandler.h"
-#include "IRQHandler.h"
-#include "IDT.h"
 #include "Common/Lock.h"
+#include "Common/Map.h"
+#include "IDT.h"
+#include "IRQHandler.h"
+#include "InterruptHandler.h"
 
 namespace kernel {
 
 class IRQManager : public DynamicInterruptHandler {
     MAKE_SINGLETON(IRQManager) = default;
+
 public:
     static void initialize()
     {

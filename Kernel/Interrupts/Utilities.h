@@ -145,7 +145,8 @@ namespace Interrupts {
     inline void enable()
     {
         sti();
-        asm volatile("nop" ::: "memory");
+        asm volatile("nop" ::
+                         : "memory");
     }
 
     inline void disable()

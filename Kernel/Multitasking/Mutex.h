@@ -1,8 +1,8 @@
 #pragma once
 
+#include "Blocker.h"
 #include "Common/Lock.h"
 #include "Thread.h"
-#include "Blocker.h"
 
 namespace kernel {
 

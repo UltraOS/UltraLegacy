@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Common/Types.h"
 #include "Common/List.h"
+#include "Common/Types.h"
 
 #include "Core/Registers.h"
 

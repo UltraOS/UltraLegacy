@@ -1,12 +1,12 @@
 #include "InterruptManager.h"
+#include "Common/Lock.h"
+#include "Common/Logger.h"
 #include "ExceptionDispatcher.h"
 #include "IDT.h"
 #include "IPICommunicator.h"
+#include "IRQManager.h"
 #include "IVectorAllocator.h"
 #include "SyscallDispatcher.h"
-#include "IRQManager.h"
-#include "Common/Logger.h"
-#include "Common/Lock.h"
 
 namespace kernel {
 

@@ -1,6 +1,6 @@
 #include "MP.h"
-#include "Common/Logger.h"
 #include "Common/DynamicArray.h"
+#include "Common/Logger.h"
 #include "Memory/MemoryManager.h"
 
 namespace kernel {
@@ -38,8 +38,7 @@ Optional<PCIIRQ> MP::try_deduce_pci_irq_number(u8 bus, u8 device)
 
     static Map<u8, DynamicArray<PCIIRQ>>* ioapic_mappings;
 
-    auto try_to_find_irq_from_bus_and_device = [] (u8 bus, u8 device) -> Optional<PCIIRQ>
-    {
+    auto try_to_find_irq_from_bus_and_device = [](u8 bus, u8 device) -> Optional<PCIIRQ> {
         auto this_bus = ioapic_mappings->find(bus);
 
         if (this_bus == ioapic_mappings->end())
@@ -78,7 +77,6 @@ Optional<PCIIRQ> MP::try_deduce_pci_irq_number(u8 bus, u8 device)
 
             (*ioapic_mappings)[bus.id] = {};
             break;
-
         }
         case EntryType::IO_INTERRUPT_ASSIGNMENT: {
             auto& assignment = *entry_address.as_pointer<InterruptEntry>();

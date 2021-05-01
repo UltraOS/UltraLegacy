@@ -656,7 +656,7 @@ List<AHCI::OP> AHCI::build_ops(size_t port, OP::Type op, Address virtual_address
 void AHCI::execute(OP& op)
 {
     AHCI_DEBUG << "executing op " << op.type_to_string() << " | lba range: "
-                << op.lba_range << " | " << op.physical_ranges.size() << " physical range(s) | slot " << op.command_slot;
+               << op.lba_range << " | " << op.physical_ranges.size() << " physical range(s) | slot " << op.command_slot;
 
     auto& port = m_ports[op.port];
     auto& ch = port.command_list->commands[op.command_slot];

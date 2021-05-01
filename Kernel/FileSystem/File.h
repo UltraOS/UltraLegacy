@@ -9,6 +9,7 @@ class FileSystem;
 class File {
     MAKE_NONCOPYABLE(File);
     MAKE_NONMOVABLE(File);
+
 public:
     static constexpr size_t max_name_length = 255;
     static constexpr size_t small_name_length = 12; // 8 + (.) + 3

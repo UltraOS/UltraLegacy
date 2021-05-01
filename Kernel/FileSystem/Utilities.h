@@ -67,7 +67,7 @@ inline StringView next_path_node(const char* current, const char* end)
     size_t length = 0;
 
     while (current != end && current[0] == '/')
-            current++;
+        current++;
 
     while ((current + length) != end && current[length] != '/')
         length++;

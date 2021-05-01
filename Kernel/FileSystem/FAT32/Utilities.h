@@ -23,7 +23,8 @@ Pair<size_t, size_t> length_of_name_and_extension(StringView file_name)
     return { name_length, extension_length };
 }
 
-String generate_short_name(StringView long_name) {
+String generate_short_name(StringView long_name)
+{
     String short_name;
 
     auto [name_length, extension_length] = length_of_name_and_extension(long_name);
@@ -75,7 +76,8 @@ String generate_short_name(StringView long_name) {
     return short_name;
 }
 
-String next_short_name(StringView current, bool &ok) {
+String next_short_name(StringView current, bool& ok)
+{
     if (StringView(current.data() + 1, 7) == "~999999"_sv) {
         ok = false;
         return {};
@@ -132,9 +134,10 @@ String next_short_name(StringView current, bool &ok) {
     return new_short_name;
 }
 
-u8 generate_short_name_checksum(StringView name) {
+u8 generate_short_name_checksum(StringView name)
+{
     u8 sum = 0;
-    const u8 *byte_ptr = reinterpret_cast<const u8*>(name.data());
+    const u8* byte_ptr = reinterpret_cast<const u8*>(name.data());
 
     for (size_t i = short_name_length + short_extension_length; i != 0; i--) {
         sum = (sum >> 1) + ((sum & 1) << 7);

@@ -1,8 +1,8 @@
 #include "SVGA-II.h"
 
 #include "Common/Logger.h"
-#include "Interrupts/MP.h"
 #include "Core/IO.h"
+#include "Interrupts/MP.h"
 
 #define SVGAII_LOG info("SVGA-II")
 #define SVGAII_WARN warning("SVGA-II")
@@ -86,14 +86,14 @@ void SVGAII::dump_capabilities()
     SVGAII_DEBUG << "Capability: \"TRACES\" present: " << m_caps.traces;
     SVGAII_DEBUG << "Capability: \"GMR2\" present: " << m_caps.guest_memory_regions_2;
     SVGAII_DEBUG << "Capability: \"SCREEN_OBJECT_2\" present: " << m_caps.screen_object_2;
-    SVGAII_DEBUG << "Capability: \"COMMAND_BUFFERS\" present: "  << m_caps.command_buffers_1;
+    SVGAII_DEBUG << "Capability: \"COMMAND_BUFFERS\" present: " << m_caps.command_buffers_1;
     SVGAII_DEBUG << "Capability: \"DEAD1\" present: " << m_caps.dead_1;
-    SVGAII_DEBUG << "Capability: \"CMD_BUFFERS_2\" present: "  << m_caps.command_buffers_2;
-    SVGAII_DEBUG << "Capability: \"GBOBJECTS\" present: "  << m_caps.guest_backed_objects;
-    SVGAII_DEBUG << "Capability: \"DX\" present: "  << m_caps.dx;
-    SVGAII_DEBUG << "Capability: \"HP_CMD_QUEUE\" present: "  << m_caps.high_priority_command_queue;
-    SVGAII_DEBUG << "Capability: \"NO_BB_RESTRICTION\" present: "  << m_caps.no_bounding_box_restrictions;
-    SVGAII_DEBUG << "Capability: \"CAP2_REGISTER\" present: "  << m_caps.capabilities_2_register;
+    SVGAII_DEBUG << "Capability: \"CMD_BUFFERS_2\" present: " << m_caps.command_buffers_2;
+    SVGAII_DEBUG << "Capability: \"GBOBJECTS\" present: " << m_caps.guest_backed_objects;
+    SVGAII_DEBUG << "Capability: \"DX\" present: " << m_caps.dx;
+    SVGAII_DEBUG << "Capability: \"HP_CMD_QUEUE\" present: " << m_caps.high_priority_command_queue;
+    SVGAII_DEBUG << "Capability: \"NO_BB_RESTRICTION\" present: " << m_caps.no_bounding_box_restrictions;
+    SVGAII_DEBUG << "Capability: \"CAP2_REGISTER\" present: " << m_caps.capabilities_2_register;
 
     SVGAII_DEBUG << "Capability: \"GROW_OTABLE\" present: " << m_caps_2.grow_otable;
     SVGAII_DEBUG << "Capability: \"INTRA_SURFACE_COPY\" present: " << m_caps_2.intra_surface_copy;

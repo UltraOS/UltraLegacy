@@ -1,6 +1,6 @@
 #include "IRQManager.h"
-#include "Utilities.h"
 #include "InterruptController.h"
+#include "Utilities.h"
 
 namespace kernel {
 

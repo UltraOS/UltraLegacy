@@ -168,20 +168,20 @@ private:
     StringView state_to_string()
     {
         switch (state()) {
-            case State::UNDEFINED:
-                return "UNDEFINED"_sv;
-            case State::RUNNING:
-                return "RUNNING"_sv;
-            case State::DEAD:
-                return "DEAD"_sv;
-            case State::BLOCKED:
-                return "BLOCKED"_sv;
-            case State::SLEEPING:
-                return "SLEEPING"_sv;
-            case State::READY:
-                return "READY"_sv;
-            default:
-                return "INVALID"_sv;
+        case State::UNDEFINED:
+            return "UNDEFINED"_sv;
+        case State::RUNNING:
+            return "RUNNING"_sv;
+        case State::DEAD:
+            return "DEAD"_sv;
+        case State::BLOCKED:
+            return "BLOCKED"_sv;
+        case State::SLEEPING:
+            return "SLEEPING"_sv;
+        case State::READY:
+            return "READY"_sv;
+        default:
+            return "INVALID"_sv;
         }
     }
 

@@ -6,10 +6,10 @@ namespace kernel {
 
 class FileSystem;
 
-class Directory
-{
+class Directory {
     MAKE_NONCOPYABLE(Directory);
     MAKE_NONMOVABLE(Directory);
+
 public:
     Directory(FileSystem& fs, File& associated_file)
         : m_fs(&fs)
@@ -43,6 +43,5 @@ private:
     FileSystem* m_fs;
     File* m_file;
 };
-
 
 }

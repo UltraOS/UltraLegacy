@@ -1,8 +1,8 @@
 #pragma once
 
+#include "FileSystem/Directory.h"
 #include "FileSystem/DiskCache.h"
 #include "FileSystem/File.h"
-#include "FileSystem/Directory.h"
 #include "FileSystem/FileSystem.h"
 #include "Multitasking/Mutex.h"
 #include "Structures.h"
@@ -83,7 +83,7 @@ public:
         FAT32& fs_as_fat32() { return static_cast<FAT32&>(fs()); }
 
     private:
-        Identifier m_identifier { };
+        Identifier m_identifier {};
         u32 m_first_cluster { 0 };
         u32 m_last_cluster { 0 };
         u32 m_size { 0 };
