@@ -6,6 +6,16 @@ on_error()
     exit 1
 }
 
+if [[ "$OSTYPE" == "darwin"* ]]; then
+  realpath() {
+      [[ $1 = /* ]] && echo "$1" || echo "$PWD/${1#./}"
+  }
+
+  cores=$(sysctl -n hw.physicalcpu)
+elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
+  cores=$(nproc)
+fi
+
 echo "Building UltraOS..."
 true_path="$(dirname "$(realpath "$0")")"
 root_path=$true_path/..
@@ -29,7 +39,7 @@ pushd $root_path
 mkdir -p Build$arch || on_error
 pushd Build$arch
 cmake .. -DARCH=$arch || on_error
-cmake --build . -- -j$(nproc) || on_error
+cmake --build . -- -j$cores || on_error
 popd
 popd
 

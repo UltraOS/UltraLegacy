@@ -1,5 +1,11 @@
 #!/bin/bash
 
+if [[ "$OSTYPE" == "darwin"* ]]; then
+  realpath() {
+      [[ $1 = /* ]] && echo "$1" || echo "$PWD/${1#./}"
+  }
+fi
+
 true_path="$(dirname "$(realpath "$0")")"
 
 source $true_path/utils.sh

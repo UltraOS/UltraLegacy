@@ -1,5 +1,11 @@
 #!/bin/bash
 
+if [[ "$OSTYPE" == "darwin"* ]]; then
+  realpath() {
+      [[ $1 = /* ]] && echo "$1" || echo "$PWD/${1#./}"
+  }
+fi
+
 true_path="$(dirname "$(realpath "$0")")"
 root_path=$true_path/..
 
@@ -42,29 +48,50 @@ else
   echo "Building the cross-compiler for $compiler_prefix..."
 fi
 
-sudo apt update
+if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+  sudo apt update
 
-# should also include makefile/gcc?
-declare -a dependencies=(
-            "bison"
-            "flex"
-            "libgmp-dev"
-            "libmpc-dev"
-            "libmpfr-dev"
-            "texinfo"
-            "libisl-dev"
-            "build-essential"
-        )
+  declare -a dependencies=(
+              "bison"
+              "flex"
+              "libgmp-dev"
+              "libmpc-dev"
+              "libmpfr-dev"
+              "texinfo"
+              "libisl-dev"
+              "build-essential"
+          )
+elif [[ "$OSTYPE" == "darwin"* ]]; then
+  declare -a dependencies=(
+              "bison"
+              "flex"
+              "gmp"
+              "libmpc"
+              "mpfr"
+              "texinfo"
+              "isl"
+              "libmpc"
+              "wget"
+          )
+fi
 
 for dependency in "${dependencies[@]}"
 do
    echo -n $dependency
-   is_dependency_installed=$(dpkg-query -l | grep $dependency)
-   
+   if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+      is_dependency_installed=$(dpkg-query -l | grep $dependency)
+   elif [[ "$OSTYPE" == "darwin"* ]]; then
+      is_dependency_installed=$(brew list $dependency)
+   fi
+
    if [ -z "$is_dependency_installed" ]
     then
       echo " - not installed"
-      sudo apt install -y $dependency || on_error
+      if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+        sudo apt install -y $dependency || on_error
+      elif [[ "$OSTYPE" == "darwin"* ]]; then
+        brew install $dependency || on_error
+      fi
     else
       echo " - installed"
     fi
@@ -123,11 +150,23 @@ popd
 echo "Building GCC..."
 mkdir -p "CrossCompiler/gcc_build$arch" || on_error
 pushd "CrossCompiler/gcc_build$arch"
-../gcc/configure --target=$TARGET \
-                 --prefix="$PREFIX" \
-                 --disable-nls \
-                 --enable-languages=c,c++ \
-                 --without-headers || on_error
+
+if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+  ../gcc/configure --target=$TARGET \
+                   --prefix="$PREFIX" \
+                   --disable-nls \
+                   --enable-languages=c,c++ \
+                   --without-headers || on_error
+elif [[ "$OSTYPE" == "darwin"* ]]; then
+  ../gcc/configure --target=$TARGET \
+                   --prefix="$PREFIX" \
+                   --disable-nls \
+                   --enable-languages=c,c++ \
+                   --without-headers \
+                   --with-gmp=/usr/local/opt/gmp \
+                   --with-mpc=/usr/local/opt/libmpc \
+                   --with-mpfr=/usr/local/opt/mpfr || on_error
+fi
 
 make all-gcc               || on_error
 make all-target-libgcc     || on_error

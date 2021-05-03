@@ -13,6 +13,12 @@ if [ "$1" ]
     fi
 fi
 
+if [[ "$OSTYPE" == "darwin"* ]]; then
+  accel_arg="-accel hvf"
+elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
+  accel_arg="--enable-kvm"
+fi
+
 /bin/bash Scripts/build_ultra.sh $arch || exit 1
 qemu-system-x86_64 -drive file="Images/Ultra${arch}HDD.vmdk",index=0,media=disk \
                    -debugcon stdio                                              \
@@ -22,4 +28,4 @@ qemu-system-x86_64 -drive file="Images/Ultra${arch}HDD.vmdk",index=0,media=disk 
                    -no-reboot                                                   \
                    -M q35                                                       \
                    -vga vmware                                                  \
-                   --enable-kvm
+                   $accel_arg

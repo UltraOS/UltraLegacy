@@ -33,3 +33,4 @@ Tests/Environment/*
 *.creator.user
 *.creator.user.*
 *log*.txt
+.DS_Store
