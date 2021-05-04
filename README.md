@@ -39,11 +39,29 @@ Windows support is fully based on WSL, so you can't currently build the system w
 - run `run_qemu.bat`, you can choose to build for i386 or AMD64 by passing "32" or "64" respectively, the default build is AMD64
 
 ### Linux
+
+Currently only works for distributions with the apt package manager (used for pulling the toolchain dependencies).
+
 - Install QEMU
 - Install nasm
 - run `run_qemu.sh`, you can choose to build for i386 or AMD64 by passing "32" or "64" respectively, the default build is AMD64
 
-Virtualization software other than QEMU (like VMware, VirtualBox) is also usable by manually loading the VMDK image from `Images` (generated via `Scripts/build_ultra.{sh/bat}`).
+### MacOS
+
+Mostly experimental support, but should work by following the same steps as Linux.
+(Expects to have brew available for pulling dependencies)
+
+---
+
+### Virtualization Software
+
+Pretty much any virtualization software you could find is supported as long as it can virtualize x86.
+The system is confirmed to correctly work on all popular virtual machines.
+
+QEMU is supported out of the box with most optimal parameters by running the `run_qemu.{sh/bar}` script, which also recompiles/rebuilds the system
+if necessary.
+
+For other virtual machines you can simply grab the VMDK image from the `Images` folder, generated via either `Scripts/build_ultra.{sh/bat}` or `run_qemu.{sh/bar}`.
 
 ### Real Hardware
 I've personally tested the system on multiple PCs as well as laptops and encountered no problems, so it will probably work on yours, too.
