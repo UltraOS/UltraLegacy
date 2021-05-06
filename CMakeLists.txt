@@ -32,9 +32,15 @@ add_subdirectory(Kernel)
 
 add_custom_target(DISK_IMAGE ALL DEPENDS ${PROJECT_SOURCE_DIR}/Images/Ultra${ARCH}HDD.vmdk)
 
+if (ARCH MATCHES "64")
+    set(PATH_TO_FILT "${PROJECT_SOURCE_DIR}/Toolchain/CrossCompiler/Tools64/bin/x86_64-elf-c++filt")
+else ()
+    set(PATH_TO_FILT "${PROJECT_SOURCE_DIR}/Toolchain/CrossCompiler/Tools32/bin/i686-elf-c++filt")
+endif ()
+
 add_custom_command(
     OUTPUT ${KERNEL_PATH}/KSyms.map
-    COMMAND python3 ${PROJECT_SOURCE_DIR}/Scripts/generate_ksyms_map.py ${KERNEL_PATH} kernel.map
+    COMMAND python3 ${PROJECT_SOURCE_DIR}/Scripts/generate_ksyms_map.py ${KERNEL_PATH} kernel.map ${PATH_TO_FILT}
     DEPENDS ${KERNEL}
 )
 

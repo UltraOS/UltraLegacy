@@ -10,13 +10,14 @@
 import sys
 import subprocess
 
-if len(sys.argv) != 3:
-    print(f"Usage: {sys.argv[0]} path/to/bin/dir name_of_kernel_map")
+if len(sys.argv) < 3 or len(sys.argv) > 4:
+    print(f"Usage: {sys.argv[0]} path/to/bin/dir name_of_kernel_map <path to c++filt>")
     exit(1)
 
 MAX_SYMBOL_LENGTH = 100
 full_path = f"{sys.argv[1]}/{sys.argv[2]}"
 symbols = []
+demangle_command = "c++filt" if len(sys.argv) < 4 else sys.argv[3]
 
 with open(full_path, "r") as f:
     previous_address = ""
@@ -37,7 +38,7 @@ with open(full_path, "r") as f:
 
             symbol = as_list[1].rstrip('\n')
 
-            result = subprocess.run(["c++filt", symbol], stdout=subprocess.PIPE)
+            result = subprocess.run([demangle_command, symbol], stdout=subprocess.PIPE)
             if result.returncode != 0:
                 exit(1)
                 print("c++filt returned with a non-zero exit code")
