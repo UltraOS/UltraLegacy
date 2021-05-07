@@ -81,7 +81,8 @@ void DemoTTY::tick()
 
             if (event.vk_state.vkey == VK::BACKSPACE) {
                 clear_characters(1);
-                m_current_command.pop_back();
+                if (!m_current_command.empty())
+                    m_current_command.pop_back();
                 break;
             }
 
