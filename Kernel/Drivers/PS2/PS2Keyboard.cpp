@@ -230,13 +230,13 @@ bool PS2Keyboard::handle_action()
     case State::E0:
         if (scancode == 0x2A || scancode == 0xB7) {
             m_state = State::PRINT_SCREEN_1;
-            break;
+            return true;
         }
         break;
     case State::PRINT_SCREEN_1:
         if (scancode == 0xE0) {
             m_state = State::E0_REPEAT;
-            break;
+            return true;
         }
         m_state = State::NORMAL;
         break;
@@ -252,7 +252,7 @@ bool PS2Keyboard::handle_action()
             warning() << "PS2Keyboard: expected a prt sc scancode 0x37/0xAA, got " << format::as_hex << scancode;
 
         m_state = State::NORMAL;
-        break;
+        return true;
     case State::NORMAL:
         if (scancode == 0xE0)
             m_state = State::E0;
@@ -261,23 +261,23 @@ bool PS2Keyboard::handle_action()
         else
             break;
 
-        break;
+        return true;
     case State::E1:
         if (scancode == 0x1D)
             m_state = State::PAUSE_1;
-        break;
+        return true;
     case State::PAUSE_1:
         if (scancode == 0x45)
             m_state = State::PAUSE_2;
-        break;
+        return true;
     case State::PAUSE_2:
         if (scancode == 0xE1)
             m_state = State::E1_REPEAT;
-        break;
+        return true;
     case State::E1_REPEAT:
         if (scancode == 0x9D)
             m_state = State::PAUSE_3;
-        break;
+        return true;
     case State::PAUSE_3:
         if (scancode == 0xC5) {
             EventManager::the().post_action({ VK::PAUSE_BREAK, VKState::PRESSED });
@@ -285,7 +285,7 @@ bool PS2Keyboard::handle_action()
         }
 
         m_state = State::NORMAL;
-        break;
+        return true;
     default:
         ASSERT_NEVER_REACHED();
     }
