@@ -6,8 +6,7 @@
 static const char* sso_string = "SSO St";
 
 // Shouldn't be SSO
-static const char* non_sso_string = "NON SSO String!!!";
-
+static const char* non_sso_string = "NON SSO String!!!!!!!!!Hello";
 
 TEST(Basic) {
     kernel::String test;
@@ -62,7 +61,7 @@ TEST(MoveOwnership) {
     Assert::that(test.size()).is_equal(0);
 
     Assert::that(test1.c_string()).is_equal(non_sso_string);
-    Assert::that(test1.size()).is_equal(kernel::String::length_of(non_sso_string));
+    Assert::that(test1.size()).is_equal(kernel::length_of(non_sso_string));
 
     kernel::String test2 = sso_string;
     kernel::String test3 = move(test2);
@@ -71,7 +70,7 @@ TEST(MoveOwnership) {
     Assert::that(test2.size()).is_equal(0);
 
     Assert::that(test3.c_string()).is_equal(sso_string);
-    Assert::that(test3.size()).is_equal(kernel::String::length_of(sso_string));
+    Assert::that(test3.size()).is_equal(kernel::length_of(sso_string));
 }
 
 TEST(PopBackSSO) {
@@ -84,14 +83,6 @@ TEST(PopBackSSO) {
     sso_test.pop_back();
     Assert::that(sso_test.c_string()).is_equal("s");
     Assert::that(sso_test.size()).is_equal(1);
-
-    sso_test.pop_back();
-    Assert::that(sso_test.c_string()).is_equal("");
-    Assert::that(sso_test.size()).is_equal(0);
-
-    sso_test.pop_back();
-    Assert::that(sso_test.c_string()).is_equal("");
-    Assert::that(sso_test.size()).is_equal(0);
 }
 
 TEST(PopBackNonSSO) {
@@ -110,8 +101,8 @@ TEST(PopBackNonSSO) {
     Assert::that(non_sso_test.size()).is_equal(3);
 }
 
-TEST(StackStringBuilder) {
-    kernel::StackStringBuilder builder;
+TEST(StackString) {
+    kernel::StackString builder;
     builder += 123;
     builder += "456";
     builder << kernel::format::as_hex << 0xDEADBEEF;
@@ -122,8 +113,8 @@ TEST(StackStringBuilder) {
     Assert::that(const_cast<const char*>(builder.data())).is_equal("1234560xDEADBEEFtesttrue!");
 }
 
-TEST(StackStringBuilderLeftShift) {
-    kernel::StackStringBuilder builder;
+TEST(StackStringLeftShift) {
+    kernel::StackString builder;
 
     int* my_pointer = reinterpret_cast<int*>(static_cast<decltype(sizeof(int))>(0xDEADBEEF));
 
@@ -304,8 +295,8 @@ TEST(CaseInsensitiveCompare) {
     kernel::StringView str2 = "HELLOwORLd";
     kernel::StringView str3 = "";
 
-    Assert::that(kernel::case_insensitive_equals(str1, str2)).is_true();
-    Assert::that(kernel::case_insensitive_equals(str2, str3)).is_false();
-    Assert::that(kernel::case_insensitive_equals(str1, str1)).is_true();
-    Assert::that(kernel::case_insensitive_equals(str2, str2)).is_true();
+    Assert::that(str1.case_insensitive_equals(str2)).is_true();
+    Assert::that(str2.case_insensitive_equals(str3)).is_false();
+    Assert::that(str1.case_insensitive_equals(str1)).is_true();
+    Assert::that(str2.case_insensitive_equals(str2)).is_true();
 }
