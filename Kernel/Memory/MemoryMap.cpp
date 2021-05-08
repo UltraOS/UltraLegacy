@@ -154,7 +154,7 @@ void MemoryMap::correct_overlapping_ranges(size_t hint)
             }
 
             if (j == i) {
-                StackStringBuilder error_message;
+                StackString error_message;
                 error_message << "MemoryMap: error while correcting ranges, couldn't merge:\n"
                               << m_entries[i] << "\nwith\n"
                               << m_entries[i + 1];

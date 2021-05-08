@@ -125,7 +125,7 @@ void on_assertion_failed(const char* message, const char* file, const char* func
     static constexpr auto file_str = "\n------> File       : "_sv;
 
     // We don't want to use the heap here as it might be corrupted
-    StackStringBuilder<512> formatted_message;
+    StackString<512> formatted_message;
     formatted_message << assertion_failed << expression << message << function_str << function << file_str << file
                       << ':' << line;
 

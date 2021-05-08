@@ -29,7 +29,10 @@ RefPtr<Process> Process::create_supervisor(Address entrypoint, StringView name, 
 {
     RefPtr<Process> process = new Process(AddressSpace::of_kernel(), IsSupervisor::YES, name);
 
-    auto stack = MemoryManager::the().allocate_kernel_stack(String(name) + " thread 0 stack", stack_size);
+    String process_name;
+    process_name << name << " thread 0 stack"_sv;
+
+    auto stack = MemoryManager::the().allocate_kernel_stack(process_name.to_view(), stack_size);
 
     auto main_thread = Thread::create_supervisor(*process, stack, entrypoint);
     process->m_threads.emplace(main_thread);
@@ -53,7 +56,7 @@ void Process::create_thread(Address entrypoint, size_t stack_size)
         if (m_is_supervisor == IsSupervisor::YES) {
             String name = m_name;
             name << " thread " << m_next_thread_id.load() << " stack";
-            auto stack = MemoryManager::the().allocate_kernel_stack(name, stack_size);
+            auto stack = MemoryManager::the().allocate_kernel_stack(name.to_view(), stack_size);
             thread = Thread::create_supervisor(*this, stack, entrypoint);
         } else {
             ASSERT_NEVER_REACHED(); // trying to create user thread (TODO)

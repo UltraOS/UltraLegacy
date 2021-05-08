@@ -35,8 +35,8 @@ bool ACPI::find_rsdp()
 
     auto rsdp = rsdp_signature.find_in_range(ebda_range, rsdp_alignment);
 
-    if (!rsdp.empty()) {
-        m_rsdp = Address(rsdp.data()).as_pointer<RSDP>();
+    if (rsdp) {
+        m_rsdp = rsdp.as_pointer<RSDP>();
         return true;
     }
 
@@ -48,8 +48,8 @@ bool ACPI::find_rsdp()
 
     rsdp = rsdp_signature.find_in_range(bios_range, rsdp_alignment);
 
-    if (!rsdp.empty()) {
-        m_rsdp = Address(rsdp.data()).as_pointer<RSDP>();
+    if (rsdp) {
+        m_rsdp = rsdp.as_pointer<RSDP>();
         return true;
     }
 

@@ -118,10 +118,10 @@ MP::FloatingPointer* MP::find_floating_pointer_table()
 
     log() << "MP: Trying to find the floating pointer table in the EBDA...";
 
-    auto string = mp_floating_pointer_signature.find_in_range(ebda_range, table_alignment);
+    auto address = mp_floating_pointer_signature.find_in_range(ebda_range, table_alignment);
 
-    if (!string.empty())
-        return Address(string.begin()).as_pointer<FloatingPointer>();
+    if (address)
+        return address.as_pointer<FloatingPointer>();
 
     static constexpr Address bios_rom_base = 0xF0000;
     static constexpr Address bios_rom_end = 0xFFFFF;
@@ -129,10 +129,10 @@ MP::FloatingPointer* MP::find_floating_pointer_table()
 
     log() << "MP: Couldn't find the floating pointer table in the EBDA, trying ROM...";
 
-    string = mp_floating_pointer_signature.find_in_range(bios_rom_range, table_alignment);
+    address = mp_floating_pointer_signature.find_in_range(bios_rom_range, table_alignment);
 
-    if (!string.empty())
-        return Address(string.begin()).as_pointer<FloatingPointer>();
+    if (address)
+        return address.as_pointer<FloatingPointer>();
 
     static constexpr Address bda_address = 0x400;
     static constexpr Address bda_address_linear = MemoryManager::physical_to_virtual(bda_address);
@@ -144,10 +144,10 @@ MP::FloatingPointer* MP::find_floating_pointer_table()
 
     log() << "MP: Couldn't find the floating pointer table in ROM, trying last 1KB of base memory...";
 
-    string = mp_floating_pointer_signature.find_in_range(last_base_kilobyte_range, table_alignment);
+    address = mp_floating_pointer_signature.find_in_range(last_base_kilobyte_range, table_alignment);
 
-    if (!string.empty())
-        return Address(string.begin()).as_pointer<FloatingPointer>();
+    if (address)
+        return address.as_pointer<FloatingPointer>();
 
     warning() << "MP: Couldn't find the floating pointer table, reverting to single core configuration.";
 

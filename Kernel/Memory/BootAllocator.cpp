@@ -29,7 +29,7 @@ Address64 BootAllocator::reserve_contiguous(size_t page_count, Address64 lower_l
     ASSERT(m_did_release == false);
 
     auto fail_on_allocation = [&]() {
-        StackStringBuilder error_string;
+        StackString error_string;
         error_string << "BootAllocator: failed to allocate "
                      << page_count << " pages with tag " << tag_to_string(tag)
                      << " within " << lower_limit << "-" << upper_limit

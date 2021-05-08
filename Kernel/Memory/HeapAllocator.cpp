@@ -130,7 +130,7 @@ void HeapAllocator::refill_if_needed(size_t bytes_left)
 void* HeapAllocator::allocate(size_t bytes)
 {
     if ((bytes == 0) || (bytes > upper_allocation_threshold)) {
-        StackStringBuilder error_string;
+        StackString error_string;
         error_string << "HeapAllocator: invalid allocation size " << bytes;
         runtime::panic(error_string.data());
     }
@@ -268,7 +268,7 @@ void* HeapAllocator::allocate(size_t bytes)
         }
     }
 
-    StackStringBuilder error_string;
+    StackString error_string;
     error_string << "HeapAllocator: Out of memory! (tried to allocate " << bytes << " bytes)";
     error_string << " " << s_calls_to_allocate << " " << s_heap_block->free_bytes() << " " << s_heap_block->chunk_size * s_heap_block->chunk_count;
     runtime::panic(error_string.data());
@@ -319,7 +319,7 @@ void HeapAllocator::free(void* ptr)
                 allocation_id >>= bit_index;
 
                 if (allocation_id == 0) {
-                    StackStringBuilder str;
+                    StackString str;
                     str << "HeapAllocator: double free at address " << ptr;
                     runtime::panic(str.data());
                 }
@@ -342,7 +342,7 @@ void HeapAllocator::free(void* ptr)
     }
 
     if (!freed_heap) {
-        StackStringBuilder error_string;
+        StackString error_string;
         error_string << "HeapAllocator: Couldn't find a heap block to free from. ptr: " << ptr;
         runtime::panic(error_string.data());
     }

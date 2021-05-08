@@ -37,7 +37,7 @@ private:
     {
         // in case the deadlock was caused by the HeapAllocator we cannot use it anymore
         if (HeapAllocator::is_deadlocked()) {
-            StackStringBuilder error_string;
+            StackString error_string;
             error_string << "HeapAllocator deadlock on cpu " << CPU::current_id()
                          << "! Last acquired on cpu " << m_core
                          << " at " << m_file << ":" << m_line;

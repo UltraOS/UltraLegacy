@@ -78,6 +78,7 @@ private:
 
         s_data = new String;
         s_lock = new InterruptSafeSpinLock;
+        s_data->reserve(256 * KB);
     }
 
 private:
@@ -116,7 +117,7 @@ using DefaultSinkHolder = StaticSinkHolder<sink_holder_capacity>;
 alignas(DefaultSinkHolder) inline static u8 sink_storage[sizeof(DefaultSinkHolder)];
 alignas(InterruptSafeSpinLock) inline static u8 lock_storage[sizeof(InterruptSafeSpinLock)];
 
-class Logger : public StreamingFormatter {
+class Logger : public StreamingFormatter<Logger> {
 public:
     static constexpr StringView info_prefix = "[\33[34mINFO\033[0m] "_sv;
     static constexpr StringView warn_prefix = "[\33[33mWARNING\033[0m] "_sv;
@@ -168,19 +169,7 @@ public:
         other.m_should_terminate = false;
     }
 
-    template <typename T>
-    enable_if_default_serializable_t<T, Logger> operator<<(T value)
-    {
-        if constexpr (is_same_v<T, format>) {
-            set_format(value);
-        } else {
-            append(value);
-        }
-
-        return *this;
-    }
-
-    void write(StringView string) override
+    void write(StringView string)
     {
         if (!is_initialized())
             return;
@@ -214,7 +203,10 @@ private:
 class DummyLogger {
 public:
     template <typename T>
-    StreamingFormatter::enable_if_default_serializable_t<T, DummyLogger> operator<<(T) { return *this; }
+    StreamingFormatter<DummyLogger>::enable_if_default_serializable_t<T> operator<<(T) { return *this; }
+
+    template <typename T>
+    StreamingFormatter<DummyLogger>::enable_if_default_ref_serializable_t<T> operator<<(const T&) { return *this; }
 };
 
 inline Logger info()

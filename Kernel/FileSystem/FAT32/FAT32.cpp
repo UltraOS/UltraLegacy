@@ -196,9 +196,9 @@ FAT32::Directory::NativeEntry FAT32::Directory::next_native()
 
     auto process_normal_entry = [this](DirectoryEntry& in, NativeEntry& out, bool is_small) {
         if (in.is_lowercase_name())
-            String::to_lower(in.filename);
+            to_lower(in.filename);
         if (in.is_lowercase_extension())
-            String::to_lower(in.extension);
+            to_lower(in.extension);
 
         auto name = StringView::from_char_array(in.filename);
         auto ext = StringView::from_char_array(in.extension);
@@ -1257,7 +1257,7 @@ ErrorCode FAT32::create_file(StringView path, File::Attributes attributes)
             new_file_name.rstrip('.');
 
             FAT32_DEBUG << "Original new file name \"" << current_node
-                        << "\", after strip: \"" << new_file_name.to_view() << "\"";
+                        << "\", after strip: \"" << new_file_name << "\"";
 
             if (new_file_name.empty()) {
                 RETURN_WITH_CODE(ErrorCode::BAD_FILENAME);
@@ -1275,13 +1275,13 @@ ErrorCode FAT32::create_file(StringView path, File::Attributes attributes)
                 break;
 
             if (last_directory) {
-                if (!case_insensitive_equals(new_file_name.to_view(), current_node))
+                if (!new_file_name.case_insensitive_equals(current_node))
                     continue;
 
                 RETURN_WITH_CODE(ErrorCode::FILE_ALREADY_EXISTS);
             }
 
-            if (!case_insensitive_equals(entry.name_view(), current_node))
+            if (!entry.name_view().case_insensitive_equals(current_node))
                 continue;
 
             next_file = open_or_incref(
@@ -1347,8 +1347,8 @@ ErrorCode FAT32::create_file(StringView path, File::Attributes attributes)
     if (!is_vfat) {
         auto count_lower_and_upper_chars = [](StringView node, size_t& lower_count, size_t& upper_count) {
             for (char c : node) {
-                lower_count += String::is_lower(c);
-                upper_count += String::is_upper(c);
+                lower_count += is_lower(c);
+                upper_count += is_upper(c);
             }
         };
 
@@ -1414,7 +1414,7 @@ ErrorCode FAT32::create_file(StringView path, File::Attributes attributes)
 
         size_t chars_copied = 0;
         for (char c : name)
-            entry.filename[chars_copied++] = String::to_upper(c);
+            entry.filename[chars_copied++] = to_upper(c);
 
         auto name_padding = short_name_length - chars_copied;
         while (name_padding--)
@@ -1423,7 +1423,7 @@ ErrorCode FAT32::create_file(StringView path, File::Attributes attributes)
         if (!extension.empty()) {
             chars_copied = 0;
             for (char c : extension)
-                entry.extension[chars_copied++] = String::to_upper(c);
+                entry.extension[chars_copied++] = to_upper(c);
         }
 
         auto extension_padding = short_extension_length - chars_copied;
@@ -1489,7 +1489,7 @@ ErrorCode FAT32::create_file(StringView path, File::Attributes attributes)
 
         if (StringView::from_char_array(entry.small_name) == short_name) {
             bool ok = false;
-            short_name = next_short_name(short_name, ok);
+            short_name = next_short_name(short_name.to_view(), ok);
 
             if (!ok) {
                 // TODO: this actually means that there are too many files with similar names,
@@ -1509,7 +1509,7 @@ ErrorCode FAT32::create_file(StringView path, File::Attributes attributes)
 
     LongNameDirectoryEntry long_entry {};
 
-    auto checksum = generate_short_name_checksum(short_name);
+    auto checksum = generate_short_name_checksum(short_name.to_view());
     long_entry.checksum = checksum;
 
     static constexpr size_t vfat_name_attributes = 0x0F;

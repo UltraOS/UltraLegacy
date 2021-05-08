@@ -142,7 +142,7 @@ MemoryManager::MemoryManager()
 
     static constexpr size_t lowest_sane_ram_amount = 64 * MB;
     if (m_initial_physical_bytes < lowest_sane_ram_amount) {
-        StackStringBuilder<256> error_str;
+        StackString<256> error_str;
         error_str << "RAM size sanity check failed: detected "
                   << m_initial_physical_bytes.load() << " bytes, expected at least "
                   << lowest_sane_ram_amount;
@@ -304,7 +304,7 @@ void MemoryManager::free_page(const Page& page)
 void MemoryManager::handle_page_fault(const RegisterState& registers, const PageFault& fault)
 {
     if (!is_initialized()) {
-        StackStringBuilder error_string;
+        StackString error_string;
         error_string << "unexpected early page fault " << fault;
         runtime::panic(error_string.data(), &registers);
     }
