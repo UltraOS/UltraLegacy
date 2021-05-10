@@ -9,6 +9,7 @@
 
 import sys
 import subprocess
+from platform import uname
 
 if len(sys.argv) < 3 or len(sys.argv) > 4:
     print(f"Usage: {sys.argv[0]} path/to/bin/dir name_of_kernel_map <path to c++filt>")
@@ -18,6 +19,11 @@ MAX_SYMBOL_LENGTH = 100
 full_path = f"{sys.argv[1]}/{sys.argv[2]}"
 symbols = []
 demangle_command = "c++filt" if len(sys.argv) < 4 else sys.argv[3]
+
+# If we're inside WSL running c++filt from a mounted system volume would be incredibly slow,
+# so revert to using the native toolchain c++filt (which is hopefully GCC).
+if 'microsoft' in uname().release.lower():
+    demangle_command = "c++filt"
 
 with open(full_path, "r") as f:
     previous_address = ""
