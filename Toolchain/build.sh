@@ -134,6 +134,10 @@ export PREFIX="$true_path/CrossCompiler/Tools$arch"
 export TARGET=$compiler_prefix-elf
 export PATH="$PREFIX/bin:$PATH"
 
+# Build with optimizations and no debug information
+export CFLAGS="-g0 -O2"
+export CXXFLAGS="-g0 -O2"
+
 echo "Building binutils..."
 mkdir -p "CrossCompiler/binutils_build$arch" || on_error
 
