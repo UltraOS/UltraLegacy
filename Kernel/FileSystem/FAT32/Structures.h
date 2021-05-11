@@ -55,8 +55,12 @@ struct PACKED FSINFO {
 static_assert(sizeof(FSINFO) == FSINFO::size, "Incorrect size of FSINFO");
 
 struct PACKED DirectoryEntry {
-    char filename[8];
-    char extension[3];
+    static constexpr size_t short_name_length = 8;
+    static constexpr size_t short_extension_length = 3;
+    static constexpr size_t full_short_name_length = short_name_length + short_extension_length;
+
+    char filename[short_name_length];
+    char extension[short_extension_length];
 
     enum class Attributes : u8 {
         READ_ONLY = SET_BIT(0),
