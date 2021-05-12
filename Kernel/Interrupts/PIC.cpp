@@ -101,7 +101,7 @@ bool PIC::is_irq_being_serviced(u8 request_number)
     IO::out8<master_command>(read_isr);
     IO::out8<slave_command>(read_isr);
 
-    u16 isr_mask = (IO::in8<slave_command>() << 8) | IO::in8<master_command>();
+    u16 isr_mask = (static_cast<u16>(IO::in8<slave_command>()) << 8) | IO::in8<master_command>();
 
     info() << "PIC: ISR mask=" << isr_mask << " request number=" << request_number;
 

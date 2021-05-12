@@ -18,7 +18,7 @@ public:
     static constexpr u8 year_register = 0x09;
     static constexpr u8 century_register = 0x32;
 
-    static constexpr u8 update_in_progress_bit = 1 << 7;
+    static constexpr u8 update_in_progress_bit = SET_BIT(7);
     static constexpr u8 update_in_progress_register = 0x0A;
     static constexpr u8 time_format_register = 0x0B;
 

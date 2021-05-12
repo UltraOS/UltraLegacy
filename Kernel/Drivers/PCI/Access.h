@@ -37,7 +37,7 @@ public:
         bool upper = offset & 2;
 
         if (upper)
-            res = (value << 16) | (res & 0xFFFF);
+            res = (static_cast<u32>(value) << 16) | (res & 0xFFFF);
         else
             res = (res & 0xFFFF0000) | value;
 

@@ -24,8 +24,8 @@ void RTC::synchronize_system_clock()
 
     auto time_format = CMOS::read<time_format_register>();
 
-    static constexpr u8 hour_24_bit = 1 << 1;
-    static constexpr u8 bcd_bit = 1 << 2;
+    static constexpr u8 hour_24_bit = SET_BIT(1);
+    static constexpr u8 bcd_bit = SET_BIT(2);
 
     bool is_12_hours = !(time_format & hour_24_bit);
     bool is_bcd = !(time_format & bcd_bit);
@@ -73,7 +73,7 @@ void RTC::synchronize_system_clock()
 
     original_time.year += 2000;
 
-    static constexpr u8 pm_bit = 1 << 7;
+    static constexpr u8 pm_bit = SET_BIT(7);
 
     if (is_12_hours && (original_time.hour & pm_bit))
         original_time.hour = ((original_time.hour & ~pm_bit) + 12) % 24;

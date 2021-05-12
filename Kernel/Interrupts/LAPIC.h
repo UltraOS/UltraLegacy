@@ -25,8 +25,8 @@ public:
     class Timer final : public ::kernel::Timer {
     public:
         static constexpr u32 irq_number = 253;
-        static constexpr u32 masked_bit = 1 << 16;
-        static constexpr u32 periodic_mode = 1 << 17;
+        static constexpr u32 masked_bit = SET_BIT(16);
+        static constexpr u32 periodic_mode = SET_BIT(17);
 
         Timer()
             : ::kernel::Timer(IRQHandler::Type::FIXED, irq_number)

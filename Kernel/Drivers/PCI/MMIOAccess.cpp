@@ -41,10 +41,12 @@ Address MMIOAccess::physical_base_for(PCI::Location location) const
         runtime::panic(error_string.c_string());
     }
 
-    auto physical_base = space->physical_base;
-    auto rebased_bus = location.bus - space->first_bus;
+    ptr_t physical_base = space->physical_base;
+    ptr_t rebased_bus = location.bus - space->first_bus;
+    ptr_t device = location.device;
+    ptr_t function = location.function;
 
-    physical_base += rebased_bus << 20 | location.device << 15 | location.function << 12;
+    physical_base += rebased_bus << 20 | device << 15 | function << 12;
 
     return physical_base;
 }

@@ -273,7 +273,7 @@ private:
 
     Set<RefPtr<VirtualRegion>, Less<>> m_kernel_virtual_regions;
 
-    // sorted in ascending order therefore can be searched via lower_bound/bianry_search
+    // sorted in ascending order therefore can be searched via lower_bound/binary_search
     DynamicArray<UniquePtr<PhysicalRegion>> m_physical_regions;
 
     MemoryMap m_memory_map;

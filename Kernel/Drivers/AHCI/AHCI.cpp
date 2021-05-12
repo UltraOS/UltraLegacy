@@ -489,7 +489,7 @@ void AHCI::identify_sata_port(size_t index)
         size_t logical_sectors_per_physical = 1;
 
         if (sector_info & multiple_logical_sectors_per_physical_bit)
-            logical_sectors_per_physical = 1 << (sector_info & power_of_2_logical_sectors_per_physical_mask);
+            logical_sectors_per_physical = SET_BIT(sector_info & power_of_2_logical_sectors_per_physical_mask);
 
         if (sector_info & logical_sector_greater_than_256_words_bit) {
             static constexpr size_t logical_sector_size_offset = 117;
@@ -714,12 +714,12 @@ void AHCI::execute(OP& op)
     if (!op.is_async)
         synchronous_wait_for_command_completion(op.port, op.command_slot);
     else
-        m_hba->ports[op.port].command_issue = 1 << op.command_slot;
+        m_hba->ports[op.port].command_issue = SET_BIT(op.command_slot);
 }
 
 void AHCI::synchronous_wait_for_command_completion(size_t port, size_t slot)
 {
-    auto command_bit = 1 << slot;
+    auto command_bit = SET_BIT(slot);
 
     m_hba->ports[port].command_issue = command_bit;
 
