@@ -31,6 +31,8 @@ struct ErrorCode {
     bool is_success() const { return value == NO_ERROR; }
     bool is_error() const { return !is_success(); }
 
+    explicit operator bool() { return is_error(); }
+
     StringView to_string() const
     {
         switch (value) {
