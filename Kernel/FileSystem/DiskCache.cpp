@@ -162,7 +162,7 @@ void DiskCache::read_one(u64 block_index, size_t offset, size_t bytes, void* buf
     copy_memory(begin.as_pointer<void>(), buffer, bytes);
 }
 
-void DiskCache::write_one(u64 block_index, size_t offset, size_t bytes, void* buffer)
+void DiskCache::write_one(u64 block_index, size_t offset, size_t bytes, const void* buffer)
 {
     if (m_io_size == no_caching_required) {
         auto full_offset = offset + block_index * m_fs_block_size;

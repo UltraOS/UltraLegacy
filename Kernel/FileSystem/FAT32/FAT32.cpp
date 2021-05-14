@@ -176,6 +176,7 @@ void FAT32::Directory::write_one(void* directory_entry, Slot& slot)
     auto& fs = fs_as_fat32();
 
     auto coords = slot.next_entry(fs.bytes_per_cluster());
+    FAT32_DEBUG << "Writing a directory entry at " << coords.cluster << " offset " << coords.offset_within_cluster;
 
     fs.locked_write(pure_cluster_value(coords.cluster), coords.offset_within_cluster, DirectoryEntry::size_in_bytes, directory_entry);
 }
@@ -203,20 +204,22 @@ FAT32::Directory::NativeEntry FAT32::Directory::next_native()
         auto name = StringView::from_char_array(in.filename);
         auto ext = StringView::from_char_array(in.extension);
 
-        auto* out_buffer = is_small ? out.small_name : out.name;
+        if (!is_small) {
+            auto name_length = name.find(" "_sv).value_or(name.size());
+            copy_memory(name.data(), out.name, name_length);
 
-        auto name_length = name.find(" "_sv).value_or(name.size());
-        copy_memory(name.data(), out_buffer, name_length);
+            auto ext_length = ext.find(" "_sv).value_or(ext.size());
 
-        auto ext_length = ext.find(" "_sv).value_or(ext.size());
-
-        if (ext_length) {
-            out_buffer[name_length++] = '.';
-            copy_memory(ext.data(), out_buffer + name_length, ext_length);
+            if (ext_length) {
+                out.name[name_length++] = '.';
+                copy_memory(ext.data(), out.name + name_length, ext_length);
+            }
         }
 
+        copy_memory(in.filename, out.short_name, DirectoryEntry::full_short_name_length);
+
         out.size = in.size;
-        out.first_data_cluster = (in.cluster_high << 16) | in.cluster_low;
+        out.first_data_cluster = (static_cast<u32>(in.cluster_high) << 16) | in.cluster_low;
         out.metadata_entry_cluster = m_current_cluster;
         out.metadata_entry_offset_within_cluster = m_offset_within_cluster - DirectoryEntry::size_in_bytes;
 
@@ -226,7 +229,7 @@ FAT32::Directory::NativeEntry FAT32::Directory::next_native()
 
     auto process_ucs2 = [](const u8* ucs2, size_t count, char*& out) -> size_t {
         for (size_t i = 0; i < (count * bytes_per_ucs2_char); i += bytes_per_ucs2_char) {
-            u16 ucs2_char = ucs2[i] | (ucs2[i + 1] << 8);
+            u16 ucs2_char = ucs2[i] | (static_cast<u16>(ucs2[i + 1]) << 8);
 
             char ascii;
 
@@ -590,7 +593,7 @@ void FAT32::locked_read(u64 block_index, size_t offset, size_t bytes, void* buff
     m_data_cache->read_one(block_index, offset, bytes, buffer);
 }
 
-void FAT32::locked_write(u64 block_index, size_t offset, size_t bytes, void* buffer)
+void FAT32::locked_write(u64 block_index, size_t offset, size_t bytes, const void* buffer)
 {
     LOCK_GUARD(m_data_lock);
     m_data_cache->write_one(block_index, offset, bytes, buffer);
@@ -656,7 +659,7 @@ size_t FAT32::File::read(void* buffer, size_t offset, size_t size)
     return bytes_read;
 }
 
-size_t FAT32::File::write(void* buffer, size_t offset, size_t size)
+size_t FAT32::File::write(const void* buffer, size_t offset, size_t size)
 {
     if (size == 0)
         return 0;
@@ -671,12 +674,12 @@ size_t FAT32::File::write(void* buffer, size_t offset, size_t size)
     bool write_starts_at_last_cluster = false;
 
     // We have to zero fill all the clusters before offset
-    if (file_cluster_count <= offset_cluster_index) {
+    if (offset_cluster_index && (file_cluster_count <= offset_cluster_index)) {
         write_starts_at_last_cluster = true;
-        auto zero_filled_clusters = offset_cluster_index - file_cluster_count + 1;
+        auto zero_filled_clusters = offset_cluster_index - file_cluster_count;
         zero_filled_clusters += 1; // we allocate 1 extra cluster that will contain the written data
 
-        // if write is greater than the cluster size or offset doesn't start at the
+        // if write is less than the cluster size or offset doesn't start at the
         // exact beginning of the cluster we have to zero fill it
         bool should_zero_fill_last_cluster = offset_within_cluster || (size < fs.bytes_per_cluster());
 
@@ -710,33 +713,50 @@ size_t FAT32::File::write(void* buffer, size_t offset, size_t size)
     }
 
     auto bytes_to_write = size;
-    auto clusters_to_write = size / fs.bytes_per_cluster();
+    auto clusters_to_write = ceiling_divide<size_t>(size, fs.bytes_per_cluster());
 
-    if ((offset_cluster_index + clusters_to_write + 1) > file_cluster_count) {
-        auto clusters_to_allocate = (offset_cluster_index + clusters_to_write + 1) - file_cluster_count;
+    auto extra_bytes = fs.bytes_per_cluster() - (size % fs.bytes_per_cluster());
+    if ((offset_within_cluster + extra_bytes) > fs.bytes_per_cluster())
+        clusters_to_write++;
+
+    if ((offset_cluster_index + clusters_to_write) > file_cluster_count) {
+        auto clusters_to_allocate = (offset_cluster_index + clusters_to_write) - file_cluster_count;
         auto chain = fs.allocate_cluster_chain(clusters_to_allocate, compute_last_cluster());
 
-        FAT32_DEBUG << "write for file " << name() << " goes outside of last cluster, allocating "
+        FAT32_DEBUG << "write for file " << name() << " is past last cluster, allocating "
                     << clusters_to_allocate << " extra";
+
+        if (!m_first_cluster) {
+            FAT32_DEBUG << "file " << name() << " was empty, setting first cluster to be " << chain.first();
+            set_first_cluster(chain.first());
+            first_cluster_to_write = chain.first();
+        }
 
         auto bytes_to_write_for_new_clusters = bytes_to_write - (fs.bytes_per_cluster() - offset_within_cluster);
 
-        // write size is unaligned to cluster size so we zero fill the last cluster
-        if (bytes_to_write_for_new_clusters % fs.bytes_per_cluster())
-            fs.locked_zero_fill(chain.last(), 1);
+        if (bytes_to_write_for_new_clusters % fs.bytes_per_cluster()) {
+            FAT32_DEBUG << "write size unaligned to cluster size, zero filling last cluster...";
+            fs.locked_zero_fill(pure_cluster_value(chain.last()), 1);
+        }
 
         set_last_cluster(chain.last());
     }
 
     auto current_cluster = first_cluster_to_write;
-    auto* byte_buff = reinterpret_cast<u8*>(buffer);
+    auto* byte_buff = reinterpret_cast<const u8*>(buffer);
 
-    while (bytes_to_write) {
+    for (;;) {
         auto bytes_for_this_write = min(bytes_to_write, fs.bytes_per_cluster() - offset_within_cluster);
-        fs.locked_write(pure_cluster_value(current_cluster), offset_cluster_index, bytes_for_this_write, byte_buff);
+        fs.locked_write(pure_cluster_value(current_cluster), offset_within_cluster, bytes_for_this_write, byte_buff);
+
+        FAT32_DEBUG << "writing " << bytes_for_this_write << " out of " << bytes_to_write << " offset is " << offset_within_cluster;
 
         byte_buff += bytes_for_this_write;
         bytes_to_write -= bytes_for_this_write;
+
+        if (bytes_to_write == 0)
+            break;
+
         current_cluster = fs.fat_entry_at(current_cluster);
         ASSERT(fs.entry_type_of_fat_value(current_cluster) != FATEntryType::END_OF_CHAIN);
         offset_within_cluster = 0;
@@ -744,7 +764,6 @@ size_t FAT32::File::write(void* buffer, size_t offset, size_t size)
 
     auto end_of_write = offset + size;
     if (end_of_write > m_size) {
-        FAT32_DEBUG << "set new size for " << name() << " to be " << m_size;
         set_size(end_of_write);
         flush_meta_modifications();
     }
@@ -847,17 +866,22 @@ Pair<ErrorCode, FAT32::File*> FAT32::open_file_from_path(StringView path, OnlyIf
     File* next_file = nullptr;
 
     for (auto node : IterablePath(path)) {
+        if (node == "."_sv)
+            continue;
+
         if (next_file) {
+            cur_file->lock().unlock();
             close(*cur_file);
             cur_file = next_file;
             next_file = nullptr;
         }
 
-        LOCK_GUARD(cur_file->lock());
+        cur_file->lock().lock();
 
         bool node_found = false;
 
         if ((cur_file->attributes() & File::Attributes::IS_DIRECTORY) != File::Attributes::IS_DIRECTORY) {
+            cur_file->lock().unlock();
             close(*cur_file);
             return { ErrorCode::IS_FILE, nullptr };
         }
@@ -873,7 +897,11 @@ Pair<ErrorCode, FAT32::File*> FAT32::open_file_from_path(StringView path, OnlyIf
             if (entry.name_view() != node)
                 continue;
 
-            next_file = open_or_incref(entry.name_view(), entry.attributes, entry.identifier(), entry.first_data_cluster, entry.size);
+            auto first_cluster = entry.first_data_cluster;
+            if (entry.name_view() == ".." && first_cluster == 0)
+                first_cluster = m_ebpb.root_dir_cluster;
+
+            next_file = open_or_incref(entry.name_view(), entry.attributes, entry.identifier(), first_cluster, entry.size);
 
             node_found = true;
             break;
@@ -883,6 +911,7 @@ Pair<ErrorCode, FAT32::File*> FAT32::open_file_from_path(StringView path, OnlyIf
             break;
     }
 
+    cur_file->lock().unlock();
     close(*cur_file);
 
     if (!next_file)
@@ -901,6 +930,7 @@ Pair<ErrorCode, FAT32::File*> FAT32::open_file_from_path(StringView path, OnlyIf
 
 DynamicArray<u32> FAT32::allocate_cluster_chain(u32 count, u32 link_to)
 {
+    ASSERT(count != 0);
     ASSERT(count <= m_free_clusters);
 
     DynamicArray<u32> chain;
@@ -938,7 +968,9 @@ DynamicArray<u32> FAT32::allocate_cluster_chain(u32 count, u32 link_to)
         hint = reserved_cluster_count;
     }
 
-    FAILED_ASSERTION("Failed to allocate enough clusters");
+    String error_str;
+    error_str << "FAT32: Failed to allocate enough clusters, requested: " << count;
+    runtime::panic(error_str.c_string());
 }
 
 void FAT32::free_cluster_chain_starting_at(u32 first, FreeMode free_mode)
@@ -1036,17 +1068,38 @@ ErrorCode FAT32::remove_file(StringView path, OnlyIf constraint)
         auto node = *itr_path;
         ++itr_path;
 
+        if (node == "."_sv) {
+            if (itr_path != itr_path.end())
+                continue;
+
+            cur_file->lock().unlock();
+            close(*cur_file);
+
+            // Tried to remove '.'
+            return { ErrorCode::INVALID_ARGUMENT };
+        }
+
+        if (node == ".."_sv && itr_path == itr_path.end()) {
+            cur_file->lock().unlock();
+            close(*cur_file);
+
+            // Tried to remove '..'
+            return { ErrorCode::INVALID_ARGUMENT };
+        }
+
         if (next_file) {
+            cur_file->lock().unlock();
             close(*cur_file);
             cur_file = next_file;
             next_file = nullptr;
         }
 
-        LOCK_GUARD(cur_file->lock());
+        cur_file->lock().lock();
 
         bool keep_going = false;
 
         if ((cur_file->attributes() & File::Attributes::IS_DIRECTORY) != File::Attributes::IS_DIRECTORY) {
+            cur_file->lock().unlock();
             close(*cur_file);
             return { ErrorCode::IS_FILE };
         }
@@ -1069,7 +1122,11 @@ ErrorCode FAT32::remove_file(StringView path, OnlyIf constraint)
             auto identifier = entry.identifier();
 
             if (itr_path != itr_path.end()) {
-                next_file = open_or_incref(entry.name_view(), entry.attributes, identifier, entry.first_data_cluster, entry.size);
+                auto first_cluster = entry.first_data_cluster;
+                if (entry.name_view() == ".." && first_cluster == 0)
+                    first_cluster = m_ebpb.root_dir_cluster;
+
+                next_file = open_or_incref(entry.name_view(), entry.attributes, identifier, first_cluster, entry.size);
                 keep_going = true;
                 break;
             }
@@ -1100,7 +1157,8 @@ ErrorCode FAT32::remove_file(StringView path, OnlyIf constraint)
             if (is_directory && entry.first_data_cluster) {
                 u8 first_byte = 0;
 
-                locked_read(pure_cluster_value(entry.first_data_cluster), 0, 1, &first_byte);
+                // Offset at 2 to skip . and ..
+                locked_read(pure_cluster_value(entry.first_data_cluster), DirectoryEntry::size_in_bytes * 2, 1, &first_byte);
 
                 // Non-empty directory
                 if (first_byte != DirectoryEntry::end_of_directory_mark) {
@@ -1199,6 +1257,7 @@ ErrorCode FAT32::remove_file(StringView path, OnlyIf constraint)
             break;
     }
 
+    cur_file->lock().unlock();
     close(*cur_file);
 
     return code;
@@ -1234,6 +1293,23 @@ ErrorCode FAT32::create_file(StringView path, File::Attributes attributes)
         current_node = *itr_path;
         ++itr_path;
 
+        if (current_node == "."_sv) {
+            if (itr_path != itr_path.end())
+                continue;
+
+            close(*cur_file);
+
+            // Tried to create '.'
+            return { ErrorCode::INVALID_ARGUMENT };
+        }
+
+        if (current_node == ".."_sv && itr_path == itr_path.end()) {
+            close(*cur_file);
+
+            // Tried to create '..'
+            return { ErrorCode::INVALID_ARGUMENT };
+        }
+
         if (next_file) {
             close(*cur_file);
             cur_file = next_file;
@@ -1248,12 +1324,12 @@ ErrorCode FAT32::create_file(StringView path, File::Attributes attributes)
             return ErrorCode::IS_FILE;
         }
 
-        bool last_directory = itr_path != itr_path.end();
+        bool last_directory = itr_path == itr_path.end();
         Directory dir(*this, *cur_file, false);
 
         if (last_directory) {
             new_file_name = current_node;
-            new_file_name.strip();
+            new_file_name.rstrip(' ');
             new_file_name.rstrip('.');
 
             FAT32_DEBUG << "Original new file name \"" << current_node
@@ -1275,7 +1351,7 @@ ErrorCode FAT32::create_file(StringView path, File::Attributes attributes)
                 break;
 
             if (last_directory) {
-                if (!new_file_name.case_insensitive_equals(current_node))
+                if (!new_file_name.case_insensitive_equals(entry.name_view()))
                     continue;
 
                 RETURN_WITH_CODE(ErrorCode::FILE_ALREADY_EXISTS);
@@ -1284,31 +1360,45 @@ ErrorCode FAT32::create_file(StringView path, File::Attributes attributes)
             if (!entry.name_view().case_insensitive_equals(current_node))
                 continue;
 
+            auto first_cluster = entry.first_data_cluster;
+            if (entry.name_view() == ".." && first_cluster == 0)
+                first_cluster = m_ebpb.root_dir_cluster;
+
             next_file = open_or_incref(
                 entry.name_view(), entry.attributes, entry.identifier(),
-                entry.first_data_cluster, entry.size);
+                first_cluster, entry.size);
             keep_going = true;
 
             break;
         }
 
-        if (!keep_going)
+        if (!keep_going) {
+            if (!last_directory) {
+                RETURN_WITH_CODE(ErrorCode::BAD_PATH);
+            }
+
             break;
+        }
 
         cur_file->lock().unlock();
+
+        if (!next_file) {
+            RETURN_WITH_CODE(ErrorCode::BAD_PATH);
+        }
     }
 
     // Now we have the last directory open, we can proceed to allocating the directory slot
     Directory dir(*this, *cur_file, false);
 
     auto [name_length, extension_length] = length_of_name_and_extension(new_file_name.to_view());
+    FAT32_LOG << "File " << new_file_name << " name length: " << name_length << " extension length: " << extension_length;
 
     bool is_vfat = name_length > short_name_length || extension_length > short_extension_length;
 
     bool is_name_entirely_upper = false;
     bool is_name_entirely_lower = false;
 
-    bool is_extension_entirely_upper = false;
+    bool is_extension_entirely_upper = true;
     bool is_extension_entirely_lower = false;
 
     static constexpr char minimum_allowed_ascii_value = 0x20;
@@ -1334,8 +1424,10 @@ ErrorCode FAT32::create_file(StringView path, File::Attributes attributes)
         contains_banned |= is_one_of(c, banned_characters, banned_characters_length);
         contains_banned |= c < minimum_allowed_ascii_value;
 
-        if (contains_banned)
+        if (contains_banned) {
+            FAT32_DEBUG << "Banned character " << c << " detected";
             break;
+        }
     }
 
     if (contains_banned) {
@@ -1377,8 +1469,10 @@ ErrorCode FAT32::create_file(StringView path, File::Attributes attributes)
             for (char c : name_view) {
                 contains_banned_for_non_vfat |= is_one_of(c, banned_but_allowed_in_vfat_characters, banned_but_allowed_in_vfat_characters_length);
 
-                if (contains_banned_for_non_vfat)
+                if (contains_banned_for_non_vfat) {
+                    FAT32_LOG << "detected a banned character for non-VFAT names: " << c;
                     break;
+                }
             }
 
             if (extension_length) {
@@ -1387,8 +1481,10 @@ ErrorCode FAT32::create_file(StringView path, File::Attributes attributes)
                 for (char c : extension_view) {
                     contains_banned_for_non_vfat |= is_one_of(c, banned_but_allowed_in_vfat_characters, banned_but_allowed_in_vfat_characters_length);
 
-                    if (contains_banned_for_non_vfat)
+                    if (contains_banned_for_non_vfat) {
+                        FAT32_LOG << "detected a banned character for non-VFAT names: " << c;
                         break;
+                    }
                 }
             }
 
@@ -1399,6 +1495,8 @@ ErrorCode FAT32::create_file(StringView path, File::Attributes attributes)
     bool is_directory = (attributes & File::Attributes::IS_DIRECTORY) == File::Attributes::IS_DIRECTORY;
 
     auto write_normal_entry = [&](StringView name, StringView extension, Directory::Slot& slot, u32 first_cluster = free_cluster) {
+        FAT32_DEBUG << "Writing normal entry " << name << "." << extension << " first cluster: " << first_cluster;
+
         DirectoryEntry entry {};
 
         entry.cluster_low = first_cluster & 0xFFFF;
@@ -1421,14 +1519,13 @@ ErrorCode FAT32::create_file(StringView path, File::Attributes attributes)
             entry.filename[chars_copied++] = ' ';
 
         if (!extension.empty()) {
-            chars_copied = 0;
             for (char c : extension)
-                entry.extension[chars_copied++] = to_upper(c);
+                entry.extension[chars_copied++ - short_name_length] = to_upper(c);
         }
 
-        auto extension_padding = short_extension_length - chars_copied;
+        auto extension_padding = (short_name_length + short_extension_length) - chars_copied;
         while (extension_padding--)
-            entry.extension[chars_copied++] = ' ';
+            entry.extension[chars_copied++ - short_name_length] = ' ';
 
         auto time = Time::now_readable();
 
@@ -1456,13 +1553,21 @@ ErrorCode FAT32::create_file(StringView path, File::Attributes attributes)
 
         Directory::Slot slot(0, clusters);
 
+        // Quote from the spec:
+        // "The dotdot entry points to the starting cluster of the parent of this directory (which is 0 if this
+        //  directories parent is the root directory)."
+        if (first_cluster_of_previous_directory == m_ebpb.root_dir_cluster)
+            first_cluster_of_previous_directory = 0;
+
         write_normal_entry(".", "", slot, first_cluster_of_directory);
         write_normal_entry("..", "", slot, first_cluster_of_previous_directory);
     };
 
     if (!is_vfat) {
-        auto slot = dir.allocate_entries(1);
         auto extension_view = StringView(name_view.end() + 1, extension_length);
+        FAT32_LOG << "Name " << name_view << "." << extension_view << " is not VFAT";
+
+        auto slot = dir.allocate_entries(1);
         u32 first_cluster = 0;
 
         if (is_directory) {
@@ -1480,6 +1585,7 @@ ErrorCode FAT32::create_file(StringView path, File::Attributes attributes)
     is_extension_entirely_lower = false;
 
     auto short_name = generate_short_name(new_file_name.to_view());
+    dir.rewind();
 
     for (;;) {
         auto entry = dir.next_native();
@@ -1487,7 +1593,7 @@ ErrorCode FAT32::create_file(StringView path, File::Attributes attributes)
         if (entry.empty())
             break;
 
-        if (StringView::from_char_array(entry.small_name) == short_name) {
+        if (StringView::from_char_array(entry.short_name) == short_name) {
             bool ok = false;
             short_name = next_short_name(short_name.to_view(), ok);
 
@@ -1501,6 +1607,8 @@ ErrorCode FAT32::create_file(StringView path, File::Attributes attributes)
             dir.rewind();
         }
     }
+
+    FAT32_DEBUG << "generated short name " << short_name;
 
     auto entries_to_write = ceiling_divide(new_file_name.size(), LongNameDirectoryEntry::characters_per_entry);
 
@@ -1530,6 +1638,7 @@ ErrorCode FAT32::create_file(StringView path, File::Attributes attributes)
 
             pieces[i].ptr = name_ptr;
             pieces[i].characters = characters_for_this_piece;
+            log() << "VFS name piece[" << i << "] " << StringView(name_ptr, characters_for_this_piece);
 
             name_ptr += characters_for_this_piece;
 
@@ -1544,13 +1653,16 @@ ErrorCode FAT32::create_file(StringView path, File::Attributes attributes)
 
     auto write_long_directory_character = [](LongNameDirectoryEntry& entry, u16 character, size_t index) {
         if (index < LongNameDirectoryEntry::name_1_characters) {
-            entry.name_1[index] = character;
+            entry.name_1[index * 2] = character >> 0;
+            entry.name_1[index * 2 + 1] = character >> 8;
         } else if (index < (LongNameDirectoryEntry::name_1_characters + LongNameDirectoryEntry::name_2_characters)) {
             index -= LongNameDirectoryEntry::name_1_characters;
-            entry.name_2[index] = character;
+            entry.name_2[index * 2] = character >> 0;
+            entry.name_2[index * 2 + 1] = character >> 8;
         } else if (index < LongNameDirectoryEntry::characters_per_entry) {
             index -= LongNameDirectoryEntry::name_1_characters + LongNameDirectoryEntry::name_2_characters;
-            entry.name_3[index] = character;
+            entry.name_3[index * 2] = character >> 0;
+            entry.name_3[index * 2 + 1] = character >> 8;
         } else {
             ASSERT_NEVER_REACHED();
         }
@@ -1566,19 +1678,19 @@ ErrorCode FAT32::create_file(StringView path, File::Attributes attributes)
         auto& this_piece = pieces[sequence_number];
 
         for (; characters_written < this_piece.characters; ++characters_written)
-            write_long_directory_character(long_entry, this_piece.ptr[characters_written], characters_written);
+            write_long_directory_character(long_entry, static_cast<u16>(this_piece.ptr[characters_written]), characters_written);
 
         if (characters_written < LongNameDirectoryEntry::characters_per_entry)
-            write_long_directory_character(long_entry, 0, ++characters_written);
+            write_long_directory_character(long_entry, 0, characters_written++);
 
         while (characters_written < LongNameDirectoryEntry::characters_per_entry)
-            write_long_directory_character(long_entry, 0xFFFF, ++characters_written);
+            write_long_directory_character(long_entry, 0xFFFF, characters_written++);
 
         dir.write_one(&long_entry, slot);
     }
 
     auto short_name_view = StringView(short_name.data(), short_name_length);
-    auto short_extension_view = StringView(short_name.data() + short_name_length + 1, short_extension_length);
+    auto short_extension_view = StringView(short_name.data() + short_name_length, short_extension_length);
 
     u32 first_cluster = 0;
 
@@ -1629,7 +1741,7 @@ void FAT32::sync()
         m_data_cache->flush_all();
     }
 
-    auto fsinfo_sector = m_ebpb.fs_information_sector;
+    u64 fsinfo_sector = m_ebpb.fs_information_sector;
     if (!fsinfo_sector || fsinfo_sector == 0xFFFF)
         return;
 

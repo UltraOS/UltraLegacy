@@ -38,7 +38,7 @@ public:
         File(StringView name, FileSystem& filesystem, Attributes attributes, const Identifier&, u32 first_data_cluster, u32 size);
 
         size_t read(void* buffer, size_t offset, size_t size) override;
-        size_t write(void* buffer, size_t offset, size_t size) override;
+        size_t write(const void* buffer, size_t offset, size_t size) override;
 
         void flush_meta_modifications();
 
@@ -97,6 +97,8 @@ public:
         Directory(FileSystem& filesystem, File& directory_file, bool owns_file);
 
         struct NativeEntry : Entry {
+            char short_name[DirectoryEntry::full_short_name_length];
+
             u32 sequence_count;
             u32 entry_offset_within_cluster;
 
@@ -113,7 +115,7 @@ public:
             u32 metadata_entry_cluster; // same as file_entry_cluster_1 if not VFAT
             u32 metadata_entry_offset_within_cluster; // same as entry_offset_within_cluster if not VFAT
 
-            File::Identifier identifier() const { return { metadata_entry_cluster, metadata_entry_offset_within_cluster }; }
+            [[nodiscard]] File::Identifier identifier() const { return { metadata_entry_cluster, metadata_entry_offset_within_cluster }; }
         };
 
         NativeEntry next_native();
@@ -213,7 +215,7 @@ private:
     void set_fat_entry_at(u32 index, u32 value);
 
     void locked_read(u64 block_index, size_t offset, size_t bytes, void* buffer);
-    void locked_write(u64 block_index, size_t offset, size_t bytes, void* buffer);
+    void locked_write(u64 block_index, size_t offset, size_t bytes, const void* buffer);
     void locked_zero_fill(u64 block_index, size_t count);
 
     u32 nth_cluster_in_chain(u32 start, u32 n);

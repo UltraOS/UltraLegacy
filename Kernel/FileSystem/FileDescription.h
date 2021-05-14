@@ -15,7 +15,7 @@ public:
 
     FileDescription(File& file, Mode mode);
     size_t read(void* buffer, size_t size);
-    size_t write(void* buffer, size_t size);
+    size_t write(const void* buffer, size_t size);
     void set_offset(size_t offset);
 
     ~FileDescription();

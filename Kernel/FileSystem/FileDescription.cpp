@@ -21,7 +21,7 @@ size_t FileDescription::read(void* buffer, size_t size)
     return read_bytes;
 }
 
-size_t FileDescription::write(void* buffer, size_t size)
+size_t FileDescription::write(const void* buffer, size_t size)
 {
     LOCK_GUARD(m_lock);
 

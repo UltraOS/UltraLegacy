@@ -12,7 +12,6 @@ class File {
 
 public:
     static constexpr size_t max_name_length = 255;
-    static constexpr size_t small_name_length = 12; // 8 + (.) + 3
 
     enum class Attributes : u32 {
         IS_DIRECTORY = SET_BIT(0),
@@ -44,7 +43,7 @@ public:
     }
 
     virtual size_t read(void* buffer, size_t offset, size_t size) = 0;
-    virtual size_t write(void* buffer, size_t offset, size_t size) = 0;
+    virtual size_t write(const void* buffer, size_t offset, size_t size) = 0;
 
     bool is_directory() const { return (m_attributes & Attributes::IS_DIRECTORY) == Attributes::IS_DIRECTORY; }
     Attributes attributes() const { return m_attributes; }
