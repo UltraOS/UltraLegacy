@@ -73,15 +73,15 @@ private:
         u8 remote_irr : 1;
         TriggerMode trigger_mode : 1;
         bool is_disabled : 1;
-        u64 reserved_1 : 38;
+        u64 reserved_1 : 39;
         u8 lapic_id : 4;
         u8 reserved_2 : 4;
 
         void apply_to(Address, u8 gsi);
+
+        static constexpr size_t size = 8;
     };
 
-    static constexpr size_t redirection_entry_size = 8;
-
-    static_assert(sizeof(RedirectionEntry) == redirection_entry_size);
+    static_assert(sizeof(RedirectionEntry) == RedirectionEntry::size);
 };
 }
