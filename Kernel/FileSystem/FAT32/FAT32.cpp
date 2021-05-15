@@ -287,6 +287,12 @@ FAT32::Directory::NativeEntry FAT32::Directory::next_native()
         ASSERT(long_entry.is_last_logical());
 
         auto* cur_name_buffer_ptr = out.name + File::max_name_length;
+
+        // Since you can have at max 20 chained long entries, the theoretical limit is 20 * 13 characters,
+        // however, the actual allowed limit is 255, which would limit the 20th entry contribution to only 8 characters.
+        static constexpr size_t max_characters_for_last_entry = 8;
+
+        cur_name_buffer_ptr -= max_characters_for_last_entry;
         size_t chars_written = 0;
 
         auto previous_cluster = m_current_cluster;
@@ -306,7 +312,6 @@ FAT32::Directory::NativeEntry FAT32::Directory::next_native()
                 previous_cluster = m_current_cluster;
             }
 
-            cur_name_buffer_ptr -= LongNameDirectoryEntry::characters_per_entry;
             auto* name_ptr = cur_name_buffer_ptr;
 
             auto chars = process_ucs2(long_entry.name_1, long_entry.name_1_characters, name_ptr);
@@ -333,6 +338,7 @@ FAT32::Directory::NativeEntry FAT32::Directory::next_native()
             auto did_fetch = fetch_next(&long_entry);
             ASSERT(did_fetch);
             --sequence_number;
+            cur_name_buffer_ptr -= LongNameDirectoryEntry::characters_per_entry;
         }
 
         ASSERT(chars_written <= File::max_name_length);
@@ -668,80 +674,53 @@ size_t FAT32::File::write(const void* buffer, size_t offset, size_t size)
 
     LOCK_GUARD(lock());
 
+    auto file_cluster_count = ceiling_divide<size_t>(m_size, fs.bytes_per_cluster());
+    auto needed_cluster_count = ceiling_divide<size_t>(offset + size, fs.bytes_per_cluster());
+    auto offset_clusters = ceiling_divide<size_t>(offset, fs.bytes_per_cluster());
     auto offset_cluster_index = offset / fs.bytes_per_cluster();
     auto offset_within_cluster = offset - (offset_cluster_index * fs.bytes_per_cluster());
-    auto file_cluster_count = ceiling_divide<size_t>(m_size, fs.bytes_per_cluster());
-    bool write_starts_at_last_cluster = false;
 
-    // We have to zero fill all the clusters before offset
-    if (offset_cluster_index && (file_cluster_count <= offset_cluster_index)) {
-        write_starts_at_last_cluster = true;
-        auto zero_filled_clusters = offset_cluster_index - file_cluster_count;
-        zero_filled_clusters += 1; // we allocate 1 extra cluster that will contain the written data
+    if (file_cluster_count < needed_cluster_count) {
+        u32 clusters_to_allocate = 0;
+        u32 clusters_to_zero = 0;
 
-        // if write is less than the cluster size or offset doesn't start at the
-        // exact beginning of the cluster we have to zero fill it
-        bool should_zero_fill_last_cluster = offset_within_cluster || (size < fs.bytes_per_cluster());
-
-        FAT32_DEBUG << "write offset past last cluster for file " << name()
-                    << " zero filled cluster count is " << (zero_filled_clusters - !should_zero_fill_last_cluster);
-
-        auto chain = fs.allocate_cluster_chain(zero_filled_clusters, compute_last_cluster());
-
-        for (size_t i = 0; i < (chain.size() - !should_zero_fill_last_cluster); ++i)
-            fs.locked_zero_fill(pure_cluster_value(chain[i]), 1);
-
-        if (!m_first_cluster) {
-            FAT32_DEBUG << "file " << name() << " was empty, setting first cluster to be " << chain.first();
-            set_first_cluster(chain.first());
+        if (file_cluster_count < offset_clusters) {
+            auto extra_clusters = offset_clusters - file_cluster_count;
+            FAT32_DEBUG << "offset is past the end of file, we need " << extra_clusters << " extra cluster(s)";
+            clusters_to_allocate += extra_clusters;
+            clusters_to_zero += extra_clusters;
+            file_cluster_count += extra_clusters;
         }
 
-        FAT32_DEBUG << "new last cluster for file " << name() << " is " << chain.last();
-        set_last_cluster(chain.last());
-        file_cluster_count += zero_filled_clusters;
-    }
+        auto extra_clusters = needed_cluster_count - file_cluster_count;
+        FAT32_DEBUG << "we need extra " << extra_clusters << " cluster(s) for write";
+        clusters_to_allocate += extra_clusters;
 
-    u32 first_cluster_to_write;
+        FAT32_DEBUG << "total clusters to allocate is " << clusters_to_allocate << ", allocating...";
 
-    if (write_starts_at_last_cluster) {
-        first_cluster_to_write = compute_last_cluster();
-    } else {
-        if (offset_cluster_index)
-            first_cluster_to_write = fs.nth_cluster_in_chain(first_cluster(), offset_cluster_index);
-        else
-            first_cluster_to_write = first_cluster();
-    }
-
-    auto bytes_to_write = size;
-    auto clusters_to_write = ceiling_divide<size_t>(size, fs.bytes_per_cluster());
-
-    auto extra_bytes = fs.bytes_per_cluster() - (size % fs.bytes_per_cluster());
-    if ((offset_within_cluster + extra_bytes) > fs.bytes_per_cluster())
-        clusters_to_write++;
-
-    if ((offset_cluster_index + clusters_to_write) > file_cluster_count) {
-        auto clusters_to_allocate = (offset_cluster_index + clusters_to_write) - file_cluster_count;
         auto chain = fs.allocate_cluster_chain(clusters_to_allocate, compute_last_cluster());
 
-        FAT32_DEBUG << "write for file " << name() << " is past last cluster, allocating "
-                    << clusters_to_allocate << " extra";
+        for (size_t i = 0; i < clusters_to_zero; ++i)
+            fs.locked_zero_fill(pure_cluster_value(chain[i]), 1);
+
+        if ((size - offset_within_cluster) % fs.bytes_per_cluster()) {
+            FAT32_DEBUG << "write is unaligned to sector size, zero filling last allocated (" << chain.last() << ")";
+            fs.locked_zero_fill(chain.last(), 1);
+        }
 
         if (!m_first_cluster) {
             FAT32_DEBUG << "file " << name() << " was empty, setting first cluster to be " << chain.first();
             set_first_cluster(chain.first());
-            first_cluster_to_write = chain.first();
-        }
-
-        auto bytes_to_write_for_new_clusters = bytes_to_write - (fs.bytes_per_cluster() - offset_within_cluster);
-
-        if (bytes_to_write_for_new_clusters % fs.bytes_per_cluster()) {
-            FAT32_DEBUG << "write size unaligned to cluster size, zero filling last cluster...";
-            fs.locked_zero_fill(pure_cluster_value(chain.last()), 1);
         }
 
         set_last_cluster(chain.last());
     }
 
+    u32 first_cluster_to_write = fs.nth_cluster_in_chain(first_cluster(), offset_cluster_index);
+
+    FAT32_DEBUG << "first cluster to write is " << first_cluster_to_write;
+
+    auto bytes_to_write = size;
     auto current_cluster = first_cluster_to_write;
     auto* byte_buff = reinterpret_cast<const u8*>(buffer);
 
@@ -749,7 +728,8 @@ size_t FAT32::File::write(const void* buffer, size_t offset, size_t size)
         auto bytes_for_this_write = min(bytes_to_write, fs.bytes_per_cluster() - offset_within_cluster);
         fs.locked_write(pure_cluster_value(current_cluster), offset_within_cluster, bytes_for_this_write, byte_buff);
 
-        FAT32_DEBUG << "writing " << bytes_for_this_write << " out of " << bytes_to_write << " offset is " << offset_within_cluster;
+        FAT32_DEBUG << "writing " << bytes_for_this_write << " out of " << bytes_to_write
+                    << " cluster: " << current_cluster << " offset: " << offset_within_cluster;
 
         byte_buff += bytes_for_this_write;
         bytes_to_write -= bytes_for_this_write;
@@ -767,6 +747,8 @@ size_t FAT32::File::write(const void* buffer, size_t offset, size_t size)
         set_size(end_of_write);
         flush_meta_modifications();
     }
+
+    FAT32_DEBUG << "write finished, file size is " << m_size;
 
     return size;
 }
@@ -1495,7 +1477,7 @@ ErrorCode FAT32::create_file(StringView path, File::Attributes attributes)
     bool is_directory = (attributes & File::Attributes::IS_DIRECTORY) == File::Attributes::IS_DIRECTORY;
 
     auto write_normal_entry = [&](StringView name, StringView extension, Directory::Slot& slot, u32 first_cluster = free_cluster) {
-        FAT32_DEBUG << "Writing normal entry " << name << "." << extension << " first cluster: " << first_cluster;
+        FAT32_DEBUG << "Writing normal entry " << name << extension << " first cluster: " << first_cluster;
 
         DirectoryEntry entry {};
 
@@ -1638,7 +1620,7 @@ ErrorCode FAT32::create_file(StringView path, File::Attributes attributes)
 
             pieces[i].ptr = name_ptr;
             pieces[i].characters = characters_for_this_piece;
-            log() << "VFS name piece[" << i << "] " << StringView(name_ptr, characters_for_this_piece);
+            FAT32_DEBUG << "VFS name piece[" << i << "] " << StringView(name_ptr, characters_for_this_piece);
 
             name_ptr += characters_for_this_piece;
 
