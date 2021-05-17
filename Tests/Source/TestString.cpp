@@ -146,6 +146,21 @@ TEST(StartsWith) {
     Assert::that(str5.starts_with(str1)).is_true();
 }
 
+TEST(EndsWith) {
+    kernel::StringView str1 = "TEST";
+
+    kernel::StringView str2 = "123321TEST";
+    kernel::StringView str3 = "";
+    kernel::StringView str4 = "123123112312321EST";
+    kernel::StringView str5 = "TEST";
+
+    Assert::that(str2.ends_with(str1)).is_true();
+    Assert::that(str3.ends_with(str1)).is_false();
+    Assert::that(str1.ends_with(str3)).is_true();
+    Assert::that(str4.ends_with(str1)).is_false();
+    Assert::that(str5.ends_with(str1)).is_true();
+}
+
 TEST(Find) {
     kernel::StringView str1 = "TEST";
 

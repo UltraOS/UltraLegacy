@@ -94,6 +94,10 @@ bool starts_with(StringView, StringView);
 template <typename LStrType, typename RStrType>
 bool starts_with(const LStrType&, const RStrType&);
 
+bool ends_with(StringView, StringView);
+template <typename LStrType, typename RStrType>
+bool ends_with(const LStrType&, const RStrType&);
+
 Optional<size_t> find(StringView, StringView);
 template <typename LStrType, typename RStrType>
 Optional<size_t> find(const LStrType&, const RStrType&);
@@ -134,6 +138,12 @@ public:
     [[nodiscard]] bool starts_with(const T& other) const
     {
         return ::kernel::starts_with(static_cast<const Self&>(*this), other);
+    }
+
+    template <typename T>
+    [[nodiscard]] bool ends_with(const T& other) const
+    {
+        return ::kernel::ends_with(static_cast<const Self&>(*this), other);
     }
 
     template <typename T>
@@ -812,6 +822,18 @@ bool is_less(const LStrType& lhs, const RStrType& rhs)
     return is_less(StringView(lhs), StringView(rhs));
 }
 
+template <typename LStrType, typename RStrType>
+bool starts_with(const LStrType& lhs, const RStrType& rhs)
+{
+    return starts_with(StringView(lhs), StringView(rhs));
+}
+
+template <typename LStrType, typename RStrType>
+bool ends_with(const LStrType& lhs, const RStrType& rhs)
+{
+    return ends_with(StringView(lhs), StringView(rhs));
+}
+
 inline bool are_equal(StringView lhs, StringView rhs)
 {
     if (lhs.size() != rhs.size())
@@ -867,6 +889,23 @@ inline bool starts_with(StringView lhs, StringView rhs)
 
     for (size_t i = 0; i < rhs.size(); ++i) {
         if (lhs.at(i) != rhs.at(i))
+            return false;
+    }
+
+    return true;
+}
+
+inline bool ends_with(StringView lhs, StringView rhs)
+{
+    if (rhs.size() > lhs.size())
+        return false;
+    if (rhs.empty())
+        return true;
+
+    auto offset = lhs.size() - rhs.size();
+
+    for (size_t i = rhs.size(); i-- > 0;) {
+        if (lhs.at(offset + i) != rhs.at(i))
             return false;
     }
 
