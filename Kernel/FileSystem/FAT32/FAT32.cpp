@@ -259,8 +259,6 @@ FAT32::Directory::NativeEntry FAT32::Directory::next_native()
             return out;
         }
 
-        if (normal_entry.is_archive())
-            continue;
         if (normal_entry.is_device())
             continue;
 
@@ -638,6 +636,9 @@ size_t FAT32::File::read(void* buffer, size_t offset, size_t size)
     size_t bytes_to_read = min(size, bytes_left_after_offset);
     size_t bytes_read = bytes_to_read;
     size_t clusters_to_read = ceiling_divide<size_t>(bytes_to_read, fs.bytes_per_cluster());
+
+    FAT32_DEBUG << "reading " << size << " bytes at offset " << offset << " into " << buffer
+                << " actual read size " << bytes_to_read << " clusters to read " << clusters_to_read;
 
     u32 current_cluster = m_first_cluster;
 
