@@ -30,6 +30,7 @@ set(CMAKE_CXX_COMPILER "${TOOLCHAIN_PATH}/CrossCompiler/Tools${ARCH}/bin/${COMPI
 
 set(LINKER_FLAGS "-ffreestanding -O2 -nostdlib")
 set(CXX_FLAGS "-std=c++17 -ffreestanding -O2 -Wall -Wextra -Werror -fno-use-cxa-atexit -fno-rtti -fno-exceptions ${ADDITIONAL_FLAGS}")
+set(C_FLAGS "-ffreestanding")
 set(CMAKE_EXE_LINKER_FLAGS_INIT "${LINKER_FLAGS}")
 set(CMAKE_CXX_FLAGS         ${CXX_FLAGS})
 set(CMAKE_CXX_FLAGS_DEBUG   ${CXX_FLAGS})
