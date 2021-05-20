@@ -27,25 +27,31 @@ void bzero(void* dest, size_t count)
 
 int ffs(int number)
 {
+#ifdef __GNUC__
     return __builtin_ffs(number);
+#elif defined(_MSC_VER)
+    return 0;
+#else
+    static_assert(false, "?");
+#endif
 }
 
 char* index(const char* src, int number)
 {
-    strchr(src, number);
+    return strchr(src, number);
 }
 
 char* rindex(const char* src, int number)
 {
-    strrchr(src, number);
+    return strrchr(src, number);
 }
 
 int strcasecmp(const char* lhs, const char* rhs)
 {
-
+    return 0;
 }
 
 int strncasecmp(const char* lhs, const char* rhs, size_t count)
 {
-
+    return 1;
 }

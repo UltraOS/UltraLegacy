@@ -2,7 +2,7 @@
 
 #include <stddef.h>
 
-#ifdef __cplusplus
+#if defined(__cplusplus) and !defined(LIBC_TEST)
 extern "C" {
 #endif
 
@@ -35,6 +35,6 @@ void* memccpy(void* dest, const void* src, int ch, size_t count);
 
 char* strerror(int errnum);
 
-#ifdef __cplusplus
+#if defined(__cplusplus) and !defined(LIBC_TEST)
 }
 #endif

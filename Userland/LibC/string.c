@@ -1,4 +1,3 @@
-#include "string.h"
 #include "stdint.h"
 
 char* strcpy(char* dest, const char* src)
@@ -6,8 +5,8 @@ char* strcpy(char* dest, const char* src)
     char* org_dest = dest;
 
     do {
-        *dest++ = *src++;
-    } while (*src);
+        *dest++ = *src;
+    } while (*src++);
 
     return org_dest;
 }
@@ -41,8 +40,8 @@ char* strncat(char* dest, const char* src, size_t count)
     size_t offset = strlen(dest);
 
     size_t i = 0;
-    for (; src[offset + i] && i < count; ++i)
-        dest[i] = src[i];
+    for (; src[i] && i < count; ++i)
+        dest[offset + i] = src[i];
     dest[offset + i] = '\0';
 
     return dest;
@@ -50,14 +49,20 @@ char* strncat(char* dest, const char* src, size_t count)
 
 size_t strxfrm(char* dest, const char* src, size_t count)
 {
+    // We don't support locales so all we do is memcpy the src into dest,
+    // while respecting the buffer size.
+
+    size_t bytes_needed = strlen(src);
+
+    if (!dest)
+        return bytes_needed;
+
     size_t i = 0;
-    for (; i < count && *src; ++i)
-        dest[i] = *src++;
+    for (; i < count && i < bytes_needed; ++i)
+         dest[i] = src[i];
+    dest[i] = '\0';
 
-    for (; i < count; ++i)
-        dest[i] = '\0';
-
-    return i;
+    return bytes_needed;
 }
 
 size_t strlen(const char* str)
@@ -102,35 +107,42 @@ int strncmp(const char* lhs, const char* rhs, size_t count)
         i++;
     }
 
+    if (i == count)
+        i--;
+
     return *(cucp)&lhs[i] - *(cucp)&rhs[i];
 }
 
-int strcoll( const char* lhs, const char* rhs)
+int strcoll(const char* lhs, const char* rhs)
 {
     return strcmp(lhs, rhs);
 }
 
 char* strchr(const char* str, int ch)
 {
-    char c = ch;
+    unsigned char c = (unsigned char)ch;
 
     for (;; str++) {
-        if (*str == c)
+        unsigned char as_unsigned = *(const unsigned char*)str;
+
+        if (as_unsigned == c)
             return (char*)str;
-        if (!*str)
+        if (!as_unsigned)
             return NULL;
     }
 }
 
 char* strrchr(const char* str, int ch)
 {
-    char c = ch;
+    unsigned char c = (unsigned char)ch;
     char* pos = NULL;
 
     for (;; str++) {
-        if (*str == c)
+        unsigned char as_unsigned = *(const unsigned char*)str;
+
+        if (as_unsigned == c)
             pos = (char*)str;
-        if (!*str)
+        if (!as_unsigned)
             return pos;
     }
 }
@@ -200,6 +212,8 @@ char* strstr(const char* str, const char* substr)
         if (k == substr_len)
             return (char*)str;
     }
+
+    return NULL;
 }
 
 void* memchr(const void* ptr, int ch, size_t count)
