@@ -6,7 +6,7 @@
 #define MB (1024ull * KB)
 #define GB (1024ull * MB)
 
-#define SET_BIT(x) (1u << (x))
+#define SET_BIT(x) (1ull << (x))
 
 #define IS_BIT_SET(mask, x) ((mask)&SET_BIT(x))
 
