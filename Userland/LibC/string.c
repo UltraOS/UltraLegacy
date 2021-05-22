@@ -147,17 +147,17 @@ char* strrchr(const char* str, int ch)
     }
 }
 
-size_t string_span(const char* dest, const char* src, uint8_t count_if, char** out_ptr)
+static size_t string_span(const char* dest, const char* src, uint8_t count_if, char** out_ptr)
 {
     uint8_t table[256];
     memset(table, 0, 256);
 
     for (; *src; src++)
-        table[(unsigned int)*src] = 1;
+        table[(unsigned char)*src] = 1;
 
     size_t count = 0;
     for (; *dest; dest++, count++) {
-        if (table[*(unsigned int*)dest] == count_if)
+        if (table[*(unsigned char*)dest] == count_if)
             continue;
 
         if (out_ptr)
@@ -210,7 +210,7 @@ char* strstr(const char* str, const char* substr)
         }
 
         if (k == substr_len)
-            return (char*)str;
+            return (char*)&str[i];
     }
 
     return NULL;
@@ -223,7 +223,7 @@ void* memchr(const void* ptr, int ch, size_t count)
 
     for (size_t i = 0; i < count; ++i) {
         if (byte_ptr[i] == byte)
-            return (void*)byte_ptr;
+            return (void*)&byte_ptr[i];
     }
 
     return NULL;

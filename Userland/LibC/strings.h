@@ -2,7 +2,7 @@
 
 #include <stddef.h>
 
-#if defined(__cplusplus) and !defined(LIBC_TEST)
+#if defined(__cplusplus) && !defined(LIBC_TEST)
 extern "C" {
 #endif
 
@@ -15,6 +15,6 @@ char* rindex(const char*, int);
 int strcasecmp(const char*, const char*);
 int strncasecmp(const char*, const char*, size_t);
 
-#if defined(__cplusplus) and !defined(LIBC_TEST)
+#if defined(__cplusplus) && !defined(LIBC_TEST)
 }
 #endif
