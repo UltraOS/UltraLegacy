@@ -143,11 +143,11 @@ TEST(Strchr) {
     Assert::that(libc::strchr(my_str, 's')).is_equal(my_str + 1);
     Assert::that(libc::strchr(my_str, 'd')).is_equal(my_str + 2);
     Assert::that(libc::strchr(my_str, '\0')).is_equal(my_str + 3);
-    Assert::that(libc::strchr(my_str, 'X')).is_equal(nullptr);
+    Assert::that(libc::strchr(my_str, 'X')).is_null();
 
     char my_str1[] = "";
     Assert::that(libc::strchr(my_str1, '\0')).is_equal(my_str1);
-    Assert::that(libc::strchr(my_str1, 'a')).is_equal(nullptr);
+    Assert::that(libc::strchr(my_str1, 'a')).is_null();
 }
 
 TEST(Strrchr) {
@@ -157,9 +157,164 @@ TEST(Strrchr) {
     Assert::that(libc::strrchr(my_str, 's')).is_equal(my_str + 1);
     Assert::that(libc::strrchr(my_str, 'd')).is_equal(my_str + 2);
     Assert::that(libc::strrchr(my_str, '\0')).is_equal(my_str + 4);
-    Assert::that(libc::strrchr(my_str, 'X')).is_equal(nullptr);
+    Assert::that(libc::strrchr(my_str, 'X')).is_null();
 
     char my_str1[] = "";
     Assert::that(libc::strrchr(my_str1, '\0')).is_equal(my_str1);
-    Assert::that(libc::strrchr(my_str1, 'a')).is_equal(nullptr);
+    Assert::that(libc::strrchr(my_str1, 'a')).is_null();
+}
+
+TEST(Strspn) {
+    const char* my_str = "aaaaaa11122231233";
+
+    Assert::that(libc::strspn(my_str, "a123")).is_equal(libc::strlen(my_str));
+    Assert::that(libc::strspn("", "")).is_equal(0);
+    Assert::that(libc::strspn("", "asd")).is_equal(0);
+    Assert::that(libc::strspn("123", "1")).is_equal(1);
+    Assert::that(libc::strspn("112233", "1")).is_equal(2);
+}
+
+TEST(Strcspn) {
+    const char* my_str = "aaaaaa11122231233";
+
+    Assert::that(libc::strcspn(my_str, "bbfgblkh0ko45678")).is_equal(libc::strlen(my_str));
+    Assert::that(libc::strcspn("", "")).is_equal(0);
+    Assert::that(libc::strcspn("", "asd")).is_equal(0);
+    Assert::that(libc::strcspn("123", "1")).is_equal(0);
+    Assert::that(libc::strcspn("112233", "3")).is_equal(4);
+}
+
+TEST(Strpbrk) {
+    char my_str[] = "aaaaaa11122231233";
+    Assert::that(libc::strpbrk(my_str, "1")).is_equal(my_str + 6);
+    Assert::that(libc::strpbrk(my_str, "a")).is_equal(my_str);
+    Assert::that(libc::strpbrk(my_str, "3")).is_equal(my_str + 12);
+
+
+    char my_str1[] = "aaa";
+    Assert::that(libc::strpbrk(my_str1, "b")).is_null();
+
+    char my_str2[] = "";
+    Assert::that(libc::strpbrk(my_str2, "")).is_null();
+    Assert::that(libc::strpbrk(my_str2, "asd")).is_null();
+}
+
+TEST(Strstr) {
+    char my_str[] = "asdtest123hello";
+
+    Assert::that(libc::strstr(my_str, "")).is_equal(my_str);
+    Assert::that(libc::strstr(my_str, "asd")).is_equal(my_str);
+    Assert::that(libc::strstr(my_str, "test")).is_equal(my_str + 3);
+    Assert::that(libc::strstr(my_str, "123")).is_equal(my_str + 7);
+    Assert::that(libc::strstr(my_str, "hello")).is_equal(my_str + 10);
+    Assert::that(libc::strstr(my_str, "hellow")).is_null();
+    Assert::that(libc::strstr(my_str, "asdd")).is_null();
+
+    char my_str1[] = "";
+    Assert::that(libc::strstr(my_str1, "")).is_equal(my_str1);
+    Assert::that(libc::strstr(my_str1, "asd")).is_null();
+}
+
+TEST(Memchr) {
+    char my_str[] = "abcdefg123";
+
+    Assert::that(libc::memchr(my_str, 'a', 0)).is_null();
+    Assert::that(libc::memchr(my_str, 'a', 1)).is_equal(my_str);
+    Assert::that(libc::memchr(my_str, 'd', 10)).is_equal(my_str + 3);
+    Assert::that(libc::memchr(my_str, '3', 10)).is_equal(my_str + 9);
+}
+
+TEST(Memcmp) {
+    char my_str[] = "abcd123";
+    char my_str1[] = "abcd132";
+
+    Assert::that(libc::memcmp(my_str, my_str1, 0)).is_equal(0);
+    Assert::that(libc::memcmp(my_str, my_str1, 1)).is_equal(0);
+    Assert::that(libc::memcmp(my_str, my_str1, 5)).is_equal(0);
+    Assert::that(libc::memcmp(my_str, my_str1, 6)).is_equal('2' - '3');
+    Assert::that(libc::memcmp(my_str1, my_str, 6)).is_equal('3' - '2');
+}
+
+TEST(Memset) {
+    uint8_t my_array[3] = { 0xFF, 0xFF, 0xFF };
+
+    libc::memset(my_array, 1, 1);
+    Assert::that(my_array[0]).is_equal(1);
+    Assert::that(my_array[1]).is_equal(0xFF);
+    Assert::that(my_array[2]).is_equal(0xFF);
+
+    my_array[0] = 0xFF;
+    libc::memset(my_array, 1, 0);
+    Assert::that(my_array[0]).is_equal(0xFF);
+    Assert::that(my_array[1]).is_equal(0xFF);
+    Assert::that(my_array[2]).is_equal(0xFF);
+}
+
+TEST(Memcpy) {
+    uint8_t array[] = { 1, 2, 3, 4 };
+
+    uint8_t new_array[4]{};
+
+    libc::memcpy(new_array, array, 0);
+    Assert::that(new_array[0]).is_equal(0);
+    Assert::that(new_array[1]).is_equal(0);
+    Assert::that(new_array[2]).is_equal(0);
+    Assert::that(new_array[3]).is_equal(0);
+
+    libc::memcpy(new_array, array, 2);
+    Assert::that(new_array[0]).is_equal(1);
+    Assert::that(new_array[1]).is_equal(2);
+    Assert::that(new_array[2]).is_equal(0);
+    Assert::that(new_array[3]).is_equal(0);
+
+    new_array[0] = 0;
+    new_array[1] = 0;
+    libc::memcpy(new_array, array, 4);
+    Assert::that(new_array[0]).is_equal(1);
+    Assert::that(new_array[1]).is_equal(2);
+    Assert::that(new_array[2]).is_equal(3);
+    Assert::that(new_array[3]).is_equal(4);
+}
+
+TEST(Memmove) {
+    uint8_t array[] = { 1, 2, 3, 4 };
+
+    uint8_t new_array[4]{};
+
+    libc::memmove(new_array, array, 0);
+    Assert::that(new_array[0]).is_equal(0);
+    Assert::that(new_array[1]).is_equal(0);
+    Assert::that(new_array[2]).is_equal(0);
+    Assert::that(new_array[3]).is_equal(0);
+
+    libc::memmove(new_array, array, 2);
+    Assert::that(new_array[0]).is_equal(1);
+    Assert::that(new_array[1]).is_equal(2);
+    Assert::that(new_array[2]).is_equal(0);
+    Assert::that(new_array[3]).is_equal(0);
+
+    new_array[0] = 0;
+    new_array[1] = 0;
+    libc::memmove(new_array, array, 4);
+    Assert::that(new_array[0]).is_equal(1);
+    Assert::that(new_array[1]).is_equal(2);
+    Assert::that(new_array[2]).is_equal(3);
+    Assert::that(new_array[3]).is_equal(4);
+
+    libc::memmove(array, array + 1, 3);
+    Assert::that(array[0]).is_equal(2);
+    Assert::that(array[1]).is_equal(3);
+    Assert::that(array[2]).is_equal(4);
+    Assert::that(array[3]).is_equal(4);
+
+    array[0] = 1;
+    array[1] = 2;
+    array[2] = 3;
+    array[3] = 4;
+
+    libc::memmove(array + 1, array, 3);
+    Assert::that(array[0]).is_equal(1);
+    Assert::that(array[1]).is_equal(1);
+    Assert::that(array[2]).is_equal(2);
+    Assert::that(array[3]).is_equal(3);
 }
