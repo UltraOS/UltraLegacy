@@ -1,7 +1,5 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.16)
 
-project(Userland)
-enable_language(CXX)
-enable_language(C)
+project(Userland CXX C)
 
 add_subdirectory(LibC)

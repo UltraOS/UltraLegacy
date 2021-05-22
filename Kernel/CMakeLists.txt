@@ -1,7 +1,6 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.16)
 
 set(ENV{ULTRA_ARCH} ${ARCH})
-set(CMAKE_TOOLCHAIN_FILE ${CMAKE_CURRENT_SOURCE_DIR}/../Toolchain/CMakeToolchain.txt)
 
 project(Kernel)
 enable_language(ASM_NASM)
@@ -11,22 +10,30 @@ if (ARCH MATCHES "64")
     set(CMAKE_ASM_NASM_FLAGS "-felf64 -DULTRA_64 -I${PROJECT_SOURCE_DIR}/Architecture/x86/ -I${PROJECT_SOURCE_DIR}/Architecture/x86/AMD64")
     add_definitions(-DULTRA_64)
     set(ARCH_FOLDER "x86/AMD64")
+    set(ADDITIONAL_FLAGS "-mcmodel=kernel -mno-red-zone -mno-mmx -mno-sse -mno-sse2")
 else ()
     set(CMAKE_ASM_NASM_FLAGS "-felf32 -DULTRA_32 -I${PROJECT_SOURCE_DIR}/Architecture/x86/ -I${PROJECT_SOURCE_DIR}/Architecture/x86/i386")
     add_definitions(-DULTRA_32)
     set(ARCH_FOLDER "x86/i386")
 endif ()
 
-set(CMAKE_CXX_FLAGS         ${CXX_FLAGS})
-set(CMAKE_CXX_FLAGS_DEBUG   ${CXX_FLAGS})
-set(CMAKE_CXX_FLAGS_RELEASE ${CXX_FLAGS})
-set(CMAKE_EXE_LINKER_FLAGS  "-T ${PROJECT_SOURCE_DIR}/Architecture/${ARCH_FOLDER}/Linker.ld ${LINKER_FLAGS}")
-
+# Don't set flags if we're building cmake purely for the sake of syntax highlighting,
+# because obviously MSVC doesn't support these flags.
 if (NOT WIN32)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ffreestanding")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wextra")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-use-cxa-atexit")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -nostdlib")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ADDITIONAL_FLAGS}")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-builtin-macro-redefined -D'__FILE__=\"$(subst $(realpath ${CMAKE_SOURCE_DIR})/,,$(abspath $<))\"'")
+    set(CMAKE_ASM_NASM_COMPILE_OBJECT "<CMAKE_ASM_NASM_COMPILER> <FLAGS> -o <OBJECT> <SOURCE>")
 endif ()
-
-set(CMAKE_ASM_NASM_COMPILE_OBJECT "<CMAKE_ASM_NASM_COMPILER> <FLAGS> -o <OBJECT> <SOURCE>")
 
 FILE(GLOB CPP_FILES "${PROJECT_SOURCE_DIR}/*cpp"                  "${PROJECT_SOURCE_DIR}/*h"
                     "${PROJECT_SOURCE_DIR}/Core/*cpp"             "${PROJECT_SOURCE_DIR}/Core/*h"
@@ -45,16 +52,14 @@ FILE(GLOB CPP_FILES "${PROJECT_SOURCE_DIR}/*cpp"                  "${PROJECT_SOU
                     "${PROJECT_SOURCE_DIR}/FileSystem/*cpp"       "${PROJECT_SOURCE_DIR}/FileSystem/*h"
                     "${PROJECT_SOURCE_DIR}/FileSystem/FAT32/*cpp" "${PROJECT_SOURCE_DIR}/FileSystem/FAT32/*h")
 
-
 FILE(GLOB ASM_FILES "${PROJECT_SOURCE_DIR}/Architecture/${ARCH_FOLDER}/*asm")
-
-set(KERNEL_SOURCES ${CPP_FILES} ${ASM_FILES})
 
 set(KERNEL Kernel.bin PARENT_SCOPE)
 set(KERNEL_PATH ${PROJECT_BINARY_DIR} PARENT_SCOPE)
-
+set(KERNEL_SOURCES ${CPP_FILES} ${ASM_FILES})
 add_executable(Kernel.bin ${KERNEL_SOURCES})
-target_include_directories(Kernel.bin PRIVATE "${PROJECT_SOURCE_DIR}")
-set_target_properties(Kernel.bin PROPERTIES LINK_FLAGS "-Wl,--oformat,binary -Wl,-Map=kernel.map")
+
+target_include_directories(Kernel.bin PRIVATE ${PROJECT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/../)
+set_target_properties(Kernel.bin PROPERTIES LINK_FLAGS "-T ${PROJECT_SOURCE_DIR}/Architecture/${ARCH_FOLDER}/Linker.ld -Wl,--oformat,binary -Wl,-Map=kernel.map")
 
 target_link_libraries(Kernel.bin gcc)
