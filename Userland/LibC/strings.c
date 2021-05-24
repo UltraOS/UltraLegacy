@@ -48,10 +48,40 @@ char* rindex(const char* src, int number)
 
 int strcasecmp(const char* lhs, const char* rhs)
 {
-    return 0;
+    size_t i = 0;
+
+    while (lhs[i] && rhs[i]) {
+        int lowerlhs = tolower(lhs[i]);
+        int lowerrhs = tolower(rhs[i]);
+
+        if (lowerlhs != lowerrhs)
+            return (unsigned char)lowerlhs - (unsigned char)lowerrhs;
+
+        i++;
+    }
+
+    return (unsigned char)tolower(lhs[i]) - (unsigned char)tolower(rhs[i]);
 }
 
 int strncasecmp(const char* lhs, const char* rhs, size_t count)
 {
-    return 1;
+    if (count == 0)
+        return 0;
+
+    size_t i = 0;
+
+    while (lhs[i] && rhs[i] && i < count) {
+        int lowerlhs = tolower(lhs[i]);
+        int lowerrhs = tolower(rhs[i]);
+
+        if (lowerlhs != lowerrhs)
+            return (unsigned char)lowerlhs - (unsigned char)lowerrhs;
+
+        i++;
+    }
+
+    if (i == count)
+        i--;
+
+    return (unsigned char)tolower(lhs[i]) - (unsigned char)tolower(rhs[i]);
 }
