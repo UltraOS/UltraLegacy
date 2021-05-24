@@ -446,6 +446,16 @@ public:
                 throw FailedAssertion("true != false", m_file, m_line);
         }
 
+        void is_equal(bool value) {
+            if (m_value != value)
+                throw FailedAssertion(std::to_string(m_value) + "!=" + std::to_string(value), m_file, m_line);
+        }
+
+        void is_not_equal(bool value) {
+            if (m_value == value)
+                throw FailedAssertion(std::to_string(m_value) + "==" + std::to_string(value), m_file, m_line);
+        }
+
     private:
         bool m_value;
 
