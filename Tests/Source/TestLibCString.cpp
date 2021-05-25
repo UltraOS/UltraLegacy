@@ -11,7 +11,7 @@ namespace libc {
 
 TEST(Strcpy) {
     char str[3];
-    memset(str, 0xFF, 3);
+    libc::memset(str, 0xFF, 3);
 
     const char* my_str = "X";
     libc::strcpy(str, my_str);
@@ -20,7 +20,7 @@ TEST(Strcpy) {
     Assert::that(str[1]).is_equal('\0');
     Assert::that(str[2]).is_equal(0xFF);
 
-    memset(str, 0xFF, 3);
+    libc::memset(str, 0xFF, 3);
 
     const char* my_str_1 = "";
     libc::strcpy(str, my_str_1);
@@ -31,7 +31,7 @@ TEST(Strcpy) {
 
 TEST(Strncpy) {
     char str[4];
-    memset(str, 0xFF, 4);
+    libc::memset(str, 0xFF, 4);
 
     const char* my_str = "X";
     libc::strncpy(str, my_str, 3);
@@ -41,7 +41,7 @@ TEST(Strncpy) {
     Assert::that(str[2]).is_equal('\0');
     Assert::that(str[3]).is_equal(0xFF);
 
-    memset(str, 0xFF, 4);
+    libc::memset(str, 0xFF, 4);
 
     const char* my_str_1 = "";
     libc::strncpy(str, my_str_1, 3);
@@ -50,7 +50,7 @@ TEST(Strncpy) {
     Assert::that(str[2]).is_equal('\0');
     Assert::that(str[3]).is_equal(0xFF);
 
-    memset(str, 0xFF, 4);
+    libc::memset(str, 0xFF, 4);
 
     const char* my_str_2 = "HELLO";
     libc::strncpy(str, my_str_2, 3);
@@ -104,7 +104,7 @@ TEST(Strxfrm) {
     Assert::that(my_buf[4]).is_equal('\0');
     Assert::that(my_buf[5]).is_equal(0xFF);
 
-    memset(my_buf, 0xFF, 10);
+    libc::memset(my_buf, 0xFF, 10);
     libc::strxfrm(my_buf, my_str, 1);
     Assert::that(std::string(my_buf)).is_equal("1");
     Assert::that(my_buf[2]).is_equal(0xFF);
@@ -317,4 +317,23 @@ TEST(Memmove) {
     Assert::that(array[1]).is_equal(1);
     Assert::that(array[2]).is_equal(2);
     Assert::that(array[3]).is_equal(3);
+}
+
+TEST(Strcasecmp) {
+    Assert::that(libc::strcasecmp("Hell123WoRlZA", "hell123worlza")).is_equal(0);
+    Assert::that(libc::strcasecmp("", "")).is_equal(0);
+    Assert::that(libc::strcasecmp("a", "")).is_equal('a');
+    Assert::that(libc::strcasecmp("", "a")).is_equal(-'a');
+    Assert::that(libc::strcasecmp("A", "a")).is_equal(0);
+}
+
+TEST(Strncasecmp) {
+    Assert::that(libc::strncasecmp("A", "b", 99)).is_equal(-1);
+    Assert::that(libc::strncasecmp("b", "A", 99)).is_equal(1);
+    Assert::that(libc::strncasecmp("a", "a", 99)).is_equal(0);
+    Assert::that(libc::strncasecmp("", "", 99)).is_equal(0);
+    Assert::that(libc::strncasecmp("asd", "", 99)).is_equal('a');
+    Assert::that(libc::strncasecmp("", "Asd", 99)).is_equal(-'a');
+    Assert::that(libc::strncasecmp("ASDasd", "asd", 3)).is_equal(0);
+    Assert::that(libc::strncasecmp("asdasd", "ASD", 6)).is_equal('a');
 }
