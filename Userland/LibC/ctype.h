@@ -1,6 +1,6 @@
 #pragma once
 
-#include "stdint.h"
+#include <stdint.h>
 
 #if defined(__cplusplus) && !defined(LIBC_TEST)
 extern "C" {

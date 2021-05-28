@@ -1,6 +1,7 @@
 #include "stdint.h"
 #include "strings.h"
 #include "string.h"
+#include "ctype.h"
 
 int bcmp(const void* lhs, const void* rhs, size_t size)
 {
