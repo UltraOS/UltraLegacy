@@ -73,9 +73,9 @@ void DemoTTY::tick()
 
     for (;;) {
         switch (event.type) {
-        case Event::Type::EMPTY:
+        case EventType::EMPTY:
             return;
-        case Event::Type::KEY_STATE: {
+        case EventType::KEY_STATE: {
             if (event.vk_state.state == VKState::RELEASED)
                 break;
 
@@ -92,7 +92,7 @@ void DemoTTY::tick()
             }
             break;
         }
-        case Event::Type::CHAR_TYPED: {
+        case EventType::CHAR_TYPED: {
             auto ascii_char = static_cast<char>(event.char_typed.character);
 
             if (ascii_char == 'c' && EventManager::the().state_of_key(VK::LEFT_CTRL) == VKState::PRESSED) {
@@ -109,14 +109,14 @@ void DemoTTY::tick()
             draw_cursor();
             break;
         }
-        case Event::Type::MOUSE_SCROLL: {
+        case EventType::MOUSE_SCROLL: {
             if (event.mouse_scroll.delta > 0)
                 scroll(Direction::UP, 3);
             else
                 scroll(Direction::DOWN, 3);
             break;
         }
-        case Event::Type::WINDOW_SHOULD_CLOSE: {
+        case EventType::WINDOW_SHOULD_CLOSE: {
             write("please don't close me :("_sv);
             break;
         }

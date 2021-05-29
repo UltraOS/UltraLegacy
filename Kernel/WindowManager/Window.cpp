@@ -223,7 +223,7 @@ bool Window::handle_event(const Event& event, bool is_handled)
     if (m_state == State::CLOSED)
         return false;
 
-    if (event.type == Event::Type::MOUSE_MOVE) {
+    if (event.type == EventType::MOUSE_MOVE) {
         if (!is_handled) {
             auto mouse_vec = Point(event.mouse_move.x, event.mouse_move.y);
 
@@ -241,7 +241,7 @@ bool Window::handle_event(const Event& event, bool is_handled)
         push_window_event(event);
 
     switch (event.type) {
-    case Event::Type::BUTTON_STATE: {
+    case EventType::BUTTON_STATE: {
         auto key = event.vk_state.vkey;
         auto key_state = event.vk_state.state;
 
@@ -262,7 +262,7 @@ bool Window::handle_event(const Event& event, bool is_handled)
                 if (m_state == State::CLOSE_BUTTON_PRESSED) {
                     if (m_frame.rect_for_button(WindowFrame::Button::CLOSE).contains(Screen::the().cursor().location())) {
                         Event e {};
-                        e.type = Event::Type::WINDOW_SHOULD_CLOSE;
+                        e.type = EventType::WINDOW_SHOULD_CLOSE;
                         push_window_event(e);
                     }
 
@@ -275,7 +275,7 @@ bool Window::handle_event(const Event& event, bool is_handled)
 
         return true;
     }
-    case Event::Type::MOUSE_MOVE: {
+    case EventType::MOUSE_MOVE: {
         auto release_buttons_if_needed = [this]() {
             if (m_state == State::CLOSE_BUTTON_HOVERED) {
                 m_state = State::NORMAL;

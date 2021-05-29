@@ -16,9 +16,9 @@ void EventManager::dispatch_pending()
         auto event = pop_event();
 
         switch (event.type) {
-        case Event::Type::EMPTY:
+        case EventType::EMPTY:
             return;
-        case Event::Type::BUTTON_STATE:
+        case EventType::BUTTON_STATE:
             update_state_of_key(event.vk_state.vkey, event.vk_state.state);
             if (event.vk_state.state == VKState::PRESSED)
                 Screen::the().check_if_focused_window_should_change();
@@ -27,7 +27,7 @@ void EventManager::dispatch_pending()
             Window::focused().handle_event(event);
             continue;
 
-        case Event::Type::MOUSE_MOVE: {
+        case EventType::MOUSE_MOVE: {
             auto& mouse_event = event.mouse_move;
             Screen::the().move_cursor_to({ static_cast<ssize_t>(mouse_event.x), static_cast<ssize_t>(mouse_event.y) });
 
@@ -38,7 +38,7 @@ void EventManager::dispatch_pending()
             continue;
         }
 
-        case Event::Type::MOUSE_SCROLL:
+        case EventType::MOUSE_SCROLL:
             for (auto& window : WindowManager::the().windows()) {
                 if (window.full_translated_rect().contains(Screen::the().cursor().location())) {
                     window.handle_event(event, false);
@@ -47,18 +47,18 @@ void EventManager::dispatch_pending()
             }
             continue;
 
-        case Event::Type::KEY_STATE:
+        case EventType::KEY_STATE:
             update_state_of_key(event.vk_state.vkey, event.vk_state.state);
             [[fallthrough]];
-        case Event::Type::CHAR_TYPED:
+        case EventType::CHAR_TYPED:
             if (!Window::is_any_focused())
                 continue;
 
             Window::focused().handle_event(event);
             continue;
 
-        case Event::Type::WINDOW_RESIZE:
-        case Event::Type::WINDOW_MOVE:
+        case EventType::WINDOW_RESIZE:
+        case EventType::WINDOW_MOVE:
             continue;
 
         default:
@@ -79,7 +79,7 @@ Event EventManager::pop_event()
 
     if (m_event_queue.empty()) {
         Event e {};
-        e.type = Event::Type::EMPTY;
+        e.type = EventType::EMPTY;
         return e;
     }
 
@@ -107,7 +107,7 @@ void EventManager::update_state_of_key(VK key, VKState state)
 void EventManager::generate_button_state_event(VK key, VKState state)
 {
     Event e {};
-    e.type = Event::Type::BUTTON_STATE;
+    e.type = EventType::BUTTON_STATE;
     e.vk_state = { key, state };
 
     push_event(e);
@@ -120,7 +120,7 @@ void EventManager::generate_char_typed_if_applicable(VK key)
 
     if (is_convertable) {
         Event e {};
-        e.type = Event::Type::CHAR_TYPED;
+        e.type = EventType::CHAR_TYPED;
         e.char_typed.character = static_cast<size_t>(as_char);
         push_event(e);
     }
@@ -133,7 +133,7 @@ void EventManager::post_action(const Keyboard::Packet& packet)
 #endif
 
     Event e {};
-    e.type = Event::Type::KEY_STATE;
+    e.type = EventType::KEY_STATE;
     e.vk_state = { packet.key, packet.state };
 
     push_event(e);
@@ -150,7 +150,7 @@ void EventManager::post_action(const Mouse::Packet& packet)
         log() << "EventManager: mouse move x " << packet.x_delta << " y " << packet.y_delta;
 #endif
         Event e {};
-        e.type = Event::Type::MOUSE_MOVE;
+        e.type = EventType::MOUSE_MOVE;
         auto loc = Screen::the().cursor_position_for_delta(packet.x_delta, packet.y_delta);
         e.mouse_move = { static_cast<size_t>(loc.x()), static_cast<size_t>(loc.y()) };
 
@@ -164,7 +164,7 @@ void EventManager::post_action(const Mouse::Packet& packet)
 #endif
         Event e {};
 
-        e.type = Event::Type::MOUSE_SCROLL;
+        e.type = EventType::MOUSE_SCROLL;
         e.mouse_scroll = { packet.scroll_direction, packet.wheel_delta };
 
         push_event(e);

@@ -109,9 +109,9 @@ void process_with_windows()
         auto event = window->pop_event();
 
         for (;;) {
-            if (event.type == Event::Type::EMPTY) {
+            if (event.type == EventType::EMPTY) {
                 break;
-            } else if (event.type == Event::Type::WINDOW_SHOULD_CLOSE) {
+            } else if (event.type == EventType::WINDOW_SHOULD_CLOSE) {
                 window->close();
                 Scheduler::the().exit(0);
             }

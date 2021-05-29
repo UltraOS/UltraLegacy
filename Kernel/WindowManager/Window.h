@@ -82,7 +82,7 @@ public:
 
         if (m_event_queue.empty()) {
             Event e {};
-            e.type = Event::Type::EMPTY;
+            e.type = EventType::EMPTY;
             return e;
         }
 
