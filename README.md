@@ -20,6 +20,7 @@ Panic screen
 - PS/2 controller driver + keyboard & mouse
 - AHCI driver with async request queue, as well as full controller initialization according
   to the specification. Confirmed to work on all emulators and many real computers.
+- FAT32 read/write/create/delete + full VFAT support.
 - Own BIOS bootloader
 - Fully modern C++17 kernel
 - Almost everything in kernel/Common is fully covered by unit tests
