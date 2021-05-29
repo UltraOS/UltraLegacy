@@ -52,57 +52,27 @@ SYSCALL_IMPLEMENTATION(EXIT)
 
 SYSCALL_IMPLEMENTATION(OPEN)
 {
-    auto fd = VFS::the().open(StringView(Address(ARG0(registers)).as_pointer<const char>()),
-                              static_cast<FileDescription::Mode>(ARG1(registers)));
-
-    if (fd.first) {
-        RETVAL(registers) = -static_cast<size_t>(fd.first.value);
-        return;
-    }
-
-    auto id = Process::current().store_fd(fd.second);
-    RETVAL(registers) = id;
+     // TODO
 }
 
 SYSCALL_IMPLEMENTATION(CLOSE)
 {
-    RETVAL(registers) = -static_cast<size_t>(Process::current().close_fd(ARG0(registers)).value);
+     // TODO
 }
 
 SYSCALL_IMPLEMENTATION(READ)
 {
-    auto fd = Process::current().fd(ARG0(registers));
-
-    if (!fd) {
-        RETVAL(registers) = -ErrorCode::INVALID_ARGUMENT;
-        return;
-    }
-
-    RETVAL(registers) = fd->read(Address(ARG1(registers)).as_pointer<void>(), ARG2(registers));
+     // TODO
 }
 
 SYSCALL_IMPLEMENTATION(WRITE)
 {
-    auto fd = Process::current().fd(ARG0(registers));
-
-    if (!fd) {
-        RETVAL(registers) = -ErrorCode::INVALID_ARGUMENT;
-        return;
-    }
-
-    RETVAL(registers) = fd->write(Address(ARG1(registers)).as_pointer<void>(), ARG2(registers));
+     // TODO
 }
 
 SYSCALL_IMPLEMENTATION(SEEK)
 {
-    auto fd = Process::current().fd(ARG0(registers));
-
-    if (!fd) {
-        RETVAL(registers) = -ErrorCode::INVALID_ARGUMENT;
-        return;
-    }
-
-    RETVAL(registers) = -fd->set_offset(ARG1(registers), static_cast<FileDescription::SeekMode>(ARG2(registers))).value;
+     // TODO
 }
 
 SYSCALL_IMPLEMENTATION(VIRTUAL_ALLOC)
