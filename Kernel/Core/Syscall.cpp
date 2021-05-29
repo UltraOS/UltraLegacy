@@ -3,18 +3,173 @@
 #include "Interrupts/Utilities.h"
 
 #include "Multitasking/Scheduler.h"
+#include "Multitasking/Sleep.h"
+
+#include "FileSystem/VFS.h"
 
 #include "Syscall.h"
 
 namespace kernel {
 
-void Syscall::exit(size_t code)
+void(*Syscall::s_table[static_cast<size_t>(Syscall::NumberOf::MAX) + 1])(RegisterState&) =
 {
-    Scheduler::the().exit(code);
+#define SYSCALL(name) &Syscall::name,
+ENUMERATE_SYSCALLS
+#undef SYSCALL
+};
+
+#ifdef ULTRA_32
+#define RETVAL(regs) regs.eax
+#define FUNCTION(regs) regs.eax
+#define ARG0(regs) regs.ebx
+#define ARG1(regs) regs.ecx
+#define ARG2(regs) regs.edx
+#elif defined(ULTRA_64)
+#define RETVAL(regs) regs.rax
+#define FUNCTION(regs) regs.rax
+#define ARG0(regs) regs.rbx
+#define ARG1(regs) regs.rcx
+#define ARG2(regs) regs.rdx
+#endif
+
+void Syscall::invoke(RegisterState& registers)
+{
+    auto function = FUNCTION(registers);
+
+    if (function >= static_cast<size_t>(NumberOf::MAX)) {
+        RETVAL(registers) = -ErrorCode::INVALID_ARGUMENT;
+        return;
+    }
+
+    s_table[function](registers);
 }
 
-void Syscall::debug_log(const char* string)
+SYSCALL_IMPLEMENTATION(EXIT)
 {
-    log() << "DebugLog: " << string;
+    Thread::current()->set_invulnerable(false);
+    Scheduler::the().exit(ARG0(registers));
 }
+
+SYSCALL_IMPLEMENTATION(OPEN)
+{
+    auto fd = VFS::the().open(StringView(Address(ARG0(registers)).as_pointer<const char>()),
+                              static_cast<FileDescription::Mode>(ARG1(registers)));
+
+    if (fd.first) {
+        RETVAL(registers) = -static_cast<size_t>(fd.first.value);
+        return;
+    }
+
+    auto id = Process::current().store_fd(fd.second);
+    RETVAL(registers) = id;
+}
+
+SYSCALL_IMPLEMENTATION(CLOSE)
+{
+    RETVAL(registers) = -static_cast<size_t>(Process::current().close_fd(ARG0(registers)).value);
+}
+
+SYSCALL_IMPLEMENTATION(READ)
+{
+    auto fd = Process::current().fd(ARG0(registers));
+
+    if (!fd) {
+        RETVAL(registers) = -ErrorCode::INVALID_ARGUMENT;
+        return;
+    }
+
+    RETVAL(registers) = fd->read(Address(ARG1(registers)).as_pointer<void>(), ARG2(registers));
+}
+
+SYSCALL_IMPLEMENTATION(WRITE)
+{
+    auto fd = Process::current().fd(ARG0(registers));
+
+    if (!fd) {
+        RETVAL(registers) = -ErrorCode::INVALID_ARGUMENT;
+        return;
+    }
+
+    RETVAL(registers) = fd->write(Address(ARG1(registers)).as_pointer<void>(), ARG2(registers));
+}
+
+SYSCALL_IMPLEMENTATION(SEEK)
+{
+    auto fd = Process::current().fd(ARG0(registers));
+
+    if (!fd) {
+        RETVAL(registers) = -ErrorCode::INVALID_ARGUMENT;
+        return;
+    }
+
+    RETVAL(registers) = -fd->set_offset(ARG1(registers), static_cast<FileDescription::SeekMode>(ARG2(registers))).value;
+}
+
+SYSCALL_IMPLEMENTATION(VIRTUAL_ALLOC)
+{
+    auto range = AddressSpace::current().allocator().allocate(ARG0(registers));
+
+    RETVAL(registers) = range.begin();
+}
+
+SYSCALL_IMPLEMENTATION(VIRTUAL_FREE)
+{
+    AddressSpace::current().allocator().deallocate(Range(ARG0(registers), ARG1(registers)));
+
+    RETVAL(registers) = ErrorCode::NO_ERROR;
+}
+
+SYSCALL_IMPLEMENTATION(WM_COMMAND)
+{
+    // TODO: move out and implement
+    enum class WMCommand {
+        CREATE_WINDOW,
+        CLOSE_WINDOW,
+        POP_EVENT,
+        SET_WINDOW_TITLE
+    };
+
+    // TODO: Extremely unsafe code, fix
+
+    switch (*Address(ARG0(registers)).as_pointer<WMCommand>()) {
+    case WMCommand::CREATE_WINDOW:
+    case WMCommand::CLOSE_WINDOW:
+    case WMCommand::POP_EVENT:
+    case WMCommand::SET_WINDOW_TITLE:
+    default:
+        RETVAL(registers) = -ErrorCode::INVALID_ARGUMENT;
+    }
+}
+
+SYSCALL_IMPLEMENTATION(SLEEP)
+{
+    Thread::current()->set_invulnerable(false);
+    sleep::for_nanoseconds(ARG0(registers));
+
+    RETVAL(registers) = ErrorCode::NO_ERROR;
+}
+
+SYSCALL_IMPLEMENTATION(DEBUG_LOG)
+{
+    auto string = StringView(Address(ARG0(registers)).as_pointer<const char>());
+    log() << "P[" << Process::current().id() << "][" << Thread::current()->id() << "] log: " << string;
+
+    RETVAL(registers) = ErrorCode::NO_ERROR;
+}
+
+SYSCALL_IMPLEMENTATION(MAX)
+{
+    runtime::panic("Invoked MAX syscall");
+}
+
+SYSCALL_IMPLEMENTATION(CREATE_PROCESS)
+{
+    // TODO
+}
+
+SYSCALL_IMPLEMENTATION(CREATE_THREAD)
+{
+    // TODO
+}
+
 }

@@ -16,9 +16,6 @@ public:
 
     static constexpr u16 vector_number = 0x80;
 
-    static constexpr u32 exit = 0;
-    static constexpr u32 debug_log = 1;
-
 private:
     void handle_interrupt(RegisterState&) override;
 
