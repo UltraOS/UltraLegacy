@@ -2,6 +2,7 @@
 #include "ctype.h"
 #include "stdbool.h"
 #include "limits.h"
+#include <Ultra/Ultra.h>
 
 int abs(int n)
 {
@@ -20,7 +21,7 @@ long long llabs(long long n)
 
 void exit(int exit_code)
 {
-   // process_exit(exit_code);
+   process_exit(exit_code);
 }
 
 int atoi(const char* str)
