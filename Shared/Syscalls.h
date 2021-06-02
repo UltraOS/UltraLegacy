@@ -1,3 +1,5 @@
+#pragma once
+
 #define ENUMERATE_SYSCALLS  \
     SYSCALL(EXIT)           \
     SYSCALL(OPEN)           \

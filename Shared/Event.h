@@ -18,7 +18,7 @@
 #define EVENT_TYPE uint8_t
 #endif
 
-struct Event {
+typedef struct {
     union {
         struct {
             size_t x;
@@ -41,4 +41,4 @@ struct Event {
     };
 
     EVENT_TYPE type;
-};
+} Event;
