@@ -110,6 +110,19 @@ TEST(Strxfrm) {
     Assert::that(my_buf[2]).is_equal(0xFF);
 }
 
+TEST(Strdup) {
+    Assert::that((const char*)libc::strdup("")).is_equal("");
+    Assert::that((const char*)libc::strdup("hello")).is_equal("hello");
+    Assert::that((const char*)libc::strdup("a")).is_equal("a");
+}
+
+TEST(Strndup) {
+    Assert::that((const char*)libc::strndup("hello", 3)).is_equal("hel");
+    Assert::that((const char*)libc::strndup("", 3)).is_equal("");
+    Assert::that((const char*)libc::strndup("hello", 999)).is_equal("hello");
+    Assert::that((const char*)libc::strndup("hello", 0)).is_equal("");
+}
+
 TEST(Strlen) {
     Assert::that(libc::strlen("")).is_equal(0);
     Assert::that(libc::strlen("123")).is_equal(3);

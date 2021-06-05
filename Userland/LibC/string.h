@@ -11,8 +11,8 @@ char* strncpy(char* dest, const char* src, size_t count);
 char* strcat(char* dest, const char* src);
 char* strncat(char* dest, const char* src, size_t count);
 size_t strxfrm(char* dest, const char* src, size_t count);
-// char* strdup(const char* str1); TODO
-// char* strndup(const char* str1, size_t size); TODO
+char* strdup(const char* str1);
+char* strndup(const char* str1, size_t size);
 
 size_t strlen(const char* str);
 int strcmp(const char* lhs, const char* rhs);

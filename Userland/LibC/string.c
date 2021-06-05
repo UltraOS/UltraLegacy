@@ -2,6 +2,10 @@
 #include "stddef.h"
 #include "string.h"
 
+#ifndef LIBC_TEST
+#include "stdlib.h"
+#endif
+
 char* strcpy(char* dest, const char* src)
 {
     char* org_dest = dest;
@@ -65,6 +69,28 @@ size_t strxfrm(char* dest, const char* src, size_t count)
     dest[i] = '\0';
 
     return bytes_needed;
+}
+
+char* strdup(const char* str1)
+{
+    size_t len = strlen(str1);
+
+    char* new_str = (char*)malloc(len + 1);
+    strcpy(new_str, str1);
+
+    return new_str;
+}
+
+char* strndup(const char* str1, size_t size)
+{
+    size_t len = strlen(str1);
+    len = size < len ? size : len;
+
+    char* new_str = (char*)malloc(len + 1);
+    memcpy(new_str, str1, len);
+    new_str[len] = '\0';
+
+    return new_str;
 }
 
 size_t strlen(const char* str)
