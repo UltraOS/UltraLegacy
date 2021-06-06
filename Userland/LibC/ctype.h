@@ -35,20 +35,20 @@ int ispunct(int ch);
 int tolower(int ch);
 int toupper(int ch);
 
-inline int __fast_isalnum(int ch) { return __ctype_table[(unsigned char)ch] & _CTYPE_ALNUM; }
-inline int __fast_isalpha(int ch) { return __ctype_table[(unsigned char)ch] & _CTYPE_ALPHA; }
-inline int __fast_islower(int ch) { return __ctype_table[(unsigned char)ch] & _CTYPE_LOWER; }
-inline int __fast_isupper(int ch) { return __ctype_table[(unsigned char)ch] & _CTYPE_UPPER; }
-inline int __fast_isdigit(int ch) { return __ctype_table[(unsigned char)ch] & _CTYPE_DIGIT; }
-inline int __fast_isxdigit(int ch) { return __ctype_table[(unsigned char)ch] & _CTYPE_XDIGIT; }
-inline int __fast_iscntrl(int ch) { return __ctype_table[(unsigned char)ch] & _CTYPE_CONTROL; }
-inline int __fast_isgraph(int ch) { return (__ctype_table[(unsigned char)ch] & (_CTYPE_CONTROL | _CTYPE_SPACE)) == 0; }
-inline int __fast_isspace(int ch) { return __ctype_table[(unsigned char)ch] & _CTYPE_SPACE; }
-inline int __fast_isblank(int ch) { return __ctype_table[(unsigned char)ch] & _CTYPE_BLANK; }
-inline int __fast_isprint(int ch) { return (__ctype_table[(unsigned char)ch] & _CTYPE_CONTROL) == 0; }
-inline int __fast_ispunct(int ch) { return __ctype_table[(unsigned char)ch] & _CTYPE_PUNCT; }
+static inline int __fast_isalnum(int ch) { return __ctype_table[(unsigned char)ch] & _CTYPE_ALNUM; }
+static inline int __fast_isalpha(int ch) { return __ctype_table[(unsigned char)ch] & _CTYPE_ALPHA; }
+static inline int __fast_islower(int ch) { return __ctype_table[(unsigned char)ch] & _CTYPE_LOWER; }
+static inline int __fast_isupper(int ch) { return __ctype_table[(unsigned char)ch] & _CTYPE_UPPER; }
+static inline int __fast_isdigit(int ch) { return __ctype_table[(unsigned char)ch] & _CTYPE_DIGIT; }
+static inline int __fast_isxdigit(int ch) { return __ctype_table[(unsigned char)ch] & _CTYPE_XDIGIT; }
+static inline int __fast_iscntrl(int ch) { return __ctype_table[(unsigned char)ch] & _CTYPE_CONTROL; }
+static inline int __fast_isgraph(int ch) { return (__ctype_table[(unsigned char)ch] & (_CTYPE_CONTROL | _CTYPE_SPACE)) == 0; }
+static inline int __fast_isspace(int ch) { return __ctype_table[(unsigned char)ch] & _CTYPE_SPACE; }
+static inline int __fast_isblank(int ch) { return __ctype_table[(unsigned char)ch] & _CTYPE_BLANK; }
+static inline int __fast_isprint(int ch) { return (__ctype_table[(unsigned char)ch] & _CTYPE_CONTROL) == 0; }
+static inline int __fast_ispunct(int ch) { return __ctype_table[(unsigned char)ch] & _CTYPE_PUNCT; }
 
-inline int __fast_tolower(int ch)
+static inline int __fast_tolower(int ch)
 {
     if (__fast_isupper(ch))
         return ch + ('a' - 'A');
@@ -56,7 +56,7 @@ inline int __fast_tolower(int ch)
     return ch;
 }
 
-inline int __fast_toupper(int ch)
+static inline int __fast_toupper(int ch)
 {
     if (__fast_islower(ch))
         return ch - ('a' - 'A');

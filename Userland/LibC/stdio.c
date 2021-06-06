@@ -5,9 +5,11 @@
 #include "string.h"
 #include "stdarg.h"
 #include "stdlib.h"
-#include <Ultra/Ultra.h>
 
 #ifndef LIBC_TEST
+
+#include <Ultra/Ultra.h>
+
 typedef unsigned int wint_t;
 
 #define DEFAULT_BUFFER_CAPACITY 512
@@ -90,7 +92,7 @@ FILE* fopen(const char* restrict filename, const char* restrict mode)
     bool fail_if_exists = false;
 
     for (size_t i = 0;; ++i) {
-        switch (mode[1])
+        switch (mode[i + 1])
         {
         case '+':
             if (native_mode & FILE_MODE_READONLY)
@@ -118,10 +120,48 @@ FILE* fopen(const char* restrict filename, const char* restrict mode)
 
     long fd = file_open(filename, native_mode);
 
-    if (fd > 0)
-        return file_ptr_open(fd);
+    if (fd < 0)
+        return NULL;
+        
+    FILE* ptr = file_ptr_open(fd);
+    ptr->flags = native_mode;
 
-    return NULL;
+    return ptr;
+}
+
+size_t fread(void* restrict buffer, size_t size, size_t count, FILE* restrict stream)
+{
+    if (!size || !count)
+        return 0;
+
+    if (stream->flags == FILE_MODE_WRITEONLY)
+        return 0;
+
+    if (stream->flags & FILE_MODE_READWRITE)
+        fflush(stream);
+
+    return file_read(stream->fd, buffer, size * count);
+}
+
+size_t fwrite(const void* restrict buffer, size_t size, size_t count, FILE* restrict stream)
+{
+    if (!size || !count)
+        return 0;
+
+    if (stream->flags == FILE_MODE_READONLY)
+        return 0;
+
+    size_t bytes_to_write = size * count;
+    size_t buf_free_bytes = stream->capacity - stream->size;
+
+    if (bytes_to_write > buf_free_bytes)
+        fflush(stream);
+
+    if (bytes_to_write > stream->capacity)
+        return file_write(stream->fd, stream->buffer, bytes_to_write);
+
+    memcpy(stream->buffer + stream->size, buffer, bytes_to_write);
+    stream->size += bytes_to_write;
 }
 
 int fclose(FILE* stream)
@@ -160,20 +200,20 @@ long ftell(FILE* stream)
     return file_seek(stream->fd, 0, SEEK_CUR);
 }
 
-#endif
-
-int scanf(const char* format, ...)
+int fscanf(FILE* stream, const char* format, ...)
 {
     // TODO
+    (void)stream;
     (void)format;
 
     return 0;
 }
 
-int fscanf(FILE* stream, const char* format, ...)
+#endif
+
+int scanf(const char* format, ...)
 {
     // TODO
-    (void)stream;
     (void)format;
 
     return 0;

@@ -11,6 +11,7 @@ extern "C" {
 #ifndef LIBC_TEST
 typedef struct {
     uint32_t fd;
+    uint32_t flags;
     char* buffer;
     size_t size;
     size_t capacity;
@@ -24,6 +25,8 @@ typedef struct {
 extern FILE* stdin;
 extern FILE* stdout;
 extern FILE* stderr;
+#else
+#define restrict
 #endif
 
 FILE* fopen(const char* restrict filename, const char* restrict mode);
@@ -32,6 +35,8 @@ int fflush(FILE* stream);
 long ftell(FILE* stream);
 int fseek(FILE* stream, long offset, int origin);
 void rewind(FILE* stream);
+size_t fread(void* restrict buffer, size_t size, size_t count, FILE* restrict stream);
+size_t fwrite(const void* restrict buffer, size_t size, size_t count, FILE* restrict stream);
 
 int scanf(const char* format, ... );
 int fscanf(FILE* stream, const char* format, ...);

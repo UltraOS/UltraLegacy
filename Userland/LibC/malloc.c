@@ -1,6 +1,7 @@
 #include "string.h"
 #include "stdint.h"
 #include "stddef.h"
+#include "stdlib.h"
 #include <Ultra/Ultra.h>
 
 #define KB 1024ul
