@@ -242,6 +242,22 @@ void* malloc(size_t size)
     return header;
 }
 
+void* calloc(size_t num, size_t size)
+{
+    size_t bytes = num * size;
+
+    // guaranteed to be zeroed as allocated directly by the OS
+    if (bytes > MALLOC_THRESHOLD)
+        return malloc(bytes);
+
+    void* buf = malloc(bytes);
+    if (!buf)
+        return NULL;
+
+    memset(buf, 0, bytes);
+    return buf;
+}
+
 void calculate_offset(void* heap_begin, void* data_ptr, size_t* unit_offset, size_t* bit_offset)
 {
     size_t byte_offset = data_ptr - heap_begin;
