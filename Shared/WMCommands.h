@@ -1,3 +1,5 @@
+#pragma once
+
 #define ENUMERATE_WM_COMMANDS  \
     WM_COMMAND(CREATE_WINDOW)  \
     WM_COMMAND(DESTROY_WINDOW) \

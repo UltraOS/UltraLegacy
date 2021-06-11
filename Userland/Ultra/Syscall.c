@@ -1,3 +1,13 @@
+long syscall_0(long function)
+{
+    long result;
+    asm volatile("int $0x80"
+        : "=a"(result)
+        : "a"(function)
+        : "memory");
+    return result;
+}
+
 long syscall_1(long function, long arg0)
 {
     long result;
