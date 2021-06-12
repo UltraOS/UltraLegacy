@@ -1123,68 +1123,45 @@ private:
 
             auto* grandparent = node->grandparent();
 
-            if (node->is_aunt_red())
-                color_filp(node);
-            else
-                rotate(node);
+            if (node->is_aunt_red()) {
+                ASSERT(grandparent != nullptr);
+
+                if (grandparent != m_root)
+                    grandparent->color = ValueNode::Color::RED;
+
+                grandparent->left->color = ValueNode::Color::BLACK;
+                grandparent->right->color = ValueNode::Color::BLACK;
+            } else {
+                switch (node->position_with_respect_to_grandparent()) {
+                    case ValueNode::Position::LEFT_RIGHT: // left-right rotation
+                        rotate_left(node->parent);
+                        node = node->left;
+                        [[fallthrough]];
+                    case ValueNode::Position::LEFT_LEFT: { // right rotation
+                        grandparent->color = ValueNode::Color::RED;
+                        node->parent->color = ValueNode::Color::BLACK;
+                        node->color = ValueNode::Color::RED;
+
+                        rotate_right(grandparent);
+                        break;
+                    }
+                    case ValueNode::Position::RIGHT_LEFT: // right-left rotation
+                        rotate_right(node->parent);
+                        node = node->right;
+                        [[fallthrough]];
+                    case ValueNode::Position::RIGHT_RIGHT: { // left rotation
+                        grandparent->color = ValueNode::Color::RED;
+                        node->parent->color = ValueNode::Color::BLACK;
+                        node->color = ValueNode::Color::RED;
+
+                        rotate_left(grandparent);
+                        break;
+                    }
+                }
+            }
 
             node = grandparent;
             ASSERT(node != nullptr);
-        }
-    }
-
-    void color_filp(ValueNode* violating_node)
-    {
-        ASSERT(violating_node != nullptr);
-        ASSERT(!violating_node->is_null());
-
-        auto* grandparent = violating_node->grandparent();
-
-        ASSERT(grandparent != nullptr);
-
-        if (grandparent != m_root)
-            grandparent->color = ValueNode::Color::RED;
-
-        grandparent->left->color = ValueNode::Color::BLACK;
-        grandparent->right->color = ValueNode::Color::BLACK;
-    }
-
-    void rotate(ValueNode* violating_node)
-    {
-        ASSERT(violating_node != nullptr);
-        ASSERT(!violating_node->is_null());
-
-        switch (violating_node->position_with_respect_to_grandparent()) {
-        case ValueNode::Position::LEFT_RIGHT: // left-right rotation
-            rotate_left(violating_node->parent);
-            violating_node = violating_node->left;
-            [[fallthrough]];
-        case ValueNode::Position::LEFT_LEFT: { // right rotation
-            auto* grandparent = violating_node->grandparent();
-            grandparent->color = ValueNode::Color::RED;
-            violating_node->parent->color = ValueNode::Color::BLACK;
-            violating_node->color = ValueNode::Color::RED;
-
-            rotate_right(grandparent);
-
-            return;
-        }
-        case ValueNode::Position::RIGHT_LEFT: // right-left rotation
-            rotate_right(violating_node->parent);
-            violating_node = violating_node->right;
-            [[fallthrough]];
-        case ValueNode::Position::RIGHT_RIGHT: { // left rotation
-            auto* grandparent = violating_node->grandparent();
-            grandparent->color = ValueNode::Color::RED;
-            violating_node->parent->color = ValueNode::Color::BLACK;
-            violating_node->color = ValueNode::Color::RED;
-
-            rotate_left(grandparent);
-
-            return;
-        }
-        default:
-            ASSERT_NEVER_REACHED();
         }
     }
 
