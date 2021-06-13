@@ -22,8 +22,10 @@ struct ErrorCode {
         BAD_FILENAME = 12,
     } value { NO_ERROR };
 
+    using code_t = decltype(value);
+
     ErrorCode() = default;
-    ErrorCode(decltype(value) code)
+    ErrorCode(code_t code)
         : value(code)
     {
     }
@@ -66,6 +68,36 @@ struct ErrorCode {
             return "<Unknown code>"_sv;
         }
     }
+};
+
+template <typename T>
+class ErrorOr {
+public:
+    ErrorOr(ErrorCode code)
+        : m_error(code)
+    {
+    }
+
+    ErrorOr(ErrorCode::code_t code)
+        : m_error(code)
+    {
+    }
+
+    ErrorOr(T value)
+        : m_error(ErrorCode::NO_ERROR)
+        , m_value(move(value))
+    {
+    }
+
+    [[nodiscard]] bool is_error() const { return m_error.is_error(); }
+    [[nodiscard]] ErrorCode error() const { return m_error; }
+
+    [[nodiscard]] const T& value() const { return m_value; }
+    [[nodiscard]] T& value() { return m_value; }
+
+private:
+    ErrorCode m_error;
+    T m_value { };
 };
 
 }
