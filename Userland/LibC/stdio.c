@@ -41,6 +41,19 @@ void stdio_init()
     stderr = file_ptr_open(2);
 }
 
+int puts(const char* str)
+{
+    fwrite(str, 1, strlen(str), stdout);
+    fwrite("\n", 1, 1, stdout);
+    return 0;
+}
+
+int putchar(int character)
+{
+    fwrite(&character, 1, 1, stdout);
+    return 0;
+}
+
 // Has to be under define, otherwise ADL gets us
 int fprintf(FILE* stream, const char* format, ...)
 {
@@ -158,10 +171,12 @@ size_t fwrite(const void* restrict buffer, size_t size, size_t count, FILE* rest
         fflush(stream);
 
     if (bytes_to_write > stream->capacity)
-        return file_write(stream->fd, stream->buffer, bytes_to_write);
+        return file_write(stream->fd, stream->buffer, bytes_to_write) / size;
 
     memcpy(stream->buffer + stream->size, buffer, bytes_to_write);
     stream->size += bytes_to_write;
+
+    return count;
 }
 
 int fclose(FILE* stream)
@@ -209,6 +224,38 @@ int fscanf(FILE* stream, const char* format, ...)
     return 0;
 }
 
+#define STACK_BUF_SIZE 4096
+
+int vfprintf(FILE* stream, const char* format, va_list vlist)
+{
+    size_t bytes_needed = vsnprintf(NULL, 0, format, vlist);
+    bytes_needed++; // '\0'
+
+    if (bytes_needed > STACK_BUF_SIZE) {
+        void* heap_buf = malloc(bytes_needed);
+        vsnprintf(heap_buf, bytes_needed, format, vlist);
+        fwrite(heap_buf, 1, bytes_needed - 1, stream);
+        free(heap_buf);
+        return 0;
+    }
+
+    char buffer[STACK_BUF_SIZE];
+    vsnprintf(buffer, bytes_needed, format, vlist);
+    fwrite(buffer, 1, bytes_needed - 1, stream);
+
+    return 0;
+}
+
+int rename(const char* old_filename, const char* new_filename)
+{
+    return file_move(old_filename, new_filename);
+}
+
+int remove(const char* fname)
+{
+    return file_remove(fname);
+}
+
 #endif
 
 int scanf(const char* format, ...)
@@ -246,13 +293,6 @@ int snprintf(char* buffer, size_t bufsz, const char* format, ...)
     va_end(list);
 
     return val;
-}
-
-int vfprintf(FILE* stream, const char* format, va_list vlist)
-{
-    // TODO
-
-    return 0;
 }
 
 int vsprintf(char* buffer, const char* format, va_list vlist)

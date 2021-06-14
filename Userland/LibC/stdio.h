@@ -42,6 +42,9 @@ int scanf(const char* format, ... );
 int fscanf(FILE* stream, const char* format, ...);
 int sscanf(const char* buffer, const char* format, ...);
 
+int puts(const char* str);
+int putchar(int character);
+
 int printf(const char* format, ...);
 int fprintf(FILE* stream, const char* format, ...);
 int sprintf(char* buffer, const char* format, ...);
@@ -51,6 +54,9 @@ int vprintf(const char* format, va_list vlist );
 int vfprintf(FILE* stream, const char* format, va_list vlist);
 int vsprintf(char* buffer, const char* format, va_list vlist);
 int vsnprintf(char* buffer, size_t bufsz, const char* format, va_list vlist);
+
+int rename(const char* old_filename, const char* new_filename);
+int remove(const char* fname);
 
 #if defined(__cplusplus) && !defined(LIBC_TEST)
 }
