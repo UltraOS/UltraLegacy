@@ -1,8 +1,22 @@
 #pragma once
 
 #include "Multitasking/Mutex.h"
+#include <Shared/File.h>
 
 namespace kernel {
+
+enum class FileMode : u32 {
+#define FILE_MODE(name, bit) name = 1 << bit,
+    ENUMERATE_FILE_MODES
+#undef FILE_MODE
+};
+
+enum class SeekMode : u32 {
+#define SEEK_MODE(name) name,
+    ENUMERATE_SEEK_MODES
+#undef SEEK_MODE
+};
+
 
 class FileSystem;
 
@@ -50,6 +64,7 @@ public:
     StringView name() const { return m_name; }
     FileSystem& fs() { return m_filesystem; }
     virtual size_t size() const = 0;
+    virtual ErrorCode truncate(size_t size) = 0;
 
     Mutex& lock() { return m_lock; }
 

@@ -2,7 +2,7 @@
 
 namespace kernel {
 
-FileDescription::FileDescription(File& file, Mode mode)
+FileDescription::FileDescription(File& file, FileMode mode)
     : m_file(file)
     , m_mode(mode)
 {
@@ -34,10 +34,24 @@ size_t FileDescription::write(const void* buffer, size_t size)
     return written_bytes;
 }
 
-void FileDescription::set_offset(size_t offset)
+ErrorCode FileDescription::set_offset(size_t offset, SeekMode mode)
 {
     LOCK_GUARD(m_lock);
-    m_offset = offset;
+
+    switch (mode) {
+    case SeekMode::BEGINNING:
+        m_offset = offset;
+        return ErrorCode::NO_ERROR;
+    case SeekMode::CURRENT:
+        m_offset += offset;
+        return ErrorCode::NO_ERROR;
+    case SeekMode::END:
+        m_offset = m_file.size();
+        m_offset += offset;
+        return ErrorCode::NO_ERROR;
+    default:
+        return ErrorCode::INVALID_ARGUMENT;
+    }
 }
 
 void FileDescription::mark_as_closed()

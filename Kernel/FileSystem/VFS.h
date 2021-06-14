@@ -36,12 +36,12 @@ public:
         return *s_instance;
     }
 
-    Pair<ErrorCode, RefPtr<FileDescription>> open(StringView path, FileDescription::Mode);
+    ErrorOr<RefPtr<FileDescription>> open(StringView path, FileMode);
     ErrorCode close(FileDescription&);
     ErrorCode remove(StringView path);
     ErrorCode remove_directory(StringView path);
-    ErrorCode create(StringView file_path, File::Attributes);
-    ErrorCode create_directory(StringView file_path, File::Attributes);
+    ErrorCode create(StringView file_path);
+    ErrorCode create_directory(StringView file_path);
 
     ErrorCode move(StringView path, StringView new_path);
 

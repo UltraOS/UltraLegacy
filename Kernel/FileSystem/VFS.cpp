@@ -151,25 +151,25 @@ String VFS::generate_prefix(StorageDevice& device)
     return prefix;
 }
 
-Pair<ErrorCode, RefPtr<FileDescription>> VFS::open(StringView path, FileDescription::Mode mode)
+ErrorOr<RefPtr<FileDescription>> VFS::open(StringView path, FileMode mode)
 {
     auto split_path = split_prefix_and_path(path);
 
     if (!split_path)
-        return { ErrorCode::BAD_PATH, RefPtr<FileDescription>() };
+        return ErrorCode::BAD_PATH;
 
     auto& prefix_to_path = split_path.value();
 
     auto fs = m_prefix_to_fs.find(prefix_to_path.first);
 
     if (fs == m_prefix_to_fs.end())
-        return { ErrorCode::DISK_NOT_FOUND, RefPtr<FileDescription>() };
+        return ErrorCode::DISK_NOT_FOUND;
 
-    auto code_to_file = fs->second->open(prefix_to_path.second);
-    if (code_to_file.first.is_error())
-        return { code_to_file.first, RefPtr<FileDescription>() };
+    auto error_of_file = fs->second->open(prefix_to_path.second);
+    if (error_of_file.is_error())
+        return error_of_file.error();
 
-    return { ErrorCode::NO_ERROR, RefPtr<FileDescription>::create(*code_to_file.second, mode) };
+    return RefPtr<FileDescription>::create(*error_of_file.value(), mode);
 }
 
 ErrorCode VFS::close(FileDescription& fd)
@@ -217,7 +217,7 @@ ErrorCode VFS::remove_directory(StringView path)
     return fs->second->remove_directory(prefix_to_path.second);
 }
 
-ErrorCode VFS::create(StringView file_path, File::Attributes attributes)
+ErrorCode VFS::create(StringView file_path)
 {
     auto split_path = split_prefix_and_path(file_path);
 
@@ -231,15 +231,12 @@ ErrorCode VFS::create(StringView file_path, File::Attributes attributes)
     if (fs == m_prefix_to_fs.end())
         return ErrorCode::DISK_NOT_FOUND;
 
-    return fs->second->create(prefix_to_path.second, attributes);
+    return fs->second->create(prefix_to_path.second);
 }
 
-ErrorCode VFS::create_directory(StringView file_path, File::Attributes attributes)
+ErrorCode VFS::create_directory(StringView file_path)
 {
     auto split_path = split_prefix_and_path(file_path);
-
-    attributes |= File::Attributes::IS_DIRECTORY;
-
     if (!split_path)
         return ErrorCode::BAD_PATH;
 
@@ -250,7 +247,7 @@ ErrorCode VFS::create_directory(StringView file_path, File::Attributes attribute
     if (fs == m_prefix_to_fs.end())
         return ErrorCode::DISK_NOT_FOUND;
 
-    return fs->second->create_directory(prefix_to_path.second, attributes);
+    return fs->second->create_directory(prefix_to_path.second);
 }
 
 ErrorCode VFS::move(StringView path, StringView new_path)

@@ -8,15 +8,12 @@ namespace kernel {
 
 class FileDescription {
 public:
-    enum class Mode {
-        READ,
-        WRITE,
-    };
-
-    FileDescription(File& file, Mode mode);
+    FileDescription(File& file, FileMode mode);
     size_t read(void* buffer, size_t size);
     size_t write(const void* buffer, size_t size);
-    void set_offset(size_t offset);
+    ErrorCode set_offset(size_t offset, SeekMode mode);
+
+    File& underlying_file() { return m_file; }
 
     ~FileDescription();
 
@@ -27,7 +24,7 @@ private:
 
     Mutex m_lock;
     File& m_file;
-    Mode m_mode;
+    FileMode m_mode;
     size_t m_offset { 0 };
     bool m_is_closed { false };
 };

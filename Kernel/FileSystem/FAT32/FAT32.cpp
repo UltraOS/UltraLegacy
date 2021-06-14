@@ -754,6 +754,11 @@ size_t FAT32::File::write(const void* buffer, size_t offset, size_t size)
     return size;
 }
 
+ErrorCode FAT32::File::truncate([[maybe_unused]] size_t new_size)
+{
+    return ErrorCode::UNSUPPORTED;
+}
+
 void FAT32::File::flush_meta_modifications()
 {
     if (!is_dirty())
@@ -843,7 +848,7 @@ FAT32::File* FAT32::open_or_incref(
     return open_file->ptr;
 }
 
-Pair<ErrorCode, FAT32::File*> FAT32::open_file_from_path(StringView path, OnlyIf constraint)
+ErrorOr<FAT32::File*> FAT32::open_file_from_path(StringView path, OnlyIf constraint)
 {
     auto* cur_file = m_root_directory;
     File* next_file = nullptr;
@@ -866,7 +871,7 @@ Pair<ErrorCode, FAT32::File*> FAT32::open_file_from_path(StringView path, OnlyIf
         if ((cur_file->attributes() & File::Attributes::IS_DIRECTORY) != File::Attributes::IS_DIRECTORY) {
             cur_file->lock().unlock();
             close(*cur_file);
-            return { ErrorCode::IS_FILE, nullptr };
+            return ErrorCode::IS_FILE;
         }
 
         Directory dir(*this, *cur_file, false);
@@ -898,17 +903,17 @@ Pair<ErrorCode, FAT32::File*> FAT32::open_file_from_path(StringView path, OnlyIf
     close(*cur_file);
 
     if (!next_file)
-        return { ErrorCode::NO_SUCH_FILE, nullptr };
+        return ErrorCode::NO_SUCH_FILE;
 
     if (constraint == OnlyIf::FILE && next_file->is_directory()) {
         close(*next_file);
-        return { ErrorCode::IS_DIRECTORY, nullptr };
+        return ErrorCode::IS_DIRECTORY;
     } else if (constraint == OnlyIf::DIRECTORY && !next_file->is_directory()) {
         close(*next_file);
-        return { ErrorCode::IS_FILE, nullptr };
+        return ErrorCode::IS_FILE;
     }
 
-    return { ErrorCode::NO_ERROR, next_file };
+    return next_file;
 }
 
 DynamicArray<u32> FAT32::allocate_cluster_chain(u32 count, u32 link_to)
@@ -983,18 +988,24 @@ void FAT32::free_cluster_chain_starting_at(u32 first, FreeMode free_mode)
     }
 }
 
-Pair<ErrorCode, FAT32::BaseDirectory*> FAT32::open_directory(StringView path)
+ErrorOr<FAT32::BaseDirectory*> FAT32::open_directory(StringView path)
 {
-    auto error_to_file = open_file_from_path(path, OnlyIf::DIRECTORY);
+    auto err_or_file = open_file_from_path(path, OnlyIf::DIRECTORY);
 
-    return { error_to_file.first, new Directory(*this, *error_to_file.second, true) };
+    if (err_or_file.is_error())
+        return err_or_file.error();
+
+    return new Directory(*this, *err_or_file.value(), true);
 }
 
-Pair<ErrorCode, FAT32::BaseFile*> FAT32::open(StringView path)
+ErrorOr<FAT32::BaseFile*> FAT32::open(StringView path)
 {
-    auto error_to_file = open_file_from_path(path, OnlyIf::FILE);
+    auto err_or_file = open_file_from_path(path, OnlyIf::FILE);
 
-    return { error_to_file.first, static_cast<BaseFile*>(error_to_file.second) };
+    if (err_or_file.is_error())
+        return err_or_file.error();
+
+    return static_cast<FAT32::BaseFile*>(err_or_file.value());
 }
 
 ErrorCode FAT32::close(BaseFile& file)
@@ -1688,14 +1699,14 @@ ErrorCode FAT32::create_file(StringView path, File::Attributes attributes)
 }
 #undef RETURN_WITH_CODE
 
-ErrorCode FAT32::create(StringView path, File::Attributes attributes)
+ErrorCode FAT32::create(StringView path)
 {
-    return create_file(path, attributes);
+    return create_file(path, {});
 }
 
-ErrorCode FAT32::create_directory(StringView path, File::Attributes attributes)
+ErrorCode FAT32::create_directory(StringView path)
 {
-    return create_file(path, attributes);
+    return create_file(path, File::Attributes::IS_DIRECTORY);
 }
 
 ErrorCode FAT32::move(StringView, StringView)

@@ -39,6 +39,7 @@ public:
 
         size_t read(void* buffer, size_t offset, size_t size) override;
         size_t write(const void* buffer, size_t offset, size_t size) override;
+        ErrorCode truncate(size_t size) override;
 
         void flush_meta_modifications();
 
@@ -189,14 +190,14 @@ public:
         bool m_owns_file { false };
     };
 
-    Pair<ErrorCode, BaseDirectory*> open_directory(StringView path) override;
-    Pair<ErrorCode, BaseFile*> open(StringView path) override;
+    ErrorOr<BaseDirectory*> open_directory(StringView path) override;
+    ErrorOr<BaseFile*> open(StringView path) override;
     ErrorCode close(BaseFile&) override;
     ErrorCode close_directory(BaseDirectory&) override;
     ErrorCode remove(StringView path) override;
     ErrorCode remove_directory(StringView path) override;
-    ErrorCode create(StringView file_path, File::Attributes) override;
-    ErrorCode create_directory(StringView file_path, File::Attributes) override;
+    ErrorCode create(StringView file_path) override;
+    ErrorCode create_directory(StringView file_path) override;
 
     ErrorCode move(StringView path, StringView new_path) override;
 
@@ -232,7 +233,7 @@ private:
         FILE,
         DIRECTORY
     };
-    Pair<ErrorCode, File*> open_file_from_path(StringView path, OnlyIf);
+    ErrorOr<File*> open_file_from_path(StringView path, OnlyIf);
     ErrorCode remove_file(StringView, OnlyIf);
     ErrorCode create_file(StringView, File::Attributes);
 
