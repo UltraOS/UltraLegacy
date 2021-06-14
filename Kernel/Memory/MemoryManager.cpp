@@ -8,6 +8,7 @@
 #include "AddressSpace.h"
 #include "BootAllocator.h"
 #include "MemoryManager.h"
+#include "Utilities.h"
 #include "NonOwningVirtualRegion.h"
 #include "Page.h"
 #include "PhysicalRegion.h"
@@ -185,7 +186,7 @@ void MemoryManager::unquickmap_page(Address virtual_address)
 
     auto slot = (virtual_address - m_quickmap_range.begin()) / Page::size;
 
-    AddressSpace::current().local_unmap_page(virtual_address);
+    AddressSpace::of_kernel().local_unmap_page(virtual_address);
 
     LOCK_GUARD(m_quickmap_lock);
     ASSERT(m_quickmap_slots.bit_at(slot) == true);
@@ -259,31 +260,36 @@ PhysicalRegion* MemoryManager::physical_region_responsible_for_page(const Page& 
 
 VirtualRegion* MemoryManager::virtual_region_responsible_for_address(Address address)
 {
-    auto aligned_address = Page::round_down(address);
+    auto aligned_address = Address(Page::round_down(address));
 
     if (address >= kernel_address_space_base) {
         LOCK_GUARD(m_virtual_region_lock);
 
-        auto kernel_virtual_region = m_kernel_virtual_regions.lower_bound(aligned_address);
+        auto region = find_address_in_range_tree(m_kernel_virtual_regions, aligned_address,
+                                                 [] (const RefPtr<VirtualRegion>& vr) { return vr->virtual_range(); });
 
-        if (kernel_virtual_region == m_kernel_virtual_regions.end() || kernel_virtual_region->get()->virtual_range().begin() != aligned_address) {
-            if (kernel_virtual_region == m_kernel_virtual_regions.begin())
-                return nullptr;
-
-            --kernel_virtual_region;
-
-            if (kernel_virtual_region->get()->virtual_range().contains(address))
-                return &**kernel_virtual_region; // Iterator -> RefPtr<VirtualRegion> -> VirtualRegion&
-
+        if (!region)
             return nullptr;
-        }
 
-        return &**kernel_virtual_region;
-    } else {
-        // TODO: search process for the virtual region
+        return &***region; // Optional<Iterator<T>> -> Iterator<T> -> T& -> address of T
     }
 
-    return nullptr;
+    auto& current_process = Process::current();
+
+    LOCK_GUARD(current_process.lock());
+
+    // First check if it's one of the user's stacks
+    for (auto& thread : current_process.threads())
+        if (thread->user_stack().virtual_range().contains(aligned_address))
+            return &thread->user_stack();
+
+    auto region = find_address_in_range_tree(current_process.virtual_regions(), aligned_address,
+                                             [] (const RefPtr<VirtualRegion>& vr) { return vr->virtual_range(); });
+
+    if (!region)
+        return nullptr;
+
+    return &***region; // Optional<Iterator<T>> -> Iterator<T> -> T& -> address of T
 }
 
 void MemoryManager::free_page(const Page& page)
@@ -357,7 +363,7 @@ void MemoryManager::handle_page_fault(const RegisterState& registers, const Page
                     << fault;
 
         auto page = self.allocate_page();
-        private_region.store_page(page);
+        private_region.store_page(page, aligned_address);
         AddressSpace::current().map_page(aligned_address, page.address(), fault.is_supervisor());
         return;
     }
@@ -424,13 +430,13 @@ void MemoryManager::preallocate_specific(PrivateVirtualRegion& region, Range req
     }
 
     ASSERT_PAGE_ALIGNED(range.begin());
+    ASSERT_PAGE_ALIGNED(range.end());
 
     size_t page_start = 0;
     size_t page_count = range.length() / Page::size;
 
-    if (region.is_stack()) {
+    if (region.is_stack() && region.is_supervisor() == IsSupervisor::YES) {
         ASSERT(page_count > 1);
-        ASSERT(requested_range.empty());
         page_start = 1;
     }
 
@@ -442,8 +448,9 @@ void MemoryManager::preallocate_specific(PrivateVirtualRegion& region, Range req
         auto page = allocate_page(should_zero);
         auto offset = i * Page::size;
 
-        AddressSpace::current().map_page(range.begin() + offset, page.address());
-        region.store_page(page);
+        auto virtual_address = range.begin() + offset;
+        AddressSpace::current().map_page(virtual_address, page.address(), region.is_supervisor());
+        region.store_page(page, virtual_address);
     }
 }
 
@@ -594,7 +601,7 @@ MemoryManager::VR MemoryManager::allocate_user_private_anywhere(StringView purpo
 MemoryManager::VR MemoryManager::allocate_kernel_non_owning(StringView purpose, Range physical_range)
 {
     auto virtual_range = AddressSpace::of_kernel().allocator().allocate(physical_range.length());
-    AddressSpace::of_kernel().map_range(virtual_range, physical_range);
+    AddressSpace::current().map_range(virtual_range, physical_range);
 
     VirtualRegion::Specification spec {};
     spec.purpose = purpose;
@@ -715,13 +722,20 @@ void MemoryManager::free_virtual_region(VirtualRegion& vr)
     // Technically this is only needed if kernel virtual region OR
     // user virtual region for a process with multiple threads.
     // Otherwise we can afford unmap_local
-    AddressSpace::current().unmap_range(vr.virtual_range());
+    if (vr.is_supervisor() == IsSupervisor::YES)
+        AddressSpace::of_kernel().unmap_range(vr.virtual_range());
+    else if (AddressSpace::current() != AddressSpace::of_kernel())
+        AddressSpace::current().unmap_range(vr.virtual_range());
 
     if (vr.is_private()) {
         auto& pvr = static_cast<PrivateVirtualRegion&>(vr);
 
-        for (auto& page : pvr.m_owned_pages)
+        for (auto& page : pvr.owned_pages()) {
+            if (!page.address())
+                continue;
+
             free_page(page);
+        }
     }
 
     // This means we're freeing this region early, before having initialized everything
@@ -734,7 +748,10 @@ void MemoryManager::free_virtual_region(VirtualRegion& vr)
 
     auto& current_process = Process::current();
 
-    current_process.address_space().allocator().deallocate(vr.virtual_range());
+    if (vr.is_supervisor() == IsSupervisor::YES)
+        AddressSpace::of_kernel().allocator().deallocate(vr.virtual_range());
+    else if (AddressSpace::current() != AddressSpace::of_kernel())
+        current_process.address_space().allocator().deallocate(vr.virtual_range());
 
     vr.mark_as_released();
     vr.lock().unlock(interrupt_state);

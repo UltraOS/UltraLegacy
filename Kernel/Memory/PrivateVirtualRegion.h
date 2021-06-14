@@ -15,7 +15,7 @@ public:
 
 private:
     friend class MemoryManager;
-    void store_page(Page page);
+    void store_page(Page page, Address virtual_address);
     DynamicArray<Page>& owned_pages() { return m_owned_pages; }
 
 private:

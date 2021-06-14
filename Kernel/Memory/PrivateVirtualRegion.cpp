@@ -10,17 +10,25 @@ PrivateVirtualRegion::PrivateVirtualRegion(Range range, Properties properties, S
 
 void PrivateVirtualRegion::preallocate_entire(bool zeroed)
 {
+    m_owned_pages.expand_to(virtual_range().length() / Page::size);
     MemoryManager::the().preallocate(*this, zeroed);
 }
 
 void PrivateVirtualRegion::preallocate_specific(Range virtual_range, bool zeroed)
 {
+    auto offset_from_base = Page::round_down(virtual_range.end() - 1) - this->virtual_range().begin();
+    m_owned_pages.expand_to(offset_from_base / Page::size + 1);
+
     MemoryManager::the().preallocate_specific(*this, virtual_range, zeroed);
 }
 
-void PrivateVirtualRegion::store_page(Page page)
+void PrivateVirtualRegion::store_page(Page page, Address virtual_address)
 {
-    m_owned_pages.append(page);
+    auto offset_from_base = virtual_address - this->virtual_range().begin();
+    offset_from_base /= Page::size;
+
+    m_owned_pages.expand_to(offset_from_base + 1);
+    m_owned_pages[offset_from_base] = page;
 }
 
 }
