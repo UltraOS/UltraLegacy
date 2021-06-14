@@ -7,11 +7,17 @@
     SYSCALL(READ)           \
     SYSCALL(WRITE)          \
     SYSCALL(SEEK)           \
+    SYSCALL(CREATE)         \
+    SYSCALL(CREATE_DIR)     \
+    SYSCALL(REMOVE)         \
+    SYSCALL(REMOVE_DIR)     \
+    SYSCALL(MOVE)           \
     SYSCALL(VIRTUAL_ALLOC)  \
     SYSCALL(VIRTUAL_FREE)   \
     SYSCALL(CREATE_THREAD)  \
     SYSCALL(CREATE_PROCESS) \
     SYSCALL(WM_COMMAND)     \
     SYSCALL(SLEEP)          \
+    SYSCALL(TICKS)          \
     SYSCALL(DEBUG_LOG)      \
     SYSCALL(MAX)
