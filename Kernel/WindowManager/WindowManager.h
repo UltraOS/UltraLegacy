@@ -4,7 +4,20 @@
 #include "Theme.h"
 #include "Window.h"
 
+#include "Core/ErrorCode.h"
+#include <Shared/WMCommands.h>
+
 namespace kernel {
+
+enum class WMCommand : u32 {
+#define WM_COMMAND(name) name,
+ENUMERATE_WM_COMMANDS
+#undef WM_COMMAND
+};
+
+#define WM_COMMAND_TYPE WMCommand
+
+#include <Shared/Window.h>
 
 class WindowManager {
     MAKE_SINGLETON(WindowManager);
@@ -29,6 +42,8 @@ public:
         ASSERT(s_instance != nullptr);
         return *s_instance;
     }
+
+    ErrorCode dispatch_window_command(void*);
 
     RefPtr<Window>& desktop() { return m_desktop_window; }
 

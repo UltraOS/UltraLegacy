@@ -38,6 +38,8 @@ public:
 
     [[nodiscard]] bool has_frame() const { return m_style != Style::FRAMELESS; }
 
+    void set_title(StringView);
+
     void set_focused() { s_currently_focused = this; }
 
     bool is_focused() { return s_currently_focused == this; }
@@ -64,6 +66,7 @@ public:
 
     [[nodiscard]] size_t width() const { return surface().width(); }
     [[nodiscard]] size_t height() const { return surface().height(); }
+    [[nodiscard]] u32 id() const { return m_id; }
 
     bool handle_event(const Event& event, bool is_handled = false);
 
@@ -129,6 +132,8 @@ private:
 
     RefPtr<VirtualRegion> m_surface_region;
     RefPtr<Theme> m_theme;
+
+    u32 m_id { 0 };
 
     Style m_style;
     Rect m_window_rect;

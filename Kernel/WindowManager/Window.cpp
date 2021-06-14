@@ -14,7 +14,7 @@ RefPtr<Window> Window::create(Thread& owner, const Rect& window_rect, RefPtr<The
 {
     RefPtr<Window> window = new Window(owner, Style::NORMAL_FRAME, window_rect, theme, title);
     WindowManager::the().add_window(window);
-    owner.add_window(window);
+    window->m_id = owner.add_window(window);
     return window;
 }
 
@@ -47,6 +47,12 @@ Window::Window(Thread& owner, Style style, const Rect& window_rect, RefPtr<Theme
         full_window_rect.height(),
         Surface::Format::RGBA_32_BPP);
 
+    m_frame.paint();
+}
+
+void Window::set_title(StringView new_title)
+{
+    m_title = new_title;
     m_frame.paint();
 }
 
@@ -215,7 +221,7 @@ void Window::close()
     WindowManager::the().remove_window(*this);
     m_state = State::CLOSED;
     MemoryManager::the().free_virtual_region(*m_surface_region);
-    m_owner.windows().remove(this);
+    m_owner.windows().remove(m_id);
 }
 
 bool Window::handle_event(const Event& event, bool is_handled)

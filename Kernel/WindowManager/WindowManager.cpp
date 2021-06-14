@@ -27,6 +27,102 @@ WindowManager::WindowManager()
 {
 }
 
+// FIXME: use safe_memcpy etc once we have it
+ErrorCode WindowManager::dispatch_window_command(void* user_ptr)
+{
+    auto command = *Address(user_ptr).as_pointer<WMCommand>();
+
+    switch (command) {
+    case WMCommand::CREATE_WINDOW: {
+        WindowCreateCommand wc_command {};
+        copy_memory(user_ptr, &wc_command, sizeof(WindowCreateCommand));
+
+        auto* current_thread = Thread::current();
+
+        Rect window_rect(
+                static_cast<ssize_t>(wc_command.top_left_x),
+                static_cast<ssize_t>(wc_command.top_left_y),
+                static_cast<ssize_t>(wc_command.width),
+                static_cast<ssize_t>(wc_command.height));
+
+        auto window =  Window::create(*current_thread, window_rect, WindowManager::the().active_theme(), wc_command.title);
+
+        wc_command.window_id = current_thread->add_window(window);
+
+        // TODO: don't generate surface regions inside kernel address space :(
+        Address fb_address = window->surface_region().virtual_range().begin();
+
+        if (window->has_frame()) {
+            const auto& theme = window->theme();
+
+            //               upper border -> -------
+            //               left border ->  |     | <- right border
+            //                                ^- start of user framebuffer
+            wc_command.pitch = theme.side_window_frame_width() * 2 + window->width();
+            wc_command.pitch *= sizeof(u32);
+
+            // Skip the upper frame + left border of the first row.
+            fb_address += theme.upper_window_frame_height() * wc_command.pitch;
+            fb_address += theme.side_window_frame_width() * sizeof(u32);
+        } else {
+            wc_command.pitch = window->width() * sizeof(u32);
+        }
+
+        wc_command.framebuffer = fb_address.as_pointer<void>();
+
+        copy_memory(&wc_command, user_ptr, sizeof(WindowCreateCommand));
+
+        return ErrorCode::NO_ERROR;
+    }
+    case WMCommand::DESTROY_WINDOW: {
+        WindowDestroyCommand wd_command {};
+        copy_memory(user_ptr, &wd_command, sizeof(WindowDestroyCommand));
+
+        auto* current_thread = Thread::current();
+        auto& windows = current_thread->windows();
+        auto this_window = windows.find(wd_command.window_id);
+
+        if (this_window == windows.end())
+            return ErrorCode::INVALID_ARGUMENT;
+
+        this_window->second->close();
+        return ErrorCode::NO_ERROR;
+    }
+    case WMCommand::POP_EVENT: {
+        PopEventCommand pe_command {};
+        copy_memory(user_ptr, &pe_command, sizeof(PopEventCommand));
+
+        auto* current_thread = Thread::current();
+        auto& windows = current_thread->windows();
+        auto this_window = windows.find(pe_command.window_id);
+
+        if (this_window == windows.end())
+            return ErrorCode::INVALID_ARGUMENT;
+
+        pe_command.event = this_window->second->pop_event();
+        copy_memory(&pe_command, user_ptr, sizeof(PopEventCommand));
+        return ErrorCode::NO_ERROR;
+    }
+    case WMCommand::SET_TITLE: {
+        SetTitleCommand st_command {};
+        copy_memory(user_ptr, &st_command, sizeof(SetTitleCommand));
+
+        auto* current_thread = Thread::current();
+        auto& windows = current_thread->windows();
+        auto this_window = windows.find(st_command.window_id);
+
+        if (this_window == windows.end())
+            return ErrorCode::INVALID_ARGUMENT;
+
+        // FIXME: This is insanely unsafe :D
+        this_window->second->set_title(st_command.title);
+        return ErrorCode::NO_ERROR;
+    }
+    default:
+        return ErrorCode::INVALID_ARGUMENT;
+    }
+}
+
 void WindowManager::add_window(const RefPtr<Window>& window)
 {
     LOCK_GUARD(window_lock());
