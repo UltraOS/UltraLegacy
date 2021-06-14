@@ -82,7 +82,7 @@ void AddressSpace::inititalize()
 
 void AddressSpace::map_page_directory_entry(size_t index, Address physical_address, IsSupervisor is_supervisor)
 {
-    ASSERT(is_active());
+    ASSERT(is_active() || is_of_kernel());
     ASSERT_PAGE_ALIGNED(physical_address);
 
 #ifdef ADDRESS_SPACE_DEBUG
@@ -195,7 +195,7 @@ void AddressSpace::early_map_huge_range(Range virtual_range, Range physical_rang
 #ifdef ULTRA_32
 void AddressSpace::map_page(Address virtual_address, Address physical_address, IsSupervisor is_supervisor)
 {
-    ASSERT(is_active());
+    ASSERT(is_active() || is_of_kernel());
     ASSERT_PAGE_ALIGNED(virtual_address);
     ASSERT_PAGE_ALIGNED(physical_address);
 
@@ -401,7 +401,7 @@ void AddressSpace::unmap_range(const Range& range)
 #ifdef ULTRA_32
 void AddressSpace::local_unmap_page(Address virtual_address)
 {
-    ASSERT(is_active());
+    ASSERT(is_active() || is_of_kernel());
     ASSERT_PAGE_ALIGNED(virtual_address);
 
     LOCK_GUARD(m_lock);
@@ -493,9 +493,14 @@ Address AddressSpace::active_directory_address()
     return active_directory_ptr;
 }
 
-bool AddressSpace::is_active()
+bool AddressSpace::is_active() const
 {
     return physical_address() == active_directory_address();
+}
+
+bool AddressSpace::is_of_kernel() const
+{
+    return *this == AddressSpace::of_kernel();
 }
 
 void AddressSpace::make_active()
@@ -540,7 +545,7 @@ AddressSpace& AddressSpace::current()
     return CPU::current().current_thread()->address_space();
 }
 
-Address AddressSpace::physical_address()
+Address AddressSpace::physical_address() const
 {
     return m_main_page.address();
 }
@@ -548,7 +553,7 @@ Address AddressSpace::physical_address()
 #ifdef ULTRA_32
 AddressSpace::PT& AddressSpace::pt_at(size_t index)
 {
-    ASSERT(is_active());
+    ASSERT(is_active() || is_of_kernel());
 
     return *reinterpret_cast<PT*>(recursive_table_base + Table::size * index);
 }
@@ -579,7 +584,7 @@ AddressSpace::PDPT& AddressSpace::kernel_pdpt_at(size_t index)
 AddressSpace::Entry& AddressSpace::entry_at(size_t index)
 {
 #ifdef ULTRA_32
-    ASSERT(is_active());
+    ASSERT(is_active() || is_of_kernel());
 
     return *reinterpret_cast<Entry*>(recursive_directory_base + Table::entry_size * index);
 #elif defined(ULTRA_64)

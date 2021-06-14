@@ -65,7 +65,7 @@ public:
     static Entry& kernel_entry_at(size_t index);
 
     VirtualAllocator& allocator();
-    Address physical_address();
+    Address physical_address() const;
 
     // Not thread safe, the directory is assumed to be inactive
     DynamicArray<Page>& owned_pages() { return m_physical_pages; }
@@ -100,11 +100,13 @@ public:
 
     Address physical_address_of(Address);
 
-    bool is_active();
+    bool is_active() const;
     void make_active();
     void invalidate_all();
     void invalidate_range(Range virtual_range);
     void invalidate_at(Address virtual_address);
+
+    bool is_of_kernel() const;
 
 private:
     void map_page_directory_entry(size_t index, Address physical_address, IsSupervisor);
