@@ -38,4 +38,9 @@ MutexBlocker::MutexBlocker(Thread& blocked_thread)
 {
 }
 
+ProcessLoadBlocker::ProcessLoadBlocker(Thread& blocked_thread)
+    : Blocker(blocked_thread, Type::PROCESS_LOAD)
+{
+}
+
 }

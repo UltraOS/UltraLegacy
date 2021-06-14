@@ -4,7 +4,9 @@
 #include "Common/Set.h"
 
 #include "Memory/VirtualRegion.h"
+#include "FileSystem/FileDescription.h"
 #include "Thread.h"
+#include "TaskLoader.h"
 
 namespace kernel {
 
@@ -24,12 +26,20 @@ public:
         StringView name,
         size_t stack_size = default_kernel_stack_size);
 
+    static RefPtr<Process> create_user(
+            StringView name,
+            AddressSpace* address_space,
+            TaskLoader::LoadRequest*,
+            size_t stack_size = default_userland_stack_size);
+
     void create_thread(Address entrypoint, size_t stack_size = default_kernel_stack_size);
 
     Set<RefPtr<Thread>, Less<>>& threads() { return m_threads; }
     Set<RefPtr<VirtualRegion>, Less<>>& virtual_regions() { return m_virtual_regions; }
+    Map<u32, RefPtr<FileDescription>>& fds() { return m_fds; }
+    RefPtr<FileDescription> fd(u32 id);
 
-    AddressSpace& address_space() { return m_address_space; }
+    AddressSpace& address_space() { return *m_address_space; }
 
     [[nodiscard]] IsSupervisor is_supervisor() const { return m_is_supervisor; }
 
@@ -42,6 +52,10 @@ public:
     [[nodiscard]] InterruptSafeSpinLock& lock() const { return m_lock; }
 
     static Process& current() { return CPU::current().current_process(); }
+
+    void store_region(const RefPtr<VirtualRegion>&);
+    u32 store_fd(const RefPtr<FileDescription>& fd);
+    ErrorCode close_fd(u32 id);
 
     friend bool operator<(const RefPtr<Process>& l, const RefPtr<Process>& r)
     {
@@ -76,14 +90,16 @@ private:
 private:
     u32 m_id { 0 };
 
-    AddressSpace& m_address_space;
+    AddressSpace* m_address_space;
     Set<RefPtr<VirtualRegion>, Less<>> m_virtual_regions;
+    Map<u32, RefPtr<FileDescription>> m_fds;
     Set<RefPtr<Thread>, Less<>> m_threads;
 
     IsSupervisor m_is_supervisor { IsSupervisor::NO };
 
     String m_name;
 
+    Atomic<u32> m_next_fd_id { 10 };
     Atomic<u32> m_next_thread_id { main_thread_id };
 
     mutable InterruptSafeSpinLock m_lock;

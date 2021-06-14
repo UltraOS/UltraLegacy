@@ -6,6 +6,7 @@
 #include "Memory/AddressSpace.h"
 #include "TSS.h"
 #include "WindowManager/Window.h"
+#include "TaskLoader.h"
 
 #include "Blocker.h"
 
@@ -33,7 +34,11 @@ public:
 
     static RefPtr<Thread> create_idle(Process& owner);
     static RefPtr<Thread> create_supervisor(Process& owner, RefPtr<VirtualRegion> kernel_stack, Address entrypoint);
-    static RefPtr<Thread> create_user(Process& owner, RefPtr<VirtualRegion> kernel_stack, RefPtr<VirtualRegion> user_stack, Address entrypoint);
+    static RefPtr<Thread> create_user(
+            Process& owner,
+            RefPtr<VirtualRegion> kernel_stack,
+            RefPtr<VirtualRegion> user_stack,
+            TaskLoader::LoadRequest*);
 
     void activate();
     void deactivate();
@@ -97,8 +102,25 @@ public:
         bool m_previous_value { false };
     };
 
-    Set<RefPtr<Window>, Less<>>& windows() { return m_windows; }
-    void add_window(RefPtr<Window> window) { m_windows.emplace(window); }
+    Map<u32, RefPtr<Window>>& windows() { return m_windows; }
+
+    u32 add_window(RefPtr<Window> window)
+    {
+        auto id = ++m_window_ids;
+        m_windows[id] = window;
+
+        return id;
+    }
+
+    RefPtr<Window> window_at_id(u32 id)
+    {
+        auto window = m_windows.find(id);
+
+        if (window != m_windows.end())
+            return window->second;
+
+        return {};
+    }
 
     class WakeTimePtrComparator {
     public:
@@ -212,6 +234,7 @@ private:
     Atomic<bool> m_should_die { false };
     bool m_is_invulnerable { false };
 
-    Set<RefPtr<Window>, Less<>> m_windows;
+    Atomic<u32> m_window_ids { 0 };
+    Map<u32, RefPtr<Window>> m_windows;
 };
 }

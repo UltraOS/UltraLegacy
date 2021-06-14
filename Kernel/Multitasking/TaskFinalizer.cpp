@@ -1,5 +1,6 @@
 #include "TaskFinalizer.h"
 #include "Memory/MemoryManager.h"
+#include "FileSystem/VFS.h"
 #include "Process.h"
 #include "Sleep.h"
 #include "WindowManager/Window.h"
@@ -79,7 +80,7 @@ void TaskFinalizer::do_free_thread(Thread& thread)
     auto& owner = thread.owner();
 
     while (!thread.windows().empty()) {
-        (*thread.windows().begin())->close();
+        (*thread.windows().begin()).second->close();
     }
 
     MemoryManager::the().free_virtual_region(thread.kernel_stack());
@@ -103,6 +104,9 @@ void TaskFinalizer::do_free_thread(Thread& thread)
 void TaskFinalizer::do_free_process(RefPtr<Process>&& process)
 {
     log() << "TaskFinalizer: Freeing process \"" << process->name().to_view() << "\"";
+
+    for (auto& fd : process->fds())
+        VFS::the().close(*fd.second);
 
     MemoryManager::the().free_all_virtual_regions(*process);
 

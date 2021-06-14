@@ -63,35 +63,69 @@ RefPtr<Thread> Thread::create_supervisor(Process& owner, RefPtr<VirtualRegion> k
     return thread;
 }
 
-RefPtr<Thread> Thread::create_user(Process& owner, RefPtr<VirtualRegion> kernel_stack, RefPtr<VirtualRegion> user_stack, Address entrypoint)
+RefPtr<Thread> Thread::create_user(
+        Process& owner,
+        RefPtr<VirtualRegion> kernel_stack,
+        RefPtr<VirtualRegion> user_stack,
+        TaskLoader::LoadRequest* load_request
+)
 {
-    Address adjusted_stack = kernel_stack->virtual_range().end() - sizeof(RegisterState);
+    // Layout of the fresh kernel stack (first is popped last):
+    // - Userspace iret frame, instruction pointer is set later by TaskLoader after loading the binary.
+    // - LoadRequest pointer (only on i386)
+    // - dummy ret address (only on i386)
+    // - Kernel iret frame, instruction pointer set to TaskLoader::do_load
 
+    Address adjusted_stack = kernel_stack->virtual_range().end() - sizeof(RegisterState) * 2;
     auto thread = new Thread(owner, kernel_stack, user_stack, IsSupervisor::NO);
-    thread->m_control_block.current_kernel_stack_top = adjusted_stack;
+    thread->m_control_block.current_kernel_stack_top = adjusted_stack.raw();
 
-    auto& frame = *new (adjusted_stack.as_pointer<void>()) RegisterState;
+    auto* frame = new (adjusted_stack.as_pointer<void>()) RegisterState {};
+
+#ifdef ULTRA_32
+    frame->ss = GDT::kernel_data_selector();
+    frame->gs = GDT::kernel_data_selector();
+    frame->fs = GDT::kernel_data_selector();
+    frame->es = GDT::kernel_data_selector();
+    frame->ds = GDT::kernel_data_selector();
+
+    frame->eip = Address(&TaskLoader::do_load);;
+    frame->cs = GDT::kernel_code_selector();
+    frame->eflags = static_cast<size_t>(CPU::FLAGS::INTERRUPTS);
+
+    adjusted_stack += sizeof(RegisterState) - 1 * sizeof(u32);
+    *adjusted_stack.as_pointer<ptr_t>() = Address(load_request);
+    adjusted_stack += sizeof(ptr_t);
+#elif defined(ULTRA_64)
+    frame->cs = GDT::kernel_code_selector();
+    frame->ss = GDT::kernel_data_selector();
+    frame->rflags = static_cast<size_t>(CPU::FLAGS::INTERRUPTS);
+    frame->rsp = kernel_stack->virtual_range().end() - sizeof(RegisterState);
+    frame->rip = Address(&TaskLoader::do_load);
+    frame->rdi = Address(load_request);
+    adjusted_stack += sizeof(RegisterState);
+#endif
+
+    frame = new (adjusted_stack.as_pointer<void>()) RegisterState {};
 
     static constexpr auto rpl_ring_3 = 0x3;
 
 #ifdef ULTRA_32
-    frame.gs = GDT::userland_data_selector() | rpl_ring_3;
-    frame.fs = GDT::userland_data_selector() | rpl_ring_3;
-    frame.es = GDT::userland_data_selector() | rpl_ring_3;
-    frame.ds = GDT::userland_data_selector() | rpl_ring_3;
-    frame.cs = GDT::userland_code_selector() | rpl_ring_3;
+    frame->gs = GDT::userland_data_selector() | rpl_ring_3;
+    frame->fs = GDT::userland_data_selector() | rpl_ring_3;
+    frame->es = GDT::userland_data_selector() | rpl_ring_3;
+    frame->ds = GDT::userland_data_selector() | rpl_ring_3;
+    frame->cs = GDT::userland_code_selector() | rpl_ring_3;
 
-    frame.userspace_ss = GDT::userland_data_selector() | rpl_ring_3;
-    frame.userspace_esp = user_stack->virtual_range().end();
-    frame.eip = entrypoint;
-    frame.eflags = static_cast<size_t>(CPU::FLAGS::INTERRUPTS);
+    frame->userspace_ss = GDT::userland_data_selector() | rpl_ring_3;
+    frame->userspace_esp = user_stack->virtual_range().end();
+    frame->eflags = static_cast<size_t>(CPU::FLAGS::INTERRUPTS);
 #elif defined(ULTRA_64)
-    frame.cs = GDT::userland_code_selector() | rpl_ring_3;
-    frame.ss = GDT::userland_data_selector() | rpl_ring_3;
+    frame->cs = GDT::userland_code_selector() | rpl_ring_3;
+    frame->ss = GDT::userland_data_selector() | rpl_ring_3;
 
-    frame.rflags = static_cast<size_t>(CPU::FLAGS::INTERRUPTS);
-    frame.rsp = user_stack->virtual_range().end();
-    frame.rip = entrypoint;
+    frame->rflags = static_cast<size_t>(CPU::FLAGS::INTERRUPTS);
+    frame->rsp = user_stack->virtual_range().end();
 #endif
 
     return thread;

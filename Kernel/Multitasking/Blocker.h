@@ -11,7 +11,8 @@ class Blocker {
 public:
     enum class Type {
         DISK_IO,
-        MUTEX
+        MUTEX,
+        PROCESS_LOAD
     };
 
     enum class Result {
@@ -53,6 +54,13 @@ public:
 class MutexBlocker : public Blocker, public StandaloneListNode<MutexBlocker> {
 public:
     MutexBlocker(Thread& blocked_thread);
+};
+
+class ProcessLoadBlocker : public Blocker {
+public:
+    ProcessLoadBlocker(Thread& blocked_thread);
+
+    virtual bool is_interruptable() { return false; }
 };
 
 }
