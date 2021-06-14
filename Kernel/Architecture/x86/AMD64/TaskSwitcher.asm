@@ -1,5 +1,6 @@
 %define switch_task _ZN6kernel9Scheduler11switch_taskEPNS_6Thread12ControlBlockE
 %define save_state  _ZN6kernel9Scheduler23save_state_and_scheduleEv
+%define jump_to_userspace _ZN6kernel10TaskLoader17jump_to_userspaceEm
 
 %define schedule    _ZN6kernel9Scheduler8scheduleEPKNS_13RegisterStateE
 extern  schedule
@@ -43,3 +44,10 @@ save_state:
     call schedule
 
     ud2 ; in case we ever return
+
+global jump_to_userspace
+jump_to_userspace:
+    mov rsp, rdi
+    popaq
+    add rsp, 0x10
+    iretq

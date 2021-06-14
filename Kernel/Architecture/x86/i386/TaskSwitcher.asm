@@ -1,5 +1,6 @@
 %define switch_task _ZN6kernel9Scheduler11switch_taskEPNS_6Thread12ControlBlockE
 %define save_state  _ZN6kernel9Scheduler23save_state_and_scheduleEv
+%define jump_to_userspace _ZN6kernel10TaskLoader17jump_to_userspaceEm
 
 %define schedule    _ZN6kernel9Scheduler8scheduleEPKNS_13RegisterStateE
 extern  schedule
@@ -45,3 +46,8 @@ save_state:
     cld
     call schedule
     ud2
+
+global jump_to_userspace
+jump_to_userspace:
+    pop esp
+    iret
