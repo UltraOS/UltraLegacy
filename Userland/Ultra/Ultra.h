@@ -8,3 +8,4 @@
 #include "Window.h"
 
 void debug_log(const char* message);
+unsigned long ticks_since_boot();

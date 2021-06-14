@@ -14,3 +14,13 @@ void process_exit(long code)
 {
     syscall_1(SYSCALL_EXIT, (long)code);
 }
+
+void sleep(long nanoseconds)
+{
+    syscall_1(SYSCALL_SLEEP, nanoseconds);
+}
+
+unsigned long ticks_since_boot()
+{
+    return syscall_0(SYSCALL_TICKS);
+}
