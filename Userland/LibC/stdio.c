@@ -14,12 +14,18 @@ typedef unsigned int wint_t;
 
 #define DEFAULT_BUFFER_CAPACITY 512
 
-static FILE* file_ptr_open(uint32_t fd)
+static FILE* file_ptr_open(uint32_t fd, bool buffered)
 {
     FILE* f = (FILE*)malloc(sizeof(FILE));
     f->fd = fd;
-    f->buffer = malloc(DEFAULT_BUFFER_CAPACITY);
-    f->capacity = DEFAULT_BUFFER_CAPACITY;
+
+    if (buffered) {
+        f->buffer = malloc(DEFAULT_BUFFER_CAPACITY);
+        f->capacity = DEFAULT_BUFFER_CAPACITY;
+    } else {
+        f->capacity = 0;
+    }
+
     f->size = 0;
 }
 
@@ -36,9 +42,9 @@ FILE* stderr = NULL;
 
 void stdio_init()
 {
-    stdin = file_ptr_open(0);
-    stdout = file_ptr_open(1);
-    stderr = file_ptr_open(2);
+    stdin = file_ptr_open(0, true);
+    stdout = file_ptr_open(1, true);
+    stderr = file_ptr_open(2, false);
 }
 
 int puts(const char* str)
@@ -136,7 +142,7 @@ FILE* fopen(const char* restrict filename, const char* restrict mode)
     if (fd < 0)
         return NULL;
         
-    FILE* ptr = file_ptr_open(fd);
+    FILE* ptr = file_ptr_open(fd, true);
     ptr->flags = native_mode;
 
     return ptr;
