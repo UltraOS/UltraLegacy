@@ -160,8 +160,6 @@ public:
         ASSERT(is_released());
     }
 
-    [[nodiscard]] InterruptSafeSpinLock& lock() const { return m_lock; }
-
     [[nodiscard]] const String& name() const { return m_name; }
     [[nodiscard]] Properties properties() const { return m_properties; }
     [[nodiscard]] const Range& virtual_range() const { return m_virtual_range; }
@@ -237,7 +235,6 @@ protected:
     }
 
 private:
-    mutable InterruptSafeSpinLock m_lock;
     Range m_virtual_range;
     Properties m_properties;
     String m_name;

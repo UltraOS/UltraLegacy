@@ -22,6 +22,17 @@ void PrivateVirtualRegion::preallocate_specific(Range virtual_range, bool zeroed
     MemoryManager::the().preallocate_specific(*this, virtual_range, zeroed);
 }
 
+Page PrivateVirtualRegion::page_at(Address virtual_address)
+{
+    auto offset_from_base = virtual_address - this->virtual_range().begin();
+    offset_from_base /= Page::size;
+
+    if (m_owned_pages.size() <= offset_from_base)
+        return {};
+
+    return m_owned_pages[offset_from_base];
+}
+
 void PrivateVirtualRegion::store_page(Page page, Address virtual_address)
 {
     auto offset_from_base = virtual_address - this->virtual_range().begin();

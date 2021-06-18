@@ -10,6 +10,9 @@ class SharedVirtualRegion : public VirtualRegion {
 public:
     SharedVirtualRegion(Range range, Properties properties, StringView name);
 
+    void preallocate_entire(bool zeroed = true);
+    void preallocate_specific(Range, bool zeroed = true);
+
 private:
     SharedVirtualRegion(Range range, Properties properties, const SharedVirtualRegion& to_clone);
     SharedVirtualRegion* clone(Range virtual_range, IsSupervisor);

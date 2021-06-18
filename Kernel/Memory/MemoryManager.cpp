@@ -258,7 +258,7 @@ PhysicalRegion* MemoryManager::physical_region_responsible_for_page(const Page& 
     return physical_region->get();
 }
 
-VirtualRegion* MemoryManager::virtual_region_responsible_for_address(Address address)
+MemoryManager::VR MemoryManager::virtual_region_responsible_for_address(Address address)
 {
     auto aligned_address = Address(Page::round_down(address));
 
@@ -269,9 +269,9 @@ VirtualRegion* MemoryManager::virtual_region_responsible_for_address(Address add
                                                  [] (const RefPtr<VirtualRegion>& vr) { return vr->virtual_range(); });
 
         if (!region)
-            return nullptr;
+            return {};
 
-        return &***region; // Optional<Iterator<T>> -> Iterator<T> -> T& -> address of T
+        return **region; // Optional<Iterator<T>> -> Iterator<T> -> T&
     }
 
     auto& current_process = Process::current();
@@ -287,9 +287,9 @@ VirtualRegion* MemoryManager::virtual_region_responsible_for_address(Address add
                                              [] (const RefPtr<VirtualRegion>& vr) { return vr->virtual_range(); });
 
     if (!region)
-        return nullptr;
+        return {};
 
-    return &***region; // Optional<Iterator<T>> -> Iterator<T> -> T& -> address of T
+    return **region; // Optional<Iterator<T>> -> Iterator<T> -> T& -> address of T
 }
 
 void MemoryManager::free_page(const Page& page)
@@ -333,17 +333,21 @@ void MemoryManager::handle_page_fault(const RegisterState& registers, const Page
     }
 
     auto& self = the();
-    auto* virtual_region = self.virtual_region_responsible_for_address(fault.address());
+    auto virtual_region = self.virtual_region_responsible_for_address(fault.address());
 
     // We don't know what this virtual address was supposed to be, so panic
-    if (virtual_region == nullptr) // TODO: kill the process if fault.is_supervisor() == IsSupervisor::NO
+    if (!virtual_region) // TODO: kill the process if fault.is_supervisor() == IsSupervisor::NO
         panic();
 
-    LOCK_GUARD(virtual_region->lock());
+    auto aligned_address = Page::round_down(fault.address());
 
     if (virtual_region->is_private()) {
         auto& private_region = static_cast<PrivateVirtualRegion&>(*virtual_region);
-        auto aligned_address = Page::round_down(fault.address());
+        LOCK_GUARD(private_region.lock());
+
+        // TODO: virtual region was released while we were handling the fault
+        if (virtual_region->is_released())
+            panic();
 
         if (private_region.is_stack()) {
             if (aligned_address == private_region.virtual_range().begin()) { // PF on the stack guard page
@@ -362,14 +366,44 @@ void MemoryManager::handle_page_fault(const RegisterState& registers, const Page
         MM_DEBUG_EX << "Handling expected page fault\n"
                     << fault;
 
+        if (private_region.page_at(aligned_address).address()) {
+            MM_DEBUG << "private region page fault spurious or already handled";
+            return;
+        }
+
         auto page = self.allocate_page();
         private_region.store_page(page, aligned_address);
-        AddressSpace::current().map_page(aligned_address, page.address(), fault.is_supervisor());
+        AddressSpace::current().map_page(aligned_address, page.address(), private_region.is_supervisor());
+        return;
+    } else if (virtual_region->is_shared()) {
+        auto& shared_region = static_cast<SharedVirtualRegion&>(*virtual_region);
+        LOCK_GUARD(shared_region.lock());
+
+        // TODO: virtual region was released while we were handling the fault
+        if (virtual_region->is_released())
+            panic();
+
+        MM_DEBUG_EX << "Handling expected shared page fault\n"
+                    << fault;
+
+        auto this_page = shared_region.page_at(aligned_address);
+
+        // Looks like someone already handled this fault for us
+        if (this_page.address()) {
+            MM_DEBUG << "shared fault at address " << aligned_address << " already handled by someone else";
+
+            // Technically this could already be mapped, but shouldn't matter too much?
+            AddressSpace::current().map_page(aligned_address, this_page.address(), shared_region.is_supervisor());
+            return;
+        }
+
+        auto new_page = self.allocate_page();
+        shared_region.store_page(new_page, aligned_address);
+        AddressSpace::current().map_page(aligned_address, new_page.address(), shared_region.is_supervisor());
         return;
     }
 
-    // Technically we can also get a page fault on a shared region but we don't use shared regions yet
-    FAILED_ASSERTION("Page fault in non private region");
+    FAILED_ASSERTION("Page fault in non private/shared region");
 }
 
 void MemoryManager::inititalize(AddressSpace& directory)
@@ -411,15 +445,13 @@ void MemoryManager::set_quickmap_range(const Range& range)
 }
 #endif
 
-void MemoryManager::preallocate(PrivateVirtualRegion& region, bool should_zero)
+void MemoryManager::preallocate(VirtualRegion& region, bool should_zero)
 {
     preallocate_specific(region, {}, should_zero);
 }
 
-void MemoryManager::preallocate_specific(PrivateVirtualRegion& region, Range requested_range, bool should_zero)
+void MemoryManager::preallocate_specific(VirtualRegion& region, Range requested_range, bool should_zero)
 {
-    LOCK_GUARD(region.lock());
-
     auto range = requested_range;
 
     // empty range means preallocate the entire region
@@ -441,16 +473,14 @@ void MemoryManager::preallocate_specific(PrivateVirtualRegion& region, Range req
     }
 
     MM_DEBUG_EX << "force allocating " << page_count << " physical pages...";
+    auto start = range.begin() + (page_start * Page::size);
 
-    region.owned_pages().reserve(page_count);
-
-    for (size_t i = page_start; i < page_count; ++i) {
-        auto page = allocate_page(should_zero);
-        auto offset = i * Page::size;
-
-        auto virtual_address = range.begin() + offset;
-        AddressSpace::current().map_page(virtual_address, page.address(), region.is_supervisor());
-        region.store_page(page, virtual_address);
+    if (region.is_private()) {
+        preallocate_unchecked(static_cast<PrivateVirtualRegion&>(region), start, page_count - page_start, should_zero);
+    } else if (region.is_shared()) {
+        preallocate_unchecked(static_cast<SharedVirtualRegion&>(region), start, page_count - page_start, should_zero);
+    } else {
+        ASSERT_NEVER_REACHED();
     }
 }
 
@@ -558,6 +588,84 @@ MemoryManager::VR MemoryManager::allocate_kernel_private_anywhere(StringView pur
     }
 
     return region;
+}
+
+MemoryManager::VR MemoryManager::allocate_user_shared(StringView purpose, AddressSpace& address_space, size_t length, size_t alignment)
+{
+    ASSERT(!address_space.is_of_kernel());
+
+    auto virtual_range = address_space.allocator().allocate(length, alignment);
+
+    VirtualRegion::Specification spec {};
+    spec.purpose = purpose;
+    spec.virtual_range = virtual_range;
+    spec.region_type = VirtualRegion::Type::SHARED;
+    spec.is_supervisor = IsSupervisor::NO;
+
+    return VirtualRegion::from_specification(spec);
+}
+
+MemoryManager::VR MemoryManager::allocate_shared(SharedVirtualRegion& region, AddressSpace& address_space, IsSupervisor is_supervisor)
+{
+    auto virtual_range = address_space.allocator().allocate(region.virtual_range().length());
+    auto* new_region = region.clone(virtual_range, is_supervisor);
+
+    // Map all already allocated physical pages, if any
+    {
+        LOCK_GUARD(region.lock());
+
+        auto& owned_pages = region.owned_pages();
+
+        for (size_t i = 0; i < (virtual_range.length() / Page::size) && (i < owned_pages.size()); ++i) {
+            auto offset = i * Page::size;
+
+            if (!owned_pages[i].address())
+                continue;
+
+            address_space.map_page(virtual_range.begin() + offset, owned_pages[i].address(), is_supervisor);
+        }
+    }
+
+    return new_region;
+}
+
+MemoryManager::VR MemoryManager::allocate_user_shared(SharedVirtualRegion& region, AddressSpace& address_space)
+{
+    ASSERT(!address_space.is_of_kernel());
+
+    return allocate_shared(region, address_space, IsSupervisor::NO);
+}
+
+MemoryManager::VR MemoryManager::allocate_kernel_shared(StringView purpose, size_t length, size_t alignment)
+{
+    auto virtual_range = AddressSpace::of_kernel().allocator().allocate(length, alignment);
+
+    VirtualRegion::Specification spec {};
+    spec.purpose = purpose;
+    spec.virtual_range = virtual_range;
+    spec.region_type = VirtualRegion::Type::SHARED;
+    spec.is_supervisor = IsSupervisor::YES;
+
+    auto region = VirtualRegion::from_specification(spec);
+
+    {
+        LOCK_GUARD(m_virtual_region_lock);
+        m_kernel_virtual_regions.emplace(region);
+    }
+
+    return region;
+}
+
+MemoryManager::VR MemoryManager::allocate_kernel_shared(SharedVirtualRegion& region)
+{
+    auto vr = allocate_shared(region, AddressSpace::of_kernel(), IsSupervisor::YES);
+
+    {
+        LOCK_GUARD(m_virtual_region_lock);
+        m_kernel_virtual_regions.emplace(vr);
+    }
+
+    return vr;
 }
 
 MemoryManager::VR MemoryManager::allocate_dma_buffer(StringView purpose, size_t length)
@@ -703,16 +811,29 @@ void MemoryManager::allocate_initial_kernel_regions()
 #endif
 }
 
+void MemoryManager::mark_as_released(VirtualRegion& region)
+{
+    if (region.is_private()) {
+        auto& pvr = static_cast<PrivateVirtualRegion&>(region);
+        LOCK_GUARD(pvr.lock());
+        pvr.mark_as_released();
+    } else if (region.is_shared()) {
+        auto& svr = static_cast<SharedVirtualRegion&>(region);
+        LOCK_GUARD(svr.lock());
+        svr.mark_as_released();
+    } else { // since this is a region that cannot be
+        region.mark_as_released();
+    }
+}
+
 void MemoryManager::free_virtual_region(VirtualRegion& vr)
 {
     MM_DEBUG << "Freeing virtual region \"" << vr.name().to_view() << "\"";
 
     ASSERT(!vr.is_eternal());
-    ASSERT(!vr.is_shared()); // TODO
     ASSERT(!vr.is_released());
 
-    bool interrupt_state = false;
-    vr.lock().lock(interrupt_state, __FILE__, __LINE__, CPU::current_id());
+    mark_as_released(vr);
 
     if (vr.is_supervisor() == IsSupervisor::YES) {
         LOCK_GUARD(m_virtual_region_lock);
@@ -729,20 +850,21 @@ void MemoryManager::free_virtual_region(VirtualRegion& vr)
 
     if (vr.is_private()) {
         auto& pvr = static_cast<PrivateVirtualRegion&>(vr);
+        LOCK_GUARD(pvr.lock());
 
-        for (auto& page : pvr.owned_pages()) {
-            if (!page.address())
-                continue;
+        release_all_pages(pvr);
+    } else if (vr.is_shared()) {
+        auto& svr = static_cast<SharedVirtualRegion&>(vr);
+        LOCK_GUARD(svr.lock());
 
-            free_page(page);
-        }
+        if (svr.decref() == 0)
+            release_all_pages(svr);
     }
 
     // This means we're freeing this region early, before having initialized everything
     if (!CPU::is_initialized() || !Scheduler::is_initialized()) {
         AddressSpace::of_kernel().allocator().deallocate(vr.virtual_range());
         vr.mark_as_released();
-        vr.lock().unlock(interrupt_state);
         return;
     }
 
@@ -752,9 +874,6 @@ void MemoryManager::free_virtual_region(VirtualRegion& vr)
         AddressSpace::of_kernel().allocator().deallocate(vr.virtual_range());
     else if (AddressSpace::current() != AddressSpace::of_kernel())
         current_process.address_space().allocator().deallocate(vr.virtual_range());
-
-    vr.mark_as_released();
-    vr.lock().unlock(interrupt_state);
 
     // Stack regions are not stored in the process virtual_regions tree
     if (vr.is_stack())
@@ -768,7 +887,6 @@ void MemoryManager::free_all_virtual_regions(Process& process)
 {
     for (auto& vr : process.virtual_regions()) {
         ASSERT(!vr->is_eternal());
-        ASSERT(!vr->is_shared());
         ASSERT(!vr->is_released());
 
         if (vr->is_private()) {
@@ -780,13 +898,16 @@ void MemoryManager::free_all_virtual_regions(Process& process)
                 m_kernel_virtual_regions.remove(pvr->virtual_range().begin());
             }
 
-            for (auto& page : pvr->m_owned_pages)
-                free_page(page);
-
+            release_all_pages(*pvr);
         } else if (vr->is_non_owning() && vr->is_supervisor() == IsSupervisor::YES) {
             AddressSpace::of_kernel().unmap_range(vr->virtual_range());
+        } else if (vr->is_shared()) {
+            auto* svr = static_cast<SharedVirtualRegion*>(vr.get());
+
+            if (svr->decref() == 0)
+                release_all_pages(*svr);
         } else {
-            ASSERT_NEVER_REACHED(); // TODO: shared region
+            ASSERT_NEVER_REACHED();
         }
 
         if (process.is_supervisor() == IsSupervisor::YES)

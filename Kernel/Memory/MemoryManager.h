@@ -15,6 +15,7 @@
 #include "PrivateVirtualRegion.h"
 #include "VirtualAllocator.h"
 #include "VirtualRegion.h"
+#include "SharedVirtualRegion.h"
 
 namespace kernel {
 
@@ -205,6 +206,14 @@ public:
 
     VR allocate_dma_buffer(StringView purpose, size_t length);
 
+    VR allocate_shared(SharedVirtualRegion&, AddressSpace&, IsSupervisor);
+
+    VR allocate_user_shared(StringView purpose, AddressSpace&, size_t length, size_t alignment = Page::size);
+    VR allocate_user_shared(SharedVirtualRegion&, AddressSpace&);
+
+    VR allocate_kernel_shared(StringView purpose, size_t length, size_t alignment = Page::size);
+    VR allocate_kernel_shared(SharedVirtualRegion&);
+
     void free_virtual_region(VirtualRegion&);
     void free_all_virtual_regions(Process&);
     void free_address_space(AddressSpace&);
@@ -259,11 +268,43 @@ private:
     ptr_t remap_bsp_stack();
 
     friend class PrivateVirtualRegion;
-    void preallocate(PrivateVirtualRegion&, bool should_zero = true);
-    void preallocate_specific(PrivateVirtualRegion&, Range pages, bool should_zero);
+    friend class SharedVirtualRegion;
+    void preallocate(VirtualRegion&, bool should_zero = true);
+    void preallocate_specific(VirtualRegion&, Range pages, bool should_zero);
+
+    template <typename T>
+    void preallocate_unchecked(T& region, Address start, size_t page_count, bool should_zero)
+    {
+        LOCK_GUARD(region.lock());
+        region.owned_pages().reserve(page_count);
+
+        for (size_t i = 0; i < page_count; ++i) {
+            auto virtual_offset = start + i * Page::size;
+
+            if (region.page_at(virtual_offset).address())
+                continue;
+
+            auto page = allocate_page(should_zero);
+            AddressSpace::current().map_page(virtual_offset, page.address(), region.is_supervisor());
+            region.store_page(page, virtual_offset);
+        }
+    }
 
     PhysicalRegion* physical_region_responsible_for_page(const Page&);
-    VirtualRegion* virtual_region_responsible_for_address(Address);
+    MemoryManager::VR virtual_region_responsible_for_address(Address);
+
+    static void mark_as_released(VirtualRegion&);
+
+    template <typename T>
+    void release_all_pages(T& region)
+    {
+        for (auto& page : region.owned_pages()) {
+            if (!page.address())
+                continue;
+
+            free_page(page);
+        }
+    }
 
 private:
     static MemoryManager* s_instance;

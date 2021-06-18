@@ -1,4 +1,5 @@
 #include "SharedVirtualRegion.h"
+#include "MemoryManager.h"
 
 namespace kernel {
 
@@ -24,6 +25,20 @@ SharedVirtualRegion* SharedVirtualRegion::clone(Range virtual_range, IsSuperviso
     props += Properties::SHARED;
 
     return new SharedVirtualRegion(virtual_range, props, *this);
+}
+
+void SharedVirtualRegion::preallocate_entire(bool zeroed)
+{
+    m_shared_block->pages.expand_to(virtual_range().length() / Page::size);
+    MemoryManager::the().preallocate(*this, zeroed);
+}
+
+void SharedVirtualRegion::preallocate_specific(Range virtual_range, bool zeroed)
+{
+    auto offset_from_base = Page::round_down(virtual_range.end() - 1) - this->virtual_range().begin();
+    m_shared_block->pages.expand_to(offset_from_base / Page::size + 1);
+
+    MemoryManager::the().preallocate_specific(*this, virtual_range, zeroed);
 }
 
 void SharedVirtualRegion::store_page(Page page, Address virtual_address)

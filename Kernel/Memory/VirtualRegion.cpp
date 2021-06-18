@@ -24,7 +24,7 @@ RefPtr<VirtualRegion> VirtualRegion::from_specification(const Specification& spe
         return new NonOwningVirtualRegion(spec.virtual_range, spec.physical_range, properties, spec.purpose);
 
     case Type::SHARED:
-        ASSERT_NEVER_REACHED(); // Not implemented yet
+        return new SharedVirtualRegion(spec.virtual_range, properties, spec.purpose);
     }
 
     ASSERT_NEVER_REACHED();
