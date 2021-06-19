@@ -38,8 +38,8 @@ Window::Window(Thread& owner, Style style, const Rect& window_rect, RefPtr<Theme
     surface_purpose << " window surface";
     auto bytes_needed = full_window_rect.width() * full_window_rect.height() * sizeof(u32);
 
-    m_surface_region = MemoryManager::the().allocate_kernel_private_anywhere(surface_purpose.to_view(), bytes_needed);
-    static_cast<PrivateVirtualRegion*>(m_surface_region.get())->preallocate_entire(false);
+    m_surface_region = MemoryManager::the().allocate_kernel_shared(surface_purpose.to_view(), bytes_needed);
+    static_cast<SharedVirtualRegion*>(m_surface_region.get())->preallocate_entire(false);
 
     m_front_surface = RefPtr<Surface>::create(
         m_surface_region->virtual_range().begin().as_pointer<void>(),

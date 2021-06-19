@@ -49,8 +49,19 @@ ErrorCode WindowManager::dispatch_window_command(void* user_ptr)
 
         wc_command.window_id = current_thread->add_window(window);
 
-        // TODO: don't generate surface regions inside kernel address space :(
-        Address fb_address = window->surface_region().virtual_range().begin();
+        auto user_window_region =
+                MemoryManager::the().allocate_user_shared(
+                        static_cast<SharedVirtualRegion&>(window->surface_region()),
+                        AddressSpace::current());
+
+        {
+            auto& current_process = Process::current();
+            LOCK_GUARD(current_process.lock());
+
+            current_process.store_region(user_window_region);
+        }
+
+        auto fb_address = user_window_region->virtual_range().begin();
 
         if (window->has_frame()) {
             const auto& theme = window->theme();
