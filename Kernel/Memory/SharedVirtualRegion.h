@@ -13,6 +13,8 @@ public:
     void preallocate_entire(bool zeroed = true);
     void preallocate_specific(Range, bool zeroed = true);
 
+    ~SharedVirtualRegion();
+
 private:
     SharedVirtualRegion(Range range, Properties properties, const SharedVirtualRegion& to_clone);
     SharedVirtualRegion* clone(Range virtual_range, IsSupervisor);

@@ -828,7 +828,7 @@ void MemoryManager::mark_as_released(VirtualRegion& region)
 
 void MemoryManager::free_virtual_region(VirtualRegion& vr)
 {
-    MM_DEBUG << "Freeing virtual region \"" << vr.name().to_view() << "\"";
+    MM_DEBUG << "Freeing virtual region \"" << vr.name() << "\"";
 
     ASSERT(!vr.is_eternal());
     ASSERT(!vr.is_released());
@@ -857,8 +857,10 @@ void MemoryManager::free_virtual_region(VirtualRegion& vr)
         auto& svr = static_cast<SharedVirtualRegion&>(vr);
         LOCK_GUARD(svr.lock());
 
-        if (svr.decref() == 0)
+        if (svr.decref() == 0) {
+            MM_DEBUG << "Shared region \"" << vr.name() << "\" has no more references, releasing all pages";
             release_all_pages(svr);
+        }
     }
 
     // This means we're freeing this region early, before having initialized everything
@@ -904,8 +906,10 @@ void MemoryManager::free_all_virtual_regions(Process& process)
         } else if (vr->is_shared()) {
             auto* svr = static_cast<SharedVirtualRegion*>(vr.get());
 
-            if (svr->decref() == 0)
+            if (svr->decref() == 0) {
+                MM_DEBUG << "Shared region \"" << svr->name() << "\" has no more references, releasing all pages";
                 release_all_pages(*svr);
+            }
         } else {
             ASSERT_NEVER_REACHED();
         }

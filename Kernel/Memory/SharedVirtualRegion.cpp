@@ -61,4 +61,10 @@ Page SharedVirtualRegion::page_at(Address virtual_address)
     return m_shared_block->pages[offset_from_base];
 }
 
+SharedVirtualRegion::~SharedVirtualRegion()
+{
+    if (m_shared_block->ref_count == 0)
+        delete m_shared_block;
+}
+
 }
