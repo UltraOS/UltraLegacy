@@ -13,11 +13,7 @@ VIRTUAL_ORIGIN: equ 0xC0000000
 KERNEL_ORIGIN:  equ 0xC0100000
 PRESENT:        equ 0b01
 READWRITE:      equ 0b10
-GLOBAL_PAGE:    equ (1 << 8)
 ENTRY_SIZE:     equ 4
-EM_BIT:         equ (1 << 2)
-TS_BIT:         equ (1 << 3)
-GLOBAL_BIT:     equ (1 << 7)
 
 WRITE_PROTECT: equ (0b1 << 16)
 PAGING:        equ (0b1 << 31)
@@ -87,17 +83,19 @@ start:
     rep stosb
     mov eax, ebp
 
-    ; initialize the FPU
-    ; TODO: actually check if we have one, and maybe move this out into a CPU class in C++.
+    ; FPU presence bit
+    EM_BIT: equ (1 << 2)
+
+    ; trap x87 instructions
+    TS_BIT: equ (1 << 3)
+
+    ; native exception handling
+    NE_BIT: equ (1 << 5)
+
     mov edx, cr0
     and edx, ~(EM_BIT | TS_BIT)
+    or  edx, NE_BIT
     mov cr0, edx
-    fninit
-
-    ; enable the global bit
-    mov ecx, cr4
-    or  ecx, GLOBAL_BIT
-    mov cr4, ecx
 
     ; set up a direct + identity mapping for the kernel page table
     ; e.g virtual 0x00000000 points to physical 0x00000000
@@ -108,7 +106,7 @@ start:
 
     map_one:
         mov edx, esi
-        or  edx, (PRESENT | READWRITE | GLOBAL_PAGE)
+        or  edx, (PRESENT | READWRITE)
         mov [edi], edx
 
         add esi, PAGE_SIZE
@@ -150,10 +148,12 @@ start:
         ; flush TLB
         mov ecx, cr3
         mov cr3, ecx
-        invlpg [0x00100000]
 
         ; Set up the kernel stack
         mov esp, bsp_kernel_stack_begin
+
+        ; align the stack to 16 for the ABI
+        sub esp, 12 ; 0 + 12 + boot context = 16
 
         ; boot context pointer
         push eax

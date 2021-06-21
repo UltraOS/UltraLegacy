@@ -12,8 +12,6 @@ PRESENT:         equ 0b01
 READWRITE:       equ 0b10
 WRITE_PROTECT:   equ (0b1 << 16)
 PAGING:          equ (0b1 << 31)
-EM_BIT:          equ (1 << 2)
-TS_BIT:          equ (1 << 3)
 
 %define TRUE  byte 1
 %define FALSE byte 0
@@ -85,12 +83,20 @@ extern kernel_page_table
         ; flush TLB
         mov ecx, cr3
         mov cr3, ecx
-        invlpg [0x00100000]
+
+        ; FPU presence bit
+        EM_BIT: equ (1 << 2)
+
+        ; trap x87 instructions
+        TS_BIT: equ (1 << 3)
+
+        ; native exception handling
+        NE_BIT: equ (1 << 5)
 
         mov edx, cr0
         and edx, ~(EM_BIT | TS_BIT)
+        or  edx, NE_BIT
         mov cr0, edx
-        fninit ; initialize the FPU
 
         ; Jump into kernel main
         mov eax, ap_entrypoint

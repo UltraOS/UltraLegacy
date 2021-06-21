@@ -15,8 +15,6 @@ EFER_NUMBER:     equ 0xC0000080
 LONG_MODE_BIT:   equ 1 << 8
 PAGING_BIT:      equ 1 << 31
 PROTECTED_BIT:   equ 1 << 0
-EM_BIT:          equ (1 << 2)
-TS_BIT:          equ (1 << 3)
 
 %define TRUE  byte 1
 %define FALSE byte 0
@@ -77,13 +75,22 @@ extern ap_entrypoint
         mov rsp, [STACK]
 
         mov rax, cr3
-        mov  qword [rax], 0x0000000000000000
+        mov qword [rax], 0x0000000000000000
         mov cr3, rax
+
+        ; FPU presence bit
+        EM_BIT: equ (1 << 2)
+
+        ; trap x87 instructions
+        TS_BIT: equ (1 << 3)
+
+        ; native exception handling
+        NE_BIT: equ (1 << 5)
 
         mov rdx, cr0
         and rdx, ~(EM_BIT | TS_BIT)
+        or  rdx, NE_BIT
         mov cr0, rdx
-        fninit ; initialize the FPU
 
         mov  rax, ap_entrypoint
         call rax

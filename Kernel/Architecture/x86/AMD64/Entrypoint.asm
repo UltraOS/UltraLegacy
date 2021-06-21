@@ -5,8 +5,6 @@ extern KERNEL_ENTRYPOINT
 extern section_bss_begin
 extern section_bss_end
 
-EM_BIT: equ (1 << 2)
-TS_BIT: equ (1 << 3)
 VIRTUAL_ORIGIN: equ 0xFFFFFFFF80000000
 PRESENT:        equ (1 << 0)
 READWRITE:      equ (1 << 1)
@@ -136,12 +134,19 @@ start:
     mov rax, TO_PHYSICAL(kernel_base_table)
     mov cr3, rax
 
-    ; initialize the FPU
-    ; TODO: actually check if we have one, and maybe move this out into a CPU class in C++.
+    ; FPU presence bit
+    EM_BIT: equ (1 << 2)
+
+    ; trap x87 instructions
+    TS_BIT: equ (1 << 3)
+
+    ; native exception handling
+    NE_BIT: equ (1 << 5)
+
     mov rdx, cr0
     and rdx, ~(EM_BIT | TS_BIT)
+    or  rdx, NE_BIT
     mov cr0, rdx
-    fninit
 
     ; zero rbp to help backtracer identify the first frame
     xor rbp, rbp
