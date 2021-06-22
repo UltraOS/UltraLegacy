@@ -15,11 +15,12 @@ class HeapAllocator {
 
 public:
     static constexpr size_t upper_allocation_threshold = 2 * MB;
+    static constexpr size_t chunk_size = 32;
 
     static void initialize();
-    static void feed_block(void* ptr, size_t size, size_t chunk_size_in_bytes = 32);
+    static void feed_block(void* ptr, size_t size, size_t chunk_size_in_bytes = chunk_size);
 
-    static void* allocate(size_t bytes);
+    static void* allocate(size_t bytes, size_t alignment = chunk_size);
     static void free(void* ptr);
 
     struct Stats {

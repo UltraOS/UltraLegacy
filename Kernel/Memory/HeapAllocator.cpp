@@ -127,11 +127,29 @@ void HeapAllocator::refill_if_needed(size_t bytes_left)
     s_is_being_refilled = false;
 }
 
-void* HeapAllocator::allocate(size_t bytes)
+static size_t count_set_bits(size_t number)
+{
+#ifdef _WIN64
+    return __popcnt64(number);
+#elif defined(_WIN32)
+    return __popcnt32(number);
+#else
+    return __builtin_popcountl(number);
+#endif
+}
+
+void* HeapAllocator::allocate(size_t bytes, size_t alignment)
 {
     if ((bytes == 0) || (bytes > upper_allocation_threshold)) {
         StackString error_string;
         error_string << "HeapAllocator: invalid allocation size " << bytes;
+        runtime::panic(error_string.data());
+    }
+
+    if (count_set_bits(alignment) != 1 || alignment > 4096) {
+        StackString error_string;
+        error_string << "HeapAllocator: tried to allocate with bad alignment value of " << alignment
+                     << " with " << bytes << " bytes";
         runtime::panic(error_string.data());
     }
 
@@ -163,8 +181,18 @@ void* HeapAllocator::allocate(size_t bytes)
         bool allocation_succeeded = false;
         size_t current_free_block = 0;
         size_t at_bit = 0;
+        size_t bits_per_aligned_block = max<size_t>((alignment / heap->chunk_size) * 2, 2);
+        size_t aligned_offset = 0;
 
-        for (size_t i = 0; i < heap->chunk_count * 2; i += 2) {
+        // since heap block always starts at chunk_size bytes alignment,
+        // we might have to align it upwards to meet required alignment
+        if (alignment > heap->chunk_size) {
+            auto rem = reinterpret_cast<ptr_t>(heap->begin()) % alignment;
+            if (rem)
+                aligned_offset += ((alignment - rem) / heap->chunk_size) * 2;
+        }
+
+        for (size_t i = aligned_offset; i < heap->chunk_count * 2; i += 2) {
             auto byte_index = i / 8;
             auto bit_index = i - 8 * byte_index;
 
@@ -173,11 +201,20 @@ void* HeapAllocator::allocate(size_t bytes)
 
             bool is_free = !allocation_id;
 
-            if (is_free)
+            if (is_free) {
                 ++current_free_block;
-            else {
+            } else {
                 current_free_block = 0;
                 at_bit = 0;
+
+                // skip alignment bits ahead
+                if (bits_per_aligned_block > 2) {
+                    i -= aligned_offset;
+                    i = (i + bits_per_aligned_block) & ~(bits_per_aligned_block - 1);
+                    i += aligned_offset;
+                    i -= 2; // done by the for loop
+                }
+
                 continue;
             }
 
