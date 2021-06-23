@@ -203,3 +203,36 @@ TEST(AllocationIdAwareness) {
     // This would fail pre 75c2046
     Assert::that(HeapAllocator::s_heap_block->free_bytes()).is_equal(bytes_after_allocation5 + 1024);
 }
+
+TEST(AllocateAligned) {
+    using namespace kernel;
+
+    auto initial_available_bytes = HeapAllocator::s_heap_block->free_bytes();
+
+    auto* allocation1 = HeapAllocator::allocate(128, 64);
+    Assert::that(reinterpret_cast<size_t>(allocation1) % 64).is_equal(0);
+
+    auto* allocation2 = HeapAllocator::allocate(128, 128);
+    Assert::that(reinterpret_cast<size_t>(allocation2) % 128).is_equal(0);
+    
+    auto* allocation3 = HeapAllocator::allocate(128, 256);
+    Assert::that(reinterpret_cast<size_t>(allocation3) % 256).is_equal(0);
+
+    auto* allocation4 = HeapAllocator::allocate(128, 512);
+    Assert::that(reinterpret_cast<size_t>(allocation4) % 512).is_equal(0);
+
+    auto* allocation5 = HeapAllocator::allocate(128, 1024);
+    Assert::that(reinterpret_cast<size_t>(allocation5) % 1024).is_equal(0);
+
+    auto* allocation6 = HeapAllocator::allocate(128, 4096);
+    Assert::that(reinterpret_cast<size_t>(allocation6) % 4096).is_equal(0);
+
+    HeapAllocator::free(allocation1);
+    HeapAllocator::free(allocation2);
+    HeapAllocator::free(allocation3);
+    HeapAllocator::free(allocation4);
+    HeapAllocator::free(allocation5);
+    HeapAllocator::free(allocation6);
+
+    Assert::that(HeapAllocator::s_heap_block->free_bytes()).is_equal(initial_available_bytes);
+}
