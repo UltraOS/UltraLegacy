@@ -49,6 +49,17 @@ public:
         u32 lower { 0x00000000 };
     };
 
+    struct XCR {
+        static XCR read(u32 index);
+        void write(u32 index);
+
+        u32 upper { 0x00000000 };
+        u32 lower { 0x00000000 };
+    };
+
+    static void write_cr4(size_t value);
+    static size_t read_cr4();
+
     static void initialize();
 
     static FLAGS flags();

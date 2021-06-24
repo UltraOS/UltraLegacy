@@ -45,6 +45,8 @@ public:
 
     [[nodiscard]] State state() const { return m_state; }
 
+    void* fpu_state() const { return m_fpu_state; }
+
     static Thread* current()
     {
         Interrupts::ScopedDisabler d;
@@ -229,6 +231,8 @@ private:
     u64 m_wake_up_time { 0 };
 
     Blocker* m_blocker { nullptr };
+
+    void* m_fpu_state { nullptr };
 
     Atomic<State> m_requested_state { State::UNDEFINED };
     Atomic<bool> m_should_die { false };

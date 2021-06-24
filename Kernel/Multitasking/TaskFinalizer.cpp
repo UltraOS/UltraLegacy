@@ -1,4 +1,5 @@
 #include "TaskFinalizer.h"
+#include "Core/FPU.h"
 #include "Memory/MemoryManager.h"
 #include "FileSystem/VFS.h"
 #include "Process.h"
@@ -82,6 +83,9 @@ void TaskFinalizer::do_free_thread(Thread& thread)
     while (!thread.windows().empty()) {
         (*thread.windows().begin()).second->close();
     }
+
+    if (thread.fpu_state())
+        FPU::free_state(thread.fpu_state());
 
     MemoryManager::the().free_virtual_region(thread.kernel_stack());
     if (thread.is_supervisor() == IsSupervisor::NO)

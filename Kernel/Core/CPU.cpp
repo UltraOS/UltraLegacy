@@ -12,6 +12,7 @@
 #include "Multitasking/Process.h"
 #include "Multitasking/TSS.h"
 
+#include "FPU.h"
 #include "CPU.h"
 
 namespace kernel {
@@ -80,6 +81,35 @@ CPU::MSR CPU::MSR::read(u32 index)
 void CPU::MSR::write(u32 index)
 {
     asm volatile("wrmsr" ::"d"(upper), "a"(lower), "c"(index));
+}
+
+CPU::XCR CPU::XCR::read(u32 index)
+{
+    XCR out;
+
+    asm volatile("xgetbv"
+                 : "=d"(out.upper), "=a"(out.lower)
+                 : "c"(index));
+
+    return out;
+}
+
+void CPU::XCR::write(u32 index)
+{
+    asm volatile("xsetbv" ::"d"(upper), "a"(lower), "c"(index));
+}
+
+void CPU::write_cr4(size_t value)
+{
+    asm volatile("mov %0, %%cr4" :: "r" (value));
+}
+
+size_t CPU::read_cr4()
+{
+    size_t value;
+    asm volatile("mov %%cr4, %0" : "=r" (value));
+
+    return value;
 }
 
 void CPU::initialize()
@@ -196,6 +226,7 @@ void CPU::ap_entrypoint()
     GDT::the().install();
     IDT::the().install();
     PAT::the().synchronize();
+    FPU::initialize_for_this_cpu();
 
     LAPIC::initialize_for_this_processor();
     auto& timer = Timer::get_specific(LAPIC::Timer::type);

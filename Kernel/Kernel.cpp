@@ -6,6 +6,7 @@
 #include "Core/CPU.h"
 #include "Core/GDT.h"
 #include "Core/Runtime.h"
+#include "Core/FPU.h"
 #include "Drivers/PCI/PCI.h"
 #include "Drivers/PS2/PS2Controller.h"
 #include "Drivers/Video/VideoDevice.h"
@@ -58,6 +59,8 @@ namespace kernel {
     InterruptController::discover_and_setup();
     Timer::discover_and_setup();
     CPU::initialize();
+    FPU::detect_features();
+    FPU::initialize_for_this_cpu();
 
     VideoDevice::discover_and_setup(context);
 

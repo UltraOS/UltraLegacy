@@ -1,4 +1,5 @@
 #include "Core/Registers.h"
+#include "Core/FPU.h"
 
 #include "Interrupts/IDT.h"
 #include "Process.h"
@@ -128,6 +129,8 @@ RefPtr<Thread> Thread::create_user(
     frame->rsp = user_stack->virtual_range().end();
 #endif
 
+    thread->m_fpu_state = FPU::allocate_state();
+
     return thread;
 }
 
@@ -162,6 +165,9 @@ void Thread::activate()
     if (is_supervisor() == IsSupervisor::NO)
         CPU::current().tss().set_kernel_stack_pointer(m_kernel_stack->virtual_range().end());
 
+    if (m_fpu_state)
+        FPU::restore_state(m_fpu_state);
+
     if (m_owner.address_space() != AddressSpace::current())
         m_owner.address_space().make_active();
 
@@ -170,6 +176,9 @@ void Thread::activate()
 
 void Thread::deactivate()
 {
+    if (m_fpu_state)
+        FPU::save_state(m_fpu_state);
+
     if (!is_running())
         return;
 
