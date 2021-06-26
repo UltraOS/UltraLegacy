@@ -49,5 +49,15 @@ save_state:
 
 global jump_to_userspace
 jump_to_userspace:
+    add esp, 4 ; sys-v abi, return eip -> arg0
     pop esp
+
+    add esp, 4 ; skip ss
+    pop gs
+    pop fs
+    pop es
+    pop ds
+    popa
+    add esp, 0x8 ; skip error code and interrupt number
+
     iret
