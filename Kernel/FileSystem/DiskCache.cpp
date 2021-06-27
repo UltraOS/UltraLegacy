@@ -146,6 +146,8 @@ DiskCache::CachedBlock* DiskCache::evict_one()
 
 void DiskCache::read_one(u64 block_index, size_t offset, size_t bytes, void* buffer)
 {
+    ASSERT((offset + bytes) <= m_fs_block_size);
+
     if (m_io_size == no_caching_required) {
         auto full_offset = offset + block_index * m_fs_block_size;
         auto req = StorageDevice::RamdiskRequest::make_read(buffer, full_offset, bytes);
@@ -164,6 +166,8 @@ void DiskCache::read_one(u64 block_index, size_t offset, size_t bytes, void* buf
 
 void DiskCache::write_one(u64 block_index, size_t offset, size_t bytes, const void* buffer)
 {
+    ASSERT((offset + bytes) <= m_fs_block_size);
+
     if (m_io_size == no_caching_required) {
         auto full_offset = offset + block_index * m_fs_block_size;
         auto req = StorageDevice::RamdiskRequest::make_read(buffer, full_offset, bytes);
