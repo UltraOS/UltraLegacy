@@ -54,12 +54,7 @@ ErrorCode WindowManager::dispatch_window_command(void* user_ptr)
                         static_cast<SharedVirtualRegion&>(window->surface_region()),
                         AddressSpace::current());
 
-        {
-            auto& current_process = Process::current();
-            LOCK_GUARD(current_process.lock());
-
-            current_process.store_region(user_window_region);
-        }
+        Process::current().store_region(user_window_region);
 
         auto fb_address = user_window_region->virtual_range().begin();
 
@@ -69,8 +64,7 @@ ErrorCode WindowManager::dispatch_window_command(void* user_ptr)
             //               upper border -> -------
             //               left border ->  |     | <- right border
             //                                ^- start of user framebuffer
-            wc_command.pitch = theme.side_window_frame_width() * 2 + window->width();
-            wc_command.pitch *= sizeof(u32);
+            wc_command.pitch = window->width() * sizeof(u32);
 
             // Skip the upper frame + left border of the first row.
             fb_address += theme.upper_window_frame_height() * wc_command.pitch;
@@ -97,6 +91,8 @@ ErrorCode WindowManager::dispatch_window_command(void* user_ptr)
             return ErrorCode::INVALID_ARGUMENT;
 
         this_window->second->close();
+        windows.remove(this_window);
+
         return ErrorCode::NO_ERROR;
     }
     case WMCommand::POP_EVENT: {
@@ -127,6 +123,23 @@ ErrorCode WindowManager::dispatch_window_command(void* user_ptr)
 
         // FIXME: This is insanely unsafe :D
         this_window->second->set_title(st_command.title);
+        return ErrorCode::NO_ERROR;
+    }
+    case WMCommand::INVALIDATE_RECT: {
+        InvalidateRectCommand ir_command {};
+        copy_memory(user_ptr, &ir_command, sizeof(InvalidateRectCommand));
+
+        auto* current_thread = Thread::current();
+        auto& windows = current_thread->windows();
+        auto this_window = windows.find(ir_command.window_id);
+
+        if (this_window == windows.end())
+            return ErrorCode::INVALID_ARGUMENT;
+
+        auto& window = this_window->second;
+
+        window->invalidate_rect(window->view_rect());
+
         return ErrorCode::NO_ERROR;
     }
     default:
