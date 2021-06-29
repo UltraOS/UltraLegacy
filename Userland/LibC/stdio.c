@@ -177,7 +177,7 @@ size_t fwrite(const void* restrict buffer, size_t size, size_t count, FILE* rest
         fflush(stream);
 
     if (bytes_to_write > stream->capacity)
-        return file_write(stream->fd, stream->buffer, bytes_to_write) / size;
+        return file_write(stream->fd, buffer, bytes_to_write) / size;
 
     memcpy(stream->buffer + stream->size, buffer, bytes_to_write);
     stream->size += bytes_to_write;
@@ -423,10 +423,15 @@ static void write_number(buffer_state* state, format_spec* spec, char* number_re
 #define REPR_BUFFER_CAPACITY 64
 static const char* characters = "0123456789ABCDEF";
 
-static void write_signed_integral(buffer_state* state, format_spec* spec, long long base, char(*char_converter)(char), long long x)
+static void write_signed_integral(buffer_state* state, format_spec* spec, long long base, int(*char_converter)(int), long long x)
 {
     size_t offset = REPR_BUFFER_CAPACITY - 1;
     char num_buf[REPR_BUFFER_CAPACITY];
+
+    if (x == 0) {
+        char c = characters[x];
+        num_buf[offset--] = char_converter ? (char)char_converter(c) : c;
+    }
 
     bool is_negative = x < 0;
 
@@ -440,7 +445,7 @@ static void write_signed_integral(buffer_state* state, format_spec* spec, long l
 
         char c = characters[rem];
         if (char_converter)
-            c = char_converter(c);
+            c = (char)char_converter(c);
 
         num_buf[offset--] = c;
     }
@@ -454,13 +459,18 @@ static void write_unsigned_integral(buffer_state* state, format_spec* spec, unsi
     size_t offset = REPR_BUFFER_CAPACITY - 1;
     char num_buf[REPR_BUFFER_CAPACITY];
 
+    if (x == 0) {
+        char c = characters[x];
+        num_buf[offset--] = char_converter ? (char)char_converter(c) : c;
+    }
+
     while (x) {
         long long rem = x % base;
         x /= base;
 
         char c = characters[rem];
         if (char_converter)
-            c = char_converter(c);
+            c = (char)char_converter(c);
 
         num_buf[offset--] = c;
     }
@@ -1163,5 +1173,5 @@ int vsnprintf(char* buffer, size_t bufsz, const char* format, va_list vlist_)
     if (bufsz)
         buffer[buf_state.offset < bufsz ? buf_state.offset : bufsz] = '\0';
 
-    return  buf_state.offset ? buf_state.offset - 1 : 0;
+    return buf_state.offset;
 }
