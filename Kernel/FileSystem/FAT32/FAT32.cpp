@@ -630,15 +630,14 @@ size_t FAT32::File::read(void* buffer, size_t offset, size_t size)
     auto& fs = fs_as_fat32();
 
     auto cluster_offset = offset / fs.bytes_per_cluster();
-    auto offset_within_cluster = offset - (cluster_offset / fs.bytes_per_cluster());
+    auto offset_within_cluster = offset - (cluster_offset * fs.bytes_per_cluster());
     auto bytes_left_after_offset = this->size() - offset;
 
     size_t bytes_to_read = min(size, bytes_left_after_offset);
     size_t bytes_read = bytes_to_read;
-    size_t clusters_to_read = ceiling_divide<size_t>(bytes_to_read, fs.bytes_per_cluster());
 
     FAT32_DEBUG << "reading " << size << " bytes at offset " << offset << " into " << buffer
-                << " actual read size " << bytes_to_read << " clusters to read " << clusters_to_read;
+                << " actual read size " << bytes_to_read;
 
     u32 current_cluster = m_first_cluster;
 
@@ -653,14 +652,19 @@ size_t FAT32::File::read(void* buffer, size_t offset, size_t size)
 
     u8* byte_buffer = reinterpret_cast<u8*>(buffer);
 
-    while (clusters_to_read--) {
-        auto bytes_to_read_for_this_cluster = min<size_t>(bytes_to_read, fs.bytes_per_cluster());
+    for (;;) {
+        auto bytes_to_read_for_this_cluster = min<size_t>(bytes_to_read, fs.bytes_per_cluster() - offset_within_cluster);
         fs.locked_read(pure_cluster_value(current_cluster), offset_within_cluster, bytes_to_read_for_this_cluster, byte_buffer);
         byte_buffer += bytes_to_read_for_this_cluster;
         bytes_to_read -= bytes_to_read_for_this_cluster;
 
-        if (clusters_to_read)
-            current_cluster = safe_next_of(current_cluster);
+
+        if (!bytes_to_read)
+            break;
+
+        current_cluster = safe_next_of(current_cluster);
+
+        offset_within_cluster = 0;
     }
 
     return bytes_read;
