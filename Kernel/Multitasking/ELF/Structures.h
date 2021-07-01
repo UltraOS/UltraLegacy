@@ -5,13 +5,13 @@
 
 namespace kernel::ELF  {
 
-enum class Class {
+enum class Class : u8 {
     NONE = 0,
     ELF32 = 1,
     ELF64 = 2
 };
 
-enum class DataEncoding {
+enum class DataEncoding : u8 {
     NONE = 0,
     LITTLE_ENDIAN = 1,
     BIG_ENDIAN = 2
@@ -76,7 +76,7 @@ struct PACKED ProgramHeader {
     };
 
 #ifdef ULTRA_32
-    size_t offset;
+    size_t offset_in_file;
     ptr_t virtual_address;
     ptr_t physical_address;
     u32 bytes_in_file;

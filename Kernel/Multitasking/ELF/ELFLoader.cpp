@@ -1,7 +1,10 @@
 #include "Structures.h"
 #include "ELFLoader.h"
+#include "Memory/MemoryManager.h"
 
 #define ELF_LOG log("ELFLoader")
+
+#define ELF_DEBUG_MODE
 
 #ifdef ELF_DEBUG_MODE
 #define ELF_DEBUG log("ELFLoader")
@@ -66,7 +69,57 @@ ErrorOr<Address> ELFLoader::load(FileDescription& fd)
     if (!validate_header(header))
         return ErrorCode::INVALID_ARGUMENT;
 
-    return ErrorCode::UNSUPPORTED;
+    if (header.program_header_count == 0)
+        return ErrorCode::INVALID_ARGUMENT;
+
+    if (header.program_headers_offset > fd.underlying_file().size())
+        return ErrorCode::INVALID_ARGUMENT;
+
+    if (header.bytes_per_program_header != sizeof(ELF::ProgramHeader)) {
+        ELF_LOG << "invalid program header size " << header.bytes_per_program_header
+                << ", expected "<< sizeof(ELF::ProgramHeader);
+        return ErrorCode::INVALID_ARGUMENT;
+    }
+
+    size_t current_offset = 0;
+    fd.set_offset(header.program_headers_offset, SeekMode::BEGINNING);
+
+    ELF::ProgramHeader ph {};
+
+    for (size_t i = 0; i < header.program_header_count; ++i) {
+        if (fd.read(&ph, sizeof(ph)) != sizeof(ph)) {
+            ELF_LOG << "failed to read program headers";
+            return ErrorCode::INVALID_ARGUMENT;
+        }
+
+        if (ph.type != ELF::ProgramHeader::Type::LOAD)
+            continue;
+
+        // TODO: memory flags
+
+        current_offset = fd.set_offset(0, SeekMode::CURRENT).value();
+
+        auto begin = Page::round_down(ph.virtual_address);
+        auto end = Page::round_up(begin + ph.bytes_in_memory);
+        auto offset = ph.virtual_address - begin;
+
+        ELF_DEBUG << "Program header: at virtual " << format::as_hex << ph.virtual_address
+                  << ", " << ph.bytes_in_memory << " memory bytes, " << ph.bytes_in_file
+                  << " file bytes, aligned at " << begin << " -> " << end << " with offset " << offset;
+
+        auto region = MemoryManager::the().allocate_user_private("code", Range::from_two_pointers(begin, end));
+        static_cast<PrivateVirtualRegion*>(region.get())->preallocate_entire();
+        Process::current().store_region(region);
+
+        fd.set_offset(ph.offset_in_file, SeekMode::BEGINNING);
+
+        fd.read(Address(region->virtual_range().begin() + offset).as_pointer<void>(), ph.bytes_in_file);
+
+        // restore old offset to keep reading program headers
+        fd.set_offset(current_offset, SeekMode::BEGINNING);
+    }
+
+    return Address(header.entrypoint);
 }
 
 
