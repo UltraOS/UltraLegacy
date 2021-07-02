@@ -65,7 +65,13 @@ public:
         m_size = count;
     }
 
-    void reserve(size_t count) { grow_by(count); }
+    void reserve(size_t count)
+    {
+        if (count <= capcity())
+            return;
+
+        grow_by(count - capcity());
+    }
 
     [[nodiscard]] T& at(size_t index)
     {
