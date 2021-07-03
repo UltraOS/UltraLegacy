@@ -34,21 +34,21 @@ size_t FileDescription::write(const void* buffer, size_t size)
     return written_bytes;
 }
 
-ErrorCode FileDescription::set_offset(size_t offset, SeekMode mode)
+ErrorOr<size_t> FileDescription::set_offset(size_t offset, SeekMode mode)
 {
     LOCK_GUARD(m_lock);
 
     switch (mode) {
     case SeekMode::BEGINNING:
         m_offset = offset;
-        return ErrorCode::NO_ERROR;
+        return m_offset;
     case SeekMode::CURRENT:
         m_offset += offset;
-        return ErrorCode::NO_ERROR;
+        return m_offset;
     case SeekMode::END:
         m_offset = m_file.size();
         m_offset += offset;
-        return ErrorCode::NO_ERROR;
+        return m_offset;
     default:
         return ErrorCode::INVALID_ARGUMENT;
     }

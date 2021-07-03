@@ -41,6 +41,7 @@ FILE(GLOB CPP_FILES "${PROJECT_SOURCE_DIR}/*cpp"                  "${PROJECT_SOU
                     "${PROJECT_SOURCE_DIR}/Interrupts/*cpp"       "${PROJECT_SOURCE_DIR}/Interrupts/*h"
                     "${PROJECT_SOURCE_DIR}/Memory/*cpp"           "${PROJECT_SOURCE_DIR}/Memory/*h"
                     "${PROJECT_SOURCE_DIR}/Multitasking/*cpp"     "${PROJECT_SOURCE_DIR}/Multitasking/*h"
+                    "${PROJECT_SOURCE_DIR}/Multitasking/ELF/*cpp" "${PROJECT_SOURCE_DIR}/Multitasking/ELF/*h"
                     "${PROJECT_SOURCE_DIR}/Time/*cpp"             "${PROJECT_SOURCE_DIR}/Time/*h"
                     "${PROJECT_SOURCE_DIR}/Drivers/*cpp"          "${PROJECT_SOURCE_DIR}/Drivers/*h"
                     "${PROJECT_SOURCE_DIR}/Drivers/Video/*cpp"    "${PROJECT_SOURCE_DIR}/Drivers/Video/*h"

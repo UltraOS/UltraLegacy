@@ -11,7 +11,7 @@ public:
     FileDescription(File& file, FileMode mode);
     size_t read(void* buffer, size_t size);
     size_t write(const void* buffer, size_t size);
-    ErrorCode set_offset(size_t offset, SeekMode mode);
+    ErrorOr<size_t> set_offset(size_t offset, SeekMode mode);
 
     File& underlying_file() { return m_file; }
 

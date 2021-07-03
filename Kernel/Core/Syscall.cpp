@@ -110,7 +110,12 @@ SYSCALL_IMPLEMENTATION(SEEK)
         return;
     }
 
-    RETVAL = -fd->set_offset(ARG1, static_cast<SeekMode>(ARG2)).value;
+    auto error_or_offset = fd->set_offset(ARG1, static_cast<SeekMode>(ARG2));
+
+    if (error_or_offset.is_error())
+        RETVAL = -error_or_offset.error().value;
+    else
+        RETVAL = error_or_offset.value();
 }
 
 SYSCALL_IMPLEMENTATION(CREATE)
@@ -140,14 +145,9 @@ SYSCALL_IMPLEMENTATION(MOVE)
 
 SYSCALL_IMPLEMENTATION(VIRTUAL_ALLOC)
 {
-    auto range = Range(ARG0, ARG1);
+    auto range = Range(ARG0, Page::round_up(ARG1));
 
     if (!Page::is_aligned(range.begin())) {
-        RETVAL = -ErrorCode::INVALID_ARGUMENT;
-        return;
-    }
-
-    if (!Page::is_aligned(range.length())) {
         RETVAL = -ErrorCode::INVALID_ARGUMENT;
         return;
     }
@@ -214,7 +214,7 @@ SYSCALL_IMPLEMENTATION(SLEEP)
 
 SYSCALL_IMPLEMENTATION(TICKS)
 {
-    RETVAL = Timer::nanoseconds_since_boot();
+    RETVAL = Timer::nanoseconds_since_boot() / Time::nanoseconds_in_millisecond;
 }
 
 SYSCALL_IMPLEMENTATION(DEBUG_LOG)
