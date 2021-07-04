@@ -1,0 +1,96 @@
+diff -ruN binutils/bfd/config.bfd binutils-ultra/bfd/config.bfd
+--- binutils/bfd/config.bfd	2020-01-18 16:55:47.000000000 +0300
++++ binutils-ultra/bfd/config.bfd	2021-07-04 14:19:42.669945600 +0300
+@@ -220,7 +220,17 @@
+ 
+ case "${targ}" in
+ # START OF targmatch.h
++  i[3-7]86-*-ultra*)
++    targ_defvec=i386_elf32_vec
++    targ_selvecs=
++    targ64_selvecs=x86_64_elf64_vec
++    ;;
+ #ifdef BFD64
++  x86_64-*-ultra*)
++    targ_defvec=x86_64_elf64_vec
++    targ_selvecs=i386_elf32_vec
++    want64=true
++    ;;
+   aarch64-*-darwin*)
+     targ_defvec=aarch64_mach_o_vec
+     targ_selvecs="arm_mach_o_vec mach_o_le_vec mach_o_be_vec mach_o_fat_vec"
+diff -ruN binutils/config.sub binutils-ultra/config.sub
+--- binutils/config.sub	2020-01-18 16:55:47.000000000 +0300
++++ binutils-ultra/config.sub	2021-07-04 14:06:29.675581200 +0300
+@@ -1366,7 +1366,7 @@
+ 	     | skyos* | haiku* | rdos* | toppers* | drops* | es* \
+ 	     | onefs* | tirtos* | phoenix* | fuchsia* | redox* | bme* \
+ 	     | midnightbsd* | amdhsa* | unleashed* | emscripten* | wasi* \
+-	     | nsk* | powerunix)
++	     | nsk* | powerunix | ultra*)
+ 	# Remember, each alternative MUST END IN *, to match a version number.
+ 		;;
+ 	qnx*)
+diff -ruN binutils/gas/configure.tgt binutils-ultra/gas/configure.tgt
+--- binutils/gas/configure.tgt	2020-01-18 16:55:47.000000000 +0300
++++ binutils-ultra/gas/configure.tgt	2021-07-04 14:23:22.095054400 +0300
+@@ -259,6 +259,7 @@
+   i386-*-*nt*)				fmt=coff em=pe ;;
+   i386-*-rdos*)				fmt=elf ;;
+   i386-*-darwin*)			fmt=macho ;;
++  i386-*-ultra*)			fmt=elf ;;
+ 
+   ia16-*-elf*)				fmt=elf ;;
+ 
+diff -ruN binutils/ld/Makefile.in binutils-ultra/ld/Makefile.in
+--- binutils/ld/Makefile.in	2020-02-01 14:50:25.000000000 +0300
++++ binutils-ultra/ld/Makefile.in	2021-07-04 14:42:52.186314100 +0300
+@@ -787,6 +787,7 @@
+ 	eelf_i386_vxworks.c \
+ 	eelf_iamcu.c \
+ 	eelf_s390.c \
++	eelf_i386_ultra.c \
+ 	eh8300elf.c \
+ 	eh8300elf_linux.c \
+ 	eh8300helf.c \
+@@ -952,6 +953,7 @@
+ 	eelf_x86_64_fbsd.c \
+ 	eelf_x86_64_nacl.c \
+ 	eelf_x86_64_sol2.c \
++	eelf_x86_64_ultra.c \
+ 	ehppa64linux.c \
+ 	ei386pep.c \
+ 	emmo.c
+diff -ruN binutils/ld/configure.tgt binutils-ultra/ld/configure.tgt
+--- binutils/ld/configure.tgt	2020-01-18 16:55:48.000000000 +0300
++++ binutils-ultra/ld/configure.tgt	2021-07-04 14:28:44.023205900 +0300
+@@ -410,6 +410,16 @@
+ 			targ64_extra_emuls="elf32_x86_64_nacl elf_x86_64_nacl"
+ 			targ64_extra_libpath=$targ64_extra_emuls
+ 			;;
++i[3-7]86-*-ultra*)
++			targ_emul=elf_i386_ultra
++			targ_extra_emuls=elf_i386
++			targ64_extra_emuls="elf_x86_64_ultra elf_x86_64"
++			;;
++x86_64-*-ultra*)
++			targ_emul=elf_x86_64_ultra
++			targ_extra_emuls="elf_i386_ultra elf_x86_64 elf_i386"
++			;;
++
+ ia16-*-elf*)		targ_emul=elf_i386
+ 			targ_extra_emuls=i386msdos
+ 			;;
+diff -ruN binutils/ld/emulparams/elf_i386_ultra.sh binutils-ultra/ld/emulparams/elf_i386_ultra.sh
+--- binutils/ld/emulparams/elf_i386_ultra.sh	1970-01-01 03:00:00.000000000 +0300
++++ binutils-ultra/ld/emulparams/elf_i386_ultra.sh	2021-07-04 14:34:31.985230000 +0300
+@@ -0,0 +1,4 @@
++. ${srcdir}/emulparams/elf_i386.sh
++GENERATE_SHLIB_SCRIPT=yes
++GENERATE_PIE_SCRIPT=yes
++
+diff -ruN binutils/ld/emulparams/elf_x86_64_ultra.sh binutils-ultra/ld/emulparams/elf_x86_64_ultra.sh
+--- binutils/ld/emulparams/elf_x86_64_ultra.sh	1970-01-01 03:00:00.000000000 +0300
++++ binutils-ultra/ld/emulparams/elf_x86_64_ultra.sh	2021-07-04 14:35:44.375627000 +0300
+@@ -0,0 +1 @@
++. ${srcdir}/emulparams/elf_x86_64.sh
