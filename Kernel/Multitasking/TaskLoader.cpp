@@ -2,6 +2,8 @@
 #include "TaskLoader.h"
 #include "FileSystem/VFS.h"
 #include "Memory/PrivateVirtualRegion.h"
+#include "ELF/ELFLoader.h"
+#include "Core/FPU.h"
 #include "Scheduler.h"
 
 namespace kernel {
@@ -30,21 +32,12 @@ void TaskLoader::do_load(LoadRequest* request)
 
     auto& fd = error_or_file.value();
 
-    // TODO: elf support
-    if (!path.ends_with(".bin")) {
-        TERMINATE_WITH_ERROR(ErrorCode::UNSUPPORTED);
+    auto res = ELFLoader::load(*fd);
+    // TODO: store fd somewhere so we have a refcount?
+
+    if (res.is_error()) {
+        TERMINATE_WITH_ERROR(res.error().value);
     }
-
-    static constexpr size_t raw_binary_load_address = 1 * MB;
-
-    auto size_to_load = fd->underlying_file().size();
-    log() << "TaskLoader: executable requires " << size_to_load << " bytes";
-
-    auto vr = MemoryManager::the().allocate_user_private("executable"_sv, { raw_binary_load_address, Page::round_up(size_to_load) });
-    auto& pvr = static_cast<PrivateVirtualRegion&>(*vr);
-    pvr.preallocate_entire(false);
-    fd->read(pvr.virtual_range().begin().as_pointer<void>(), size_to_load);
-    process.store_region(vr);
 
     request->error_code = ErrorCode::NO_ERROR;
     request->blocker.unblock();
@@ -60,10 +53,12 @@ void TaskLoader::do_load(LoadRequest* request)
 
     Address userspace_iret_frame = main_thread->kernel_stack().virtual_range().end() - sizeof(RegisterState);
 #ifdef ULTRA_32
-    userspace_iret_frame.as_pointer<RegisterState>()->eip = pvr.virtual_range().begin();
+    userspace_iret_frame.as_pointer<RegisterState>()->eip = res.value();
 #elif defined(ULTRA_64)
-    userspace_iret_frame.as_pointer<RegisterState>()->rip = pvr.virtual_range().begin();
+    userspace_iret_frame.as_pointer<RegisterState>()->rip = res.value();
 #endif
+
+    FPU::restore_state(main_thread->fpu_state());
 
     Thread::current()->set_invulnerable(false);
     jump_to_userspace(userspace_iret_frame);
