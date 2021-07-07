@@ -1,6 +1,29 @@
-diff -ruN gcc/config/ultra.h gcc-ultra/config/ultra.h
---- gcc/config/ultra.h	1970-01-01 03:00:00.000000000 +0300
-+++ gcc-ultra/config/ultra.h	2021-07-04 15:44:39.217692800 +0300
+diff -ruN gcc/config.sub gcc-ultra/config.sub
+--- gcc/config.sub	2020-05-07 13:49:58.000000000 +0300
++++ gcc-ultra/config.sub	2021-07-05 10:34:40.561517300 +0300
+@@ -1366,7 +1366,7 @@
+ 	     | skyos* | haiku* | rdos* | toppers* | drops* | es* \
+ 	     | onefs* | tirtos* | phoenix* | fuchsia* | redox* | bme* \
+ 	     | midnightbsd* | amdhsa* | unleashed* | emscripten* | wasi* \
+-	     | nsk* | powerunix)
++	     | nsk* | powerunix | ultra*)
+ 	# Remember, each alternative MUST END IN *, to match a version number.
+ 		;;
+ 	qnx*)
+diff -ruN gcc/fixincludes/mkfixinc.sh gcc-ultra/fixincludes/mkfixinc.sh
+--- gcc/fixincludes/mkfixinc.sh	2020-05-07 13:49:59.000000000 +0300
++++ gcc-ultra/fixincludes/mkfixinc.sh	2021-07-05 10:34:40.588519700 +0300
+@@ -11,6 +11,7 @@
+ 
+ # Check for special fix rules for particular targets
+ case $machine in
++    *-ultra* | \
+     i?86-*-cygwin* | \
+     i?86-*-mingw32* | \
+     x86_64-*-mingw32* | \
+diff -ruN gcc/gcc/config/ultra.h gcc-ultra/gcc/config/ultra.h
+--- gcc/gcc/config/ultra.h	1970-01-01 03:00:00.000000000 +0300
++++ gcc-ultra/gcc/config/ultra.h	2021-07-05 10:34:40.526516600 +0300
 @@ -0,0 +1,18 @@
 +#undef TARGET_ULTRA
 +#define TARGET_ULTRA 1
@@ -20,32 +43,9 @@ diff -ruN gcc/config/ultra.h gcc-ultra/config/ultra.h
 +    builtin_define ("__ultra__");    \
 +    builtin_assert ("system=ultra"); \
 +  } while (0);
-diff -ruN gcc/config.sub gcc-ultra/config.sub
---- gcc/config.sub	2020-05-07 13:49:58.000000000 +0300
-+++ gcc-ultra/config.sub	2021-07-04 15:17:20.868832600 +0300
-@@ -1366,7 +1366,7 @@
- 	     | skyos* | haiku* | rdos* | toppers* | drops* | es* \
- 	     | onefs* | tirtos* | phoenix* | fuchsia* | redox* | bme* \
- 	     | midnightbsd* | amdhsa* | unleashed* | emscripten* | wasi* \
--	     | nsk* | powerunix)
-+	     | nsk* | powerunix | ultra*)
- 	# Remember, each alternative MUST END IN *, to match a version number.
- 		;;
- 	qnx*)
-diff -ruN gcc/fixincludes/mkfixinc.sh gcc-ultra/fixincludes/mkfixinc.sh
---- gcc/fixincludes/mkfixinc.sh	2020-05-07 13:49:59.000000000 +0300
-+++ gcc-ultra/fixincludes/mkfixinc.sh	2021-07-04 15:59:51.637896800 +0300
-@@ -11,6 +11,7 @@
- 
- # Check for special fix rules for particular targets
- case $machine in
-+    *-ultra* | \
-     i?86-*-cygwin* | \
-     i?86-*-mingw32* | \
-     x86_64-*-mingw32* | \
 diff -ruN gcc/gcc/config.gcc gcc-ultra/gcc/config.gcc
 --- gcc/gcc/config.gcc	2020-05-07 13:49:59.000000000 +0300
-+++ gcc-ultra/gcc/config.gcc	2021-07-04 15:26:24.195231300 +0300
++++ gcc-ultra/gcc/config.gcc	2021-07-05 10:34:40.608519500 +0300
 @@ -675,6 +675,12 @@
  
  # Common parts for widely ported systems.
@@ -74,25 +74,25 @@ diff -ruN gcc/gcc/config.gcc gcc-ultra/gcc/config.gcc
  	tm_file="${tm_file} aarch64/aarch64-elf.h aarch64/aarch64-errata.h aarch64/aarch64-elf-raw.h"
 diff -ruN gcc/libgcc/config.host gcc-ultra/libgcc/config.host
 --- gcc/libgcc/config.host	2020-05-07 13:50:02.000000000 +0300
-+++ gcc-ultra/libgcc/config.host	2021-07-04 15:58:09.434219200 +0300
-@@ -215,6 +215,14 @@
++++ gcc-ultra/libgcc/config.host	2021-07-07 18:59:39.308437900 +0300
+@@ -359,6 +359,14 @@
+ esac
  
- # Common parts for widely ported systems.
  case ${host} in
 +i[34567]86-*-ultra*)
-+  extra_parts="$extra_parts crti.o crtbegin.o crtbeginS.o crtend.o crtendS.o crtn.o"
-+  tmake_file="$tmake_file i386/t-crtstuff t-crtstuff-pic t-libgcc-pic"
-+  ;;
++	extra_parts="$extra_parts crti.o crtbegin.o crtbeginS.o crtend.o crtendS.o crtn.o"
++	tmake_file="$tmake_file i386/t-crtstuff t-crtstuff-pic t-libgcc-pic"
++	;;
 +x86_64-*-ultra*)
-+  extra_parts="$extra_parts crti.o crtbegin.o crtbeginS.o crtend.o crtendS.o crtn.o"
-+  tmake_file="$tmake_file i386/t-crtstuff t-crtstuff-pic t-libgcc-pic"
-+  ;;
- *-*-darwin*)
-   asm_hidden_op=.private_extern
-   tmake_file="$tmake_file t-darwin ${cpu_type}/t-darwin t-libgcc-pic t-slibgcc-darwin"
++	extra_parts="$extra_parts crti.o crtbegin.o crtbeginS.o crtend.o crtendS.o crtn.o"
++	tmake_file="$tmake_file i386/t-crtstuff t-crtstuff-pic t-libgcc-pic"
++	;;
+ aarch64*-*-elf | aarch64*-*-rtems*)
+ 	extra_parts="$extra_parts crtbegin.o crtend.o crti.o crtn.o"
+ 	extra_parts="$extra_parts crtfastmath.o"
 diff -ruN gcc/libstdc++-v3/crossconfig.m4 gcc-ultra/libstdc++-v3/crossconfig.m4
 --- gcc/libstdc++-v3/crossconfig.m4	2020-05-07 13:50:02.000000000 +0300
-+++ gcc-ultra/libstdc++-v3/crossconfig.m4	2021-07-04 15:48:04.488511700 +0300
++++ gcc-ultra/libstdc++-v3/crossconfig.m4	2021-07-05 10:34:40.711524900 +0300
 @@ -5,6 +5,12 @@
  AC_DEFUN([GLIBCXX_CROSSCONFIG],[
  # Base decisions on target environment.
