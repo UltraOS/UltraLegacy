@@ -98,7 +98,7 @@ diff -ruN binutils/ld/Makefile.in binutils-ultra/ld/Makefile.in
  	emmo.c
 diff -ruN binutils/ld/configure.tgt binutils-ultra/ld/configure.tgt
 --- binutils/ld/configure.tgt	2020-01-18 16:55:48.000000000 +0300
-+++ binutils-ultra/ld/configure.tgt	2021-07-07 19:24:56.170352800 +0300
++++ binutils-ultra/ld/configure.tgt	2021-07-08 13:46:47.081320900 +0300
 @@ -410,6 +410,13 @@
  			targ64_extra_emuls="elf32_x86_64_nacl elf_x86_64_nacl"
  			targ64_extra_libpath=$targ64_extra_emuls
@@ -113,6 +113,17 @@ diff -ruN binutils/ld/configure.tgt binutils-ultra/ld/configure.tgt
  ia16-*-elf*)		targ_emul=elf_i386
  			targ_extra_emuls=i386msdos
  			;;
+@@ -1035,6 +1042,10 @@
+ NATIVE_LIB_DIRS='/usr/local/lib /lib /usr/lib'
+ case "${target}" in
+ 
++*-*-ultra*)
++  NATIVE_LIB_DIRS='/System/Libraries'
++  ;;
++
+ *-*-dragonfly*)
+   NATIVE_LIB_DIRS='/lib /usr/lib /usr/pkg/lib /usr/local/lib'
+   ;;
 diff -ruN binutils/ld/emulparams/elf_i386_ultra.sh binutils-ultra/ld/emulparams/elf_i386_ultra.sh
 --- binutils/ld/emulparams/elf_i386_ultra.sh	1970-01-01 03:00:00.000000000 +0300
 +++ binutils-ultra/ld/emulparams/elf_i386_ultra.sh	2021-07-05 10:34:40.460507400 +0300
