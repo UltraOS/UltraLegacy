@@ -16,3 +16,5 @@ void exit(int exit_code);
 
 int atoi(const char* str);
 double atof(const char* str);
+
+void abort();

@@ -105,3 +105,9 @@ double atof(const char* str)
 
     return result * multiplier;
 }
+
+void abort()
+{
+    debug_log("abort() called");
+    exit(-1);
+}
