@@ -4,6 +4,18 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
   realpath() {
       [[ $1 = /* ]] && echo "$1" || echo "$PWD/${1#./}"
   }
+
+  cores=$(sysctl -n hw.physicalcpu)
+
+  copyfiles() {
+    find $1 -type f | grep -i $2$ | xargs -i ditto {} -t $3/. || on_error
+  }
+elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
+  cores=$(nproc)
+
+  copyfiles() {
+    find $1/ -type f | grep -i $2$ | xargs -i cp {} --parents -t $3/. || on_error
+  }
 fi
 
 true_path="$(dirname "$(realpath "$0")")"
@@ -15,7 +27,7 @@ on_error()
     exit 1
 }
 
-arch="32"
+arch="64"
 
 if [ "$1" ]
   then
@@ -41,12 +53,28 @@ source $root_path/Scripts/utils.sh
 
 pushd $true_path
 
-if [ -e "CrossCompiler/Tools$arch/bin/$compiler_prefix-elf-g++" ]
+if [ -e "CrossCompiler/Tools$arch/bin/$compiler_prefix-pc-ultra-g++" ]
 then
   exit 0
 else
   echo "Building the cross-compiler for $compiler_prefix..."
 fi
+
+echo "Generating system root..."
+
+pushd $root_path
+
+sysroot_path="$root_path/Root$arch"
+include_path="$sysroot_path/System/Includes"
+library_path="$sysroot_path/System/Libraries"
+
+mkdir -p $include_path || on_error
+
+pushd "Userland/LibC"
+copyfiles . h $include_path
+popd
+
+popd # root_path
 
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
   sudo apt update
@@ -112,6 +140,10 @@ then
   tar -xf "CrossCompiler/gcc.tar.gz" \
       -C  "CrossCompiler/gcc" --strip-components 1  || on_error
   rm "CrossCompiler/gcc.tar.gz"
+
+  pushd CrossCompiler
+  patch -s -p0 < $true_path/Patches/gcc.patch || on_error
+  popd
 else
   echo "GCC is already downloaded!"
 fi
@@ -126,17 +158,23 @@ then
   tar -xf "CrossCompiler/binutils.tar.gz" \
       -C "CrossCompiler/binutils" --strip-components 1 || on_error
   rm "CrossCompiler/binutils.tar.gz"
+
+  pushd CrossCompiler
+  patch -s -p0 < $true_path/Patches/binutils.patch || on_error
+  popd
 else
   echo "binutils is already downloaded!"
 fi
 
 export PREFIX="$true_path/CrossCompiler/Tools$arch"
-export TARGET=$compiler_prefix-elf
+export TARGET="$compiler_prefix-pc-ultra"
 export PATH="$PREFIX/bin:$PATH"
 
 # Build with optimizations and no debug information
 export CFLAGS="-g0 -O2"
 export CXXFLAGS="-g0 -O2"
+
+echo "Crosscompiler target $TARGET"
 
 echo "Building binutils..."
 mkdir -p "CrossCompiler/binutils_build$arch" || on_error
@@ -144,11 +182,11 @@ mkdir -p "CrossCompiler/binutils_build$arch" || on_error
 pushd "CrossCompiler/binutils_build$arch"
 ../binutils/configure --target=$TARGET \
                       --prefix="$PREFIX" \
-                      --with-sysroot \
+                      --with-sysroot=$sysroot_path \
                       --disable-nls \
                       --disable-werror || on_error
-make         || on_error
-make install || on_error
+make         -j$cores || on_error
+make install          || on_error
 popd
 
 echo "Building GCC..."
@@ -159,23 +197,24 @@ if [[ "$OSTYPE" == "linux-gnu"* ]]; then
   ../gcc/configure --target=$TARGET \
                    --prefix="$PREFIX" \
                    --disable-nls \
-                   --enable-languages=c,c++ \
-                   --without-headers || on_error
+                   --with-sysroot=$sysroot_path \
+                   --enable-languages=c,c++ || on_error
 elif [[ "$OSTYPE" == "darwin"* ]]; then
   ../gcc/configure --target=$TARGET \
                    --prefix="$PREFIX" \
                    --disable-nls \
+                   --with-sysroot=$sysroot_path \
                    --enable-languages=c,c++ \
-                   --without-headers \
                    --with-gmp=/usr/local/opt/gmp \
                    --with-mpc=/usr/local/opt/libmpc \
                    --with-mpfr=/usr/local/opt/mpfr || on_error
 fi
 
-make all-gcc               || on_error
-make all-target-libgcc     || on_error
-make install-gcc           || on_error
-make install-target-libgcc || on_error
+make all-gcc              -j$cores || on_error
+make install-gcc                   || on_error
+make all-target-libgcc    -j$cores || on_error
+make install-target-libgcc         || on_error
+
 popd
 
 popd # true_path

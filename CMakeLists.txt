@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
- 
+
 if (NOT ARCH)
     set(ARCH "64")
 elseif ((NOT ARCH MATCHES "32") AND (NOT ARCH MATCHES "64"))
@@ -9,7 +9,7 @@ endif ()
 if (ARCH MATCHES "64")
   set(COMPILER_PREFIX "x86_64")
 else ()
-  set(COMPILER_PREFIX "i686")    
+  set(COMPILER_PREFIX "i686")
 endif ()
 
 execute_process(
@@ -31,7 +31,7 @@ execute_process(
 if (NOT WIN32)
     if (TOOLCHAIN_BUILD_FAILED)
         message(FATAL_ERROR "-- Toolchain build error.")
-    endif()        
+    endif()
 endif()
 
 # dirty hack because it tries to compile with -lc and crt0.o
@@ -40,8 +40,8 @@ set(CMAKE_CXX_COMPILER_WORKS 1)
 
 set(TOOLCHAIN_ROOT ${CMAKE_SOURCE_DIR}/Toolchain/CrossCompiler/Tools${ARCH})
 set(TOOLCHAIN_PATH ${TOOLCHAIN_ROOT}/bin)
-set(PATH_TO_FILT "${TOOLCHAIN_PATH}/${COMPILER_PREFIX}-elf-c++filt")
-set(TOOLCHAIN_PREFIX ${TOOLCHAIN_PATH}/${COMPILER_PREFIX}-elf-)
+set(PATH_TO_FILT "${TOOLCHAIN_PATH}/${COMPILER_PREFIX}-pc-ultra-c++filt")
+set(TOOLCHAIN_PREFIX ${TOOLCHAIN_PATH}/${COMPILER_PREFIX}-pc-ultra-)
 
 set(CMAKE_C_COMPILER ${TOOLCHAIN_PREFIX}gcc)
 set(CMAKE_CXX_COMPILER ${TOOLCHAIN_PREFIX}g++)
