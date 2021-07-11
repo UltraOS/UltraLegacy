@@ -39,10 +39,9 @@ FILE* stdin = NULL;
 FILE* stdout = NULL;
 FILE* stderr = NULL;
 
-
 void stdio_init()
 {
-    stdin = file_ptr_open(0, true);
+    stdin = file_ptr_open(0, false);
     stdout = file_ptr_open(1, true);
     stderr = file_ptr_open(2, false);
 }
@@ -89,7 +88,7 @@ int vprintf(const char* format, va_list vlist)
 FILE* fopen(const char* restrict filename, const char* restrict mode)
 {
     long native_mode = 0;
-    
+
     switch (mode[0])
     {
     case 'r':
@@ -141,7 +140,7 @@ FILE* fopen(const char* restrict filename, const char* restrict mode)
 
     if (fd < 0)
         return NULL;
-        
+
     FILE* ptr = file_ptr_open(fd, true);
     ptr->flags = native_mode;
 
@@ -183,6 +182,12 @@ size_t fwrite(const void* restrict buffer, size_t size, size_t count, FILE* rest
     stream->size += bytes_to_write;
 
     return count;
+}
+
+int fputc(int character, FILE* stream)
+{
+    char c = (char)character;
+    return fwrite(&c, sizeof(c), 1, stream);
 }
 
 int fclose(FILE* stream)
@@ -1022,8 +1027,8 @@ int vsnprintf(char* buffer, size_t bufsz, const char* format, va_list vlist_)
                 return -1;
             }
             if (state == NORMAL) {
-               
-               break; 
+
+               break;
             } else if (state == PERCENT || state == PRECISION_DOT || state == PRECISION_NUMBER) {
                 spec.prepend_sign = true;
             } else {

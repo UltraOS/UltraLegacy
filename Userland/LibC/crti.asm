@@ -24,7 +24,7 @@ _fini:
 
 %else
 
-%error "Unknown architecture"
+%error Unknown architecture
 
 %endif
 

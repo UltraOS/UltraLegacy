@@ -37,6 +37,7 @@ int fseek(FILE* stream, long offset, int origin);
 void rewind(FILE* stream);
 size_t fread(void* restrict buffer, size_t size, size_t count, FILE* restrict stream);
 size_t fwrite(const void* restrict buffer, size_t size, size_t count, FILE* restrict stream);
+int fputc(int character, FILE * stream);
 
 int scanf(const char* format, ... );
 int fscanf(FILE* stream, const char* format, ...);
