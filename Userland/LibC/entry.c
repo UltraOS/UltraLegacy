@@ -6,16 +6,16 @@ void _init();
 void stdio_init();
 void malloc_init();
 
-void _start()
+void libc_entrypoint(void* sysv_stack)
 {
     malloc_init();
     stdio_init();
     _init();
 
-    char arg1[] = { "/fixme.exe" };
-    char* argv[] = { arg1 };
+    int argc = *(int*)sysv_stack;
+    char** argv = (char**)((char*)sysv_stack + sizeof(size_t));
 
-    int ret = main(1, argv);
+    int ret = main(argc, argv);
 
     exit(ret);
 }
