@@ -26,7 +26,7 @@ set(SYSROOT_PATH "${ROOT_PATH}/Root${ARCH}")
 set(LIBRARIES_PATH "${SYSROOT_PATH}/System/Libraries")
 set(INCLUDES_PATH "${SYSROOT_PATH}/System/Includes")
 
-add_library(crt0 STATIC crt0.c)
+add_library(crt0 STATIC crt0.asm)
 add_custom_command(
     TARGET crt0
     COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_OBJECTS:crt0> ${LIBRARIES_PATH}/crt0.o)
