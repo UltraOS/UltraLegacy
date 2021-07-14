@@ -30,6 +30,10 @@ struct PACKED RegisterState {
 
     u32 instruction_pointer() const { return eip; }
     u32 base_pointer() const { return ebp; }
+
+    void set_instruction_pointer(u32 new_eip) { eip = new_eip; }
+    void set_stack_pointer(u32 new_esp) { esp = new_esp; }
+    void set_userspace_stack_pointer(u32 new_esp) { userspace_esp = new_esp; }
 };
 #elif defined(ULTRA_64)
 struct PACKED RegisterState {
@@ -58,6 +62,10 @@ struct PACKED RegisterState {
 
     u64 instruction_pointer() const { return rip; }
     u64 base_pointer() const { return rbp; }
+
+    void set_instruction_pointer(u64 new_rip) { rip = new_rip; }
+    void set_stack_pointer(u64 new_rsp) { rsp = new_rsp; }
+    void set_userspace_stack_pointer(u64 new_rsp) { rsp = new_rsp; }
 };
 #endif
 }
