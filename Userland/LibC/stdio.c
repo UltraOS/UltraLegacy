@@ -85,7 +85,7 @@ int vprintf(const char* format, va_list vlist)
     return vfprintf(stdout, format, vlist);
 }
 
-FILE* fopen(const char* restrict filename, const char* restrict mode)
+FILE* fopen(const char* filename, const char* mode)
 {
     long native_mode = 0;
 
@@ -147,7 +147,7 @@ FILE* fopen(const char* restrict filename, const char* restrict mode)
     return ptr;
 }
 
-size_t fread(void* restrict buffer, size_t size, size_t count, FILE* restrict stream)
+size_t fread(void* buffer, size_t size, size_t count, FILE* stream)
 {
     if (!size || !count)
         return 0;
@@ -161,7 +161,7 @@ size_t fread(void* restrict buffer, size_t size, size_t count, FILE* restrict st
     return file_read(stream->fd, buffer, size * count);
 }
 
-size_t fwrite(const void* restrict buffer, size_t size, size_t count, FILE* restrict stream)
+size_t fwrite(const void* buffer, size_t size, size_t count, FILE* stream)
 {
     if (!size || !count)
         return 0;

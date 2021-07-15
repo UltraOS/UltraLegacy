@@ -25,19 +25,17 @@ typedef struct {
 extern FILE* stdin;
 extern FILE* stdout;
 extern FILE* stderr;
-#else
-#define restrict
 #endif
 
-FILE* fopen(const char* restrict filename, const char* restrict mode);
+FILE* fopen(const char* filename, const char* mode);
 int fclose(FILE* stream);
 int fflush(FILE* stream);
 long ftell(FILE* stream);
 int fseek(FILE* stream, long offset, int origin);
 void rewind(FILE* stream);
-size_t fread(void* restrict buffer, size_t size, size_t count, FILE* restrict stream);
-size_t fwrite(const void* restrict buffer, size_t size, size_t count, FILE* restrict stream);
-int fputc(int character, FILE * stream);
+size_t fread(void* buffer, size_t size, size_t count, FILE* stream);
+size_t fwrite(const void* buffer, size_t size, size_t count, FILE* stream);
+int fputc(int character, FILE* stream);
 
 int scanf(const char* format, ... );
 int fscanf(FILE* stream, const char* format, ...);
