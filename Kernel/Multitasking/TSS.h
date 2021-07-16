@@ -11,8 +11,7 @@ public:
 
     static constexpr u8 non_maskable_ist_slot = 1;
     static constexpr u8 double_fault_ist_slot = 2;
-    static constexpr u8 page_fault_ist_slot = 3;
-    static constexpr u8 machine_check_expection_ist_slot = 4;
+    static constexpr u8 machine_check_exception_ist_slot = 3;
 
     TSS();
 

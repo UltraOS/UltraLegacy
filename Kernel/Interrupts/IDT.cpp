@@ -67,13 +67,11 @@ void IDT::configure_ist()
 {
     static constexpr auto nmi_index = 0x2;
     static constexpr auto df_index = 0x8;
-    static constexpr auto pf_index = 0xE;
     static constexpr auto mce_index = 0x12;
 
     m_entries[nmi_index].ist_slot = TSS::non_maskable_ist_slot;
     m_entries[df_index].ist_slot = TSS::double_fault_ist_slot;
-    m_entries[pf_index].ist_slot = TSS::page_fault_ist_slot;
-    m_entries[mce_index].ist_slot = TSS::machine_check_expection_ist_slot;
+    m_entries[mce_index].ist_slot = TSS::machine_check_exception_ist_slot;
 
     install();
 }
