@@ -20,6 +20,8 @@ struct ErrorCode {
         FILE_ALREADY_EXISTS = 10,
         NAME_TOO_LONG = 11,
         BAD_FILENAME = 12,
+        INTERRUPTED = 13,
+        STREAM_CLOSED = 14,
     } value { NO_ERROR };
 
     using code_t = decltype(value);
@@ -64,6 +66,10 @@ struct ErrorCode {
             return "Name Is Too Long"_sv;
         case BAD_FILENAME:
             return "Filename Is Bad"_sv;
+        case INTERRUPTED:
+            return "Interrupted"_sv;
+        case STREAM_CLOSED:
+            return "IO Stream Is Already Closed";
         default:
             return "<Unknown code>"_sv;
         }
