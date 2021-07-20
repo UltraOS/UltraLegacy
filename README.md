@@ -1,11 +1,11 @@
 # UltraOS
 An operating system that doesn't try to be UNIX. Made completely from scratch with its own bootloader. 😊
 
-Desktop
-![alt-text](https://i.ibb.co/S7PTxxH/image.png)
+Running DOOM
+![alt-text](https://i.ibb.co/7v1NDK7/doom.png)
 
 Panic screen
-![alt-text](https://i.ibb.co/wNCc5vC/image.png)
+![alt-text](https://i.ibb.co/HD0R2nM/panic.png)
 
 ## Current Features
 - Support for both i386 and AMD64
