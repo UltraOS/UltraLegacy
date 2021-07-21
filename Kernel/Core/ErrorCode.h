@@ -22,6 +22,7 @@ struct ErrorCode {
         BAD_FILENAME = 12,
         INTERRUPTED = 13,
         STREAM_CLOSED = 14,
+        WOULD_BLOCK_FOREVER = 15,
     } value { NO_ERROR };
 
     using code_t = decltype(value);
@@ -70,6 +71,8 @@ struct ErrorCode {
             return "Interrupted"_sv;
         case STREAM_CLOSED:
             return "IO Stream Is Already Closed";
+        case WOULD_BLOCK_FOREVER:
+            return "Operation Would Block Forever";
         default:
             return "<Unknown code>"_sv;
         }
