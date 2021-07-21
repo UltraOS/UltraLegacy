@@ -9,13 +9,14 @@ class Thread;
 
 class Blocker {
 public:
-    enum class Type {
+    enum class Type : u32 {
         DISK_IO,
         MUTEX,
-        PROCESS_LOAD
+        IO,
+        PROCESS_LOAD,
     };
 
-    enum class Result {
+    enum class Result : u32 {
         UNDEFINED,
         UNBLOCKED,
         INTERRUPTED,
@@ -61,6 +62,11 @@ public:
     ProcessLoadBlocker(Thread& blocked_thread);
 
     virtual bool is_interruptable() { return false; }
+};
+
+class IOBlocker : public Blocker, public StandaloneListNode<IOBlocker> {
+public:
+    IOBlocker(Thread& blocked_thread);
 };
 
 }

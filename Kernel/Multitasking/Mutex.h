@@ -2,9 +2,10 @@
 
 #include "Blocker.h"
 #include "Common/Lock.h"
-#include "Thread.h"
 
 namespace kernel {
+
+class Thread;
 
 class Mutex {
 public:
