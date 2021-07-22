@@ -68,7 +68,6 @@ SYSCALL_IMPLEMENTATION(OPEN)
                               static_cast<IOMode>(ARG1));
 
     if (file.is_error()) {
-        log() << "error " << file.error().to_string();
         RETVAL = -(i64)file.error().value;
         return;
     }
