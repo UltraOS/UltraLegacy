@@ -187,6 +187,18 @@ SYSCALL_IMPLEMENTATION(SEEK)
         RETVAL = error_or_offset.value();
 }
 
+SYSCALL_IMPLEMENTATION(TRUNCATE)
+{
+    auto file = Process::current().io_stream(ARG0);
+
+    if (!file || file->type() != IOStream::Type::FILE_ITERATOR) {
+        RETVAL = -ErrorCode::INVALID_ARGUMENT;
+        return;
+    }
+
+    RETVAL = -static_cast<FileIterator*>(file.get())->truncate(ARG1).value;
+}
+
 SYSCALL_IMPLEMENTATION(CREATE)
 {
     RETVAL = -VFS::the().create(reinterpret_cast<const char*>(ARG0)).value;
