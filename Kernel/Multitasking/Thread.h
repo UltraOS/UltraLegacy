@@ -37,7 +37,6 @@ public:
     static RefPtr<Thread> create_user(
             Process& owner,
             RefPtr<VirtualRegion> kernel_stack,
-            RefPtr<VirtualRegion> user_stack,
             TaskLoader::LoadRequest*);
 
     void activate();
@@ -66,12 +65,6 @@ public:
     {
         ASSERT(!m_kernel_stack.is_null());
         return *m_kernel_stack;
-    }
-
-    [[nodiscard]] VirtualRegion& user_stack()
-    {
-        ASSERT(!m_user_stack.is_null());
-        return *m_user_stack;
     }
 
     bool should_die() const { return m_should_die; }
@@ -155,7 +148,7 @@ public:
 
 private:
     Thread(Process& owner);
-    Thread(Process& owner, RefPtr<VirtualRegion> kernel_stack, RefPtr<VirtualRegion> user_stack, IsSupervisor);
+    Thread(Process& owner, RefPtr<VirtualRegion> kernel_stack, IsSupervisor);
 
     friend class Scheduler;
     void sleep(u64 until)
@@ -221,7 +214,6 @@ private:
     Process& m_owner;
 
     RefPtr<VirtualRegion> m_kernel_stack;
-    RefPtr<VirtualRegion> m_user_stack;
 
     ControlBlock m_control_block { 0 };
 

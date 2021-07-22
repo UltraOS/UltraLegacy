@@ -31,14 +31,14 @@ RefPtr<Thread> Thread::create_idle(Process& owner)
 
 RefPtr<Thread> Thread::create_supervisor(Process& owner, RefPtr<VirtualRegion> kernel_stack, Address entrypoint)
 {
-    Address adjusted_stack = kernel_stack->virtual_range().end() - sizeof(RegisterState)
+    Address adjusted_stack = kernel_stack->virtual_range().end() - sizeof(RegisterState);
 #ifdef ULTRA_32
-        + sizeof(u32) * 2; // esp and ss are not popped
-#elif defined(ULTRA_64)
-        ;
+    adjusted_stack += sizeof(u32) * 2; // ss and esp are not popped
 #endif
+    // force misalign the stack to sizeof(void*) for sysv abi
+    adjusted_stack -= sizeof(ptr_t);
 
-    auto thread = new Thread(owner, kernel_stack, {}, IsSupervisor::YES);
+    auto thread = new Thread(owner, kernel_stack, IsSupervisor::YES);
     thread->m_control_block.current_kernel_stack_top = adjusted_stack.raw();
 
     auto& frame = *new (adjusted_stack.as_pointer<void>()) RegisterState;
@@ -67,18 +67,31 @@ RefPtr<Thread> Thread::create_supervisor(Process& owner, RefPtr<VirtualRegion> k
 RefPtr<Thread> Thread::create_user(
         Process& owner,
         RefPtr<VirtualRegion> kernel_stack,
-        RefPtr<VirtualRegion> user_stack,
         TaskLoader::LoadRequest* load_request
 )
 {
-    // Layout of the fresh kernel stack (first is popped last):
-    // - Userspace iret frame, instruction pointer is set later by TaskLoader after loading the binary.
-    // - LoadRequest pointer (only on i386)
-    // - dummy ret address (only on i386)
-    // - Kernel iret frame, instruction pointer set to TaskLoader::do_load
-
     Address adjusted_stack = kernel_stack->virtual_range().end() - sizeof(RegisterState) * 2;
-    auto thread = new Thread(owner, kernel_stack, user_stack, IsSupervisor::NO);
+
+    // Layout of a fresh kernel stack (first is popped last):
+    // ------ i386 -----
+    // - Userspace iret frame, instruction pointer is set later by TaskLoader after loading the binary.
+    // - dummy u32 (SysV abi)
+    // - dummy u32 (SysV abi)
+    // - dummy u32 (SysV abi)
+    // - LoadRequest pointer
+    // - dummy ret address
+    // - Kernel iret frame, instruction pointer set to TaskLoader::do_load
+    // ----- AMD64 -----
+    // - Userspace iret frame, same as above
+    // - dummy ret address
+    // - Kernel iret frame, same as above
+#ifdef ULTRA_64
+    adjusted_stack -= sizeof(u64);
+#elif defined(ULTRA_32)
+    adjusted_stack -= sizeof(u32) * 5;
+    adjusted_stack += sizeof(u32) * 2; // ss and esp are not popped for kernel iret
+#endif
+    auto thread = new Thread(owner, kernel_stack, IsSupervisor::NO);
     thread->m_control_block.current_kernel_stack_top = adjusted_stack.raw();
 
     auto* frame = new (adjusted_stack.as_pointer<void>()) RegisterState {};
@@ -94,9 +107,17 @@ RefPtr<Thread> Thread::create_user(
     frame->cs = GDT::kernel_code_selector();
     frame->eflags = static_cast<size_t>(CPU::FLAGS::INTERRUPTS);
 
-    adjusted_stack += sizeof(RegisterState) - 1 * sizeof(u32);
+    // skip kernel iret
+    adjusted_stack += sizeof(RegisterState) - (2 * sizeof(u32));
+
+    // skip fake ret address
+    adjusted_stack += sizeof(u32);
+
+    // push load request on the stack
     *adjusted_stack.as_pointer<ptr_t>() = Address(load_request);
-    adjusted_stack += sizeof(ptr_t);
+
+    // skip load_request and alignment
+    adjusted_stack += sizeof(u32) * 4;
 #elif defined(ULTRA_64)
     frame->cs = GDT::kernel_code_selector();
     frame->ss = GDT::kernel_data_selector();
@@ -104,7 +125,9 @@ RefPtr<Thread> Thread::create_user(
     frame->rsp = kernel_stack->virtual_range().end() - sizeof(RegisterState);
     frame->rip = Address(&TaskLoader::do_load);
     frame->rdi = Address(load_request);
-    adjusted_stack += sizeof(RegisterState);
+
+    // skip kernel iret + fake return address
+    adjusted_stack += sizeof(RegisterState) + sizeof(ptr_t);
 #endif
 
     frame = new (adjusted_stack.as_pointer<void>()) RegisterState {};
@@ -119,14 +142,12 @@ RefPtr<Thread> Thread::create_user(
     frame->cs = GDT::userland_code_selector() | rpl_ring_3;
 
     frame->userspace_ss = GDT::userland_data_selector() | rpl_ring_3;
-    frame->userspace_esp = user_stack->virtual_range().end();
     frame->eflags = static_cast<size_t>(CPU::FLAGS::INTERRUPTS);
 #elif defined(ULTRA_64)
     frame->cs = GDT::userland_code_selector() | rpl_ring_3;
     frame->ss = GDT::userland_data_selector() | rpl_ring_3;
 
     frame->rflags = static_cast<size_t>(CPU::FLAGS::INTERRUPTS);
-    frame->rsp = user_stack->virtual_range().end();
 #endif
 
     thread->m_fpu_state = FPU::allocate_state();
@@ -141,11 +162,10 @@ Thread::Thread(Process& owner)
 {
 }
 
-Thread::Thread(Process& owner, RefPtr<VirtualRegion> kernel_stack, RefPtr<VirtualRegion> user_stack, IsSupervisor is_supervisor)
+Thread::Thread(Process& owner, RefPtr<VirtualRegion> kernel_stack, IsSupervisor is_supervisor)
     : m_id(owner.consume_thread_id())
     , m_owner(owner)
     , m_kernel_stack(kernel_stack)
-    , m_user_stack(user_stack)
     , m_control_block { kernel_stack->virtual_range().end() }
     , m_is_supervisor(is_supervisor)
 {
