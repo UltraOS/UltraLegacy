@@ -26,6 +26,8 @@ void TaskFinalizer::run()
     ASSERT(s_instance == nullptr);
     s_instance = new TaskFinalizer();
 
+    Thread::current()->set_invulnerable(true);
+
     bool did_work = false;
 
     for (;;) {
@@ -80,16 +82,17 @@ void TaskFinalizer::do_free_thread(Thread& thread)
 
     auto& owner = thread.owner();
 
-    while (!thread.windows().empty()) {
-        (*thread.windows().begin()).second->close();
+    auto& windows = thread.windows();
+    while (!windows.empty()) {
+        auto this_window = windows.begin();
+        this_window->second->close();
+        windows.remove(this_window);
     }
 
     if (thread.fpu_state())
         FPU::free_state(thread.fpu_state());
 
     MemoryManager::the().free_virtual_region(thread.kernel_stack());
-    if (thread.is_supervisor() == IsSupervisor::NO)
-        MemoryManager::the().free_virtual_region(thread.user_stack());
 
     {
         LOCK_GUARD(owner.lock());
@@ -109,8 +112,8 @@ void TaskFinalizer::do_free_process(RefPtr<Process>&& process)
 {
     log() << "TaskFinalizer: Freeing process \"" << process->name().to_view() << "\"";
 
-    for (auto& fd : process->fds())
-        VFS::the().close(*fd.second);
+    for (auto& stream : process->io_streams())
+        stream.second->close();
 
     MemoryManager::the().free_all_virtual_regions(*process);
 
