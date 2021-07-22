@@ -5,6 +5,7 @@
 #include "Multitasking/Scheduler.h"
 #include "Multitasking/Sleep.h"
 
+#include "FileSystem/IOStream.h"
 #include "FileSystem/VFS.h"
 
 #include "WindowManager/WindowManager.h"
@@ -52,65 +53,133 @@ SYSCALL_IMPLEMENTATION(EXIT)
 
 SYSCALL_IMPLEMENTATION(OPEN)
 {
-    auto fd = VFS::the().open(StringView(Address(ARG0).as_pointer<const char>()),
-                              static_cast<FileMode>(ARG1));
+    auto path = String(Address(ARG0).as_pointer<const char>());
 
-    if (fd.is_error()) {
-        RETVAL = -fd.error().value;
+    if (!path.starts_with("/")) {
+        auto& current_process = Process::current();
+
+        LOCK_GUARD(current_process.lock());
+        String full_path = current_process.working_directory();
+        full_path += path;
+        path = move(full_path);
+    }
+
+    auto file = VFS::the().open(path.to_view(),
+                              static_cast<IOMode>(ARG1));
+
+    if (file.is_error()) {
+        log() << "error " << file.error().to_string();
+        RETVAL = -(i64)file.error().value;
         return;
     }
 
-    auto id = Process::current().store_fd(fd.value());
-    RETVAL = id;
+    auto id = Process::current().store_io_stream(file.value());
+    if (id.is_error()) {
+        file.value()->close();
+        RETVAL = -id.error().value;
+        return;
+    }
+
+    RETVAL = id.value();
 }
 
 SYSCALL_IMPLEMENTATION(CLOSE)
 {
-    RETVAL = -Process::current().close_fd(ARG0).value;
+    auto stream = Process::current().pop_io_stream(ARG0);
+    if (!stream) {
+        RETVAL = -ErrorCode::INVALID_ARGUMENT;
+        return;
+    }
+
+    RETVAL = -stream->close().value;
 }
 
 SYSCALL_IMPLEMENTATION(READ)
 {
-    auto fd = Process::current().fd(ARG0);
+    auto stream = Process::current().io_stream(ARG0);
 
-    if (!fd) {
+    if (!stream) {
         RETVAL = -ErrorCode::INVALID_ARGUMENT;
         return;
     }
 
-    RETVAL = fd->read(Address(ARG1).as_pointer<void>(), ARG2);
+    for (;;) {
+        if (!stream->can_read_without_blocking()) {
+            auto ret = stream->block_until_readable();
+            if (ret.is_error()) {
+                RETVAL = -ret.error().value;
+                return;
+            }
+
+            if (ret.value() == Blocker::Result::INTERRUPTED) {
+                RETVAL = -ErrorCode::INTERRUPTED;
+                return;
+            }
+        }
+
+        auto ret = stream->read(Address(ARG1).as_pointer<void>(), ARG2);
+
+        if (ret.is_error()) {
+            RETVAL = -ret.error().value;
+            return;
+        }
+
+        if (ret.value() == 0)
+            continue;
+
+        RETVAL = ret.value();
+        return;
+    }
 }
 
 SYSCALL_IMPLEMENTATION(WRITE)
 {
-    auto raw_fd = ARG0;
+    auto stream = Process::current().io_stream(ARG0);
 
-    // FIXME: yeah this is a bit lame
-    if (raw_fd == 1 || raw_fd == 2) {
-        log() << "STDOUT: " << StringView(Address(ARG1).as_pointer<const char>(), ARG2);
-        return;
-    }
-
-    auto fd = Process::current().fd(ARG0);
-
-    if (!fd) {
+    if (!stream) {
         RETVAL = -ErrorCode::INVALID_ARGUMENT;
         return;
     }
 
-    RETVAL = fd->write(Address(ARG1).as_pointer<void>(), ARG2);
+    for (;;) {
+        if (!stream->can_write_without_blocking()) {
+            auto ret = stream->block_until_writable();
+            if (ret.is_error()) {
+                RETVAL = -ret.error().value;
+                return;
+            }
+
+            if (ret.value() == Blocker::Result::INTERRUPTED) {
+                RETVAL = -ErrorCode::INTERRUPTED;
+                return;
+            }
+        }
+
+        auto ret = stream->write(Address(ARG1).as_pointer<void>(), ARG2);
+
+        if (ret.is_error()) {
+            RETVAL = -ret.error().value;
+            return;
+        }
+
+        if (ret.value() == 0)
+            continue;
+
+        RETVAL = ret.value();
+        return;
+    }
 }
 
 SYSCALL_IMPLEMENTATION(SEEK)
 {
-    auto fd = Process::current().fd(ARG0);
+    auto stream = Process::current().io_stream(ARG0);
 
-    if (!fd) {
+    if (!stream) {
         RETVAL = -ErrorCode::INVALID_ARGUMENT;
         return;
     }
 
-    auto error_or_offset = fd->set_offset(ARG1, static_cast<SeekMode>(ARG2));
+    auto error_or_offset = stream->seek(ARG1, static_cast<SeekMode>(ARG2));
 
     if (error_or_offset.is_error())
         RETVAL = -error_or_offset.error().value;
