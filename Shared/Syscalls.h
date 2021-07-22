@@ -7,6 +7,7 @@
     SYSCALL(READ)           \
     SYSCALL(WRITE)          \
     SYSCALL(SEEK)           \
+    SYSCALL(TRUNCATE)       \
     SYSCALL(CREATE)         \
     SYSCALL(CREATE_DIR)     \
     SYSCALL(REMOVE)         \
