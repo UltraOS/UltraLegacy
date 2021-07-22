@@ -59,20 +59,18 @@ bool ELFLoader::validate_header(const ELF::Header& header)
     return true;
 }
 
-ErrorOr<Address> ELFLoader::load(FileDescription& fd)
+ErrorOr<Address> ELFLoader::load(IOStream& stream)
 {
     ELF::Header header {};
 
-    if (fd.read(&header, sizeof(header)) != sizeof(header))
+    // TODO: more error handling and sanity checking
+    if (stream.read(&header, sizeof(header)).value() != sizeof(header))
         return ErrorCode::INVALID_ARGUMENT;
 
     if (!validate_header(header))
         return ErrorCode::INVALID_ARGUMENT;
 
     if (header.program_header_count == 0)
-        return ErrorCode::INVALID_ARGUMENT;
-
-    if (header.program_headers_offset > fd.underlying_file().size())
         return ErrorCode::INVALID_ARGUMENT;
 
     if (header.bytes_per_program_header != sizeof(ELF::ProgramHeader)) {
@@ -82,12 +80,12 @@ ErrorOr<Address> ELFLoader::load(FileDescription& fd)
     }
 
     size_t current_offset = 0;
-    fd.set_offset(header.program_headers_offset, SeekMode::BEGINNING);
+    stream.seek(header.program_headers_offset, SeekMode::BEGINNING);
 
     ELF::ProgramHeader ph {};
 
     for (size_t i = 0; i < header.program_header_count; ++i) {
-        if (fd.read(&ph, sizeof(ph)) != sizeof(ph)) {
+        if (stream.read(&ph, sizeof(ph)).value() != sizeof(ph)) {
             ELF_LOG << "failed to read program headers";
             return ErrorCode::INVALID_ARGUMENT;
         }
@@ -97,7 +95,7 @@ ErrorOr<Address> ELFLoader::load(FileDescription& fd)
 
         // TODO: memory flags
 
-        current_offset = fd.set_offset(0, SeekMode::CURRENT).value();
+        current_offset = stream.seek(0, SeekMode::CURRENT).value();
 
         auto begin = Page::round_down(ph.virtual_address);
         auto end = Page::round_up(begin + ph.bytes_in_memory);
@@ -111,12 +109,12 @@ ErrorOr<Address> ELFLoader::load(FileDescription& fd)
         static_cast<PrivateVirtualRegion*>(region.get())->preallocate_entire();
         Process::current().store_region(region);
 
-        fd.set_offset(ph.offset_in_file, SeekMode::BEGINNING);
+        stream.seek(ph.offset_in_file, SeekMode::BEGINNING);
 
-        fd.read(Address(region->virtual_range().begin() + offset).as_pointer<void>(), ph.bytes_in_file);
+        stream.read(Address(region->virtual_range().begin() + offset).as_pointer<void>(), ph.bytes_in_file);
 
         // restore old offset to keep reading program headers
-        fd.set_offset(current_offset, SeekMode::BEGINNING);
+        stream.seek(current_offset, SeekMode::BEGINNING);
     }
 
     return Address(header.entrypoint);
