@@ -14,10 +14,10 @@ typedef unsigned int wint_t;
 
 #define DEFAULT_BUFFER_CAPACITY 512
 
-static FILE* file_ptr_open(uint32_t fd, bool buffered)
+static FILE* file_ptr_open(uint32_t io_handle, bool buffered)
 {
     FILE* f = (FILE*)malloc(sizeof(FILE));
-    f->fd = fd;
+    f->io_handle = io_handle;
 
     if (buffered) {
         f->buffer = malloc(DEFAULT_BUFFER_CAPACITY);
@@ -92,17 +92,17 @@ FILE* fopen(const char* filename, const char* mode)
     switch (mode[0])
     {
     case 'r':
-        native_mode |= FILE_MODE_READONLY;
+        native_mode |= IO_READONLY;
         break;
     case 'w':
-        native_mode |= FILE_MODE_CREATE;
-        native_mode |= FILE_MODE_WRITEONLY;
-        native_mode |= FILE_MODE_TRUNCATE;
+        native_mode |= IO_CREATE;
+        native_mode |= IO_WRITEONLY;
+        native_mode |= IO_TRUNCATE;
         break;
     case 'a':
-        native_mode |= FILE_MODE_CREATE;
-        native_mode |= FILE_MODE_APPEND;
-        native_mode |= FILE_MODE_WRITEONLY;
+        native_mode |= IO_CREATE;
+        native_mode |= IO_APPEND;
+        native_mode |= IO_WRITEONLY;
     default:
         return NULL;
     }
@@ -113,13 +113,13 @@ FILE* fopen(const char* filename, const char* mode)
         switch (mode[i + 1])
         {
         case '+':
-            if (native_mode & FILE_MODE_READONLY)
-                native_mode &= ~FILE_MODE_READONLY;
-            if (native_mode & FILE_MODE_WRITEONLY)
-                native_mode &= ~FILE_MODE_WRITEONLY;
-            if (native_mode & FILE_MODE_APPEND)
-                native_mode &= ~FILE_MODE_WRITEONLY;
-            native_mode |= FILE_MODE_READWRITE;
+            if (native_mode & IO_READONLY)
+                native_mode &= ~IO_READONLY;
+            if (native_mode & IO_WRITEONLY)
+                native_mode &= ~IO_WRITEONLY;
+            if (native_mode & IO_APPEND)
+                native_mode &= ~IO_WRITEONLY;
+            native_mode |= IO_READWRITE;
             continue;
         case 'b':
             continue;
@@ -136,12 +136,12 @@ FILE* fopen(const char* filename, const char* mode)
     // TODO: make a check
     (void) fail_if_exists;
 
-    long fd = file_open(filename, native_mode);
+    long io_handle = open_file(filename, native_mode);
 
-    if (fd < 0)
+    if (io_handle < 0)
         return NULL;
 
-    FILE* ptr = file_ptr_open(fd, true);
+    FILE* ptr = file_ptr_open(io_handle, true);
     ptr->flags = native_mode;
 
     return ptr;
@@ -152,13 +152,13 @@ size_t fread(void* buffer, size_t size, size_t count, FILE* stream)
     if (!size || !count)
         return 0;
 
-    if (stream->flags == FILE_MODE_WRITEONLY)
+    if (stream->flags == IO_WRITEONLY)
         return 0;
 
-    if (stream->flags & FILE_MODE_READWRITE)
+    if (stream->flags & IO_READWRITE)
         fflush(stream);
 
-    return file_read(stream->fd, buffer, size * count);
+    return io_read(stream->io_handle, buffer, size * count);
 }
 
 size_t fwrite(const void* buffer, size_t size, size_t count, FILE* stream)
@@ -166,7 +166,7 @@ size_t fwrite(const void* buffer, size_t size, size_t count, FILE* stream)
     if (!size || !count)
         return 0;
 
-    if (stream->flags == FILE_MODE_READONLY)
+    if (stream->flags == IO_READONLY)
         return 0;
 
     size_t bytes_to_write = size * count;
@@ -176,7 +176,7 @@ size_t fwrite(const void* buffer, size_t size, size_t count, FILE* stream)
         fflush(stream);
 
     if (bytes_to_write > stream->capacity)
-        return file_write(stream->fd, buffer, bytes_to_write) / size;
+        return io_write(stream->io_handle, buffer, bytes_to_write) / size;
 
     memcpy(stream->buffer + stream->size, buffer, bytes_to_write);
     stream->size += bytes_to_write;
@@ -193,7 +193,7 @@ int fputc(int character, FILE* stream)
 int fclose(FILE* stream)
 {
     fflush(stream);
-    file_close(stream->fd);
+    io_close(stream->io_handle);
     file_ptr_close(stream);
 }
 
@@ -202,7 +202,7 @@ int fflush(FILE* stream)
     if (!stream->size)
         return 0;
 
-    file_write(stream->fd, stream->buffer, stream->size);
+    io_write(stream->io_handle, stream->buffer, stream->size);
     stream->size = 0;
     return 0;
 }
@@ -210,7 +210,7 @@ int fflush(FILE* stream)
 int fseek(FILE* stream, long offset, int origin)
 {
     fflush(stream);
-    long ret = file_seek(stream->fd, offset, origin);
+    long ret = io_seek(stream->io_handle, offset, origin);
 
     return ret < 0;
 }
@@ -223,7 +223,7 @@ void rewind(FILE* stream)
 
 long ftell(FILE* stream)
 {
-    return file_seek(stream->fd, 0, SEEK_CUR);
+    return io_seek(stream->io_handle, 0, SEEK_CUR);
 }
 
 int fscanf(FILE* stream, const char* format, ...)
@@ -259,12 +259,12 @@ int vfprintf(FILE* stream, const char* format, va_list vlist)
 
 int rename(const char* old_filename, const char* new_filename)
 {
-    return file_move(old_filename, new_filename);
+    return move_file(old_filename, new_filename);
 }
 
 int remove(const char* fname)
 {
-    return file_remove(fname);
+    return remove_file(fname);
 }
 
 #endif

@@ -10,14 +10,14 @@ extern "C" {
 
 #ifndef LIBC_TEST
 typedef struct {
-    uint32_t fd;
-    uint32_t flags;
+    long io_handle;
+    unsigned long flags;
     char* buffer;
     size_t size;
     size_t capacity;
 } FILE;
 
-// NOTE: must match Ultra/File.h seek modes
+// NOTE: must match Ultra/IO.h seek modes
 #define SEEK_SET 0
 #define SEEK_CUR 1
 #define SEEK_END 2
