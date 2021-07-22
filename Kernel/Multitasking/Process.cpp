@@ -40,7 +40,7 @@ RefPtr<Process> Process::create_supervisor(Address entrypoint, StringView name, 
     return process;
 }
 
-RefPtr<Process> Process::create_user(StringView name, AddressSpace* address_space, TaskLoader::LoadRequest* load_req, size_t stack_size)
+RefPtr<Process> Process::create_user(StringView name, AddressSpace* address_space, TaskLoader::LoadRequest* load_req)
 {
     ASSERT(address_space != nullptr);
     RefPtr<Process> process = new Process(*address_space, IsSupervisor::NO, name);
@@ -49,9 +49,8 @@ RefPtr<Process> Process::create_user(StringView name, AddressSpace* address_spac
     process_name << name << " thread 0 stack"_sv;
 
     auto kernel_stack = MemoryManager::the().allocate_kernel_stack(process_name.to_view(), default_kernel_stack_size);
-    auto user_stack = MemoryManager::the().allocate_user_stack(process_name.to_view(), *address_space, stack_size);
 
-    auto main_thread = Thread::create_user(*process, kernel_stack, user_stack, load_req);
+    auto main_thread = Thread::create_user(*process, kernel_stack, load_req);
     process->m_threads.emplace(main_thread);
 
     return process;
@@ -91,44 +90,66 @@ Process::Process(AddressSpace& address_space, IsSupervisor is_supervisor, String
 {
 }
 
+void Process::set_working_directory(StringView path)
+{
+    LOCK_GUARD(m_lock);
+    m_working_directory = path;
+}
+
 void Process::store_region(const RefPtr<VirtualRegion>& region)
 {
     LOCK_GUARD(m_lock);
     m_virtual_regions.emplace(region);
 }
 
-u32 Process::store_fd(const RefPtr<FileDescription>& fd)
+ErrorCode Process::store_io_stream_at(u32 id, const RefPtr<IOStream>& stream)
 {
     LOCK_GUARD(m_lock);
 
-    auto fd_id = m_next_fd_id++;
-    m_fds.emplace(fd_id, fd);
-
-    return fd_id;
-}
-
-ErrorCode Process::close_fd(u32 id)
-{
-    LOCK_GUARD(m_lock);
-
-    auto fd = m_fds.find(id);
-
-    if (fd == m_fds.end())
+    if (m_io_streams.contains(id))
         return ErrorCode::INVALID_ARGUMENT;
 
-    VFS::the().close(*fd->second);
-    m_fds.remove(id);
+    m_io_streams.emplace(id, stream);
+
+    // FIXME: support proper io id allocation.
+    u32 next_io_id = max(m_next_io_id.load(), id);
+    m_next_io_id = next_io_id;
 
     return ErrorCode::NO_ERROR;
 }
 
-RefPtr<FileDescription> Process::fd(u32 id)
+ErrorOr<u32> Process::store_io_stream(const RefPtr<IOStream>& object)
 {
     LOCK_GUARD(m_lock);
 
-    auto fd = m_fds.find(id);
+    auto io_id = m_next_io_id++;
+    m_io_streams.emplace(io_id, object);
 
-    return fd == m_fds.end() ? RefPtr<FileDescription>() : fd->second;
+    return io_id;
+}
+
+RefPtr<IOStream> Process::pop_io_stream(u32 id)
+{
+    LOCK_GUARD(m_lock);
+
+    auto io_stream = m_io_streams.find(id);
+
+    if (io_stream == m_io_streams.end())
+        return {};
+
+    auto stream = io_stream->second;
+    m_io_streams.remove(io_stream);
+
+    return stream;
+}
+
+RefPtr<IOStream> Process::io_stream(u32 id)
+{
+    LOCK_GUARD(m_lock);
+
+    auto io_stream = m_io_streams.find(id);
+
+    return io_stream == m_io_streams.end() ? RefPtr<IOStream>() : io_stream->second;
 }
 
 }
