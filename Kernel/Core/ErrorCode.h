@@ -3,27 +3,16 @@
 #include "Common/String.h"
 #include "Common/Types.h"
 
+#include <Shared/Error.h>
+
 namespace kernel {
 
 struct ErrorCode {
+#define ERROR_CODE(name, value) name = value,
     enum : u32 {
-        NO_ERROR = 0,
-        ACCESS_DENIED = 1,
-        INVALID_ARGUMENT = 2,
-        BAD_PATH = 3,
-        DISK_NOT_FOUND = 4,
-        UNSUPPORTED = 5,
-        NO_SUCH_FILE = 6,
-        IS_DIRECTORY = 7,
-        IS_FILE = 8,
-        FILE_IS_BUSY = 9,
-        FILE_ALREADY_EXISTS = 10,
-        NAME_TOO_LONG = 11,
-        BAD_FILENAME = 12,
-        INTERRUPTED = 13,
-        STREAM_CLOSED = 14,
-        WOULD_BLOCK_FOREVER = 15,
+        ENUMERATE_ERROR_CODES
     } value { NO_ERROR };
+#undef ERROR_CODE
 
     using code_t = decltype(value);
 
