@@ -1,22 +1,9 @@
 #pragma once
 
+#include "Core/ErrorCode.h"
 #include "Multitasking/Mutex.h"
-#include <Shared/File.h>
 
 namespace kernel {
-
-enum class FileMode : u32 {
-#define FILE_MODE(name, bit) name = 1 << bit,
-    ENUMERATE_FILE_MODES
-#undef FILE_MODE
-};
-
-enum class SeekMode : u32 {
-#define SEEK_MODE(name) name,
-    ENUMERATE_SEEK_MODES
-#undef SEEK_MODE
-};
-
 
 class FileSystem;
 

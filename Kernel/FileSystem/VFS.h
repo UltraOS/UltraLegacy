@@ -8,7 +8,7 @@
 #include "Directory.h"
 #include "Drivers/Storage.h"
 #include "File.h"
-#include "FileDescription.h"
+#include "FileIterator.h"
 #include "FileSystem.h"
 
 namespace kernel {
@@ -36,8 +36,7 @@ public:
         return *s_instance;
     }
 
-    ErrorOr<RefPtr<FileDescription>> open(StringView path, FileMode);
-    ErrorCode close(FileDescription&);
+    ErrorOr<RefPtr<IOStream>> open(StringView path, IOMode);
     ErrorCode remove(StringView path);
     ErrorCode remove_directory(StringView path);
     ErrorCode create(StringView file_path);

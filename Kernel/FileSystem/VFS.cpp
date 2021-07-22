@@ -151,7 +151,7 @@ String VFS::generate_prefix(StorageDevice& device)
     return prefix;
 }
 
-ErrorOr<RefPtr<FileDescription>> VFS::open(StringView path, FileMode mode)
+ErrorOr<RefPtr<IOStream>> VFS::open(StringView path, IOMode mode)
 {
     auto split_path = split_prefix_and_path(path);
 
@@ -165,22 +165,11 @@ ErrorOr<RefPtr<FileDescription>> VFS::open(StringView path, FileMode mode)
     if (fs == m_prefix_to_fs.end())
         return ErrorCode::DISK_NOT_FOUND;
 
-    auto error_of_file = fs->second->open(prefix_to_path.second);
-    if (error_of_file.is_error())
-        return error_of_file.error();
+    auto error_or_file = fs->second->open(prefix_to_path.second);
+    if (error_or_file.is_error())
+        return error_or_file.error();
 
-    return RefPtr<FileDescription>::create(*error_of_file.value(), mode);
-}
-
-ErrorCode VFS::close(FileDescription& fd)
-{
-    auto& file = fd.raw_file();
-    auto code = file.fs().close(file);
-
-    if (code.is_success())
-        fd.mark_as_closed();
-
-    return code;
+    return FileIterator::create(*error_or_file.value(), mode);
 }
 
 ErrorCode VFS::remove(StringView path)
