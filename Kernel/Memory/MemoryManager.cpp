@@ -278,18 +278,13 @@ MemoryManager::VR MemoryManager::virtual_region_responsible_for_address(Address 
 
     LOCK_GUARD(current_process.lock());
 
-    // First check if it's one of the user's stacks
-    for (auto& thread : current_process.threads())
-        if (thread->user_stack().virtual_range().contains(aligned_address))
-            return &thread->user_stack();
-
     auto region = find_address_in_range_tree(current_process.virtual_regions(), aligned_address,
                                              [] (const RefPtr<VirtualRegion>& vr) { return vr->virtual_range(); });
 
     if (!region)
         return {};
 
-    return **region; // Optional<Iterator<T>> -> Iterator<T> -> T& -> address of T
+    return **region; // Optional<Iterator<T>> -> Iterator<T> -> T&
 }
 
 void MemoryManager::free_page(const Page& page)
@@ -364,7 +359,7 @@ void MemoryManager::handle_page_fault(const RegisterState& registers, const Page
         }
 
         MM_DEBUG_EX << "Handling expected page fault\n"
-                    << fault;
+                    << fault << " on region " << virtual_region->name();
 
         if (private_region.page_at(aligned_address).address()) {
             MM_DEBUG << "private region page fault spurious or already handled";
@@ -828,7 +823,7 @@ void MemoryManager::mark_as_released(VirtualRegion& region)
 
 void MemoryManager::free_virtual_region(VirtualRegion& vr)
 {
-    MM_DEBUG << "Freeing virtual region \"" << vr.name() << "\"";
+    MM_DEBUG_EX << "Freeing virtual region \"" << vr.name() << "\"";
 
     ASSERT(!vr.is_eternal());
     ASSERT(!vr.is_released());
