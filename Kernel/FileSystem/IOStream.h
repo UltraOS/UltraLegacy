@@ -43,7 +43,7 @@ enum class SeekMode : u32 {
 //
 // - close()
 // Releases the underlying resources, e.g closes the file in case of FileIterator.
-// All further calls to read/write/etc return the IO_CLOSED error code.
+// All further calls to read/write/etc return the STREAM_CLOSED error code.
 //
 // - is_closed()
 // Indicates whether a call to close() has been made before for this IO stream. Calls to read/write
