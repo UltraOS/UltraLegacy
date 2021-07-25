@@ -62,6 +62,8 @@ struct ErrorCode {
             return "IO Stream Is Already Closed";
         case WOULD_BLOCK_FOREVER:
             return "Operation Would Block Forever";
+        case MEMORY_ACCESS_VIOLATION:
+            return "Memory Access Violation";
         default:
             return "<Unknown code>"_sv;
         }

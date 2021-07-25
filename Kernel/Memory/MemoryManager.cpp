@@ -330,7 +330,7 @@ void MemoryManager::handle_page_fault(RegisterState& registers, const PageFault&
     if (!virtual_region) {
         // Check if it's a page fault in safe_copy_memory etc.
         if (registers.instruction_pointer() >= Address(&safe_operations_begin) && registers.instruction_pointer() < Address(&safe_operations_end)) {
-            MM_LOG << "Page fault during a safe operation";
+            MM_DEBUG_EX << "Page fault during a safe operation (" << fault.address() << ")";
 #ifdef ULTRA_64
             registers.rip = registers.rbx;
 #elif defined(ULTRA_32)

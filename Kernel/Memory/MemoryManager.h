@@ -124,7 +124,7 @@ public:
 #undef STACK_POINTER
     }
 
-    static void handle_page_fault(const RegisterState&, const PageFault&);
+    static void handle_page_fault(RegisterState&, const PageFault&);
 
     static MemoryManager& the();
 
