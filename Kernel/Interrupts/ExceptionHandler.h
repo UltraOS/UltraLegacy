@@ -20,7 +20,7 @@ public:
 
     size_t exception_number() const { return m_exception_number; }
 
-    virtual void handle(const RegisterState& registers) = 0;
+    virtual void handle(RegisterState& registers) = 0;
 
     virtual ~ExceptionHandler() { ExceptionDispatcher::the().unregister_handler(*this); }
 

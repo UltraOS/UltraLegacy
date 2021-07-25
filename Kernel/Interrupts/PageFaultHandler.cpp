@@ -8,7 +8,7 @@ PageFaultHandler::PageFaultHandler()
 {
 }
 
-void PageFaultHandler::handle(const RegisterState& state)
+void PageFaultHandler::handle(RegisterState& state)
 {
     ++m_occurrences;
 

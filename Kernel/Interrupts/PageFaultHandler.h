@@ -10,7 +10,7 @@ public:
 
     PageFaultHandler();
 
-    void handle(const RegisterState& state) override;
+    void handle(RegisterState& state) override;
 
     size_t occurances() const { return m_occurrences; }
 

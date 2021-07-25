@@ -8,6 +8,9 @@ SECTIONS
     {
         *(.entry)
         *(.text .text.*)
+        safe_operations_begin = .;
+        *(.safe_operations)
+        safe_operations_end = .;
     }
 
     .rodata ALIGN(4K) : AT (ADDR (.rodata) - 0xC0000000)

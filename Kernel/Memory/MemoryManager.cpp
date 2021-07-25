@@ -31,6 +31,10 @@
 
 namespace kernel {
 
+// Linker generated labels
+extern "C" ptr_t safe_operations_begin;
+extern "C" ptr_t safe_operations_end;
+
 MemoryManager* MemoryManager::s_instance;
 LoaderContext* MemoryManager::s_loader_context;
 
@@ -302,7 +306,7 @@ void MemoryManager::free_page(const Page& page)
     runtime::panic(error_string.data());
 }
 
-void MemoryManager::handle_page_fault(const RegisterState& registers, const PageFault& fault)
+void MemoryManager::handle_page_fault(RegisterState& registers, const PageFault& fault)
 {
     if (!is_initialized()) {
         StackString error_string;
@@ -316,23 +320,27 @@ void MemoryManager::handle_page_fault(const RegisterState& registers, const Page
         runtime::panic(error_string.data(), &registers);
     };
 
-    if (fault.address() > userspace_usable_ceiling && fault.is_supervisor() == IsSupervisor::NO) {
-        // TODO: kill the process (SEGFAULT)
-        panic();
-    }
-
-    // most likely nullptr write/read, doesn't matter if user/kernel
-    if (fault.address() < userspace_usable_base) {
-        // TODO: kill the process if fault.is_supervisor() == IsSupervisor::NO
-        panic();
-    }
-
     auto& self = the();
-    auto virtual_region = self.virtual_region_responsible_for_address(fault.address());
+    VR virtual_region;
 
-    // We don't know what this virtual address was supposed to be, so panic
-    if (!virtual_region) // TODO: kill the process if fault.is_supervisor() == IsSupervisor::NO
+    // userspace might've tried to fault on a valid kernel address, in which case we shouldn't look for it
+    if (fault.address() < MemoryManager::userspace_usable_ceiling || fault.is_supervisor() == IsSupervisor::YES)
+        virtual_region = self.virtual_region_responsible_for_address(fault.address());
+
+    if (!virtual_region) {
+        // Check if it's a page fault in safe_copy_memory etc.
+        if (registers.instruction_pointer() >= Address(&safe_operations_begin) && registers.instruction_pointer() < Address(&safe_operations_end)) {
+            MM_LOG << "Page fault during a safe operation";
+#ifdef ULTRA_64
+            registers.rip = registers.rbx;
+#elif defined(ULTRA_32)
+            registers.eip = registers.ebx;
+#endif
+            return;
+        }
+
         panic();
+    }
 
     auto aligned_address = Page::round_down(fault.address());
 
