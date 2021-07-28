@@ -16,7 +16,7 @@ NOINLINE bool safe_copy_memory(const void* source, void* destination, size_t byt
 NOINLINE size_t length_of_user_string(const void* string);
 
 // Copies up to max_length or up to the null byte to the dst from src.
-// Returns the pointer to the end of dst or nullptr if faulted.
-NOINLINE void* copy_until_null_or_n_from_user(const void* source, void* destination, size_t max_length);
+// Returns the number of bytes copied including the null byte, or 0 if faulted.
+NOINLINE size_t copy_until_null_or_n_from_user(const void* source, void* destination, size_t max_length);
 
 }

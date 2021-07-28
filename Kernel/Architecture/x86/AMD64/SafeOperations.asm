@@ -24,14 +24,12 @@ safe_copy_memory:
 
     rep movsb
 
-    ; success, we didn't fault
     mov rax, 1
-    pop rbx
-    ret
+    jmp .done
 
-    ; memory violation while copying :(
     .on_access_violation:
         mov rax, 0
+    .done:
         pop rbx
         ret
 
@@ -50,13 +48,12 @@ length_of_user_string:
 
     mov rax, 0xFFFFFFFFFFFFFFFF
     sub rax, rcx
-
-    pop rbx
-    ret
+    jmp .done
 
     .on_access_violation:
-        pop rbx
         mov rax, 0
+    .done:
+        pop rbx
         ret
 
 ; Copies up to max_length or up to the null byte to the dst from src.
@@ -68,6 +65,7 @@ copy_until_null_or_n_from_user:
     push rbx
 
     mov rbx, .on_access_violation
+    xor rax, rax
 
     .next:
         ; if (length == 0) return
@@ -80,6 +78,9 @@ copy_until_null_or_n_from_user:
         ; *dst = c
         mov [rsi], cl
 
+        ; bytes_copied++
+        inc rax
+
         ; if (c == '\0') return
         or cl, cl
         jz .done
@@ -91,12 +92,8 @@ copy_until_null_or_n_from_user:
 
         jmp .next
 
+    .on_access_violation:
+        mov rax, 0
     .done:
         pop rbx
-        mov rax, rsi
-        ret
-
-    .on_access_violation:
-        pop rbx
-        mov rax, 0
         ret

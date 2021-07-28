@@ -24,20 +24,16 @@ safe_copy_memory:
 
     rep movsb
 
-    pop ebx
-    pop edi
-    pop esi
-
-    ; success, we didn't fault
     mov eax, 1
-    ret
+    jmp .done
 
-    ; memory violation while copying :(
     .on_access_violation:
+        mov eax, 0
+    .done:
         pop ebx
         pop edi
         pop esi
-        mov eax, 0
+
         ret
 
 ; Returns string length including the null terminator, or 0 if faulted
@@ -58,18 +54,15 @@ length_of_user_string:
 
     mov eax, 0xFFFFFFFF
     sub eax, ecx
-
-    pop ebx
-    pop edi
-    pop ecx
-
-    ret
+    jmp .done
 
     .on_access_violation:
+        mov eax, 0
+    .done:
         pop ebx
         pop edi
         pop ecx
-        mov eax, 0
+
         ret
 
 ; Copies up to max_length or up to the null byte to the dst from src.
@@ -80,11 +73,13 @@ copy_until_null_or_n_from_user:
     ; preserve non-scratch
     push ebx
     push esi
+    push edi
 
     mov ebx, .on_access_violation
-    mov eax, [esp + 12]
-    mov esi, [esp + 16]
-    mov ecx, [esp + 20]
+    xor eax, eax
+    mov edi, [esp + 16]
+    mov esi, [esp + 20]
+    mov ecx, [esp + 24]
 
     .next:
         ; if (length == 0) return
@@ -92,29 +87,29 @@ copy_until_null_or_n_from_user:
         jz .done
 
         ; char c = *src
-        mov dl, byte [eax]
+        mov dl, byte [edi]
 
         ; *dst = c
         mov [esi], dl
+
+        ; bytes_copied++
+        inc eax
 
         ; if (c == \0) return
         or dl, dl
         jz .done
 
         ; src++, dst++, length--
-        inc eax
+        inc edi
         inc esi
         dec ecx
 
         jmp .next
 
-    .done:
-        pop esi
-        pop ebx
-        ret
-
     .on_access_violation:
+        mov eax, 0
+    .done:
+        pop edi
         pop esi
         pop ebx
-        mov eax, 0
         ret
