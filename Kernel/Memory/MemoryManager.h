@@ -153,6 +153,11 @@ public:
 
         return virtual_address - kernel_reserved_base;
     }
+
+    static bool is_potentially_valid_userspace_pointer(Address virtual_address)
+    {
+        return virtual_address >= userspace_usable_base && virtual_address < userspace_usable_ceiling;
+    }
 #elif defined(ULTRA_64)
     static constexpr Address physical_to_virtual(Address physical_address)
     {
@@ -167,6 +172,11 @@ public:
             return virtual_address - kernel_reserved_base;
         else
             return virtual_address - physical_memory_base;
+    }
+
+    static bool is_potentially_valid_userspace_pointer(Address virtual_address)
+    {
+        return virtual_address >= userspace_usable_base && virtual_address < userspace_usable_ceiling;
     }
 #endif
 
