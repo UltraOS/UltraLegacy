@@ -9,7 +9,7 @@ namespace kernel {
 
 struct ErrorCode {
 #define ERROR_CODE(name, value) name = value,
-    enum : u32 {
+    enum : ptr_t {
         ENUMERATE_ERROR_CODES
     } value { NO_ERROR };
 #undef ERROR_CODE
