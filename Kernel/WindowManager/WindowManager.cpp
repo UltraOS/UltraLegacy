@@ -4,6 +4,7 @@
 #include "Compositor.h"
 #include "EventManager.h"
 #include "Memory/MemoryManager.h"
+#include "Memory/SafeOperations.h"
 #include "Screen.h"
 #include "WindowManager.h"
 
@@ -35,7 +36,8 @@ ErrorCode WindowManager::dispatch_window_command(void* user_ptr)
     switch (command) {
     case WMCommand::CREATE_WINDOW: {
         WindowCreateCommand wc_command {};
-        copy_memory(user_ptr, &wc_command, sizeof(WindowCreateCommand));
+        if (!safe_copy_memory(user_ptr, &wc_command, sizeof(WindowCreateCommand)))
+            return ErrorCode::MEMORY_ACCESS_VIOLATION;
 
         auto* current_thread = Thread::current();
 
@@ -54,7 +56,8 @@ ErrorCode WindowManager::dispatch_window_command(void* user_ptr)
                         static_cast<SharedVirtualRegion&>(window->surface_region()),
                         AddressSpace::current());
 
-        Process::current().store_region(user_window_region);
+        auto& this_process = Process::current();
+        this_process.store_region(user_window_region);
 
         auto fb_address = user_window_region->virtual_range().begin();
 
@@ -75,13 +78,18 @@ ErrorCode WindowManager::dispatch_window_command(void* user_ptr)
 
         wc_command.framebuffer = fb_address.as_pointer<void>();
 
-        copy_memory(&wc_command, user_ptr, sizeof(WindowCreateCommand));
+        if (!safe_copy_memory(&wc_command, user_ptr, sizeof(WindowCreateCommand))) {
+            window->close();
+            current_thread->windows().remove(wc_command.window_id);
+            return ErrorCode::MEMORY_ACCESS_VIOLATION;
+        }
 
         return ErrorCode::NO_ERROR;
     }
     case WMCommand::DESTROY_WINDOW: {
         WindowDestroyCommand wd_command {};
-        copy_memory(user_ptr, &wd_command, sizeof(WindowDestroyCommand));
+        if (!safe_copy_memory(user_ptr, &wd_command, sizeof(WindowDestroyCommand)))
+            return ErrorCode::MEMORY_ACCESS_VIOLATION;
 
         auto* current_thread = Thread::current();
         auto& windows = current_thread->windows();
@@ -97,7 +105,8 @@ ErrorCode WindowManager::dispatch_window_command(void* user_ptr)
     }
     case WMCommand::POP_EVENT: {
         PopEventCommand pe_command {};
-        copy_memory(user_ptr, &pe_command, sizeof(PopEventCommand));
+        if (!safe_copy_memory(user_ptr, &pe_command, sizeof(PopEventCommand)))
+            return ErrorCode::MEMORY_ACCESS_VIOLATION;
 
         auto* current_thread = Thread::current();
         auto& windows = current_thread->windows();
@@ -107,12 +116,15 @@ ErrorCode WindowManager::dispatch_window_command(void* user_ptr)
             return ErrorCode::INVALID_ARGUMENT;
 
         pe_command.event = this_window->second->pop_event();
-        copy_memory(&pe_command, user_ptr, sizeof(PopEventCommand));
+        if (!safe_copy_memory(&pe_command, user_ptr, sizeof(PopEventCommand)))
+            return ErrorCode::MEMORY_ACCESS_VIOLATION;
+
         return ErrorCode::NO_ERROR;
     }
     case WMCommand::SET_TITLE: {
         SetTitleCommand st_command {};
-        copy_memory(user_ptr, &st_command, sizeof(SetTitleCommand));
+        if (!safe_copy_memory(user_ptr, &st_command, sizeof(SetTitleCommand)))
+            return ErrorCode::MEMORY_ACCESS_VIOLATION;
 
         auto* current_thread = Thread::current();
         auto& windows = current_thread->windows();
@@ -121,13 +133,24 @@ ErrorCode WindowManager::dispatch_window_command(void* user_ptr)
         if (this_window == windows.end())
             return ErrorCode::INVALID_ARGUMENT;
 
-        // FIXME: This is insanely unsafe :D
-        this_window->second->set_title(st_command.title);
+        char title_buffer[256];
+        size_t bytes = copy_until_null_or_n_from_user(st_command.title, title_buffer, 256);
+        StringView title_view;
+
+        if (bytes == 0)
+            return ErrorCode::MEMORY_ACCESS_VIOLATION;
+        else if (bytes == 1)
+            title_view = "Untitled"_sv;
+        else
+            title_view = StringView(title_buffer, bytes);
+
+        this_window->second->set_title(title_view);
         return ErrorCode::NO_ERROR;
     }
     case WMCommand::INVALIDATE_RECT: {
         InvalidateRectCommand ir_command {};
-        copy_memory(user_ptr, &ir_command, sizeof(InvalidateRectCommand));
+        if (!safe_copy_memory(user_ptr, &ir_command, sizeof(InvalidateRectCommand)))
+            return ErrorCode::MEMORY_ACCESS_VIOLATION;
 
         auto* current_thread = Thread::current();
         auto& windows = current_thread->windows();
