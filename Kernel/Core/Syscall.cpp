@@ -132,7 +132,6 @@ SYSCALL_IMPLEMENTATION(READ)
 
     if (!stream)
         return ErrorCode::INVALID_ARGUMENT;
-
     if (!MemoryManager::is_potentially_valid_userspace_pointer(ARG1))
         return ErrorCode::MEMORY_ACCESS_VIOLATION;
 

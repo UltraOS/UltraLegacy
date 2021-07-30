@@ -1,5 +1,6 @@
 #include "Pipe.h"
 #include "Memory/MemoryManager.h"
+#include "Memory/SafeOperations.h"
 
 namespace kernel {
 
@@ -60,11 +61,18 @@ ErrorOr<size_t> Pipe::read(void* buffer, size_t bytes)
     size_t final_bytes_read = bytes_to_read;
 
     u8* byte_buffer = reinterpret_cast<u8*>(buffer);
+    const auto initial_read_offset = m_state->read_offset;
+    const auto initial_buffer_size = m_state->size;
 
     while (bytes_to_read) {
         size_t this_read_bytes = min(bytes_to_read, m_state->capacity - m_state->read_offset);
         auto read_addr = Address(m_state->buffer->virtual_range().begin() + m_state->read_offset);
-        copy_memory(read_addr.as_pointer<void>(), byte_buffer, this_read_bytes);
+
+        if (!safe_copy_memory(read_addr.as_pointer<void>(), byte_buffer, this_read_bytes)) {
+            m_state->read_offset = initial_read_offset;
+            m_state->size = initial_buffer_size;
+            return ErrorCode::MEMORY_ACCESS_VIOLATION;
+        }
 
         bytes_to_read -= this_read_bytes;
         byte_buffer += this_read_bytes;
@@ -100,11 +108,19 @@ ErrorOr<size_t> Pipe::write(const void* buffer, size_t bytes)
     size_t final_write_size = byte_to_write;
 
     const u8* byte_buffer = reinterpret_cast<const u8*>(buffer);
+    const auto initial_write_offset = m_state->write_offset;
+    const auto initial_buffer_size = m_state->size;
 
     while (byte_to_write) {
         size_t this_write_bytes = min(byte_to_write, m_state->capacity - m_state->write_offset);
         auto write_addr = Address(m_state->buffer->virtual_range().begin() + m_state->write_offset);
-        copy_memory(byte_buffer, write_addr.as_pointer<void>(), this_write_bytes);
+
+        if (!safe_copy_memory(byte_buffer, write_addr.as_pointer<void>(), this_write_bytes)) {
+            m_state->write_offset = initial_write_offset;
+            m_state->size = initial_buffer_size;
+            return ErrorCode::MEMORY_ACCESS_VIOLATION;
+        }
+
         byte_to_write -= this_write_bytes;
         byte_buffer += this_write_bytes;
         m_state->write_offset += this_write_bytes;
