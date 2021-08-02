@@ -190,6 +190,12 @@ int fputc(int character, FILE* stream)
     return fwrite(&c, sizeof(c), 1, stream);
 }
 
+int fputs(const char* str, FILE* stream)
+{
+    size_t res = fwrite(str, sizeof(char), strlen(str), stream);
+    return res ? res : EOF;
+}
+
 int fclose(FILE* stream)
 {
     fflush(stream);

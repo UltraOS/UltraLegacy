@@ -25,6 +25,8 @@ typedef struct {
 extern FILE* stdin;
 extern FILE* stdout;
 extern FILE* stderr;
+
+#define EOF -1
 #endif
 
 FILE* fopen(const char* filename, const char* mode);
@@ -36,6 +38,7 @@ void rewind(FILE* stream);
 size_t fread(void* buffer, size_t size, size_t count, FILE* stream);
 size_t fwrite(const void* buffer, size_t size, size_t count, FILE* stream);
 int fputc(int character, FILE* stream);
+int fputs(const char* str, FILE* stream);
 
 int scanf(const char* format, ... );
 int fscanf(FILE* stream, const char* format, ...);
