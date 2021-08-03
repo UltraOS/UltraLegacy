@@ -48,15 +48,18 @@ void stdio_init()
 
 int puts(const char* str)
 {
-    fwrite(str, 1, strlen(str), stdout);
-    fwrite("\n", 1, 1, stdout);
-    return 0;
+    size_t res = fwrite(str, 1, strlen(str), stdout);
+    if (res == 0)
+        return EOF;
+
+    res = fwrite("\n", 1, 1, stdout);
+    return res ? res : EOF;
 }
 
 int putchar(int character)
 {
-    fwrite(&character, 1, 1, stdout);
-    return 0;
+    size_t res = fwrite(&character, 1, 1, stdout);
+    return res ? character : EOF;
 }
 
 // Has to be under define, otherwise ADL gets us
