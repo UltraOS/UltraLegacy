@@ -28,10 +28,11 @@ WindowManager::WindowManager()
 {
 }
 
-// FIXME: use safe_memcpy etc once we have it
 ErrorCode WindowManager::dispatch_window_command(void* user_ptr)
 {
-    auto command = *Address(user_ptr).as_pointer<WMCommand>();
+    WMCommand command;
+    if (!safe_copy_memory(user_ptr, &command, sizeof(command)))
+        return ErrorCode::MEMORY_ACCESS_VIOLATION;
 
     switch (command) {
     case WMCommand::CREATE_WINDOW: {
@@ -142,7 +143,7 @@ ErrorCode WindowManager::dispatch_window_command(void* user_ptr)
         else if (bytes == 1)
             title_view = "Untitled"_sv;
         else
-            title_view = StringView(title_buffer, bytes);
+            title_view = StringView(title_buffer, bytes - 1);
 
         this_window->second->set_title(title_view);
         return ErrorCode::NO_ERROR;
