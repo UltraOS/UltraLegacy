@@ -3,7 +3,9 @@
 #include "Common/String.h"
 #include "Shared/VirtualKey.h"
 
-enum class VK : uint8_t {
+namespace kernel {
+
+enum class VK : u8 {
 #define VIRTUAL_KEY(key, representation) key,
     ENUMERATE_VIRTUAL_KEYS
 #undef VIRTUAL_KEY
@@ -11,15 +13,13 @@ enum class VK : uint8_t {
 
 #define VK VK
 
-enum class VKState : uint8_t {
+enum class VKState : u8 {
 #define VK_STATE(state) state,
     ENUMERATE_VK_STATES
 #undef VK_STATE
 };
 
 #define VK_STATE VKState
-
-namespace kernel {
 
 inline StringView to_string(VK k)
 {
