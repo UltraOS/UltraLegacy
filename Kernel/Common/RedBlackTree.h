@@ -416,7 +416,7 @@ public:
     template <typename... Args>
     Pair<Iterator, bool> emplace(Args&&... args)
     {
-        auto value = ValueType(forward<Args>(args)...);
+        ValueType value(forward<Args>(args)...);
 
         if (!Traits::allow_duplicates) {
             auto* location = find_node(Traits::extract_key(value));
