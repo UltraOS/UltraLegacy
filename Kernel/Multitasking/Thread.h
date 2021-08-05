@@ -24,7 +24,6 @@ public:
         RUNNING,
         DEAD,
         BLOCKED,
-        SLEEPING,
         READY,
     };
 
@@ -117,17 +116,6 @@ public:
         return {};
     }
 
-    class WakeTimePtrComparator {
-    public:
-        bool operator()(const Thread* l, const Thread* r) const
-        {
-            ASSERT(l != nullptr);
-            ASSERT(r != nullptr);
-
-            return l->wakeup_time() < r->wakeup_time();
-        }
-    };
-
     // A bunch of operators to make RedBlackTree work with Thread
     friend bool operator<(const RefPtr<Thread>& l, const RefPtr<Thread>& r)
     {
@@ -151,12 +139,6 @@ private:
     Thread(Process& owner, RefPtr<VirtualRegion> kernel_stack, IsSupervisor);
 
     friend class Scheduler;
-    void sleep(u64 until)
-    {
-        m_wake_up_time = until;
-        request_state(State::SLEEPING);
-    }
-
     void block(Blocker* blocker)
     {
         ASSERT(m_blocker == nullptr);
@@ -172,10 +154,6 @@ private:
     bool interrupt();
     void exit() { m_should_die = true; }
 
-    void wake_up() { m_state = State::READY; }
-    [[nodiscard]] u64 wakeup_time() const { return m_wake_up_time; }
-
-    [[nodiscard]] bool is_sleeping() const { return m_state == State::SLEEPING; }
     [[nodiscard]] bool is_blocked() const { return m_state == State::BLOCKED; }
     [[nodiscard]] bool is_dead() const { return m_state == State::DEAD; }
     [[nodiscard]] bool is_running() const { return m_state == State::RUNNING; }
@@ -193,8 +171,6 @@ private:
             return "DEAD"_sv;
         case State::BLOCKED:
             return "BLOCKED"_sv;
-        case State::SLEEPING:
-            return "SLEEPING"_sv;
         case State::READY:
             return "READY"_sv;
         default:
@@ -204,8 +180,6 @@ private:
 
     void set_blocker(Blocker* blocker) { m_blocker = blocker; }
     Blocker* blocker() const { return m_blocker; }
-
-    bool should_be_woken_up() const { return m_wake_up_time <= Timer::nanoseconds_since_boot(); }
     // ---------------------------------------------------------------------------------------------------
 
 private:
@@ -219,8 +193,6 @@ private:
 
     State m_state { State::READY };
     IsSupervisor m_is_supervisor { IsSupervisor::NO };
-
-    u64 m_wake_up_time { 0 };
 
     Blocker* m_blocker { nullptr };
 

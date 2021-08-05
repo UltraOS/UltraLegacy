@@ -39,8 +39,9 @@ public:
     Stats stats() const;
 
 private:
-    // The 4 functions below assume s_queues_lock is held by the caller
+    // The 5 functions below assume s_queues_lock is held by the caller
     void wake_ready_threads();
+    void unblock_unchecked(Blocker&);
     Thread* pick_next_thread();
     void kill_current_thread();
     void free_deferred_threads();
@@ -55,7 +56,7 @@ private:
 private:
     Set<RefPtr<Process>, Less<>> m_processes; // sorted by pid
 
-    MultiSet<Thread*, Thread::WakeTimePtrComparator> m_sleeping_threads; // sorted by wake-up time
+    MultiSet<SleepBlocker*, SleepBlocker::WakeTimePtrComparator> m_sleeping_threads; // sorted by wake-up time
 
     List<Thread> m_deferred_deleted_dead_threads;
     List<Thread> m_ready_threads;
