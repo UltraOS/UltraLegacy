@@ -48,4 +48,15 @@ IOBlocker::IOBlocker(Thread &blocked_thread)
 {
 }
 
+SleepBlocker::SleepBlocker(Thread& blocked_thread, u64 wake_time)
+    : Blocker(blocked_thread, Type::SLEEP)
+    , m_wake_time(wake_time)
+{
+}
+
+bool SleepBlocker::should_be_woken_up() const
+{
+    return m_wake_time <= Timer::nanoseconds_since_boot();
+}
+
 }

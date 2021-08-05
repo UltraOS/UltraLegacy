@@ -14,6 +14,7 @@ public:
         MUTEX,
         IO,
         PROCESS_LOAD,
+        SLEEP
     };
 
     enum class Result : u32 {
@@ -67,6 +68,28 @@ public:
 class IOBlocker : public Blocker, public StandaloneListNode<IOBlocker> {
 public:
     IOBlocker(Thread& blocked_thread);
+};
+
+class SleepBlocker : public Blocker {
+public:
+    SleepBlocker(Thread& blocked_thread, u64 wake_time);
+
+    class WakeTimePtrComparator {
+    public:
+        bool operator()(const SleepBlocker* l, const SleepBlocker* r) const
+        {
+            ASSERT(l != nullptr);
+            ASSERT(r != nullptr);
+
+            return l->wakeup_time() < r->wakeup_time();
+        }
+    };
+
+    [[nodiscard]] u64 wakeup_time() const { return m_wake_time; }
+    [[nodiscard]] bool should_be_woken_up() const;
+
+private:
+    u64 m_wake_time { 0 };
 };
 
 }
