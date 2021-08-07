@@ -126,18 +126,12 @@ FILE* fopen(const char* filename, const char* mode)
             continue;
         case 'b':
             continue;
-        case 'x':
-            fail_if_exists = true;
-            continue;
         default:
             break;
         }
 
         break;
     }
-
-    // TODO: make a check
-    (void) fail_if_exists;
 
     long io_handle = open_file(filename, native_mode);
 
