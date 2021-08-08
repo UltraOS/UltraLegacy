@@ -17,7 +17,7 @@ macro(add_extra_files FILES)
     set(PORT_FILES_LIST "${PORT_FILES_LIST}" PARENT_SCOPE)
 endmacro()
 
-include(ports_list.txt)
+include(ports_list.txt OPTIONAL)
 
 string(REPLACE ";" " " PORT_FILES_LIST "${PORT_FILES_LIST}")
 string(REPLACE ";" " " PORT_EXECUTABLES "${PORT_EXECUTABLES}")
