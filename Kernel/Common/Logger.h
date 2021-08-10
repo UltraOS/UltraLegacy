@@ -142,9 +142,7 @@ private:
     }
 
 private:
-    static constexpr size_t bytes_per_log_record = CharactersPerRow + 1;
-
-    static_assert(bytes_per_log_record < 128, "Too many characters per row");
+    static_assert(CharactersPerRow < 128, "Too many characters per row");
     static_assert(CharactersPerRow != 0, "Invalid character count per row");
     static_assert(RowCapacity != 0, "Row capacity cannot be 0");
 
