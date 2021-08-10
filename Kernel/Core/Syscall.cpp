@@ -53,10 +53,16 @@ void Syscall::invoke(RegisterState& registers)
         RETVAL = res.value();
 }
 
-SYSCALL_IMPLEMENTATION(EXIT)
+SYSCALL_IMPLEMENTATION(EXIT_THREAD)
 {
     Thread::current()->set_invulnerable(false);
-    Scheduler::the().exit(ARG0);
+    Scheduler::the().exit_thread(static_cast<i32>(ARG0));
+}
+
+SYSCALL_IMPLEMENTATION(EXIT_PROCESS)
+{
+    Thread::current()->set_invulnerable(false);
+    Scheduler::the().exit_process(static_cast<i32>(ARG0));
 }
 
 static ErrorOr<StringView> copy_user_path(void* user_pointer, Span<char> kernel_buffer)
@@ -345,6 +351,9 @@ SYSCALL_IMPLEMENTATION(TICKS)
 
 SYSCALL_IMPLEMENTATION(DEBUG_LOG)
 {
+    if (!MemoryManager::is_potentially_valid_userspace_pointer(ARG0))
+        return ErrorCode::MEMORY_ACCESS_VIOLATION;
+
     char log_buffer[512];
     size_t bytes = copy_until_null_or_n_from_user(Address(ARG0).as_pointer<void>(), log_buffer, sizeof(log_buffer));
     if (bytes == 0)
