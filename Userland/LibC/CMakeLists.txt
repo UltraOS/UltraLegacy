@@ -43,7 +43,7 @@ add_custom_command(
 
 add_library(c STATIC ${C_FILES})
 target_include_directories(c PUBLIC "${USERLAND_PATH}" "${ROOT_PATH}" "${CMAKE_CURRENT_SOURCE_DIR}")
-target_link_libraries(c ultra)
+target_link_libraries(c)
 
 install(
     DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/.

@@ -13,7 +13,7 @@ namespace kernel {
     if (request->blocker)                            \
         request->blocker->unblock();                 \
     Thread::current()->set_invulnerable(false);      \
-    Scheduler::the().exit(static_cast<size_t>(code));
+    Scheduler::the().exit_process(static_cast<size_t>(code));
 
 void TaskLoader::do_load(LoadRequest* request)
 {

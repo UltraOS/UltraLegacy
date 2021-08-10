@@ -15,6 +15,12 @@ class Process {
     MAKE_NONMOVABLE(Process);
 
 public:
+    enum class State : u32 {
+        ALIVE,
+        EXITING,
+        EXITED
+    };
+
     static constexpr u32 main_thread_id = 0;
     static constexpr auto default_userland_stack_size = 4 * MB;
     static constexpr auto default_kernel_stack_size = 32 * KB;
@@ -31,7 +37,7 @@ public:
             AddressSpace* address_space,
             TaskLoader::LoadRequest*);
 
-    void create_thread(Address entrypoint, size_t stack_size = default_kernel_stack_size);
+    ErrorCode create_thread(Address entrypoint, size_t stack_size = default_kernel_stack_size);
 
     Set<RefPtr<Thread>, Less<>>& threads() { return m_threads; }
     Set<RefPtr<VirtualRegion>, Less<>>& virtual_regions() { return m_virtual_regions; }
@@ -46,8 +52,23 @@ public:
 
     [[nodiscard]] u32 id() const { return m_id; }
 
-    [[nodiscard]] const String& name() const { return m_name; }
+    void set_exit_code(u32 code) { m_exit_code = code; }
+    [[nodiscard]] u32 exit_code() const { return m_exit_code; }
 
+    bool exit(u32 code)
+    {
+        State expected = State::ALIVE;
+        bool did_set = m_state.compare_and_exchange(&expected, State::EXITING);
+
+        if (did_set)
+            m_exit_code = code;
+
+        return did_set;
+    }
+
+    [[nodiscard]] bool is_alive() const { return m_state == State::ALIVE; }
+    [[nodiscard]] State state() const { return m_state; }
+    [[nodiscard]] const String& name() const { return m_name; }
     [[nodiscard]] InterruptSafeSpinLock& lock() const { return m_lock; }
 
     static Process& current() { return CPU::current().current_process(); }
@@ -79,7 +100,14 @@ public:
 
     ~Process()
     {
-        ASSERT(m_released == true);
+        ASSERT(m_state == State::EXITED);
+    }
+
+    [[nodiscard]] u32 alive_thread_count() const { return m_alive_thread_count; }
+    u32 increment_alive_thread_count() { return ++m_alive_thread_count; }
+    u32 decrement_alive_thread_count() {
+        ASSERT(m_alive_thread_count != 0);
+        return --m_alive_thread_count;
     }
 
 private:
@@ -88,12 +116,13 @@ private:
     friend class TaskFinalizer;
     void mark_as_released()
     {
-        ASSERT(m_released == false);
-        m_released = true;
+        ASSERT(m_state == State::EXITING);
+        m_state = State::EXITED;
     }
 
 private:
     u32 m_id { 0 };
+    i32 m_exit_code { 0 };
 
     AddressSpace* m_address_space;
     Set<RefPtr<VirtualRegion>, Less<>> m_virtual_regions;
@@ -107,10 +136,10 @@ private:
 
     Atomic<u32> m_next_io_id { 10 };
     Atomic<u32> m_next_thread_id { main_thread_id };
+    Atomic<u32> m_alive_thread_count { 0 }; // not always equal to m_threads.size()
+    Atomic<State> m_state { State::ALIVE };
 
     mutable InterruptSafeSpinLock m_lock;
-
-    bool m_released { false };
 
     static Atomic<u32> s_next_process_id;
 };

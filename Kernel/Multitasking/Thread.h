@@ -133,6 +133,7 @@ public:
     }
 
     [[nodiscard]] u32 id() const { return m_id; }
+    [[nodiscard]] i32 exit_code() const { return m_exit_code; }
 
 private:
     Thread(Process& owner);
@@ -147,12 +148,19 @@ private:
         request_state(Thread::State::BLOCKED);
     }
 
+    void kill_all_threads_on_exit() { m_should_kill_all_threads = true; }
+    [[nodiscard]] bool should_kill_all_threads_on_exit() const { return m_should_kill_all_threads; }
+
     // NOTE: Important invariant
     // All member functions in the following block must only be called with Scheduler::s_queues_lock held.
     // ---------------------------------------------------------------------------------------------------
     void unblock();
     bool interrupt();
-    void exit() { m_should_die = true; }
+    void exit(i32 code)
+    {
+        m_should_die = true;
+        m_exit_code = code;
+    }
 
     [[nodiscard]] bool is_blocked() const { return m_state == State::BLOCKED; }
     [[nodiscard]] bool is_dead() const { return m_state == State::DEAD; }
@@ -184,6 +192,7 @@ private:
 
 private:
     u32 m_id { 0 };
+    i32 m_exit_code { 0 };
 
     Process& m_owner;
 
@@ -191,7 +200,7 @@ private:
 
     ControlBlock m_control_block { 0 };
 
-    State m_state { State::READY };
+    State m_state { State::UNDEFINED };
     IsSupervisor m_is_supervisor { IsSupervisor::NO };
 
     Blocker* m_blocker { nullptr };
@@ -201,6 +210,7 @@ private:
     Atomic<State> m_requested_state { State::UNDEFINED };
     Atomic<bool> m_should_die { false };
     bool m_is_invulnerable { false };
+    bool m_should_kill_all_threads { false };
 
     Atomic<u32> m_window_ids { 0 };
     Map<u32, RefPtr<Window>> m_windows;

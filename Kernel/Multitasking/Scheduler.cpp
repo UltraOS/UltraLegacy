@@ -48,13 +48,49 @@ void Scheduler::wake_ready_threads()
     }
 }
 
-void Scheduler::exit(size_t)
+void Scheduler::exit_thread(i32 code)
 {
     Interrupts::ScopedDisabler d;
 
-    Thread::current()->exit();
+    Thread::current()->exit(code);
 
-    // We don't even have to save state because this thread will never be ran again
+    // We don't even have to save state because this thread will never be run again
+    pick_next();
+}
+
+void Scheduler::exit_process(i32 code)
+{
+    Interrupts::ScopedDisabler d;
+
+    auto& current_thread = *Thread::current();
+
+    // We were the first to kill the process, no we get the right
+    // to kill all other threads on exit if they exist.
+    if (current_thread.owner().exit(code))
+        current_thread.kill_all_threads_on_exit();
+
+    current_thread.exit(code);
+
+    pick_next();
+}
+
+// TODO: allow the user to somehow handle the error?
+void Scheduler::crash(ErrorCode code)
+{
+    Interrupts::ScopedDisabler d;
+
+    auto& current_thread = *Thread::current();
+
+    // We were the first to kill the process, no we get the right
+    // to kill all other threads on exit if they exist.
+    if (current_thread.owner().exit(-code.value)) {
+        current_thread.kill_all_threads_on_exit();
+    }
+
+    // Force set the exit code to our error.
+    current_thread.exit(-code.value);
+    current_thread.owner().set_exit_code(current_thread.exit_code());
+
     pick_next();
 }
 
@@ -72,10 +108,19 @@ void Scheduler::kill_current_thread()
     auto* current_thread = Thread::current();
     current_thread->set_state(Thread::State::DEAD);
 
-    if (!current_thread->is_main()) {
+    auto& process = current_thread->owner();
+
+    // all we have to do is free the current thread
+    if (!current_thread->should_kill_all_threads_on_exit()) {
+        // For cases where last thread in the process calls exit_thread()
+        if (process.decrement_alive_thread_count() == 0)
+            process.exit(current_thread->exit_code());
+
         m_deferred_deleted_dead_threads.insert_back(*current_thread);
         return;
     }
+
+    // We are the process killer, so we have to kill all threads.
 
     auto remove_sleeping_blocker = [this](SleepBlocker* blocker) {
         auto lb = m_sleeping_threads.lower_bound(blocker);
@@ -89,33 +134,31 @@ void Scheduler::kill_current_thread()
         m_sleeping_threads.remove(lb);
     };
 
-    // Killing the main thread so we also have to kill every other thread
-    LOCK_GUARD(current_thread->owner().lock());
-    for (const auto& thread : current_thread->owner().threads()) {
+    LOCK_GUARD(process.lock());
+    for (const auto& thread : process.threads()) {
         if (thread.get() == current_thread) {
+            process.decrement_alive_thread_count();
             m_deferred_deleted_dead_threads.insert_back(*current_thread);
             continue;
         }
 
-        thread->exit();
+        // tell the thread it's time for it to die
+        thread->exit(0);
 
         if (thread->is_blocked()) {
             if (thread->blocker()->type() == Blocker::Type::SLEEP) {
+                process.decrement_alive_thread_count();
                 remove_sleeping_blocker(static_cast<SleepBlocker*>(thread->blocker()));
                 TaskFinalizer::the().free_thread(*thread);
-            } else if (thread->interrupt()) {
+            } else if (thread->interrupt()) { // allow thread to clean-up if needed before exiting
                 m_ready_threads.insert_back(*thread);
             }
         } else if (thread->is_ready()) {
+            process.decrement_alive_thread_count();
             thread->pop_off();
             TaskFinalizer::the().free_thread(*thread);
         } // else thread is currently running, kill once it gets preempted OR thread is already dead
     }
-}
-
-void Scheduler::crash()
-{
-    ASSERT(!"Scheduler::crash() is not yet implemented!");
 }
 
 void Scheduler::register_process(RefPtr<Process> process)
@@ -126,8 +169,11 @@ void Scheduler::register_process(RefPtr<Process> process)
 
     m_processes.emplace(process);
 
-    for (auto& thread : process->threads())
+    for (auto& thread : process->threads()) {
+        thread->set_state(Thread::State::READY);
+        process->increment_alive_thread_count();
         m_ready_threads.insert_back(*thread);
+    }
 }
 
 RefPtr<Process> Scheduler::unregister_process(u32 id)
@@ -143,12 +189,24 @@ RefPtr<Process> Scheduler::unregister_process(u32 id)
     return ref;
 }
 
-void Scheduler::register_thread(Thread& thread)
+bool Scheduler::register_thread(Thread& thread)
 {
     LOCK_GUARD(s_queues_lock);
 
+    // Tried to create a new thread for a dead process, kill it right away.
+    auto& process = thread.owner();
+    if (!process.is_alive()) {
+        thread.exit(0);
+        thread.set_state(Thread::State::DEAD);
+        TaskFinalizer::the().free_thread(thread);
+        return false;
+    }
+
     ASSERT(m_processes.contains(thread.owner().id()));
+    process.increment_alive_thread_count();
+    thread.set_state(Thread::State::READY);
     m_ready_threads.insert_back(thread);
+    return true;
 }
 
 void Scheduler::block(Blocker& blocker)
@@ -227,9 +285,9 @@ void Scheduler::pick_next()
 
     auto requested_state = current_thread->requested_state();
 
-    if (current_thread->should_die() && !current_thread->is_invulnerable())
+    if (current_thread->should_die() && !current_thread->is_invulnerable()) {
         kill_current_thread();
-    else if (requested_state != Thread::State::UNDEFINED) {
+    } else if (requested_state != Thread::State::UNDEFINED) {
         switch (requested_state) {
         case Thread::State::BLOCKED:
             if (current_thread->blocker()->should_block()) {

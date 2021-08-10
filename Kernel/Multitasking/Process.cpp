@@ -56,16 +56,15 @@ RefPtr<Process> Process::create_user(StringView name, AddressSpace* address_spac
     return process;
 }
 
-void Process::create_thread(Address entrypoint, size_t stack_size)
+ErrorCode Process::create_thread(Address entrypoint, size_t stack_size)
 {
     RefPtr<Thread> thread;
 
+    if (!is_alive())
+        return ErrorCode::ACCESS_DENIED;
+
     {
         LOCK_GUARD(m_lock);
-
-        // Trying to create a thread for a dead process
-        // TODO: add some sort of handling for this case
-        ASSERT(!m_threads.empty() && !m_threads.begin()->get()->is_dead());
 
         if (m_is_supervisor == IsSupervisor::YES) {
             String name = m_name;
@@ -79,7 +78,11 @@ void Process::create_thread(Address entrypoint, size_t stack_size)
         m_threads.emplace(thread);
     }
 
-    Scheduler::the().register_thread(*thread);
+    // We got killed while creating this thread :(
+    if (!Scheduler::the().register_thread(*thread))
+        return ErrorCode::ACCESS_DENIED;
+
+    return ErrorCode::NO_ERROR;
 }
 
 Process::Process(AddressSpace& address_space, IsSupervisor is_supervisor, StringView name)

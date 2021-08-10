@@ -24,13 +24,14 @@ public:
     void sleep(u64 wake_time);
     void block(Blocker&);
     void unblock(Blocker&);
-    [[noreturn]] void exit(size_t);
-    [[noreturn]] void crash();
+    [[noreturn]] void exit_thread(i32);
+    [[noreturn]] void exit_process(i32);
+    [[noreturn]] void crash(ErrorCode);
 
     void register_process(RefPtr<Process>);
     RefPtr<Process> unregister_process(u32 id);
 
-    void register_thread(Thread&);
+    bool register_thread(Thread&);
 
     struct Stats {
         DynamicArray<Pair<u32, StringView>> processor_to_task;

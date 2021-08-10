@@ -10,9 +10,14 @@ long create_thread(void* entrypoint, void* arg)
     syscall_2(SYSCALL_CREATE_THREAD, (long)entrypoint, (long)arg);
 }
 
-void process_exit(long code)
+void exit_process(long code)
 {
-    syscall_1(SYSCALL_EXIT, (long)code);
+    syscall_1(SYSCALL_EXIT_PROCESS, (long)code);
+}
+
+void exit_thread(long code)
+{
+    syscall_1(SYSCALL_EXIT_THREAD, (long)code);
 }
 
 void sleep(long nanoseconds)

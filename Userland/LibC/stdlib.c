@@ -21,7 +21,7 @@ long long llabs(long long n)
 
 void exit(int exit_code)
 {
-   process_exit(exit_code);
+   exit_process(exit_code);
 }
 
 int atoi(const char* str)
