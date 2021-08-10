@@ -339,6 +339,13 @@ void MemoryManager::handle_page_fault(RegisterState& registers, const PageFault&
             return;
         }
 
+        if (fault.is_supervisor() == IsSupervisor::NO) {
+            MM_DEBUG << "Userspace MEMORY_ACCESS_VIOLATION at " << fault.address()
+                     << " ip: " << format::as_hex << registers.instruction_pointer()
+                     << ", crashing the process";
+            Scheduler::the().crash(ErrorCode::MEMORY_ACCESS_VIOLATION);
+        }
+
         panic();
     }
 

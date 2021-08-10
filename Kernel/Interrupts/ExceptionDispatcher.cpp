@@ -8,6 +8,8 @@
 #include "ExceptionHandler.h"
 #include "PageFaultHandler.h"
 
+#include "Multitasking/Scheduler.h"
+
 #include "Memory/MemoryManager.h"
 
 namespace kernel {
@@ -36,6 +38,11 @@ void ExceptionDispatcher::handle_interrupt(RegisterState& registers)
         exception_number = 21; // security exception is 21st in the array
 
     if (m_handlers[exception_number] == nullptr) {
+        if ((registers.cs & 3) == 3) {
+            log() << "Userspace caused an exception " << s_exception_messages[exception_number] << ", crashing the process";
+            Scheduler::the().crash(ErrorCode::MEMORY_ACCESS_VIOLATION);
+        }
+
         String error_string;
 
         error_string << "An exception has occured: " << s_exception_messages[exception_number] << " ("
