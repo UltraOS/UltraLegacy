@@ -1037,6 +1037,8 @@ ErrorCode FAT32::close(BaseFile& file)
         // Ideally we should call flush on any cached file clusters,
         // but it might be too expensive to fetch all the file clusters
         // and completely unnecessary if file wasn't read/written for example.
+        delete open_file->ptr;
+        delete open_file;
         m_identifier_to_file.remove(it);
     } else {
         FAT32_DEBUG << "file \"" << f.name() << "\" still has " << open_file->refcount.load() << " reference(s)";
