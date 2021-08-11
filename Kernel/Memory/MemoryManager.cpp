@@ -940,6 +940,10 @@ void MemoryManager::free_address_space(AddressSpace& address_space)
 
     for (auto& page : address_space.owned_pages())
         free_page(page);
+
+    free_page(address_space.m_main_page);
+
+    delete &address_space;
 }
 
 String MemoryManager::kernel_virtual_regions_debug_dump()
