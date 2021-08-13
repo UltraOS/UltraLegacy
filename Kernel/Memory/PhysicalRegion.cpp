@@ -68,6 +68,9 @@ void PhysicalRegion::free_page(const Page& page)
 
     auto bit = physical_address_as_bit(page.address());
 
+    // check for double free
+    ASSERT(m_allocation_map.bit_at(bit));
+
     m_allocation_map.set_bit(bit, false);
     ++m_free_pages;
 }
