@@ -7,7 +7,8 @@ bin/
 Project/
 Scripts/vhc
 cmake-build-*/
-Ports/
+Ports/UltraDOOM
+Ports/ports_list.txt
 Root*/
 
 # Everything tests related
