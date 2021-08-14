@@ -37,8 +37,8 @@ public:
 
         File(StringView name, FileSystem& filesystem, Attributes attributes, const Identifier&, u32 first_data_cluster, u32 size);
 
-        size_t read(void* buffer, size_t offset, size_t size) override;
-        size_t write(const void* buffer, size_t offset, size_t size) override;
+        ErrorOr<size_t> read(void* buffer, size_t offset, size_t size) override;
+        ErrorOr<size_t> write(const void* buffer, size_t offset, size_t size) override;
         ErrorCode truncate(size_t size) override;
 
         void flush_meta_modifications();
@@ -215,8 +215,8 @@ private:
     u32 fat_entry_at(u32);
     void set_fat_entry_at(u32 index, u32 value);
 
-    void locked_read(u64 block_index, size_t offset, size_t bytes, void* buffer);
-    void locked_write(u64 block_index, size_t offset, size_t bytes, const void* buffer);
+    ErrorCode locked_read(u64 block_index, size_t offset, size_t bytes, void* buffer);
+    ErrorCode locked_write(u64 block_index, size_t offset, size_t bytes, const void* buffer);
     void locked_zero_fill(u64 block_index, size_t count);
 
     u32 nth_cluster_in_chain(u32 start, u32 n);

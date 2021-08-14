@@ -21,10 +21,11 @@ ErrorOr<size_t> FileIterator::read(void* buffer, size_t size)
     if (m_is_closed)
         return ErrorCode::STREAM_CLOSED;
 
-    auto read_bytes = m_file.read(buffer, m_offset, size);
-    m_offset += read_bytes;
+    auto read_bytes_or_error = m_file.read(buffer, m_offset, size);
+    if (!read_bytes_or_error.is_error())
+        m_offset += read_bytes_or_error.value();
 
-    return read_bytes;
+    return read_bytes_or_error;
 }
 
 ErrorOr<size_t> FileIterator::write(const void* buffer, size_t size)
@@ -34,10 +35,11 @@ ErrorOr<size_t> FileIterator::write(const void* buffer, size_t size)
     if (m_is_closed)
         return ErrorCode::STREAM_CLOSED;
 
-    auto written_bytes = m_file.write(buffer, m_offset, size);
-    m_offset += written_bytes;
+    auto written_bytes_or_error = m_file.write(buffer, m_offset, size);
+    if (!written_bytes_or_error.is_error())
+        m_offset += written_bytes_or_error.value();
 
-    return written_bytes;
+    return written_bytes_or_error;
 }
 
 ErrorOr<size_t> FileIterator::seek(size_t offset, SeekMode mode)

@@ -347,7 +347,7 @@ void AHCI::handle_port_irq(size_t port_index)
             // We're done here
             if (req->queued_ops.empty()) {
                 port.slot_to_request[bit] = nullptr;
-                req->request->complete();
+                req->request->complete(ErrorCode::NO_ERROR);
                 delete req;
 
                 // Lets check if we have any other queued requests

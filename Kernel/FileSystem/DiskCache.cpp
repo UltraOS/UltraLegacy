@@ -1,5 +1,6 @@
 #include "DiskCache.h"
 #include "Memory/MemoryManager.h"
+#include "Memory/SafeOperations.h"
 
 #define DC_DEBUG_MODE
 
@@ -144,7 +145,7 @@ DiskCache::CachedBlock* DiskCache::evict_one()
     return &block_to_evict;
 }
 
-void DiskCache::read_one(u64 block_index, size_t offset, size_t bytes, void* buffer)
+ErrorCode DiskCache::read_one(u64 block_index, size_t offset, size_t bytes, void* buffer)
 {
     ASSERT((offset + bytes) <= m_fs_block_size);
 
@@ -152,7 +153,7 @@ void DiskCache::read_one(u64 block_index, size_t offset, size_t bytes, void* buf
         auto full_offset = offset + block_index * m_fs_block_size;
         auto req = StorageDevice::RamdiskRequest::make_read(buffer, full_offset, bytes);
         m_device.submit_request(req);
-        return;
+        return req.result();
     }
 
     auto block_and_offset = cached_block(block_index);
@@ -161,10 +162,13 @@ void DiskCache::read_one(u64 block_index, size_t offset, size_t bytes, void* buf
     begin += block_and_offset.second;
     begin += offset;
 
-    copy_memory(begin.as_pointer<void>(), buffer, bytes);
+    if (!safe_copy_memory(begin.as_pointer<void>(), buffer, bytes))
+        return ErrorCode::MEMORY_ACCESS_VIOLATION;
+
+    return ErrorCode::NO_ERROR;
 }
 
-void DiskCache::write_one(u64 block_index, size_t offset, size_t bytes, const void* buffer)
+ErrorCode DiskCache::write_one(u64 block_index, size_t offset, size_t bytes, const void* buffer)
 {
     ASSERT((offset + bytes) <= m_fs_block_size);
 
@@ -172,7 +176,7 @@ void DiskCache::write_one(u64 block_index, size_t offset, size_t bytes, const vo
         auto full_offset = offset + block_index * m_fs_block_size;
         auto req = StorageDevice::RamdiskRequest::make_read(buffer, full_offset, bytes);
         m_device.submit_request(req);
-        return;
+        return req.result();
     }
 
     auto block_and_offset = cached_block(block_index);
@@ -181,8 +185,11 @@ void DiskCache::write_one(u64 block_index, size_t offset, size_t bytes, const vo
     begin += block_and_offset.second;
     begin += offset;
 
-    copy_memory(buffer, begin.as_pointer<void>(), bytes);
     block_and_offset.first->mark_dirty();
+    if (!safe_copy_memory(buffer, begin.as_pointer<void>(), bytes))
+        return ErrorCode::MEMORY_ACCESS_VIOLATION;
+
+    return ErrorCode::NO_ERROR;
 }
 
 void DiskCache::zero_fill_one(u64 block_index)

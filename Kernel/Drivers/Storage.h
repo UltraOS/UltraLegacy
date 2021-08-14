@@ -76,13 +76,21 @@ public:
         [[nodiscard]] OP op() const { return m_op; }
         [[nodiscard]] Type type() const { return m_type; }
         [[nodiscard]] Address virtual_address() const { return m_virtual_address; }
+        [[nodiscard]] ErrorCode result() const { return m_result; }
+
+        virtual void complete(ErrorCode) = 0;
+        virtual ErrorCode wait() = 0;
 
         ~Request() = default;
+
+    protected:
+        void set_result(ErrorCode code) { m_result = code; }
 
     private:
         Address m_virtual_address;
         OP m_op;
         Type m_type;
+        ErrorCode m_result { ErrorCode::NO_ERROR };
     };
 
     class AsyncRequest : public Request {
@@ -99,8 +107,8 @@ public:
             return { virtual_address, lba_range, OP::WRITE };
         }
 
-        void wait();
-        void complete();
+        ErrorCode wait() override;
+        void complete(ErrorCode) override;
 
         [[nodiscard]] LBARange lba_range() const { return m_lba_range; }
 
@@ -123,6 +131,9 @@ public:
         {
             return { virtual_address, byte_offset, byte_count, OP::WRITE };
         }
+
+        void complete(ErrorCode) override;
+        ErrorCode wait() override { return result(); }
 
         [[nodiscard]] size_t offset() const { return m_offset; }
         [[nodiscard]] size_t byte_count() const { return m_byte_count; }

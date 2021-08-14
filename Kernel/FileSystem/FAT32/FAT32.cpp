@@ -791,6 +791,8 @@ void FAT32::File::flush_meta_modifications()
         pure_cluster_value(m_identifier.file_directory_entry_cluster),
         m_identifier.file_directory_entry_offset_within_cluster,
         DirectoryEntry::size_in_bytes, &entry);
+
+    mark_clean();
 }
 
 u32 FAT32::nth_cluster_in_chain(u32 start, u32 n)
@@ -1391,7 +1393,7 @@ ErrorCode FAT32::create_file(StringView path, File::Attributes attributes)
     Directory dir(*this, *cur_file, false);
 
     auto [name_length, extension_length] = length_of_name_and_extension(new_file_name.to_view());
-    FAT32_LOG << "File " << new_file_name << " name length: " << name_length << " extension length: " << extension_length;
+    FAT32_DEBUG << "File " << new_file_name << " name length: " << name_length << " extension length: " << extension_length;
 
     bool is_vfat = name_length > short_name_length || extension_length > short_extension_length;
 

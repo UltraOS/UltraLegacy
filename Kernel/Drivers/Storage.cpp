@@ -16,18 +16,20 @@ StorageDevice::AsyncRequest::AsyncRequest(Address virtual_address, LBARange lba_
 {
 }
 
-void StorageDevice::AsyncRequest::wait()
+ErrorCode StorageDevice::AsyncRequest::wait()
 {
     if (m_is_completed)
-        return;
+        return result();
 
     m_blocker.block();
+    return result();
 }
 
-void StorageDevice::AsyncRequest::complete()
+void StorageDevice::AsyncRequest::complete(ErrorCode code)
 {
     ASSERT(!m_is_completed);
 
+    set_result(code);
     m_blocker.unblock();
     m_is_completed = true;
 }
@@ -37,6 +39,11 @@ StorageDevice::RamdiskRequest::RamdiskRequest(Address virtual_address, size_t by
     , m_offset(byte_offset)
     , m_byte_count(byte_count)
 {
+}
+
+void StorageDevice::RamdiskRequest::complete(ErrorCode code)
+{
+    set_result(code);
 }
 
 }
