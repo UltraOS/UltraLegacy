@@ -50,19 +50,23 @@ class DiskIOBlocker : public Blocker {
 public:
     DiskIOBlocker(Thread& blocked_thread);
 
-    virtual bool is_interruptable() { return false; }
+    bool is_interruptable() override { return false; }
 };
 
 class MutexBlocker : public Blocker, public StandaloneListNode<MutexBlocker> {
 public:
     MutexBlocker(Thread& blocked_thread);
+
+    // Technically it should be interruptable, but we would need to handle lock
+    // errors everywhere, and we just don't have that yet.
+    bool is_interruptable() override { return false; }
 };
 
 class ProcessLoadBlocker : public Blocker {
 public:
     ProcessLoadBlocker(Thread& blocked_thread);
 
-    virtual bool is_interruptable() { return false; }
+    bool is_interruptable() override { return false; }
 };
 
 class IOBlocker : public Blocker, public StandaloneListNode<IOBlocker> {
