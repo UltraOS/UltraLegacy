@@ -168,7 +168,8 @@ void DemoTTY::execute_command()
         auto stats_struct = MemoryManager::the().physical_stats();
 
         stats << "Total MB: " << stats_struct.total_bytes / MB;
-        stats << "\nUsed MB: " << (stats_struct.total_bytes - stats_struct.free_bytes) / MB << "\n";
+        auto diff = stats_struct.total_bytes - stats_struct.free_bytes;
+        stats << "\nUsed MB: " << (diff) / MB << " (" << diff / Page::size << " pages)\n";
 
         write(stats.to_view());
     } else if (m_current_command == "kheap"_sv) {
@@ -384,7 +385,10 @@ void DemoTTY::execute_command()
     } else if (m_current_command == "klog"_sv) {
         LOCK_GUARD(MemorySink::lock());
         write("\n");
-        write(MemorySink::data().to_view());
+        for (auto log_record : MemorySink::log_ring()) {
+            write(log_record);
+            write("\n");
+        }
         write("\n");
     } else if (m_current_command.empty()) {
         write("\n");
