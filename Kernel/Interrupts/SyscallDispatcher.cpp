@@ -3,6 +3,7 @@
 #include "Core/Syscall.h"
 
 #include "Multitasking/Thread.h"
+#include "Multitasking/Scheduler.h"
 
 #include "IDT.h"
 #include "SyscallDispatcher.h"
@@ -29,8 +30,22 @@ void SyscallDispatcher::handle_interrupt(RegisterState& registers)
     // Parameter passing order:
     // R/EAX -> syscall number
     // R/EBX, R/ECX, R/EDX -> syscall arguments, left -> right
+    // R/EAX -> return code, one of negated ErrorCode values
 
-    Thread::ScopedInvulnerability si;
+    auto& current_thread = *Thread::current();
+
+    // We got killed by someone while running.
+    // Yield so scheduler can deque & kill us.
+    if (current_thread.should_die() || !current_thread.owner().is_alive())
+        Scheduler::the().yield();
+
+    // Prevent us from dying while running a syscall.
+    current_thread.set_invulnerable(true);
     Syscall::invoke(registers);
+    current_thread.set_invulnerable(false);
+
+    // Got killed while executing the syscall.
+    if (current_thread.should_die() || !current_thread.owner().is_alive())
+        Scheduler::the().yield();
 }
 }
