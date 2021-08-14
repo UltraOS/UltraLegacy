@@ -1,9 +1,7 @@
-#define FailedAssertion(ignored1, ignored2, ignored3) "FIXME :)"
-#include "Common/Macros.h" // koenig lookup
-#include "Common/List.h"
-#undef FailedAssertion
-
 #include "TestRunner.h"
+
+#define TEST_ENVIRONMENT
+#include "Common/List.h"
 
 TEST(AppendFront) {
     using kernel::List;

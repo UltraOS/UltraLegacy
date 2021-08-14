@@ -4,8 +4,19 @@
 #include "Memory.h"
 #include "Traits.h"
 
+#ifdef TEST_ENVIRONMENT
+#include <utility>
+#include <algorithm>
+using std::swap;
+using std::move;
+using std::forward;
+using std::max;
+using std::min;
+#endif
+
 namespace kernel {
 
+#ifndef TEST_ENVIRONMENT
 template <typename T>
 T&& forward(remove_reference_t<T>& value)
 {
@@ -44,6 +55,7 @@ void swap(T& l, T& r)
     l = move(r);
     r = move(tmp);
 }
+#endif
 
 // clang-format off
 template <typename To, typename From>

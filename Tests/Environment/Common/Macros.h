@@ -10,11 +10,6 @@
 
 #define IS_BIT_SET(mask, x) ((mask)&SET_BIT(x))
 
-// Koenig lookup workaround
-#include "Utilities.h"
-#define move    ::kernel::move
-#define forward ::kernel::forward
-
 #define MAKE_NONCOPYABLE(class_name)        \
     class_name(const class_name&) = delete; \
     class_name& operator=(const class_name&) = delete;

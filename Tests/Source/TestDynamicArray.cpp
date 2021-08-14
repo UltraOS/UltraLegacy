@@ -1,8 +1,7 @@
-#define FailedAssertion(ignored1, ignored2, ignored3) "FIXME :)"
-#include "Common/DynamicArray.h"
-#undef FailedAssertion
-
 #include "TestRunner.h"
+
+#define TEST_ENVIRONMENT
+#include "Common/DynamicArray.h"
 
 TEST(TrivialEmplace) {
     kernel::DynamicArray<size_t> array;
@@ -54,7 +53,7 @@ TEST(MoveOwnership) {
         array.emplace("NON-SSO STRING " + std::to_string(i));
     }
 
-    array2 = kernel::move(array);
+    array2 = std::move(array);
 
     Assert::that(array.size()).is_equal(0);
     Assert::that(array2.size()).is_equal(test_size);
