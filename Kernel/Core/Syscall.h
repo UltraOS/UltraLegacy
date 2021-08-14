@@ -16,6 +16,20 @@ public:
 #undef SYSCALL
     };
 
+    static StringView name_of(size_t syscall)
+    {
+        if (syscall >= static_cast<size_t>(NumberOf::MAX))
+            return "INVALID"_sv;
+
+        switch (static_cast<NumberOf>(syscall)) {
+#define SYSCALL(name) case NumberOf::name: return #name ## _sv;
+            ENUMERATE_SYSCALLS
+#undef SYSCALL
+            default:
+                return "INVALID"_sv;
+        }
+    }
+
 #define SYSCALL(name) static ErrorOr<ptr_t> name(RegisterState&);
     ENUMERATE_SYSCALLS
 #undef SYSCALL

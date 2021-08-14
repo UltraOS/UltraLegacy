@@ -1,7 +1,8 @@
 #pragma once
 
 #define ENUMERATE_SYSCALLS  \
-    SYSCALL(EXIT)           \
+    SYSCALL(EXIT_THREAD)    \
+    SYSCALL(EXIT_PROCESS)   \
     SYSCALL(OPEN)           \
     SYSCALL(CLOSE)          \
     SYSCALL(READ)           \
