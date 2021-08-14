@@ -7,6 +7,7 @@
 #include "Conversions.h"
 #include "Lock.h"
 #include "String.h"
+#include "LogRing.h"
 #include "Traits.h"
 #include "Types.h"
 
@@ -36,128 +37,6 @@ public:
     void write(StringView string) override { Serial::write<Serial::Port::COM1>(string); }
 };
 
-template <size_t RowCapacity, size_t CharactersPerRow>
-class LogRing {
-public:
-    static constexpr size_t row_capacity() { return RowCapacity; }
-    static constexpr size_t characters_per_pow() { return CharactersPerRow; }
-
-    class Iterator
-    {
-    public:
-        Iterator(LogRing& ring, size_t read_offset, bool should_meet_ourselves = false)
-            : m_ring(ring)
-            , m_read_offset(read_offset)
-            , m_met_ourselves(!should_meet_ourselves)
-        {
-        }
-
-        StringView operator*()
-        {
-            ASSERT(m_read_offset != m_ring.m_current_record);
-
-            auto& log = m_ring.m_log_records[m_read_offset];
-            return { log.message, log.length };
-        }
-
-        Iterator& operator++()
-        {
-            if (++m_read_offset == m_ring.row_capacity())
-                m_read_offset = 0;
-
-            return *this;
-        }
-
-        bool operator!=(const Iterator& itr)
-        {
-            if (m_read_offset == itr.m_read_offset) {
-                if (m_met_ourselves)
-                    return false;
-
-                m_met_ourselves = true;
-                return true;
-            }
-
-            return m_read_offset != itr.m_read_offset;
-        }
-
-    private:
-        LogRing& m_ring;
-        u32 m_read_offset { 0 };
-        bool m_met_ourselves { false };
-    };
-
-    Iterator begin() { return { *this, m_earliest_record, m_buffer_full }; }
-    Iterator end() { return { *this, m_buffer_full ? m_earliest_record : m_current_record }; }
-
-    void write(StringView message)
-    {
-        for (char c : message)
-        {
-            auto* current_record = &m_log_records[m_current_record];
-
-            if (c == '\n') {
-                advance_log_record();
-                continue;
-            }
-
-            if (current_record->length == CharactersPerRow) {
-                advance_log_record();
-                current_record = &m_log_records[m_current_record];
-            }
-
-            if (m_current_record_untouched) {
-                if (m_current_record == RowCapacity - 1)
-                    m_buffer_full = true;
-
-                m_current_record_untouched = false;
-                current_record->length = 0;
-
-                advance_earliest_record_if_needed();
-            }
-
-            current_record->message[current_record->length++] = c;
-        }
-    }
-
-private:
-    void advance_log_record()
-    {
-        if (++m_current_record == RowCapacity)
-            m_current_record = 0;
-
-        m_current_record_untouched = true;
-    }
-
-    void advance_earliest_record_if_needed()
-    {
-        if (!m_buffer_full)
-            return;
-
-        if (m_current_record == m_earliest_record)
-            ++m_earliest_record;
-
-        if (m_earliest_record == RowCapacity)
-            m_earliest_record = 0;
-    }
-
-private:
-    static_assert(CharactersPerRow < 128, "Too many characters per row");
-    static_assert(CharactersPerRow != 0, "Invalid character count per row");
-    static_assert(RowCapacity != 0, "Row capacity cannot be 0");
-
-    struct LogRecord {
-        char message[CharactersPerRow];
-        u8 length;
-    };
-
-    LogRecord m_log_records[RowCapacity] {};
-    u32 m_earliest_record { 0 };
-    u32 m_current_record { 0 };
-    bool m_current_record_untouched { true };
-    bool m_buffer_full { false };
-};
-
 class MemorySink : public LogSink {
 public:
     // should be about 128 * 120, (16 pages) of memory
@@ -170,7 +49,11 @@ public:
         if (string.starts_with("[\33"_sv))
             return;
 
-        LOCK_GUARD(lock());
+        auto& wlock = lock();
+        if (wlock.is_deadlocked())
+            return;
+
+        LOCK_GUARD(wlock);
         s_ring.write(string);
     }
 
