@@ -46,33 +46,19 @@ public:
         u32 first_cluster() const { return m_first_cluster; }
         const Identifier& identifier() const { return m_identifier; }
 
-        u32 compute_last_cluster()
-        {
-            if (m_first_cluster == free_cluster)
-                return free_cluster;
-
-            if (!m_last_cluster)
-                m_last_cluster = fs_as_fat32().last_cluster_in_chain(m_first_cluster);
-
-            return m_last_cluster;
-        }
-
         void set_first_cluster(u32 first_cluster)
         {
             m_first_cluster = first_cluster;
             m_is_dirty = true;
         }
 
-        void set_last_cluster(u32 last_cluster)
-        {
-            m_is_dirty = true;
-            m_last_cluster = last_cluster;
-        }
-
         void set_size(size_t size)
         {
             m_is_dirty = true;
             m_size = size;
+
+            if (m_size == 0)
+                m_first_cluster = 0;
         }
 
         bool is_dirty() const { return m_is_dirty; }
@@ -83,10 +69,32 @@ public:
 
         FAT32& fs_as_fat32() { return static_cast<FAT32&>(fs()); }
 
+        void compute_contiguous_ranges();
+        u32 cluster_from_offset(u32);
+        u32 last_cluster();
+
     private:
+        struct ContiguousFileRange {
+            u32 file_offset_cluster;
+            u32 global_cluster;
+
+            friend bool operator<(u32 l, const ContiguousFileRange& r)
+            {
+                return l < r.file_offset_cluster;
+            }
+
+            friend bool operator<(const ContiguousFileRange& l, u32 r)
+            {
+                return l.file_offset_cluster < r;
+            }
+        };
+        // Sorted in ascending order by file_offset_cluster.
+        // Each range at i spans ([i].file_offset_cluster -> [i + 1].file_offset_cluster - 1) clusters
+        // For last i the end is the last cluster of the file (inclusive).
+        DynamicArray<ContiguousFileRange> m_contiguous_ranges;
+
         Identifier m_identifier {};
         u32 m_first_cluster { 0 };
-        u32 m_last_cluster { 0 };
         u32 m_size { 0 };
         bool m_is_dirty { false };
     };

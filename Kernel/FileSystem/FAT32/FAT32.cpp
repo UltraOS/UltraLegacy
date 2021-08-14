@@ -155,7 +155,7 @@ FAT32::Directory::Slot FAT32::Directory::allocate_entries(size_t count)
     FAT32_DEBUG << "allocating extra " << extra_to_allocate << " directory entries, aka "
                 << clusters_to_allocate << " cluster(s)";
 
-    auto chain = fs.allocate_cluster_chain(clusters_to_allocate, file_as_fat32().compute_last_cluster());
+    auto chain = fs.allocate_cluster_chain(clusters_to_allocate, file_as_fat32().last_cluster());
 
     // We have to zero the last cluster in chain because entry count is unaligned to size
     if (extra_bytes != (clusters_to_allocate * fs.bytes_per_cluster())) {
@@ -591,16 +591,16 @@ void FAT32::set_fat_entry_at(u32 index, u32 value)
     m_fat_cache->write_one(index, 0, sizeof(u32), &value);
 }
 
-void FAT32::locked_read(u64 block_index, size_t offset, size_t bytes, void* buffer)
+ErrorCode FAT32::locked_read(u64 block_index, size_t offset, size_t bytes, void* buffer)
 {
     LOCK_GUARD(m_data_lock);
-    m_data_cache->read_one(block_index, offset, bytes, buffer);
+    return m_data_cache->read_one(block_index, offset, bytes, buffer);
 }
 
-void FAT32::locked_write(u64 block_index, size_t offset, size_t bytes, const void* buffer)
+ErrorCode FAT32::locked_write(u64 block_index, size_t offset, size_t bytes, const void* buffer)
 {
     LOCK_GUARD(m_data_lock);
-    m_data_cache->write_one(block_index, offset, bytes, buffer);
+    return m_data_cache->write_one(block_index, offset, bytes, buffer);
 }
 
 void FAT32::locked_zero_fill(u64 block_index, size_t count)
@@ -620,7 +620,87 @@ FAT32::File::File(StringView name, FileSystem& filesystem, Attributes attributes
 {
 }
 
-size_t FAT32::File::read(void* buffer, size_t offset, size_t size)
+// this assumes fs.fat_cache_lock() and file.lock() is held
+void FAT32::File::compute_contiguous_ranges()
+{
+    ContiguousFileRange range {};
+    range.file_offset_cluster = 0;
+    range.global_cluster = m_first_cluster;
+
+    u32 current_file_offset = 1;
+    u32 current_cluster = m_first_cluster;
+
+    auto& fs = fs_as_fat32();
+
+    auto ts_begin = Timer::nanoseconds_since_boot();
+
+    // 32 bytes by default
+    m_contiguous_ranges.reserve(8);
+
+    for (;;) {
+        auto next_cluster = fs.fat_entry_at(current_cluster);
+
+        switch (fs.entry_type_of_fat_value(next_cluster)) {
+        case FATEntryType::END_OF_CHAIN: {
+            ASSERT(current_file_offset * fs.bytes_per_cluster() >= m_size);
+            m_contiguous_ranges.emplace(range);
+
+            auto ts_end = Timer::nanoseconds_since_boot();
+
+            FAT32_LOG << m_contiguous_ranges.size() << " contiguous cluster range(s) for file " << name()
+                      << ", scanned " << (m_size / KB) << "KB in " << ((ts_end - ts_begin) / Time::nanoseconds_in_millisecond) << " ms";
+            return;
+        }
+        case FATEntryType::LINK:
+            if (next_cluster == current_cluster + 1)
+                break;
+
+            m_contiguous_ranges.emplace(range);
+            range = { current_file_offset + 1, next_cluster };
+            break;
+        default:
+            ASSERT_NEVER_REACHED();
+        }
+
+        current_cluster = next_cluster;
+        current_file_offset++;
+    }
+}
+
+// file.lock() is assumed to be held
+u32 FAT32::File::cluster_from_offset(u32 offset)
+{
+    ASSERT(!m_contiguous_ranges.empty());
+    ASSERT(offset < ceiling_divide(m_size, fs_as_fat32().bytes_per_cluster()));
+
+    auto itr = lower_bound(m_contiguous_ranges.begin(), m_contiguous_ranges.end(), offset);
+
+    if (itr == m_contiguous_ranges.end())
+        --itr;
+    if (itr->file_offset_cluster > offset)
+        --itr;
+
+    auto global_cluster = itr->global_cluster + (offset - itr->file_offset_cluster);
+    ASSERT(fs_as_fat32().entry_type_of_fat_value(global_cluster) == FATEntryType::LINK);
+
+    return global_cluster;
+}
+
+// file.lock() is assumed to be held
+u32 FAT32::File::last_cluster()
+{
+    ASSERT(!m_contiguous_ranges.empty());
+    auto bytes_per_cluster = fs_as_fat32().bytes_per_cluster();
+    if (m_size < bytes_per_cluster)
+        return m_first_cluster;
+
+    auto& range = m_contiguous_ranges.last();
+
+    auto last_file_cluster_offset = ceiling_divide(m_size, bytes_per_cluster) - 1;
+    return range.global_cluster + (last_file_cluster_offset - range.file_offset_cluster);
+}
+
+ErrorOr<size_t> FAT32::File::read(void* buffer, size_t offset, size_t size)
 {
     LOCK_GUARD(lock());
 
@@ -628,6 +708,11 @@ size_t FAT32::File::read(void* buffer, size_t offset, size_t size)
         return 0;
 
     auto& fs = fs_as_fat32();
+
+    if (m_contiguous_ranges.empty()) {
+        LOCK_GUARD(fs.m_fat_cache_lock);
+        compute_contiguous_ranges();
+    }
 
     auto cluster_offset = offset / fs.bytes_per_cluster();
     auto offset_within_cluster = offset - (cluster_offset * fs.bytes_per_cluster());
@@ -639,30 +724,21 @@ size_t FAT32::File::read(void* buffer, size_t offset, size_t size)
     FAT32_DEBUG << "reading " << size << " bytes at offset " << offset << " into " << buffer
                 << " actual read size " << bytes_to_read;
 
-    u32 current_cluster = m_first_cluster;
-
-    auto safe_next_of = [&fs](u32 cluster) {
-        cluster = fs.locked_fat_entry_at(cluster);
-        ASSERT(fs.entry_type_of_fat_value(cluster) == FATEntryType::LINK);
-        return cluster;
-    };
-
-    while (cluster_offset--)
-        current_cluster = safe_next_of(current_cluster);
-
     u8* byte_buffer = reinterpret_cast<u8*>(buffer);
 
     for (;;) {
+        auto current_cluster = cluster_from_offset(cluster_offset++);
+
         auto bytes_to_read_for_this_cluster = min<size_t>(bytes_to_read, fs.bytes_per_cluster() - offset_within_cluster);
-        fs.locked_read(pure_cluster_value(current_cluster), offset_within_cluster, bytes_to_read_for_this_cluster, byte_buffer);
+        auto res = fs.locked_read(pure_cluster_value(current_cluster), offset_within_cluster, bytes_to_read_for_this_cluster, byte_buffer);
+        if (res)
+            return res;
+
         byte_buffer += bytes_to_read_for_this_cluster;
         bytes_to_read -= bytes_to_read_for_this_cluster;
 
-
         if (!bytes_to_read)
             break;
-
-        current_cluster = safe_next_of(current_cluster);
 
         offset_within_cluster = 0;
     }
@@ -670,7 +746,7 @@ size_t FAT32::File::read(void* buffer, size_t offset, size_t size)
     return bytes_read;
 }
 
-size_t FAT32::File::write(const void* buffer, size_t offset, size_t size)
+ErrorOr<size_t> FAT32::File::write(const void* buffer, size_t offset, size_t size)
 {
     if (size == 0)
         return 0;
@@ -678,6 +754,11 @@ size_t FAT32::File::write(const void* buffer, size_t offset, size_t size)
     auto& fs = fs_as_fat32();
 
     LOCK_GUARD(lock());
+
+    if (m_contiguous_ranges.empty()) {
+        LOCK_GUARD(fs.m_fat_cache_lock);
+        compute_contiguous_ranges();
+    }
 
     auto file_cluster_count = ceiling_divide<size_t>(m_size, fs.bytes_per_cluster());
     auto needed_cluster_count = ceiling_divide<size_t>(offset + size, fs.bytes_per_cluster());
@@ -703,7 +784,7 @@ size_t FAT32::File::write(const void* buffer, size_t offset, size_t size)
 
         FAT32_DEBUG << "total clusters to allocate is " << clusters_to_allocate << ", allocating...";
 
-        auto chain = fs.allocate_cluster_chain(clusters_to_allocate, compute_last_cluster());
+        auto chain = fs.allocate_cluster_chain(clusters_to_allocate, last_cluster());
 
         for (size_t i = 0; i < clusters_to_zero; ++i)
             fs.locked_zero_fill(pure_cluster_value(chain[i]), 1);
@@ -717,21 +798,29 @@ size_t FAT32::File::write(const void* buffer, size_t offset, size_t size)
             FAT32_DEBUG << "file " << name() << " was empty, setting first cluster to be " << chain.first();
             set_first_cluster(chain.first());
         }
-
-        set_last_cluster(chain.last());
     }
 
-    u32 first_cluster_to_write = fs.nth_cluster_in_chain(first_cluster(), offset_cluster_index);
-
-    FAT32_DEBUG << "first cluster to write is " << first_cluster_to_write;
-
     auto bytes_to_write = size;
-    auto current_cluster = first_cluster_to_write;
     auto* byte_buff = reinterpret_cast<const u8*>(buffer);
 
+    auto end_of_write = offset + size;
+    if (end_of_write > m_size) {
+        set_size(end_of_write);
+        flush_meta_modifications();
+
+        m_contiguous_ranges.clear();
+        {
+            LOCK_GUARD(fs.m_fat_cache_lock);
+            compute_contiguous_ranges();
+        }
+    }
+
     for (;;) {
+        auto current_cluster = cluster_from_offset(offset_cluster_index++);
         auto bytes_for_this_write = min(bytes_to_write, fs.bytes_per_cluster() - offset_within_cluster);
-        fs.locked_write(pure_cluster_value(current_cluster), offset_within_cluster, bytes_for_this_write, byte_buff);
+        auto res = fs.locked_write(pure_cluster_value(current_cluster), offset_within_cluster, bytes_for_this_write, byte_buff);
+        if (res)
+            return res;
 
         FAT32_DEBUG << "writing " << bytes_for_this_write << " out of " << bytes_to_write
                     << " cluster: " << current_cluster << " offset: " << offset_within_cluster;
@@ -742,15 +831,7 @@ size_t FAT32::File::write(const void* buffer, size_t offset, size_t size)
         if (bytes_to_write == 0)
             break;
 
-        current_cluster = fs.fat_entry_at(current_cluster);
-        ASSERT(fs.entry_type_of_fat_value(current_cluster) != FATEntryType::END_OF_CHAIN);
         offset_within_cluster = 0;
-    }
-
-    auto end_of_write = offset + size;
-    if (end_of_write > m_size) {
-        set_size(end_of_write);
-        flush_meta_modifications();
     }
 
     FAT32_DEBUG << "write finished, file size is " << m_size;
