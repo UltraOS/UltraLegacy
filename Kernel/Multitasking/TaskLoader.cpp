@@ -15,6 +15,8 @@ namespace kernel {
     Thread::current()->set_invulnerable(false);      \
     Scheduler::the().exit_process(static_cast<size_t>(code));
 
+// NOTE: This function is noreturn, so don't create any non-trivially destructible objects
+//       on the stack in the main scope, their destructors will never be called.
 void TaskLoader::do_load(LoadRequest* request)
 {
     Thread::current()->set_invulnerable(true);
@@ -83,48 +85,50 @@ void TaskLoader::do_load(LoadRequest* request)
         *current_sp.as_pointer<Address::underlying_pointer_type>() = addr;
     };
 
-    DynamicArray<Address> user_envp;
-    user_envp.reserve(request->envp.size());
+    {
+        DynamicArray<Address> user_envp;
+        user_envp.reserve(request->envp.size());
 
-    for (size_t i = request->envp.size(); i-- > 0;) {
-        push_str_on_the_stack(request->envp[i].to_view());
-        user_envp.emplace(current_sp);
+        for (size_t i = request->envp.size(); i-- > 0;) {
+            push_str_on_the_stack(request->envp[i].to_view());
+            user_envp.emplace(current_sp);
+        }
+
+        DynamicArray<Address> user_argv;
+        user_argv.reserve(request->argv.size());
+
+        for (size_t i = request->argv.size(); i-- > 0;) {
+            push_str_on_the_stack(request->argv[i].to_view());
+            user_argv.emplace(current_sp);
+        }
+
+        current_sp -= current_sp % 16;
+
+        static constexpr size_t words_per_16_bytes = 16 / sizeof(ptr_t);
+
+        // misalign stack to N to keep 16 byte alignment after push
+        auto remainder = (user_envp.size() + user_argv.size()) % words_per_16_bytes;
+        if (remainder)
+            current_sp -= (words_per_16_bytes - remainder) * sizeof(ptr_t);
+
+        // null aux vector entry
+        push_ptr_on_the_stack(nullptr);
+
+        // end of envp
+        push_ptr_on_the_stack(nullptr);
+
+        for (auto& addr : user_envp)
+            push_ptr_on_the_stack(addr);
+
+        // end of argv
+        push_ptr_on_the_stack(nullptr);
+
+        for (auto& addr : user_argv)
+            push_ptr_on_the_stack(addr);
+
+        // argc
+        push_ptr_on_the_stack(user_argv.size());
     }
-
-    DynamicArray<Address> user_argv;
-    user_argv.reserve(request->argv.size());
-
-    for (size_t i = request->argv.size(); i-- > 0;) {
-        push_str_on_the_stack(request->argv[i].to_view());
-        user_argv.emplace(current_sp);
-    }
-
-    current_sp -= current_sp % 16;
-
-    static constexpr size_t words_per_16_bytes = 16 / sizeof(ptr_t);
-
-    // misalign stack to N to keep 16 byte alignment after push
-    auto remainder = (user_envp.size() + user_argv.size()) % words_per_16_bytes;
-    if (remainder)
-        current_sp -= (words_per_16_bytes - remainder) * sizeof(ptr_t);
-
-    // null aux vector entry
-    push_ptr_on_the_stack(nullptr);
-
-    // end of envp
-    push_ptr_on_the_stack(nullptr);
-
-    for (auto& addr : user_envp)
-        push_ptr_on_the_stack(addr);
-
-    // end of argv
-    push_ptr_on_the_stack(nullptr);
-
-    for (auto& addr : user_argv)
-        push_ptr_on_the_stack(addr);
-
-    // argc
-    push_ptr_on_the_stack(user_argv.size());
 
     ASSERT((current_sp % 16) == 0);
 
