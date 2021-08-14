@@ -21,15 +21,20 @@ enum class SeekMode : u32 {
 #undef SEEK_MODE
 };
 
+inline bool is_io_mode_set(IOMode value, IOMode flag)
+{
+    return static_cast<u32>(value) & static_cast<u32>(flag);
+}
 
 // Behavior expected from the functions:
 // - read()
-// Non blocking, reads up to 'size' bytes to the buffer.
+// Must not block if reading is currently impossible, reads up to 'size' bytes to the buffer.
+// Can block if needed for the read operation, e.g fetching sectors from disk.
 //
 // - write()
-// Non blocking, either writes 'size' bytes or nothing, but is allowed to
-// write less bytes in case for example there isn't enough space left on disk
-// and the io stream is a FileIterator.
+// Must not block if writing is currently impossible. Either writes 'size' bytes or nothing,
+// but is allowed to write less bytes in case for example there isn't enough space left on disk
+// and the io stream is a FileIterator, in which case an error must be returned.
 //
 // - seek()
 // Sets the current read/write offset in the stream, if applicable.

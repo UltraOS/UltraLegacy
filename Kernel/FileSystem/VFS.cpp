@@ -165,11 +165,32 @@ ErrorOr<RefPtr<IOStream>> VFS::open(StringView path, IOMode mode)
     if (fs == m_prefix_to_fs.end())
         return ErrorCode::DISK_NOT_FOUND;
 
-    auto error_or_file = fs->second->open(prefix_to_path.second);
-    if (error_or_file.is_error())
-        return error_or_file.error();
+    File* file = nullptr;
 
-    return FileIterator::create(*error_or_file.value(), mode);
+    // Loop until we can either open or create the file (if IOMode::CREATE is set).
+    // Since there's no locking here file can get created and deleted multiple times until we can open it,
+    // with enough threads trying to open/delete the same file.
+    for (;;) {
+        auto error_or_file = fs->second->open(prefix_to_path.second);
+        if (!error_or_file.is_error()) {
+            file = error_or_file.value();
+            break;
+        }
+
+        if (error_or_file.error().value != ErrorCode::NO_SUCH_FILE || !is_io_mode_set(mode, IOMode::CREATE))
+            return error_or_file.error();
+
+        error_or_file = fs->second->create(prefix_to_path.second);
+        if (!error_or_file.is_error()) {
+            file = error_or_file.value();
+            break;
+        }
+
+        if (error_or_file.error().value != ErrorCode::FILE_ALREADY_EXISTS)
+            return error_or_file.error();
+    }
+
+    return FileIterator::create(*file, mode);
 }
 
 ErrorCode VFS::remove(StringView path)
