@@ -49,8 +49,7 @@ ErrorCode WindowManager::dispatch_window_command(void* user_ptr)
                 static_cast<ssize_t>(wc_command.height));
 
         auto window =  Window::create(*current_thread, window_rect, WindowManager::the().active_theme(), wc_command.title);
-
-        wc_command.window_id = current_thread->add_window(window);
+        wc_command.window_id = window->id();
 
         auto user_window_region =
                 MemoryManager::the().allocate_user_shared(
@@ -100,7 +99,6 @@ ErrorCode WindowManager::dispatch_window_command(void* user_ptr)
             return ErrorCode::INVALID_ARGUMENT;
 
         this_window->second->close();
-        windows.remove(this_window);
 
         return ErrorCode::NO_ERROR;
     }

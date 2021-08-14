@@ -86,7 +86,6 @@ void TaskFinalizer::do_free_thread(Thread& thread)
     while (!windows.empty()) {
         auto this_window = windows.begin();
         this_window->second->close();
-        windows.remove(this_window);
     }
 
     if (thread.fpu_state())
