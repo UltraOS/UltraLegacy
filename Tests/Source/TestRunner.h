@@ -354,11 +354,21 @@ public:
         }
 
         void is_less_than(const T& other) {
+            if (!(m_value < other))
+                throw FailedAssertion(serialize(m_value) + " >= " + serialize(other), m_file, m_line);
+        }
+
+        void is_less_than_or_equal(const T& other) {
             if (m_value > other)
                 throw FailedAssertion(serialize(m_value) + " > " + serialize(other), m_file, m_line);
         }
 
         void is_greater_than(const T& other) {
+            if (!(m_value > other))
+                throw FailedAssertion(serialize(m_value) + " <= " + serialize(other), m_file, m_line);
+        }
+
+        void is_greater_than_or_equal(const T& other) {
             if (m_value < other)
                 throw FailedAssertion(serialize(m_value) + " < " + serialize(other), m_file, m_line);
         }
