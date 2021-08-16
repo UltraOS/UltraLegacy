@@ -37,7 +37,7 @@ public:
     {
 #ifdef ULTRA_32
         u64 out_counter = 0;
-        u32 captured_update = s_time_update_sync_counter;
+        u32 captured_update = 0;
 
         do {
             captured_update = s_time_update_sync_counter;
