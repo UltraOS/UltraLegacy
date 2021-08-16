@@ -15,6 +15,7 @@ else ()
     set(CMAKE_ASM_NASM_FLAGS "-felf32 -DULTRA_32 -I${PROJECT_SOURCE_DIR}/Architecture/x86/ -I${PROJECT_SOURCE_DIR}/Architecture/x86/i386")
     add_definitions(-DULTRA_32)
     set(ARCH_FOLDER "x86/i386")
+    set(ADDITIONAL_FLAGS "-mgeneral-regs-only")
 endif ()
 
 # Don't set flags if we're building cmake purely for the sake of syntax highlighting,

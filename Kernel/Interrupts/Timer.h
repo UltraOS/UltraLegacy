@@ -33,7 +33,28 @@ public:
 
     virtual void calibrate_for_this_processor() { }
 
-    static u64 nanoseconds_since_boot() { return s_nanoseconds_since_boot; }
+    static u64 nanoseconds_since_boot()
+    {
+#ifdef ULTRA_32
+        u64 out_counter = 0;
+        u32 captured_update = s_time_update_sync_counter;
+
+        do {
+            captured_update = s_time_update_sync_counter;
+
+            while (captured_update & 1) {
+                captured_update = s_time_update_sync_counter;
+                continue;
+            }
+
+            out_counter = s_nanoseconds_since_boot;
+        } while (captured_update != s_time_update_sync_counter);
+
+        return out_counter;
+#elif defined(ULTRA_64)
+        return s_nanoseconds_since_boot;
+#endif
+    }
 
     virtual void set_frequency(u32 ticks_per_second) = 0;
 
@@ -66,7 +87,13 @@ private:
 private:
     InterruptSafeSpinLock m_timer_specific_lock;
 
+#ifdef ULTRA_32
+    static u64 s_nanoseconds_since_boot;
+    static Atomic<u32> s_time_update_sync_counter;
+#elif defined(ULTRA_64)
     static Atomic<u64> s_nanoseconds_since_boot;
+#endif
+
     static InterruptSafeSpinLock s_lock;
     static SchedulerEventHandler s_scheduler_handler;
     static DynamicArray<TransparentEventHandler> s_transparent_handlers;

@@ -8,7 +8,14 @@
 namespace kernel {
 
 InterruptSafeSpinLock Timer::s_lock;
+
+#ifdef ULTRA_32
+Atomic<u32> Timer::s_time_update_sync_counter;
+u64 Timer::s_nanoseconds_since_boot;
+#elif defined(ULTRA_64)
 Atomic<u64> Timer::s_nanoseconds_since_boot;
+#endif
+
 Timer::SchedulerEventHandler Timer::s_scheduler_handler;
 DynamicArray<Timer::TransparentEventHandler> Timer::s_transparent_handlers;
 
@@ -26,7 +33,13 @@ void Timer::on_tick(const RegisterState& register_state, bool is_bsp)
     if (is_bsp) {
         LOCK_GUARD(s_lock);
 
+#ifdef ULTRA_32
+        s_time_update_sync_counter++;
+#endif
         s_nanoseconds_since_boot += Time::nanoseconds_in_second / current_frequency();
+#ifdef ULTRA_32
+        s_time_update_sync_counter++;
+#endif
 
         for (auto handler : s_transparent_handlers)
             handler();
