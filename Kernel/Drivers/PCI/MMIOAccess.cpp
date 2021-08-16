@@ -150,22 +150,22 @@ void MMIOAccess::DeviceEnumerator::enumerate_function(u8 bus, u8 device, u8 func
     u8 device_class = read8(PCI::class_offset);
     u8 device_subclass = read8(PCI::subclass_offset);
 
+    auto& new_device = m_found_devices.emplace();
+    new_device.location = location;
+    new_device.device_id = read16(PCI::device_id_offset);
+    new_device.vendor_id = read16(PCI::vendor_id_offset);
+    new_device.class_code = device_class;
+    new_device.subclass_code = device_subclass;
+    new_device.programming_interface = read8(PCI::programming_interface_offset);
+    enumerate_capabilities(new_device);
+    log() << "PCIe: detected device " << new_device;
+
     if (device_class == PCI::bridge_device_class && device_subclass == PCI::pci_to_pci_bridge_subclass) {
         auto subordinate_bus = read8(PCI::subordinate_bus_offset);
         auto secondary_bus = read8(PCI::secondary_bus_offset);
         log() << "PCIe: detected secondary bus " << secondary_bus
               << ", managed range: [" << secondary_bus << " -> " << subordinate_bus << "]";
         enumerate_bus(secondary_bus);
-    } else {
-        auto& device = m_found_devices.emplace();
-        device.location = location;
-        device.device_id = read16(PCI::device_id_offset);
-        device.vendor_id = read16(PCI::vendor_id_offset);
-        device.class_code = device_class;
-        device.subclass_code = device_subclass;
-        device.programming_interface = read8(PCI::programming_interface_offset);
-        enumerate_capabilities(device);
-        log() << "PCIe: detected device " << device;
     }
 }
 
