@@ -11,29 +11,34 @@ void FPU::detect_features()
     auto id1 = CPU::ID(1);
     auto id7 = CPU::ID(7);
 
-    s_features.sse1 = IS_BIT_SET(id1.d, 25);
-    s_features.sse2 = IS_BIT_SET(id1.d, 26);
-    s_features.sse3 = IS_BIT_SET(id1.c, 0);
-    s_features.ssse3 = IS_BIT_SET(id1.c, 9);
-    s_features.sse4_1 = IS_BIT_SET(id1.c, 19);
-    s_features.sse4_2 = IS_BIT_SET(id1.c, 20);
-    s_features.avx = IS_BIT_SET(id1.c, 28);
-    s_features.fxsave = IS_BIT_SET(id1.d, 24);
-    s_features.xsave = IS_BIT_SET(id1.c, 26);
-    s_features.avx2 = IS_BIT_SET(id7.d, 26);
-    s_features.avx512 = IS_BIT_SET(id7.b, 16);
+    String supported_features;
+    supported_features.reserve(64);
 
-    log() << "SSE: " << s_features.sse1
-          << ", SSE2: " << s_features.sse2
-          << ", SSE3: " << s_features.sse3
-          << ", SSSE3: " << s_features.ssse3
-          << ", SSE4.1: " << s_features.sse4_1
-          << ", SSE4.2: " << s_features.sse4_2
-          << ", AVX: " << s_features.avx
-          << ", FXSAVE: " << s_features.fxsave
-          << ", XSAVE: " << s_features.xsave
-          << ", AVX2: " << s_features.avx2
-          << ", AVX512: " << s_features.avx512;
+    auto supported_if = [&supported_features](bool test, bool& out, StringView repr) {
+        if (!test)
+            return;
+
+        out = true;
+        supported_features += " "_sv;
+        supported_features += repr;
+    };
+
+    supported_if(IS_BIT_SET(id1.d, 25), s_features.sse1, "SSE"_sv);
+    supported_if(IS_BIT_SET(id1.d, 26), s_features.sse2, "SSE2"_sv);
+    supported_if(IS_BIT_SET(id1.c, 0), s_features.sse3, "SSE3"_sv);
+    supported_if(IS_BIT_SET(id1.c, 9), s_features.ssse3, "SSSE3"_sv);
+    supported_if(IS_BIT_SET(id1.c, 19), s_features.sse4_1, "SSE4.1"_sv);
+    supported_if(IS_BIT_SET(id1.c, 20), s_features.sse4_2, "SSE4.2"_sv);
+    supported_if(IS_BIT_SET(id1.c, 28), s_features.avx, "AVX");
+    supported_if(IS_BIT_SET(id1.d, 24), s_features.fxsave, "FXSAVE");
+    supported_if(IS_BIT_SET(id1.c, 26), s_features.xsave, "XSAVE");
+    supported_if(IS_BIT_SET(id7.d, 26), s_features.avx2, "AVX2");
+    supported_if(IS_BIT_SET(id7.b, 16), s_features.avx512, "AVX512");
+
+    if (supported_features.empty())
+        supported_features << "NONE";
+
+    log() << "FPU: supported extensions ->" << supported_features;
 
     if (s_features.xsave) {
         auto idd = CPU::ID(0xD);
