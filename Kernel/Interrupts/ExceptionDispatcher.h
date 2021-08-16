@@ -60,6 +60,6 @@ private:
 private:
     static ExceptionDispatcher* s_instance;
 
-    ExceptionHandler* m_handlers[exception_count];
+    ExceptionHandler* m_handlers[exception_count] {};
 };
 }
