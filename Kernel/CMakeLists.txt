@@ -49,6 +49,8 @@ FILE(GLOB CPP_FILES "${PROJECT_SOURCE_DIR}/*cpp"                  "${PROJECT_SOU
                     "${PROJECT_SOURCE_DIR}/Drivers/PS2/*cpp"      "${PROJECT_SOURCE_DIR}/Drivers/PS2/*h"
                     "${PROJECT_SOURCE_DIR}/Drivers/PCI/*cpp"      "${PROJECT_SOURCE_DIR}/Drivers/PCI/*h"
                     "${PROJECT_SOURCE_DIR}/Drivers/AHCI/*cpp"     "${PROJECT_SOURCE_DIR}/Drivers/AHCI/*h"
+                    "${PROJECT_SOURCE_DIR}/Drivers/USB/*cpp"      "${PROJECT_SOURCE_DIR}/Drivers/USB/*h"
+                    "${PROJECT_SOURCE_DIR}/Drivers/USB/XHCI/*cpp" "${PROJECT_SOURCE_DIR}/Drivers/USB/XHCI/*h"
                     "${PROJECT_SOURCE_DIR}/WindowManager/*cpp"    "${PROJECT_SOURCE_DIR}/WindowManager/*h"
                     "${PROJECT_SOURCE_DIR}/ACPI/*cpp"             "${PROJECT_SOURCE_DIR}/ACPI/*h"
                     "${PROJECT_SOURCE_DIR}/FileSystem/*cpp"       "${PROJECT_SOURCE_DIR}/FileSystem/*h"
