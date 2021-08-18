@@ -43,13 +43,12 @@ AHCI::AHCI(const PCI::DeviceInfo& info)
     , IRQHandler(IRQHandler::Type::MSI)
     , m_ports()
 {
-    enable_memory_space();
-    make_bus_master();
-    clear_interrupts_disabled();
-
     auto bar_5 = bar(5);
-    ASSERT(bar_5.type == BAR::Type::MEMORY);
+    ASSERT(bar_5.type == BAR::Type::MEMORY32);
     m_hba = TypedMapping<volatile HBA>::create("AHCI HBA"_sv, bar_5.address);
+
+    set_command_register(MemorySpaceMode::ENABLED, IOSpaceMode::UNTOUCHED, BusMasterMode::ENABLED);
+    clear_interrupts_disabled();
 
     // We have to enable AHCI before touching any AHCI registers
     enable_ahci();
@@ -653,7 +652,7 @@ List<AHCI::OP> AHCI::build_ops(size_t port, OP::Type op, Address virtual_address
     return ops;
 }
 
-void AHCI::execute(OP& op)
+void AHCI::execute(const OP& op)
 {
     AHCI_DEBUG << "executing op " << op.type_to_string() << " | lba range: "
                << op.lba_range << " | " << op.physical_ranges.size() << " physical range(s) | slot " << op.command_slot;

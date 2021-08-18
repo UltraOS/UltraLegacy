@@ -171,23 +171,62 @@ public:
         struct BAR {
             enum class Type {
                 IO,
-                MEMORY,
+                MEMORY32,
+                MEMORY64,
                 NOT_PRESENT
-            } type;
+            } type { Type::NOT_PRESENT };
 
-            Address address;
+            size_t span { 0 };
+#ifdef ULTRA_32
+            size_t span_upper { 0 };
+#endif
+
+            Address address { nullptr };
+#ifdef ULTRA_32
+            Address address_upper { nullptr };
+#endif
         };
 
         Device(const DeviceInfo&);
 
-        const DeviceInfo& pci_device_info() { return m_info; }
-        const Location& location() const { return m_info.location; }
+        [[nodiscard]] const DeviceInfo& pci_device_info() const { return m_info; }
+        [[nodiscard]] const Location& location() const { return m_info.location; }
 
         BAR bar(u8);
 
-        void make_bus_master();
-        void enable_memory_space();
-        void enable_io_space();
+#ifdef ULTRA_64
+        bool can_use_bar(const BAR&) { return true; }
+#elif defined(ULTRA_32)
+        bool can_use_bar(const BAR&);
+#endif
+
+        enum class MemorySpaceMode {
+            DISABLED,
+            ENABLED,
+            UNTOUCHED
+        };
+        enum class IOSpaceMode {
+            DISABLED,
+            ENABLED,
+            UNTOUCHED
+        };
+        enum class BusMasterMode {
+            DISABLED,
+            ENABLED,
+            UNTOUCHED
+        };
+        struct CommandRegister {
+            MemorySpaceMode memory_space;
+            IOSpaceMode io_space;
+            BusMasterMode bus_master;
+        };
+
+        // returns the original command register values
+        CommandRegister set_command_register(
+                MemorySpaceMode = MemorySpaceMode::UNTOUCHED,
+                IOSpaceMode = IOSpaceMode::UNTOUCHED,
+                BusMasterMode = BusMasterMode::UNTOUCHED);
+
         void enable_msi(u16 vector);
         void clear_interrupts_disabled();
 

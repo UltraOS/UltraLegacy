@@ -145,7 +145,7 @@ private:
     List<OP> build_ops(size_t port, OP::Type, Address virtual_address, LBARange, bool is_async);
     void synchronous_wait_for_command_completion(size_t port, size_t slot);
     void synchronous_execute(size_t port, List<OP>& ops);
-    void execute(OP&);
+    void execute(const OP&);
 
     template <typename T>
     size_t offset_of_port_structure(size_t index);

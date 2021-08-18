@@ -35,23 +35,22 @@ SVGAII::SVGAII(const PCI::DeviceInfo& info, const PCIIRQ& routing_info)
 
 void SVGAII::initialize()
 {
-    enable_memory_space();
-    make_bus_master();
+    set_command_register(MemorySpaceMode::ENABLED, IOSpaceMode::ENABLED, BusMasterMode::ENABLED);
 
     auto io_base = bar(0);
     ASSERT(io_base.type == BAR::Type::IO);
     m_io_base = io_base.address;
-    SVGAII_DEBUG << "IO base at " << format::as_hex << m_io_base;
+    SVGAII_DEBUG << "IO base at " << format::as_hex << m_io_base << ", spans " << io_base.span;
 
     auto fb_base = bar(1);
-    ASSERT(fb_base.type == BAR::Type::MEMORY);
+    ASSERT(fb_base.type == BAR::Type::MEMORY32);
     m_fb_base = fb_base.address;
-    SVGAII_DEBUG << "Framebuffer base at " << m_fb_base;
+    SVGAII_DEBUG << "Framebuffer base at " << m_fb_base << ", spans " << (fb_base.span / KB) << "KB";
 
     auto fifo_base = bar(2);
-    ASSERT(fifo_base.type = BAR::Type::MEMORY);
+    ASSERT(fifo_base.type = BAR::Type::MEMORY32);
     m_fifo_base = fifo_base.address;
-    SVGAII_DEBUG << "FIFO base at " << m_fifo_base;
+    SVGAII_DEBUG << "FIFO base at " << m_fifo_base << ", spans " << (fifo_base.span / KB) << "KB";
 
     negotiate_version();
 
