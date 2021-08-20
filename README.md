@@ -17,7 +17,7 @@ Panic screen
 - Window manager
 - WC cached framebuffer for fast rendering on real hardware
 - Multicore RR preemptive O(1) scheduler
-- PS/2 controller driver + keyboard & mouse
+- PS/2 controller driver with active multiplexing support + keyboard & mouse
 - AHCI driver with async request queue, as well as full controller initialization according
   to the specification. Confirmed to work on all emulators and many real computers.
 - FAT32 read/write/create/delete + full VFAT support.
