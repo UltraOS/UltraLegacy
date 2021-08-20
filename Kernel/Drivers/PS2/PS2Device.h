@@ -35,7 +35,14 @@ protected:
     {
         auto status = m_controller->status();
 
-        auto channel = status.data_from_port_2 ? PS2Controller::Channel::TWO : PS2Controller::Channel::ONE;
+        PS2Controller::Channel channel = PS2Controller::Channel::ONE;
+        if (status.data_from_port_2) {
+            if (controller().is_multiplexed()) {
+                channel = static_cast<PS2Controller::Channel>(static_cast<u8>(PS2Controller::Channel::AUX_ZERO) + status.source);
+            } else {
+                channel = PS2Controller::Channel::TWO;
+            }
+        }
 
         return status.output_full && (channel == m_channel);
     }

@@ -59,10 +59,8 @@ void IRQManager::handle_interrupt(RegisterState& registers)
     auto& handlers = m_vec_to_handlers[vec];
     ASSERT(!handlers.empty());
 
-    for (auto& handler : handlers) {
-        if (handler.handle_irq(registers))
-            break;
-    }
+    for (auto& handler : handlers)
+        handler.handle_irq(registers);
 
     // We pass the legacy number because only PIC requires the irq number
     // to send an EOI, and if we're using PIC we're definitely not using

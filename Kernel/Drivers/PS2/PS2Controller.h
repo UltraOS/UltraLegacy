@@ -53,15 +53,14 @@ public:
         bool unused_2 : 1;
     };
 
-    struct Status {
+    struct PACKED Status {
         bool output_full : 1;
         bool input_full : 1;
         bool system_flag : 1;
         bool controller_data : 1;
         bool unknown_1 : 1;
         bool data_from_port_2 : 1;
-        bool timeout_error : 1;
-        bool parity_error : 1;
+        u8 source : 2; // only multiplexed mode
     };
 
     static_assert(sizeof(Configuration) == 1);
@@ -71,9 +70,16 @@ public:
 
     static void detect() { (new PS2Controller())->discover_all_devices(); }
 
-    static constexpr StringView type = "PS2 Controller"_sv;
+    static constexpr StringView type = "PS/2 Controller"_sv;
     [[nodiscard]] StringView device_type() const override { return type; }
-    [[nodiscard]] StringView device_model() const override { return "8042 PS2 Controller"_sv; }
+
+    [[nodiscard]] StringView device_model() const override
+    {
+        if (is_multiplexed())
+            return "Synaptics Multiplexed PS/2 controller";
+
+        return "8042 PS/2 Controller"_sv;
+    }
 
     void send_command(Command);
     static void flush();
@@ -85,8 +91,40 @@ public:
 
     enum class Channel {
         ONE = 1,
-        TWO = 2
+
+        // these are actually the respective routing prefix values
+        TWO = 0xD4,
+        AUX_ZERO = 0x90,
+        AUX_ONE = 0x91,
+        AUX_TWO = 0x92,
+        AUX_THREE = 0x93
     };
+
+    friend Channel& operator+=(Channel& c, size_t val)
+    {
+        c = static_cast<Channel>(static_cast<u8>(c) + val);
+        return c;
+    }
+
+    StringView to_string(Channel c)
+    {
+        switch (c) {
+        case Channel::ONE:
+            return "1"_sv;
+        case Channel::TWO:
+            return "2"_sv;
+        case Channel::AUX_ZERO:
+            return "AUX 0"_sv;
+        case Channel::AUX_ONE:
+            return "AUX 1"_sv;
+        case Channel::AUX_TWO:
+            return "AUX 2"_sv;
+        case Channel::AUX_THREE:
+            return "AUX 3"_sv;
+        default:
+            return "Invalid channel";
+        }
+    }
 
     void send_command_to_device(Channel, DeviceCommand, bool should_expect_ack = true);
     void send_command_to_device(Channel, u8, bool should_expect_ack = true);
@@ -123,6 +161,10 @@ public:
     DeviceIdentification identify_device(Channel);
 
     bool test_port(Channel);
+    void enable(Channel);
+    void disable(Channel);
+
+    [[nodiscard]] bool is_multiplexed() const { return m_multiplexed_mode; }
 
 private:
     void discover_all_devices();
@@ -131,5 +173,6 @@ private:
 
 private:
     bool m_last_read_timeout { false };
+    bool m_multiplexed_mode { false };
 };
 }

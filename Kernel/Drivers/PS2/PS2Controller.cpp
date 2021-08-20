@@ -1,6 +1,18 @@
 #include "PS2Controller.h"
 #include "PS2Keyboard.h"
 #include "PS2Mouse.h"
+#include "Core/RepeatUntil.h"
+
+#define PS2_LOG log("PS2Controller")
+#define PS2_WARN warning("PS2Controller")
+
+#define PS2_DEBUG_MODE
+
+#ifdef PS2_DEBUG_MODE
+#define PS2_DEBUG log("PS2Controller")
+#else
+#define PS2_DEBUG DummyLogger()
+#endif
 
 namespace kernel {
 
@@ -66,24 +78,85 @@ void PS2Controller::discover_all_devices()
     bool device_1_present = false;
     bool device_2_present = false;
 
-    // Initialize all available devices
-    if (port1_passed)
-        device_1_present = initialize_device_if_present(Channel::ONE);
+    // Attempt to detect multiplexing capability
+    if (port1_passed && port2_passed) {
+        write<command_port>(0xD3);
+        write<data_port>(0xF0);
+        read_data();
 
-    if (port2_passed)
-        device_2_present = initialize_device_if_present(Channel::TWO);
+        write<command_port>(0xD3);
+        write<data_port>(0x56);
+        read_data();
 
-    if (!port1_passed && !port2_passed) {
-        runtime::panic("PS2Controller: All ports failed self test!");
+        write<command_port>(0xD3);
+        write<data_port>(0xA4);
+        u8 version_byte = read_data();
+
+        if (version_byte == 0xA4) {
+           PS2_LOG << "no multiplexing capabilities detected";
+        } else {
+            m_multiplexed_mode = true;
+
+            u8 major = (version_byte & 0xF0) >> 4;
+            u8 minor = version_byte & 0x0F;
+
+            PS2_LOG << "multiplexing mode enabled, version " << major << "." << minor;
+        }
     }
 
-    // This has to be done here and not in the device constructors
-    // becase some firmware might send an IRQ for commands requesting data
-    // and we don't want that to happen.
-    if (device_1_present)
+    // Make sure all ports are disabled to avoid race conditions
+    if (is_multiplexed()) {
+        auto channel = Channel::AUX_ZERO;
+        while (channel <= Channel::AUX_THREE) {
+            disable(channel);
+            channel += 1;
+        }
+        flush();
+    }
+
+    // Initialize all available devices
+    if (port1_passed)
+        device_1_present |= initialize_device_if_present(Channel::ONE);
+
+    bool aux_present[4] {};
+
+    if (port2_passed) {
+        if (m_multiplexed_mode) {
+            auto channel = Channel::AUX_ZERO;
+            size_t aux_offset = 0;
+            while (channel <= Channel::AUX_THREE) {
+                bool did_initialize = initialize_device_if_present(channel);
+                device_2_present |= did_initialize;
+                aux_present[aux_offset++] = did_initialize;
+                channel += 1;
+            }
+        } else {
+            device_2_present |= initialize_device_if_present(Channel::TWO);
+        }
+    }
+
+    if (!port1_passed && !port2_passed)
+        runtime::panic("PS2Controller: All ports failed self test!");
+
+    if (device_1_present) {
+        enable(Channel::ONE);
         send_command_to_device(Channel::ONE, DeviceCommand::ENABLE_SCANNING);
-    if (device_2_present)
+    }
+
+    if (is_multiplexed()) {
+        auto channel = Channel::AUX_ZERO;
+
+        for (size_t i = 0; i < 4; ++i, channel += 1) {
+            if (!aux_present[i])
+                continue;
+
+            enable(channel);
+            send_command_to_device(channel, DeviceCommand::ENABLE_SCANNING);
+        }
+    } else if (device_2_present) {
+        enable(Channel::TWO);
         send_command_to_device(Channel::TWO, DeviceCommand::ENABLE_SCANNING);
+    }
 
     // TODO: if for whatever reason keyboard ends up on port 2
     // we have to set scancode set 1 for it manually, or just support set 2
@@ -108,123 +181,193 @@ bool PS2Controller::test_port(Channel on_channel)
     send_command(test_command);
     u8 result = read_data();
 
-    if (result != port_test_passed) {
-        warning() << "PS2Controller: port " << static_cast<u8>(on_channel)
-                  << " failed self test, expected: 0x00 received: " << format::as_hex << result;
-    }
+    if (result != port_test_passed)
+        PS2_WARN << "port " << to_string(on_channel) << " failed self test, expected: 0x00 received: " << format::as_hex << result;
 
     return result == port_test_passed;
 }
 
-bool PS2Controller::initialize_device_if_present(Channel channel)
+void PS2Controller::enable(Channel channel)
 {
     auto enable_port = channel == Channel::ONE ? Command::ENABLE_PORT_1 : Command::ENABLE_PORT_2;
 
+    if (channel != Channel::ONE && is_multiplexed())
+        send_command(static_cast<Command>(channel));
+
     send_command(enable_port);
+    flush();
+}
+
+void PS2Controller::disable(Channel channel)
+{
+    // Disable the port until we initialize all devices
+    auto disable_port = channel == Channel::ONE ? Command::DISABLE_PORT_1 : Command::DISABLE_PORT_2;
+
+    if (channel != Channel::ONE && is_multiplexed())
+        send_command(static_cast<Command>(channel));
+
+    send_command(disable_port);
+    flush();
+}
+
+bool PS2Controller::initialize_device_if_present(Channel channel)
+{
+    enable(channel);
+
+    // Disable scanning so that we avoid any race conditions with user spamming buttons
+    // while we're trying to initialize the device. If there's no device on this port
+    // it will simply timeout.
+    send_command_to_device(channel, DeviceCommand::DISABLE_SCANNING, false);
+    for (;;) {
+        repeat_until(
+                [] () -> bool
+                {
+                    return status().output_full;
+                }, 30);
+        auto data = read_data(true, 100);
+        if (did_last_read_timeout() || data == resend_command)
+            break;
+        if (data != command_ack)
+            PS2_WARN << "got garbage instead of ACK -> " << format::as_hex << data << ", ignored";
+    }
+    flush();
 
     if (!reset_device(channel)) {
-        log() << "PS2Controller: Port " << static_cast<u8>(channel) << " doesn't have a device attached";
+        disable(channel);
         return false;
     }
 
+    send_command_to_device(channel, DeviceCommand::DISABLE_SCANNING);
     auto device = identify_device(channel);
 
     if (device.is_keyboard()) {
-        log() << "Detected a keyboard on channel " << static_cast<u8>(channel);
+        PS2_LOG << "Detected a keyboard on channel " << to_string(channel);
         (new PS2Keyboard(this, channel))->make_child_of(this);
     } else if (device.is_mouse()) {
-        log() << "Detected a mouse on channel " << static_cast<u8>(channel);
+        PS2_LOG << "Detected a mouse on channel " << to_string(channel);
         (new PS2Mouse(this, channel))->make_child_of(this);
     }
+
+    disable(channel);
 
     return true;
 }
 
 bool PS2Controller::reset_device(Channel channel)
 {
-    // This command takes a ton of time on real hw (and apparently on VirtualBox too)
-    // therefore we cannot afford a smaller delay in read_data()
-    // I have one laptop where this is the minimum safe delay for channel 1 reset
-    // This is a bit ridiculous tho, but I don't know a better way of doing this :(
-    static constexpr size_t reset_max_attempts = 1'000'000;
-
     send_command_to_device(channel, DeviceCommand::RESET, false);
 
-    // TODO: this doesn't handle the case where the device might ask to resend the data (0xFE)
-    size_t response_bytes = 0;
-    u8 device_response[3] {};
+    WaitResult wait_res {};
 
-    device_response[0] = read_data(true, reset_max_attempts);
-    response_bytes += !did_last_read_timeout();
+    for (;;) {
+        wait_res = repeat_until(
+                [] () -> bool
+                {
+                    return status().output_full;
+                }, 30);
 
-    device_response[1] = read_data(true, reset_max_attempts);
-    response_bytes += !did_last_read_timeout();
-
-    // Mouse responds with ack-pass-id while keyboard just does ack-pass
-    // So lets account for that while also allowing the possibility of keyboard being channel 2
-    // (250 might be too little for real hw tho, so might have to tweak it later)
-    device_response[2] = read_data(true, channel == Channel::TWO ? reset_max_attempts : 250);
-    response_bytes += !did_last_read_timeout();
-
-    bool did_get_ack = false;
-    bool did_get_pass = false;
-    bool did_fail = false;
-
-    // These come in absolutely random order everywhere
-    // For example on QEMU I get ack-pass-id and on my laptop I get ack-id-pass
-    for (size_t i = 0; i < response_bytes; ++i) {
-        if (device_response[i] == command_ack)
-            did_get_ack = true;
-        else if (device_response[i] == self_test_passed)
-            did_get_pass = true;
-        else if (device_response[i] == reset_failure) {
-            did_fail = true;
-            break;
+        if (!wait_res.success) {
+            PS2_LOG << "no device on channel " << to_string(channel);
+            return false;
         }
+
+        auto ack_or_resend = read_data(true, 2500);
+        if (ack_or_resend == resend_command) {
+            PS2_LOG << "reset returned 0xFE for channel " << to_string(channel)
+                    << ", assuming timeout reached and no device present";
+            return false;
+        }
+
+        if (ack_or_resend == command_ack)
+            break;
+
+        PS2_WARN << "garbage byte instead of ACK - " << format::as_hex << ack_or_resend << ", ignored";
     }
 
-    if (did_get_ack && did_get_pass) {
-        return true;
-    } else if (did_fail) {
-        warning() << "PS2Controller: Device " << static_cast<u8>(channel) << " reset failure";
-        return false;
-    } else {
-        if (response_bytes != 0) {
-            String error_string;
-            error_string << "PS2Controller: Device " << static_cast<u8>(channel)
-                         << " is present but responded with unknown sequence -> "
-                         << format::as_hex << device_response[0]
-                         << '-' << device_response[1] << '-' << device_response[2]
-                         << format::as_dec << " (" << response_bytes << " bytes)";
-            runtime::panic(error_string.data());
+    // Allow about 2 seconds for the reset to complete.
+    // From Synaptics touchpads guide:
+    // "Power-on self-test and calibration normally takes 300–1000 ms. Self-test and calibration following a
+    //  software Reset command normally takes 300–500 ms. In most Synaptics TouchPads, the delays are
+    //  nominally 750 ms and 350 ms, respectively."
+    // According to what I've seen this usually takes about half a second.
+    for (;;) {
+        wait_res = repeat_until(
+                [] () -> bool
+                {
+                    return status().output_full;
+                }, 2000);
+
+        if (!wait_res.success) {
+            PS2_WARN << "reset timeout out for device on channel " << to_string(channel);
+            return false;
         }
 
-        log() << "PS2Controller: Device " << static_cast<u8>(channel) << " is not present.";
-        return false;
+        u8 data = read_data(false, 100);
+        if (data == reset_failure) {
+            PS2_WARN << "device on channel " << to_string(channel) << " failed to reset";
+            return false;
+        }
+
+        if (data == self_test_passed) {
+            PS2_DEBUG << "reset device on channel " << to_string(channel) << " in " << wait_res.elapsed_ms << "MS";
+
+            // flush all garbage bytes we might get
+            for (;;) {
+                repeat_until(
+                        [] () -> bool
+                        {
+                            return status().output_full;
+                        }, 30);
+                read_data(true, 100);
+
+                if (did_last_read_timeout())
+                    break;
+            }
+
+            return true;
+        }
+
+        PS2_WARN << "got a garbage byte " << format::as_hex << data << " after device reset, ignored";
     }
 }
 
 PS2Controller::DeviceIdentification PS2Controller::identify_device(Channel channel)
 {
-    // identify device
-    send_command_to_device(channel, DeviceCommand::DISABLE_SCANNING);
     send_command_to_device(channel, DeviceCommand::IDENTIFY);
 
     DeviceIdentification ident {};
 
-    size_t max_attempts_for_id_byte[2];
+    for (;;) {
+        repeat_until(
+                [] () -> bool
+                {
+                    return status().output_full;
+                }, 30);
 
-    if (channel == Channel::ONE) { // Here we expect to get a keyboard which is 2 ID bytes
-        max_attempts_for_id_byte[0] = 100000;
-        max_attempts_for_id_byte[1] = 100000;
-    } else { // Here we expect to get a mouse which is 1 ID byte
-        max_attempts_for_id_byte[0] = 100000;
-        max_attempts_for_id_byte[1] = 250;
-    }
+        auto id_byte = read_data(true, 100);
 
-    for (auto i = 0; i < 2; ++i) {
-        ident.id[i] = read_data(true, max_attempts_for_id_byte[i]);
-        ident.id_bytes += !did_last_read_timeout();
+        if (did_last_read_timeout())
+            break;
+
+        if (ident.id_bytes == 0) {
+            if (id_byte != 0x00 && id_byte != 0x03 && id_byte != 0x04 && id_byte != 0xAB) {
+                PS2_WARN << "unexpected first id byte " << format::as_hex << id_byte << ", skipped";
+                continue;
+            }
+
+            ident.id[0] = id_byte;
+        } else {
+            if (id_byte != 0x41 && id_byte != 0xC1 && id_byte != 0x83) {
+                PS2_WARN << "unexpected second id byte " << format::as_hex << id_byte
+                         << ", first was " << ident.id[0] << ", skipped";
+                continue;
+            }
+
+            ident.id[1] = id_byte;
+        }
+
+        if (ident.id_bytes++ == 1)
+            break;
     }
 
     return ident;
@@ -232,18 +375,17 @@ PS2Controller::DeviceIdentification PS2Controller::identify_device(Channel chann
 
 bool PS2Controller::should_resend()
 {
-    auto data = read_data();
+    for (;;) {
+        auto data = read_data();
 
-    if (data == command_ack)
-        return false;
+        if (data == command_ack)
+            return false;
 
-    if (data == resend_command)
-        return true;
+        if (data == resend_command)
+            return true;
 
-    String error_string;
-    error_string << "PS2Controller: unexpected data instead of ACK/resend -> ";
-    error_string << format::as_hex << data;
-    runtime::panic(error_string.data());
+        PS2_WARN << "unexpected byte instead of ACK/resend -> " << format::as_hex << data << ", ignored";
+    }
 }
 
 void PS2Controller::send_command_to_device(Channel channel, DeviceCommand command, bool should_expect_ack)
@@ -256,16 +398,10 @@ void PS2Controller::send_command_to_device(Channel channel, u8 command, bool sho
     size_t resend_counter = 3;
 
     do {
-        switch (channel) {
-        case Channel::TWO:
-            send_command(Command::WRITE_PORT_2);
-            [[fallthrough]];
-        case Channel::ONE:
-            write<data_port>(command);
-            break;
-        default:
-            ASSERT_NEVER_REACHED();
-        }
+        if (channel != Channel::ONE)
+            send_command(static_cast<Command>(channel));
+
+        write<data_port>(command);
     } while (should_expect_ack && --resend_counter && should_resend());
 
     if (should_expect_ack && !resend_counter) {
