@@ -163,7 +163,7 @@ public:
 
     void reserve(size_t count)
     {
-        if (!count || count < m_capacity)
+        if (!count || count <= m_capacity)
             return;
 
         T* new_buffer = reinterpret_cast<T*>(new u8[sizeof(T) * count]);
@@ -183,7 +183,7 @@ public:
 
     void expand_to(size_t count)
     {
-        if (count < m_size)
+        if (count <= m_size)
             return;
 
         reserve(count);
