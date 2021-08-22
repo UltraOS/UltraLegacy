@@ -66,7 +66,7 @@ enable_if_t<
     is_trivially_copyable_v<From>,
     To
 >
-bit_cast(From value)
+bit_cast(const From& value)
 {
     To to;
     copy_memory(&value, &to, sizeof(value));
