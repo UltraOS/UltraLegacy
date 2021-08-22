@@ -1,6 +1,7 @@
 #include "PS2Controller.h"
 #include "PS2Keyboard.h"
 #include "PS2Mouse.h"
+#include "SynapticsTouchpad.h"
 #include "Core/RepeatUntil.h"
 
 #define PS2_LOG log("PS2Controller")
@@ -244,8 +245,25 @@ bool PS2Controller::initialize_device_if_present(Channel channel)
         PS2_LOG << "Detected a keyboard on channel " << to_string(channel);
         (new PS2Keyboard(this, channel))->make_child_of(this);
     } else if (device.is_mouse()) {
-        PS2_LOG << "Detected a mouse on channel " << to_string(channel);
-        (new PS2Mouse(this, channel))->make_child_of(this);
+        // try to detect synaptics touchpad
+        for (size_t i = 0; i < 4; ++i) {
+            send_command_to_device(channel, 0xE8);
+            send_command_to_device(channel, 0x00);
+        }
+
+        send_command_to_device(channel, 0xE9);
+
+        u8 packet[3] {};
+        for (auto& byte : packet)
+            byte = read_data();
+
+        if (packet[1] == SynapticsTouchpad::magic_constant) {
+            PS2_LOG << "Detected a Synaptics TouchPad on channel " << to_string(channel);
+            (new SynapticsTouchpad(this, channel, bit_cast<SynapticsTouchpad::IdentificationPage>(packet)))->make_child_of(this);
+        } else {
+            PS2_LOG << "Detected a mouse on channel " << to_string(channel);
+            (new PS2Mouse(this, channel))->make_child_of(this);
+        }
     }
 
     disable(channel);
