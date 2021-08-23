@@ -5,6 +5,41 @@
 
 namespace kernel {
 
+struct PACKED USBLEGCTLSTS {
+    u32 USBSMIEnable : 1;
+    u32 RsvdP : 3;
+    u32 SMIOnHostSystemErrorEnable : 1;
+    u32 RsvdP1 : 8;
+    u32 SMIOnOSOwnershipEnable : 1;
+    u32 SMIOnPCICommandEnable : 1;
+    u32 SMIOnBAREnable : 1;
+    u32 SMIOnEventInterrupt : 1;
+    u32 RsvdP2 : 3;
+    u32 SMIOnHostSystemError : 1;
+    u32 RsvdZ : 8;
+    u32 SMIOnOSOwnershipChange : 1; // <-| RW1C
+    u32 SMIOnPCICommand : 1;        // <-|
+    u32 SMIOnBAR : 1;               // <-|
+};
+
+struct PACKED SupportedProtocolDWORD0 {
+    u8 CapabilityID;
+    u8 NextCapabilityPointer;
+    u8 MinorRevision;
+    u8 MajorRevision;
+};
+
+struct PACKED SupportedProtocolDWORD1 {
+    char NameString[4];
+};
+
+struct PACKED SupportedProtocolDWORD2 {
+    u32 CompatiblePortOffset : 8;
+    u32 CompatiblePortCount : 8;
+    u32 ProtocolDefined : 12;
+    u32 PSIC : 4;
+};
+
 struct PACKED PORTPMSCUSB2 {
     u32 L1S : 3;
     u32 RWE : 1;
@@ -250,6 +285,11 @@ struct PACKED OperationalRegisters {
 
     PortRegister port_registers[];
 };
+
+static_assert(sizeof(USBLEGCTLSTS) == 4, "Incorrect size of USBLEGCTLSTS");
+static_assert(sizeof(SupportedProtocolDWORD0) == 4, "Incorrect size of SupportedProtocolDWORD0");
+static_assert(sizeof(SupportedProtocolDWORD1) == 4, "Incorrect size of SupportedProtocolDWORD1");
+static_assert(sizeof(SupportedProtocolDWORD2) == 4, "Incorrect size of SupportedProtocolDWORD2");
 
 static_assert(sizeof(CapabilityRegisters) == 36, "Incorrect size of capability registers");
 static_assert(sizeof(HCSPARAMS1) == 4, "Incorrect size of HCSPARAMS1");
