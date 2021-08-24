@@ -185,6 +185,10 @@ public:
 #ifdef ULTRA_32
             Address address_upper { nullptr };
 #endif
+
+            [[nodiscard]] bool is_memory() const { return type == Type::MEMORY32 || type == Type::MEMORY64; }
+            [[nodiscard]] bool is_present() const { return type != Type::NOT_PRESENT; }
+            [[nodiscard]] bool is_io() const { return type == Type::IO; }
         };
 
         Device(const DeviceInfo&);
