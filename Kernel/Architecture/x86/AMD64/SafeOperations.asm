@@ -57,8 +57,8 @@ length_of_user_string:
         ret
 
 ; Copies up to max_length or up to the null byte to the dst from src.
-; Returns the pointer to the end of dst or 0 if faulted.
-; void* copy_until_null_or_n_from_user(void* src, void* dst, size_t max_length)
+; Returns the number of bytes copied including the null byte, or 0 if faulted.
+; size_t copy_until_null_or_n_from_user(void* src, void* dst, size_t max_length)
 global copy_until_null_or_n_from_user
 copy_until_null_or_n_from_user:
     ; preserve non-scratch
