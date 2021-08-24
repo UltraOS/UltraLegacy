@@ -4,6 +4,7 @@
 #include "Kernel/Drivers/PCI/PCI.h"
 #include "Kernel/Interrupts/IRQHandler.h"
 #include "Kernel/Memory/MemoryManager.h"
+#include "Memory/TypedMapping.h"
 
 #include "Structures.h"
 
@@ -54,6 +55,8 @@ private:
     bool detect_ports();
     Address find_extended_capability(u8, Address only_after = nullptr);
 
+    Page allocate_safe_page();
+
 private:
 #ifdef ULTRA_32
     MemoryManager::VR m_bar0_region;
@@ -96,6 +99,18 @@ private:
         }
     }* m_ports { nullptr };
     size_t m_port_count { 0 };
+
+    struct DCBAAContext {
+        TypedMapping<u64> dcbaa;
+        Page scratchpad_buffer_array_page;
+        DynamicArray<Page> scratchpad_pages;
+
+        size_t bytes_per_context_structure { 0 };
+
+        DynamicArray<Page> device_context_pages;
+    } m_dcbaa_context;
+
+    bool m_supports_64bit { false };
 };
 
 }

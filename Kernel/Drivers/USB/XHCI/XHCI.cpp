@@ -32,7 +32,7 @@ bool XHCI::initialize()
     XHCI_LOG << "BAR0 @ "<< bar0.address << ", spans " << bar0.span / KB << "KB";
 
     if (!can_use_bar(bar0)) {
-        XHCI_WARN << "Cannot utilize BAR0, outside of usable address space. Device skipped.";
+        XHCI_WARN << "cannot utilize BAR0, outside of usable address space. Device skipped.";
         return false;
     }
 
@@ -53,6 +53,10 @@ bool XHCI::initialize()
     m_operational_registers = base.as_pointer<OperationalRegisters>();
 
     auto hccp1 = read_cap_reg<HCCPARAMS1>();
+
+    m_supports_64bit = hccp1.AC64;
+    XHCI_DEBUG << "implements 64 bit addressing: " << m_supports_64bit;
+
     auto ecaps_offset = hccp1.xECP * sizeof(u32);
     m_ecaps_base = m_capability_registers;
     m_ecaps_base += ecaps_offset;
@@ -74,6 +78,15 @@ bool XHCI::initialize()
     u8 minor = version & 0x00FF;
     XHCI_LOG << "interface version " << major << "." << minor;
 
+    auto page_size = m_operational_registers->PAGESIZE;
+    page_size &= 0xFFFF;
+    page_size <<= 12;
+
+    if (page_size != Page::size) {
+        XHCI_WARN << "controller has a weird PAGESIZE of " << page_size << ", skipping";
+        return false;
+    }
+
     auto hcs = read_cap_reg<HCSPARAMS1>();
     XHCI_DEBUG << "slots: " << hcs.MaxSlots << " interrupters: " << hcs.MaxIntrs << " ports: " << hcs.MaxPorts;
     m_port_count = hcs.MaxPorts;
@@ -84,6 +97,64 @@ bool XHCI::initialize()
 
     if (!detect_ports())
         return false;
+
+    auto dcbaap_page = allocate_safe_page();
+    m_dcbaa_context.dcbaa = TypedMapping<u64>::create("DCBAA"_sv, dcbaap_page.address(), Page::size);
+
+    auto hcsp2 = read_cap_reg<HCSPARAMS2>();
+    auto sb = hcsp2.max_scratchpad_bufs();
+    XHCI_DEBUG << "controller asked for " << sb << " scratchpad pages";
+    if (sb) {
+        m_dcbaa_context.scratchpad_buffer_array_page = allocate_safe_page();
+        m_dcbaa_context.dcbaa.get()[0] = m_dcbaa_context.scratchpad_buffer_array_page.address();
+
+        auto buffer = TypedMapping<u64>::create("Scratchpad", m_dcbaa_context.scratchpad_buffer_array_page.address(), Page::size);
+
+        m_dcbaa_context.scratchpad_pages.reserve(sb);
+        for (size_t i = 0; i < sb; ++i) {
+            auto scratchpad_page = allocate_safe_page();
+            m_dcbaa_context.scratchpad_pages.emplace(scratchpad_page);
+            buffer.get()[i] = scratchpad_page.address().raw();
+        }
+    }
+
+    DCBAAP reg {};
+    reg.DeviceContextBaseAddressArrayPointerLo = dcbaap_page.address() & 0xFFFFFFFF;
+#ifdef ULTRA_64
+    reg.DeviceContextBaseAddressArrayPointerHi = (dcbaap_page.address() >> 32) & 0xFFFFFFFF;
+#endif
+
+    m_dcbaa_context.bytes_per_context_structure = hccp1.CSZ ? 64 : 32;
+    XHCI_LOG << "bytes per context: " << m_dcbaa_context.bytes_per_context_structure;
+
+    static constexpr size_t entries_per_device_context = 32;
+    size_t bytes_per_device_context = entries_per_device_context * m_dcbaa_context.bytes_per_context_structure;
+    size_t contexts_per_page = Page::size / bytes_per_device_context;
+
+    XHCI_LOG << bytes_per_device_context << " bytes per device context, " << contexts_per_page << " contexts per page";
+
+    auto pages_needed = ceiling_divide<size_t>(hcs.MaxSlots, contexts_per_page);
+    XHCI_LOG << "allocating " << pages_needed << " pages for " << hcs.MaxSlots << " slots";
+
+    m_dcbaa_context.device_context_pages.reserve(pages_needed);
+    size_t port_offset = 1;
+    size_t contexts_to_initialize = m_port_count;
+
+    for (size_t i = 0; i < pages_needed; ++i) {
+        auto page = allocate_safe_page();
+
+        auto current_base = page.address();
+        for (size_t j = 0; j < min<size_t>(contexts_to_initialize, contexts_per_page); ++j) {
+            m_dcbaa_context.dcbaa.get()[port_offset++] = current_base;
+            current_base += bytes_per_device_context;
+        }
+
+        contexts_to_initialize -= min<size_t>(contexts_to_initialize, contexts_per_page);
+
+        m_dcbaa_context.device_context_pages.emplace(page);
+    }
+
+    write_oper_reg(reg);
 
     return true;
 }
@@ -180,9 +251,10 @@ bool XHCI::detect_ports()
     }
 
 #ifdef XHCI_DEBUG_MODE
+    XHCI_DEBUG << "detected ports and pairings:";
+
     for (size_t i = 0; i < m_port_count; ++i) {
         auto& port = m_ports[i];
-
 
         XHCI_DEBUG << "port[" << i << "] mode: " << port.mode_to_string()
                    << ", offset: " << port.physical_offset << ", pair index: " << port.index_of_pair;
@@ -349,16 +421,23 @@ T XHCI::read_oper_reg()
     base += T::offset;
 
     if constexpr (sizeof(T) == 8) {
+        if (m_supports_64bit) {
 #ifdef ULTRA_32
-        volatile u32 reg_as_u32[2];
-        reg_as_u32[0] = *base.as_pointer<volatile u32>();
-        base += sizeof(u32);
-        reg_as_u32[1] = *base.as_pointer<volatile u32>();
-        return bit_cast<T>(reg_as_u32);
+            volatile u32 reg_as_u32[2];
+            reg_as_u32[0] = *base.as_pointer<volatile u32>();
+            base += sizeof(u32);
+            reg_as_u32[1] = *base.as_pointer<volatile u32>();
+            return bit_cast<T>(reg_as_u32);
 #elif defined(ULTRA_64)
-        auto value = *base.as_pointer<volatile u64>();
-        return bit_cast<T>(value);
+            auto value = *base.as_pointer<volatile u64>();
+            return bit_cast<T>(value);
 #endif
+        }
+
+        // Assuming upper dword is 0 for non-64bit xHCI.
+        volatile u32 reg_as_u32[2] {};
+        reg_as_u32[0] = *base.as_pointer<volatile u32>();
+        return bit_cast<T>(reg_as_u32);
     } else {
         u32 value = *base.as_pointer<volatile u32>();
         return bit_cast<T>(value);
@@ -372,20 +451,42 @@ void XHCI::write_oper_reg(T value)
     base += T::offset;
 
     if constexpr (sizeof(T) == 8) {
+        if (m_supports_64bit) {
 #ifdef ULTRA_32
-        u32 reg_as_u32[2];
-        copy_memory(&value, reg_as_u32, 2 * sizeof(u32));
-        *base.as_pointer<volatile u32>() = reg_as_u32[0];
-        base += sizeof(u32);
-        *base.as_pointer<volatile u32>() = reg_as_u32[1];
+            u32 reg_as_u32[2];
+            copy_memory(&value, reg_as_u32, 2 * sizeof(u32));
+            *base.as_pointer<volatile u32>() = reg_as_u32[0];
+            base += sizeof(u32);
+            *base.as_pointer<volatile u32>() = reg_as_u32[1];
 #elif defined(ULTRA_64)
-        auto raw = bit_cast<u64>(value);
-        *base.as_pointer<volatile u64>() = raw;
+            volatile auto raw = bit_cast<u64>(value);
+            *base.as_pointer<volatile u64>() = raw;
 #endif
+        } else {
+            u32 reg_as_u32[2];
+            copy_memory(&value, reg_as_u32, 2 * sizeof(u32));
+
+            // We're not allowed to write the upper half, so assert that it's empty
+            ASSERT(reg_as_u32[1] == 0);
+
+            *base.as_pointer<volatile u32>() = reg_as_u32[0];
+        }
     } else {
         auto raw = bit_cast<u32>(value);
         *base.as_pointer<volatile u32>() = raw;
     }
+}
+
+Page XHCI::allocate_safe_page()
+{
+    auto page = MemoryManager::the().allocate_page();
+
+#ifdef ULTRA_64
+    if (!m_supports_64bit)
+        ASSERT(page.address() < 0xFFFFFFFF);
+#endif
+
+    return page;
 }
 
 bool XHCI::handle_irq(RegisterState&)

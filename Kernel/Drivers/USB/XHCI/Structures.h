@@ -135,6 +135,14 @@ struct PACKED HCSPARAMS2 {
     u32 SPR : 1;
     u32 MaxScratchpadBufsLo : 5;
 
+    [[nodiscard]] u32 max_scratchpad_bufs() const
+    {
+        u32 combined = MaxScratchpadBufsLo;
+        combined |= static_cast<u32>(MaxScratchpadBufsHi) << 5;
+
+        return combined;
+    }
+
     static constexpr size_t offset = 0x8;
 };
 
@@ -295,8 +303,8 @@ static_assert(sizeof(CapabilityRegisters) == 36, "Incorrect size of capability r
 static_assert(sizeof(HCSPARAMS1) == 4, "Incorrect size of HCSPARAMS1");
 static_assert(sizeof(HCSPARAMS2) == 4, "Incorrect size of HCSPARAMS2");
 static_assert(sizeof(HCSPARAMS3) == 4, "Incorrect size of HCSPARAMS3");
-static_assert(sizeof(HCCPARAMS1) == 4, "Incorrect size of HGCCPARAMS1");
-static_assert(sizeof(HCCPARAMS2) == 4, "Incorrect size of HCSPARAMS2");
+static_assert(sizeof(HCCPARAMS1) == 4, "Incorrect size of HCCPARAMS1");
+static_assert(sizeof(HCCPARAMS2) == 4, "Incorrect size of HCCPARAMS2");
 
 static_assert(sizeof(OperationalRegisters) == 0x400, "Incorrect size of operational registers");
 static_assert(sizeof(USBCMD) == 4, "Incorrect size of USBCMD");
