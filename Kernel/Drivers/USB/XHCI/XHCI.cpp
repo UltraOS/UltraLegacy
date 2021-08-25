@@ -125,10 +125,7 @@ bool XHCI::initialize()
     }
 
     DCBAAP reg {};
-    reg.DeviceContextBaseAddressArrayPointerLo = dcbaap_page.address() & 0xFFFFFFFF;
-#ifdef ULTRA_64
-    reg.DeviceContextBaseAddressArrayPointerHi = (dcbaap_page.address() >> 32) & 0xFFFFFFFF;
-#endif
+    SET_DWORDS_TO_ADDRESS(reg.DeviceContextBaseAddressArrayPointerLo, reg.DeviceContextBaseAddressArrayPointerHi, dcbaap_page.address());
 
     m_dcbaa_context.bytes_per_context_structure = hccp1.CSZ ? 64 : 32;
     XHCI_LOG << "bytes per context: " << m_dcbaa_context.bytes_per_context_structure;
