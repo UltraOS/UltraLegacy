@@ -294,6 +294,67 @@ struct PACKED OperationalRegisters {
     PortRegister port_registers[];
 };
 
+enum class TRBType : u32 {
+    Normal = 1,
+    SetupStage = 2,
+    DataStage = 3,
+    StatusStage = 4,
+    Isoch = 5,
+    Link = 6,
+    EventData = 7,
+    NoOp = 8,
+    EnableSlotCommand = 9,
+    DisableSlotCommand = 10,
+    AddressDeviceCommand = 11,
+    ConfigureEndpointCommand = 12,
+    EvaluateContextCommand = 13,
+    ResetEndpointCommand = 14,
+    StopEndpointCommand = 15,
+    SetTRDequeuePointerCommand = 16,
+    ResetDeviceCommand = 17,
+    ForceEventCommand = 18,
+    NegotiateBandwidthCommand = 19,
+    SetLatencyToleranceValueCommand = 20,
+    GetPortBandwidthCommand = 21,
+    ForceHeaderCommand = 22,
+    NoOpCommand = 23,
+    GetExtendedPropertyCommand = 24,
+    SetExtendedPropertyCommand = 25,
+    TransferEvent = 32,
+    CommandCompletionEvent = 33,
+    PortStatusChangeEvent = 34,
+    BandwidthRequestEvent = 35,
+    DoorbellEvent = 36,
+    HostControllerEvent = 37,
+    DeviceNotificationEvent = 38,
+    MFINDEXWrapEvent = 39,
+};
+
+struct GenericCommandTRB {
+    u32 RzvdZ;
+    u32 RzvdZ1;
+    u32 RzvdZ2;
+    u32 C : 1;
+    u32 RzvdZ3 : 9;
+    TRBType Type : 6;
+    u32 RzvdZ4 : 16;
+};
+
+struct LinkTRB {
+    u32 RingSegmentPointerLo;
+    u32 RingSegmentPointerHi;
+    u32 RsvdZ : 22;
+    u32 InterrupterTarget : 10;
+    u32 C : 1;
+    u32 TC : 1;
+    u32 RsvdZ1 : 2;
+    u32 CH : 1;
+    u32 IOC : 1;
+    u32 RsvdZ2 : 4;
+    TRBType Type : 6;
+    u32 RsvdZ3 : 16;
+};
+
 static_assert(sizeof(USBLEGCTLSTS) == 4, "Incorrect size of USBLEGCTLSTS");
 static_assert(sizeof(SupportedProtocolDWORD0) == 4, "Incorrect size of SupportedProtocolDWORD0");
 static_assert(sizeof(SupportedProtocolDWORD1) == 4, "Incorrect size of SupportedProtocolDWORD1");
@@ -324,5 +385,8 @@ static_assert(sizeof(PORTLIUSB3) == 4, "Incorrect size of PORTPMSC for USB3");
 
 static_assert(sizeof(PORTHLPMCUSB2) == 4, "Incorrect size of PORTHLPMC for USB2");
 static_assert(sizeof(PORTHLPMCUSB3) == 4, "Incorrect size of PORTHLPMC for USB3");
+
+static_assert(sizeof(GenericCommandTRB) == 4 * sizeof(u32), "Incorrect size of GenericCommandTRB");
+static_assert(sizeof(LinkTRB) == 4 * sizeof(u32), "Incorrect size of LinkTRB");
 
 }

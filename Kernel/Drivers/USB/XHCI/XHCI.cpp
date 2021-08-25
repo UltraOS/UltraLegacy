@@ -1,5 +1,6 @@
 #include "XHCI.h"
 #include "Structures.h"
+#include "Drivers/MMIOHelpers.h"
 
 #include "Common/Logger.h"
 #include "Core/RepeatUntil.h"
@@ -104,9 +105,14 @@ bool XHCI::initialize()
     auto hcsp2 = read_cap_reg<HCSPARAMS2>();
     auto sb = hcsp2.max_scratchpad_bufs();
     XHCI_DEBUG << "controller asked for " << sb << " scratchpad pages";
+    if (sb > (Page::size / sizeof(u64))) {
+        XHCI_WARN << "controller requested too many pages, count crosses PAGESIZE boundary(?)";
+        return false;
+    }
+
     if (sb) {
         m_dcbaa_context.scratchpad_buffer_array_page = allocate_safe_page();
-        m_dcbaa_context.dcbaa.get()[0] = m_dcbaa_context.scratchpad_buffer_array_page.address();
+        m_dcbaa_context.dcbaa[0] = m_dcbaa_context.scratchpad_buffer_array_page.address();
 
         auto buffer = TypedMapping<u64>::create("Scratchpad", m_dcbaa_context.scratchpad_buffer_array_page.address(), Page::size);
 
@@ -114,7 +120,7 @@ bool XHCI::initialize()
         for (size_t i = 0; i < sb; ++i) {
             auto scratchpad_page = allocate_safe_page();
             m_dcbaa_context.scratchpad_pages.emplace(scratchpad_page);
-            buffer.get()[i] = scratchpad_page.address().raw();
+            buffer[i] = scratchpad_page.address().raw();
         }
     }
 
@@ -145,7 +151,7 @@ bool XHCI::initialize()
 
         auto current_base = page.address();
         for (size_t j = 0; j < min<size_t>(contexts_to_initialize, contexts_per_page); ++j) {
-            m_dcbaa_context.dcbaa.get()[port_offset++] = current_base;
+            m_dcbaa_context.dcbaa[port_offset++] = current_base;
             current_base += bytes_per_device_context;
         }
 
@@ -156,25 +162,37 @@ bool XHCI::initialize()
 
     write_oper_reg(reg);
 
+    auto command_ring_page = allocate_safe_page();
+    m_command_ring = TypedMapping<GenericCommandTRB>::create("CommandRing"_sv, command_ring_page.address(), Page::size);
+
+    // link last TRB back to the head
+    LinkTRB link {};
+    link.Type = TRBType::Link;
+    set_dwords_to_address(link.RingSegmentPointerLo, link.RingSegmentPointerHi, command_ring_page.address());
+    copy_memory(&link, &m_command_ring[command_ring_capacity - 1], sizeof(link));
+
+    CRCR cr {};
+    cr.RCS = 1;
+    cr.CommandRingPointerLo = link.RingSegmentPointerLo >> 6;
+    cr.CommandRingPointerHi = link.RingSegmentPointerHi;
+    write_oper_reg(cr);
+
+    auto cfg = read_oper_reg<CONFIG>();
+    cfg.MaxSlotsEn = hcs.MaxSlots;
+    write_oper_reg(cfg);
+
+    auto raw = m_operational_registers->DNCTRL;
+    raw |= SET_BIT(1);
+    m_operational_registers->DNCTRL = raw;
+
+    // enable the schedule
+    auto usbcmd = read_oper_reg<USBCMD>();
+    usbcmd.RS = 1;
+    usbcmd.INTE = 1;
+    usbcmd.HSEE = 1;
+    write_oper_reg(usbcmd);
+
     return true;
-}
-
-template <typename T>
-T XHCI::read_reg(Address addr)
-{
-    static_assert(sizeof(T) == 4);
-
-    auto raw = *addr.as_pointer<volatile u32>();
-    return bit_cast<T>(raw);
-}
-
-template<typename T>
-void XHCI::write_reg(T value, Address addr)
-{
-    static_assert(sizeof(T) == 4);
-
-    auto raw = bit_cast<u32>(value);
-    *addr.as_pointer<volatile u32>() = raw;
 }
 
 bool XHCI::detect_ports()
@@ -188,9 +206,9 @@ bool XHCI::detect_ports()
     }
 
     for (; proto_base; proto_base = find_extended_capability(supported_protocol_capability_id, proto_base)) {
-        auto dw0 = read_reg<SupportedProtocolDWORD0>(proto_base);
-        auto dw1 = read_reg<SupportedProtocolDWORD1>(proto_base + sizeof(u32));
-        auto dw2 = read_reg<SupportedProtocolDWORD2>(proto_base + sizeof(u32) * 2);
+        auto dw0 = mmio_read32<SupportedProtocolDWORD0>(proto_base);
+        auto dw1 = mmio_read32<SupportedProtocolDWORD1>(proto_base + sizeof(u32));
+        auto dw2 = mmio_read32<SupportedProtocolDWORD2>(proto_base + sizeof(u32) * 2);
 
         if (dw1.NameString != "USB "_sv) {
             XHCI_WARN << "invalid protocol name string " << dw1.NameString;
@@ -268,7 +286,7 @@ Address XHCI::find_extended_capability(u8 id, Address only_after)
 {
     auto next_offset_from_cap = [] (Address current) -> Address
     {
-        auto raw = read_reg<u32>(current);
+        auto raw = mmio_read32<u32>(current);
         auto offset = (raw & 0xFF00) >> 8;
         offset *= sizeof(u32);
 
@@ -286,7 +304,7 @@ Address XHCI::find_extended_capability(u8 id, Address only_after)
         search_base = m_ecaps_base;
 
     for (; search_base; search_base = next_offset_from_cap(search_base)) {
-        auto raw = read_reg<u32>(search_base);
+        auto raw = mmio_read32<u32>(search_base);
 
         if ((raw & 0xFF) == id)
             return search_base;
@@ -305,16 +323,16 @@ bool XHCI::perform_bios_handoff()
         return true;
     }
 
-    auto raw = read_reg<u32>(legacy_support_base);
+    auto raw = mmio_read32<u32>(legacy_support_base);
     static constexpr u32 os_owned_bit = SET_BIT(24);
     raw |= os_owned_bit;
-    write_reg(raw, legacy_support_base);
+    mmio_write32(legacy_support_base, raw);
 
     auto res = repeat_until(
             [legacy_support_base] () -> bool
             {
                 static constexpr u32 bios_owned_bit = SET_BIT(16);
-                return (read_reg<u32>(legacy_support_base) & bios_owned_bit) == 0;
+                return (mmio_read32<u32>(legacy_support_base) & bios_owned_bit) == 0;
             }, 1000);
 
     if (!res.success)
@@ -323,7 +341,7 @@ bool XHCI::perform_bios_handoff()
     XHCI_DEBUG << "Successfully performed BIOS handoff";
 
     // Disable all SMIs because BIOS shouldn't care anymore
-    auto legacy_ctl = read_reg<USBLEGCTLSTS>(legacy_support_base + sizeof(u32));
+    auto legacy_ctl = mmio_read32<USBLEGCTLSTS>(legacy_support_base + sizeof(u32));
     legacy_ctl.USBSMIEnable = 0;
     legacy_ctl.SMIOnHostSystemErrorEnable = 0;
     legacy_ctl.SMIOnOSOwnershipEnable = 0;
@@ -332,7 +350,7 @@ bool XHCI::perform_bios_handoff()
     legacy_ctl.SMIOnOSOwnershipChange = 1;
     legacy_ctl.SMIOnPCICommand = 1;
     legacy_ctl.SMIOnBAR = 1;
-    write_reg(legacy_ctl, legacy_support_base + sizeof(u32));
+    mmio_write32(legacy_support_base + sizeof(u32), legacy_ctl);
 
     return true;
 }
@@ -399,9 +417,7 @@ T XHCI::read_cap_reg()
     auto base = Address(m_capability_registers);
     base += T::offset;
 
-    u32 raw = *base.as_pointer<volatile u32>();
-
-    return bit_cast<T>(raw);
+    return mmio_read32<T>(base);
 }
 
 template <typename T>
@@ -410,8 +426,7 @@ void XHCI::write_cap_reg(T value)
     auto base = Address(m_capability_registers);
     base += T::offset;
 
-    u32 raw = bit_cast<u32>(value);
-    *base.as_pointer<volatile u32>() = raw;
+    mmio_write32(base, value);
 }
 
 template <typename T>
@@ -420,28 +435,10 @@ T XHCI::read_oper_reg()
     auto base = Address(m_operational_registers);
     base += T::offset;
 
-    if constexpr (sizeof(T) == 8) {
-        if (m_supports_64bit) {
-#ifdef ULTRA_32
-            volatile u32 reg_as_u32[2];
-            reg_as_u32[0] = *base.as_pointer<volatile u32>();
-            base += sizeof(u32);
-            reg_as_u32[1] = *base.as_pointer<volatile u32>();
-            return bit_cast<T>(reg_as_u32);
-#elif defined(ULTRA_64)
-            auto value = *base.as_pointer<volatile u64>();
-            return bit_cast<T>(value);
-#endif
-        }
-
-        // Assuming upper dword is 0 for non-64bit xHCI.
-        volatile u32 reg_as_u32[2] {};
-        reg_as_u32[0] = *base.as_pointer<volatile u32>();
-        return bit_cast<T>(reg_as_u32);
-    } else {
-        u32 value = *base.as_pointer<volatile u32>();
-        return bit_cast<T>(value);
-    }
+    if constexpr (sizeof(T) == 8)
+        return mmio_read64<T>(base, m_supports_64bit ? MMIOPolicy::QWORD_ACCESS : MMIOPolicy::IGNORE_UPPER_DWORD);
+    else
+        return mmio_read32<T>(base);
 }
 
 template <typename T>
@@ -450,31 +447,10 @@ void XHCI::write_oper_reg(T value)
     auto base = Address(m_operational_registers);
     base += T::offset;
 
-    if constexpr (sizeof(T) == 8) {
-        if (m_supports_64bit) {
-#ifdef ULTRA_32
-            u32 reg_as_u32[2];
-            copy_memory(&value, reg_as_u32, 2 * sizeof(u32));
-            *base.as_pointer<volatile u32>() = reg_as_u32[0];
-            base += sizeof(u32);
-            *base.as_pointer<volatile u32>() = reg_as_u32[1];
-#elif defined(ULTRA_64)
-            volatile auto raw = bit_cast<u64>(value);
-            *base.as_pointer<volatile u64>() = raw;
-#endif
-        } else {
-            u32 reg_as_u32[2];
-            copy_memory(&value, reg_as_u32, 2 * sizeof(u32));
-
-            // We're not allowed to write the upper half, so assert that it's empty
-            ASSERT(reg_as_u32[1] == 0);
-
-            *base.as_pointer<volatile u32>() = reg_as_u32[0];
-        }
-    } else {
-        auto raw = bit_cast<u32>(value);
-        *base.as_pointer<volatile u32>() = raw;
-    }
+    if constexpr (sizeof(T) == 8)
+        mmio_write64(base, value, m_supports_64bit ? MMIOPolicy::QWORD_ACCESS : MMIOPolicy::IGNORE_UPPER_DWORD);
+    else
+        mmio_write32(base, value);
 }
 
 Page XHCI::allocate_safe_page()

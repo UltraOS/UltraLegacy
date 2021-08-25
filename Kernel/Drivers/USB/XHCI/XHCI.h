@@ -46,12 +46,6 @@ private:
     bool halt();
     bool reset();
 
-    template <typename T>
-    static T read_reg(Address);
-
-    template<typename T>
-    static void write_reg(T, Address);
-
     bool detect_ports();
     Address find_extended_capability(u8, Address only_after = nullptr);
 
@@ -109,6 +103,9 @@ private:
 
         DynamicArray<Page> device_context_pages;
     } m_dcbaa_context;
+
+    static constexpr size_t command_ring_capacity = Page::size / sizeof(GenericCommandTRB);
+    TypedMapping<GenericCommandTRB> m_command_ring;
 
     bool m_supports_64bit { false };
 };
