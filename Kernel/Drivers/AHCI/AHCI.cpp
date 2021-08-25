@@ -2,30 +2,11 @@
 #include "AHCIPort.h"
 #include "Common/Logger.h"
 #include "Drivers/PCI/Access.h"
+#include "Drivers/MMIOHelpers.h"
 #include "Interrupts/Timer.h"
 #include "Memory/Utilities.h"
 #include "Multitasking/Scheduler.h"
 #include "Structures.h"
-
-#ifdef ULTRA_32
-
-#define SET_DWORDS_TO_ADDRESS(lower, upper, address) \
-    lower = address & 0xFFFFFFFF;                    \
-    upper = 0;
-
-#define ADDRESS_FROM_TWO_DWORDS(lower, upper) \
-    Address(lower);                           \
-    ASSERT(upper == 0)
-
-#elif defined(ULTRA_64)
-
-#define SET_DWORDS_TO_ADDRESS(lower, upper, address) \
-    lower = address & 0xFFFFFFFF;                    \
-    upper = address >> 32
-
-#define ADDRESS_FROM_TWO_DWORDS(lower, upper) Address(lower | (static_cast<Address::underlying_pointer_type>(upper) << 32))
-
-#endif
 
 #define AHCI_LOG log("AHCI")
 
@@ -90,19 +71,14 @@ T AHCI::hba_read()
     Address base = m_hba.get();
     base += T::offset;
 
-    auto raw = *base.as_pointer<volatile u32>();
-
-    return bit_cast<T>(raw);
+    return mmio_read32<T>(base);
 }
 
 template <typename T>
 T AHCI::port_read(size_t index)
 {
     Address base = offset_of_port_structure<T>(index);
-
-    auto raw = *base.as_pointer<volatile u32>();
-
-    return bit_cast<T>(raw);
+    return mmio_read32<T>(base);
 }
 
 template <typename T>
@@ -111,17 +87,14 @@ void AHCI::hba_write(T reg)
     Address base = m_hba.get();
     base += T::offset;
 
-    auto type_punned_reg = bit_cast<u32>(reg);
-    *base.as_pointer<volatile u32>() = type_punned_reg;
+    mmio_write32(base, reg);
 }
 
 template <typename T>
 void AHCI::port_write(size_t index, T reg)
 {
     Address base = offset_of_port_structure<T>(index);
-
-    auto type_punned_reg = bit_cast<u32>(reg);
-    *base.as_pointer<volatile u32>() = type_punned_reg;
+    mmio_write32(base, reg);
 }
 
 void AHCI::disable_dma_engines_for_all_ports()
