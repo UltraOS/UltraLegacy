@@ -42,6 +42,11 @@ public:
         return get_offset_pointer();
     }
 
+    T& operator[](size_t index)
+    {
+        return get()[index];
+    }
+
 #ifdef ULTRA_32
     ~TypedMapping()
     {
