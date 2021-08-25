@@ -183,9 +183,9 @@ void PCI::Device::enable_msi(u16 vector)
         auto table_address = table_bar.address + table_offset;
         auto mapped_table = TypedMapping<u32>::create("MSI-X Table"_sv, table_address, 4 * sizeof(u32));
 
-        mapped_table.get()[0] = message_address;
-        mapped_table.get()[2] = message_data;
-        mapped_table.get()[3] = 0; // unmasked
+        mapped_table[0] = message_address;
+        mapped_table[2] = message_data;
+        mapped_table[3] = 0; // unmasked
 
         access().write32(location(), cap->offset + message_control_offset, message_control);
     }
