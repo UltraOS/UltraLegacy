@@ -285,6 +285,9 @@ public:
 
     void clear()
     {
+        if (empty())
+            return;
+
         auto* next_node = m_end.next();
 
         for (size_t i = 0; i < m_size; ++i) {
@@ -293,6 +296,8 @@ public:
             delete current_node;
         }
 
+        m_end.set_next(&m_end);
+        m_end.set_previous(&m_end);
         m_size = 0;
     }
 
@@ -435,6 +440,8 @@ public:
     void clear()
     {
         set_nodes_owner_pointer(nullptr);
+        m_end.set_next(&m_end);
+        m_end.set_previous(&m_end);
         m_size = 0;
     }
 
