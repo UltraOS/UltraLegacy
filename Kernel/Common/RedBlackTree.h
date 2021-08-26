@@ -1133,30 +1133,30 @@ private:
                 grandparent->right->color = ValueNode::Color::BLACK;
             } else {
                 switch (node->position_with_respect_to_grandparent()) {
-                    case ValueNode::Position::LEFT_RIGHT: // left-right rotation
-                        rotate_left(node->parent);
-                        node = node->left;
-                        [[fallthrough]];
-                    case ValueNode::Position::LEFT_LEFT: { // right rotation
-                        grandparent->color = ValueNode::Color::RED;
-                        node->parent->color = ValueNode::Color::BLACK;
-                        node->color = ValueNode::Color::RED;
+                case ValueNode::Position::LEFT_RIGHT: // left-right rotation
+                    rotate_left(node->parent);
+                    node = node->left;
+                    [[fallthrough]];
+                case ValueNode::Position::LEFT_LEFT: { // right rotation
+                    grandparent->color = ValueNode::Color::RED;
+                    node->parent->color = ValueNode::Color::BLACK;
+                    node->color = ValueNode::Color::RED;
 
-                        rotate_right(grandparent);
-                        break;
-                    }
-                    case ValueNode::Position::RIGHT_LEFT: // right-left rotation
-                        rotate_right(node->parent);
-                        node = node->right;
-                        [[fallthrough]];
-                    case ValueNode::Position::RIGHT_RIGHT: { // left rotation
-                        grandparent->color = ValueNode::Color::RED;
-                        node->parent->color = ValueNode::Color::BLACK;
-                        node->color = ValueNode::Color::RED;
+                    rotate_right(grandparent);
+                    break;
+                }
+                case ValueNode::Position::RIGHT_LEFT: // right-left rotation
+                    rotate_right(node->parent);
+                    node = node->right;
+                    [[fallthrough]];
+                case ValueNode::Position::RIGHT_RIGHT: { // left rotation
+                    grandparent->color = ValueNode::Color::RED;
+                    node->parent->color = ValueNode::Color::BLACK;
+                    node->color = ValueNode::Color::RED;
 
-                        rotate_left(grandparent);
-                        break;
-                    }
+                    rotate_left(grandparent);
+                    break;
+                }
                 }
             }
 

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Time/Time.h"
 #include "Interrupts/Timer.h"
+#include "Time/Time.h"
 
 namespace kernel {
 
@@ -17,8 +17,7 @@ static WaitResult repeat_until(Callback cb, size_t timeout_ms)
     u64 current_time = wait_begin;
     u64 wait_end = current_time + timeout_ms * Time::nanoseconds_in_millisecond;
 
-    while (current_time <= wait_end)
-    {
+    while (current_time <= wait_end) {
         if (cb())
             return { true, static_cast<size_t>((current_time - wait_begin) / Time::nanoseconds_in_millisecond) };
 

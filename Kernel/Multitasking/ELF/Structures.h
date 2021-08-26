@@ -1,9 +1,9 @@
 #pragma once
 
-#include "Common/Types.h"
 #include "Common/Macros.h"
+#include "Common/Types.h"
 
-namespace kernel::ELF  {
+namespace kernel::ELF {
 
 enum class Class : u8 {
     NONE = 0,

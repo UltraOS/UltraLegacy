@@ -1,8 +1,8 @@
 #pragma once
 
 #include "Common/DynamicArray.h"
-#include "Common/RedBlackTree.h"
 #include "Common/Optional.h"
+#include "Common/RedBlackTree.h"
 #include "Range.h"
 
 namespace kernel {

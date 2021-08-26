@@ -1,8 +1,8 @@
 #pragma once
 
-#include "VirtualRegion.h"
 #include "Common/DynamicArray.h"
 #include "Page.h"
+#include "VirtualRegion.h"
 
 namespace kernel {
 
@@ -23,7 +23,7 @@ private:
         InterruptSafeSpinLock modification_lock;
         DynamicArray<Page> pages;
         Atomic<size_t> ref_count;
-    }* m_shared_block;
+    } * m_shared_block;
 
     friend class MemoryManager;
 

@@ -43,18 +43,17 @@ ErrorCode WindowManager::dispatch_window_command(void* user_ptr)
         auto* current_thread = Thread::current();
 
         Rect window_rect(
-                static_cast<ssize_t>(wc_command.top_left_x),
-                static_cast<ssize_t>(wc_command.top_left_y),
-                static_cast<ssize_t>(wc_command.width),
-                static_cast<ssize_t>(wc_command.height));
+            static_cast<ssize_t>(wc_command.top_left_x),
+            static_cast<ssize_t>(wc_command.top_left_y),
+            static_cast<ssize_t>(wc_command.width),
+            static_cast<ssize_t>(wc_command.height));
 
-        auto window =  Window::create(*current_thread, window_rect, WindowManager::the().active_theme(), wc_command.title);
+        auto window = Window::create(*current_thread, window_rect, WindowManager::the().active_theme(), wc_command.title);
         wc_command.window_id = window->id();
 
-        auto user_window_region =
-                MemoryManager::the().allocate_user_shared(
-                        static_cast<SharedVirtualRegion&>(window->surface_region()),
-                        AddressSpace::current());
+        auto user_window_region = MemoryManager::the().allocate_user_shared(
+            static_cast<SharedVirtualRegion&>(window->surface_region()),
+            AddressSpace::current());
 
         auto& this_process = Process::current();
         this_process.store_region(user_window_region);

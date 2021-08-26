@@ -9,6 +9,7 @@ namespace kernel {
 
 class Syscall {
     MAKE_STATIC(Syscall);
+
 public:
     enum class NumberOf {
 #define SYSCALL(name) name,
@@ -22,11 +23,13 @@ public:
             return "INVALID"_sv;
 
         switch (static_cast<NumberOf>(syscall)) {
-#define SYSCALL(name) case NumberOf::name: return #name ## _sv;
+#define SYSCALL(name)    \
+    case NumberOf::name: \
+        return #name##_sv;
             ENUMERATE_SYSCALLS
 #undef SYSCALL
-            default:
-                return "INVALID"_sv;
+        default:
+            return "INVALID"_sv;
         }
     }
 
@@ -35,8 +38,9 @@ public:
 #undef SYSCALL
 
     static void invoke(RegisterState&);
+
 private:
-    static ErrorOr<ptr_t>(*s_table[static_cast<size_t>(NumberOf::MAX) + 1])(RegisterState&);
+    static ErrorOr<ptr_t> (*s_table[static_cast<size_t>(NumberOf::MAX) + 1])(RegisterState&);
 };
 
 #define SYSCALL_IMPLEMENTATION(name) ErrorOr<ptr_t> Syscall::name([[maybe_unused]] RegisterState& registers)

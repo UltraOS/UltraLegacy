@@ -139,13 +139,15 @@ void mmio_write64(Address address, T value, MMIOPolicy policy)
         upper = 0;                                   \
     } while (0)
 
-#define ADDRESS_FROM_TWO_DWORDS(lower, upper) Address(lower); ASSERT(upper == 0)
+#define ADDRESS_FROM_TWO_DWORDS(lower, upper) \
+    Address(lower);                           \
+    ASSERT(upper == 0)
 
 #elif defined(ULTRA_64)
 
 #define SET_DWORDS_TO_ADDRESS(lower, upper, address) \
     do {                                             \
-        lower = (address) & 0xFFFFFFFF;              \
+        lower = (address)&0xFFFFFFFF;                \
         upper = ((address) >> 32) & 0xFFFFFFFF;      \
     } while (0)
 

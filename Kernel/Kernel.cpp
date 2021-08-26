@@ -4,9 +4,9 @@
 #include "Common/Types.h"
 #include "Core/Boot.h"
 #include "Core/CPU.h"
+#include "Core/FPU.h"
 #include "Core/GDT.h"
 #include "Core/Runtime.h"
-#include "Core/FPU.h"
 #include "Drivers/PCI/PCI.h"
 #include "Drivers/PS2/PS2Controller.h"
 #include "Drivers/Video/VideoDevice.h"
@@ -95,7 +95,7 @@ void initialize_drivers()
     PCI::the().initialize_supported();
     VFS::initialize();
 
-    Scheduler::the().exit(0);
+    Scheduler::the().exit_process(0);
 }
 
 void process_with_windows()
@@ -116,7 +116,7 @@ void process_with_windows()
                 break;
             } else if (event.type == EventType::WINDOW_SHOULD_CLOSE) {
                 window->close();
-                Scheduler::the().exit(0);
+                Scheduler::the().exit_process(0);
             }
 
             event = window->pop_event();

@@ -43,7 +43,7 @@ ProcessLoadBlocker::ProcessLoadBlocker(Thread& blocked_thread)
 {
 }
 
-IOBlocker::IOBlocker(Thread &blocked_thread)
+IOBlocker::IOBlocker(Thread& blocked_thread)
     : Blocker(blocked_thread, Type::IO)
 {
 }

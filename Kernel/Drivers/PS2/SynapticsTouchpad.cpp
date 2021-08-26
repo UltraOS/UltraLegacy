@@ -1,6 +1,6 @@
 #include "SynapticsTouchpad.h"
-#include "WindowManager/EventManager.h"
 #include "Interrupts/Timer.h"
+#include "WindowManager/EventManager.h"
 
 #define SYN_LOG log("SynapticsTouchpad")
 #define SYN_WARN warning("SynapticsTouchpad")
@@ -38,7 +38,7 @@ SynapticsTouchpad::SynapticsTouchpad(PS2Controller* parent, PS2Controller::Chann
     auto caps = query<CapabilitiesPage>(2);
 
     if (!caps.has_extended_caps) {
-        SYN_DEBUG <<"no extended capabilties";
+        SYN_DEBUG << "no extended capabilties";
         set_mode(m);
         return;
     }

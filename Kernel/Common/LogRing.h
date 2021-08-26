@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Types.h"
 #include "String.h"
+#include "Types.h"
 
 namespace kernel {
 
@@ -11,8 +11,7 @@ public:
     static constexpr size_t row_capacity() { return RowCapacity; }
     static constexpr size_t characters_per_pow() { return CharactersPerRow; }
 
-    class Iterator
-    {
+    class Iterator {
     public:
         Iterator(LogRing& ring, size_t read_offset, bool should_meet_ourselves = false)
             : m_ring(ring)
@@ -50,8 +49,8 @@ public:
 
     private:
         LogRing& m_ring;
-        u32 m_read_offset{ 0 };
-        bool m_met_ourselves{ false };
+        u32 m_read_offset { 0 };
+        bool m_met_ourselves { false };
     };
 
     Iterator begin()
@@ -86,8 +85,7 @@ public:
 
     void write(StringView message)
     {
-        for (char c : message)
-        {
+        for (char c : message) {
             auto* current_record = &m_log_records[m_current_record];
 
             if ((!m_current_record_untouched && current_record->length == CharactersPerRow) || c == '\n') {
@@ -140,7 +138,7 @@ private:
         u8 length;
     };
 
-    LogRecord m_log_records[RowCapacity]{};
+    LogRecord m_log_records[RowCapacity] {};
     u32 m_earliest_record { 0 };
     u32 m_current_record { 0 };
     bool m_current_record_untouched { true };

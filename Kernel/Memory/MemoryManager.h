@@ -13,9 +13,9 @@
 #include "Page.h"
 #include "PhysicalRegion.h"
 #include "PrivateVirtualRegion.h"
+#include "SharedVirtualRegion.h"
 #include "VirtualAllocator.h"
 #include "VirtualRegion.h"
-#include "SharedVirtualRegion.h"
 
 namespace kernel {
 

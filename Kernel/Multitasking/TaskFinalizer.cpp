@@ -1,7 +1,7 @@
 #include "TaskFinalizer.h"
 #include "Core/FPU.h"
-#include "Memory/MemoryManager.h"
 #include "FileSystem/VFS.h"
+#include "Memory/MemoryManager.h"
 #include "Process.h"
 #include "Sleep.h"
 #include "WindowManager/Window.h"

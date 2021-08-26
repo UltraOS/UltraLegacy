@@ -4,7 +4,6 @@
 #include "PS2Controller.h"
 #include "PS2Device.h"
 
-
 namespace kernel {
 
 class SynapticsTouchpad : public PS2Device, public Mouse {

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Common/Macros.h"
+#include "Common/Types.h"
 
 namespace kernel {
 

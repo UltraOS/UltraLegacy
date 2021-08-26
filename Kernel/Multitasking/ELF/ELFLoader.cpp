@@ -1,6 +1,6 @@
-#include "Structures.h"
 #include "ELFLoader.h"
 #include "Memory/MemoryManager.h"
+#include "Structures.h"
 
 #define ELF_LOG log("ELFLoader")
 
@@ -75,7 +75,7 @@ ErrorOr<Address> ELFLoader::load(IOStream& stream)
 
     if (header.bytes_per_program_header != sizeof(ELF::ProgramHeader)) {
         ELF_LOG << "invalid program header size " << header.bytes_per_program_header
-                << ", expected "<< sizeof(ELF::ProgramHeader);
+                << ", expected " << sizeof(ELF::ProgramHeader);
         return ErrorCode::INVALID_ARGUMENT;
     }
 
@@ -119,6 +119,5 @@ ErrorOr<Address> ELFLoader::load(IOStream& stream)
 
     return Address(header.entrypoint);
 }
-
 
 }

@@ -9,6 +9,7 @@ namespace kernel {
 
 class ELFLoader {
     MAKE_STATIC(ELFLoader);
+
 public:
     static ErrorOr<Address> load(IOStream&);
 

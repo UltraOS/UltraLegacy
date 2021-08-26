@@ -5,13 +5,13 @@
 #include "Traits.h"
 
 #ifdef TEST_ENVIRONMENT
-#include <utility>
 #include <algorithm>
-using std::swap;
-using std::move;
+#include <utility>
 using std::forward;
 using std::max;
 using std::min;
+using std::move;
+using std::swap;
 #endif
 
 namespace kernel {

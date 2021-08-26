@@ -1,6 +1,6 @@
 #include "XHCI.h"
-#include "Structures.h"
 #include "Drivers/MMIOHelpers.h"
+#include "Structures.h"
 
 #include "Common/Logger.h"
 #include "Core/RepeatUntil.h"
@@ -30,7 +30,7 @@ bool XHCI::initialize()
     auto bar0 = bar(0);
     ASSERT(bar0.is_memory());
 
-    XHCI_LOG << "BAR0 @ "<< bar0.address << ", spans " << bar0.span / KB << "KB";
+    XHCI_LOG << "BAR0 @ " << bar0.address << ", spans " << bar0.span / KB << "KB";
 
     if (!can_use_bar(bar0)) {
         XHCI_WARN << "cannot utilize BAR0, outside of usable address space. Device skipped.";
@@ -91,7 +91,7 @@ bool XHCI::initialize()
     auto hcs = read_cap_reg<HCSPARAMS1>();
     XHCI_DEBUG << "slots: " << hcs.MaxSlots << " interrupters: " << hcs.MaxIntrs << " ports: " << hcs.MaxPorts;
     m_port_count = hcs.MaxPorts;
-    m_ports = new Port[m_port_count]{};
+    m_ports = new Port[m_port_count] {};
 
     if (!reset())
         return false;
@@ -281,8 +281,7 @@ bool XHCI::detect_ports()
 
 Address XHCI::find_extended_capability(u8 id, Address only_after)
 {
-    auto next_offset_from_cap = [] (Address current) -> Address
-    {
+    auto next_offset_from_cap = [](Address current) -> Address {
         auto raw = mmio_read32<u32>(current);
         auto offset = (raw & 0xFF00) >> 8;
         offset *= sizeof(u32);
@@ -326,11 +325,11 @@ bool XHCI::perform_bios_handoff()
     mmio_write32(legacy_support_base, raw);
 
     auto res = repeat_until(
-            [legacy_support_base] () -> bool
-            {
-                static constexpr u32 bios_owned_bit = SET_BIT(16);
-                return (mmio_read32<u32>(legacy_support_base) & bios_owned_bit) == 0;
-            }, 1000);
+        [legacy_support_base]() -> bool {
+            static constexpr u32 bios_owned_bit = SET_BIT(16);
+            return (mmio_read32<u32>(legacy_support_base) & bios_owned_bit) == 0;
+        },
+        1000);
 
     if (!res.success)
         return false;
@@ -358,7 +357,7 @@ bool XHCI::halt()
     usbcmd.RS = 0;
     write_oper_reg(usbcmd);
 
-    auto wait_res = repeat_until([this] () -> bool { return read_oper_reg<USBSTS>().HCH; }, 20);
+    auto wait_res = repeat_until([this]() -> bool { return read_oper_reg<USBSTS>().HCH; }, 20);
     if (!wait_res.success)
         XHCI_WARN << "Failed to halt the controller";
 
@@ -375,10 +374,10 @@ bool XHCI::reset()
     write_oper_reg(usbcmd);
 
     auto wait_res = repeat_until(
-            [this] () -> bool
-            {
-                return !read_oper_reg<USBSTS>().CNR && !read_oper_reg<USBCMD>().HCRST;
-            }, 100);
+        [this]() -> bool {
+            return !read_oper_reg<USBSTS>().CNR && !read_oper_reg<USBCMD>().HCRST;
+        },
+        100);
 
     if (!wait_res.success) {
         XHCI_WARN << "Failed to reset the controller";

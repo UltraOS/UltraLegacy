@@ -1,8 +1,8 @@
 #include "PS2Controller.h"
+#include "Core/RepeatUntil.h"
 #include "PS2Keyboard.h"
 #include "PS2Mouse.h"
 #include "SynapticsTouchpad.h"
-#include "Core/RepeatUntil.h"
 
 #define PS2_LOG log("PS2Controller")
 #define PS2_WARN warning("PS2Controller")
@@ -94,7 +94,7 @@ void PS2Controller::discover_all_devices()
         u8 version_byte = read_data();
 
         if (version_byte == 0xA4) {
-           PS2_LOG << "no multiplexing capabilities detected";
+            PS2_LOG << "no multiplexing capabilities detected";
         } else {
             m_multiplexed_mode = true;
 
@@ -221,10 +221,10 @@ bool PS2Controller::initialize_device_if_present(Channel channel)
     send_command_to_device(channel, DeviceCommand::DISABLE_SCANNING, false);
     for (;;) {
         repeat_until(
-                [] () -> bool
-                {
-                    return status().output_full;
-                }, 30);
+            []() -> bool {
+                return status().output_full;
+            },
+            30);
         auto data = read_data(true, 100);
         if (did_last_read_timeout() || data == resend_command)
             break;
@@ -279,10 +279,10 @@ bool PS2Controller::reset_device(Channel channel)
 
     for (;;) {
         wait_res = repeat_until(
-                [] () -> bool
-                {
-                    return status().output_full;
-                }, 30);
+            []() -> bool {
+                return status().output_full;
+            },
+            30);
 
         if (!wait_res.success) {
             PS2_LOG << "no device on channel " << to_string(channel);
@@ -310,10 +310,10 @@ bool PS2Controller::reset_device(Channel channel)
     // According to what I've seen this usually takes about half a second.
     for (;;) {
         wait_res = repeat_until(
-                [] () -> bool
-                {
-                    return status().output_full;
-                }, 2000);
+            []() -> bool {
+                return status().output_full;
+            },
+            2000);
 
         if (!wait_res.success) {
             PS2_WARN << "reset timeout out for device on channel " << to_string(channel);
@@ -332,10 +332,10 @@ bool PS2Controller::reset_device(Channel channel)
             // flush all garbage bytes we might get
             for (;;) {
                 repeat_until(
-                        [] () -> bool
-                        {
-                            return status().output_full;
-                        }, 30);
+                    []() -> bool {
+                        return status().output_full;
+                    },
+                    30);
                 read_data(true, 100);
 
                 if (did_last_read_timeout())
@@ -357,10 +357,10 @@ PS2Controller::DeviceIdentification PS2Controller::identify_device(Channel chann
 
     for (;;) {
         repeat_until(
-                [] () -> bool
-                {
-                    return status().output_full;
-                }, 30);
+            []() -> bool {
+                return status().output_full;
+            },
+            30);
 
         auto id_byte = read_data(true, 100);
 

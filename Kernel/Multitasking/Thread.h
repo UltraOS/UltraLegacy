@@ -5,8 +5,8 @@
 #include "Interrupts/Timer.h"
 #include "Memory/AddressSpace.h"
 #include "TSS.h"
-#include "WindowManager/Window.h"
 #include "TaskLoader.h"
+#include "WindowManager/Window.h"
 
 #include "Blocker.h"
 
@@ -34,9 +34,9 @@ public:
     static RefPtr<Thread> create_idle(Process& owner);
     static RefPtr<Thread> create_supervisor(Process& owner, RefPtr<VirtualRegion> kernel_stack, Address entrypoint);
     static RefPtr<Thread> create_user(
-            Process& owner,
-            RefPtr<VirtualRegion> kernel_stack,
-            TaskLoader::LoadRequest*);
+        Process& owner,
+        RefPtr<VirtualRegion> kernel_stack,
+        TaskLoader::LoadRequest*);
 
     void activate();
     void deactivate();

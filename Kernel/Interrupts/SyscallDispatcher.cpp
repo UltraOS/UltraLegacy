@@ -2,8 +2,8 @@
 
 #include "Core/Syscall.h"
 
-#include "Multitasking/Thread.h"
 #include "Multitasking/Scheduler.h"
+#include "Multitasking/Thread.h"
 
 #include "IDT.h"
 #include "SyscallDispatcher.h"

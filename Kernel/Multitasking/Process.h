@@ -3,10 +3,10 @@
 #include "Common/DynamicArray.h"
 #include "Common/Set.h"
 
-#include "Memory/VirtualRegion.h"
 #include "FileSystem/FileIterator.h"
-#include "Thread.h"
+#include "Memory/VirtualRegion.h"
 #include "TaskLoader.h"
+#include "Thread.h"
 
 namespace kernel {
 
@@ -33,9 +33,9 @@ public:
         size_t stack_size = default_kernel_stack_size);
 
     static RefPtr<Process> create_user(
-            StringView name,
-            AddressSpace* address_space,
-            TaskLoader::LoadRequest*);
+        StringView name,
+        AddressSpace* address_space,
+        TaskLoader::LoadRequest*);
 
     ErrorCode create_thread(Address entrypoint, size_t stack_size = default_kernel_stack_size);
 
@@ -105,7 +105,8 @@ public:
 
     [[nodiscard]] u32 alive_thread_count() const { return m_alive_thread_count; }
     u32 increment_alive_thread_count() { return ++m_alive_thread_count; }
-    u32 decrement_alive_thread_count() {
+    u32 decrement_alive_thread_count()
+    {
         ASSERT(m_alive_thread_count != 0);
         return --m_alive_thread_count;
     }

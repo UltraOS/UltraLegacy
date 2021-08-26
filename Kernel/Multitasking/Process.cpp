@@ -1,8 +1,8 @@
+#include "Process.h"
+#include "FileSystem/VFS.h"
 #include "Interrupts/Utilities.h"
 #include "Memory/MemoryManager.h"
 #include "Scheduler.h"
-#include "FileSystem/VFS.h"
-#include "Process.h"
 
 namespace kernel {
 

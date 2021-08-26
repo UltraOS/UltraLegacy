@@ -1,5 +1,5 @@
-#include "Core/Registers.h"
 #include "Core/FPU.h"
+#include "Core/Registers.h"
 
 #include "Interrupts/IDT.h"
 #include "Process.h"
@@ -65,10 +65,9 @@ RefPtr<Thread> Thread::create_supervisor(Process& owner, RefPtr<VirtualRegion> k
 }
 
 RefPtr<Thread> Thread::create_user(
-        Process& owner,
-        RefPtr<VirtualRegion> kernel_stack,
-        TaskLoader::LoadRequest* load_request
-)
+    Process& owner,
+    RefPtr<VirtualRegion> kernel_stack,
+    TaskLoader::LoadRequest* load_request)
 {
     Address adjusted_stack = kernel_stack->virtual_range().end() - sizeof(RegisterState) * 2;
 
@@ -103,7 +102,7 @@ RefPtr<Thread> Thread::create_user(
     frame->es = GDT::kernel_data_selector();
     frame->ds = GDT::kernel_data_selector();
 
-    frame->eip = Address(&TaskLoader::do_load);;
+    frame->eip = Address(&TaskLoader::do_load);
     frame->cs = GDT::kernel_code_selector();
     frame->eflags = static_cast<size_t>(CPU::FLAGS::INTERRUPTS);
 

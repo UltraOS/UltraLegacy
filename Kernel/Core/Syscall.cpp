@@ -17,10 +17,9 @@
 
 namespace kernel {
 
-ErrorOr<ptr_t>(*Syscall::s_table[static_cast<size_t>(Syscall::NumberOf::MAX) + 1])(RegisterState&) =
-{
+ErrorOr<ptr_t> (*Syscall::s_table[static_cast<size_t>(Syscall::NumberOf::MAX) + 1])(RegisterState&) = {
 #define SYSCALL(name) &Syscall::name,
-ENUMERATE_SYSCALLS
+    ENUMERATE_SYSCALLS
 #undef SYSCALL
 };
 

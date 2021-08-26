@@ -8,10 +8,10 @@
 #include "AddressSpace.h"
 #include "BootAllocator.h"
 #include "MemoryManager.h"
-#include "Utilities.h"
 #include "NonOwningVirtualRegion.h"
 #include "Page.h"
 #include "PhysicalRegion.h"
+#include "Utilities.h"
 
 #define MEMORY_MANAGER_DEBUG_MODE
 
@@ -270,7 +270,7 @@ MemoryManager::VR MemoryManager::virtual_region_responsible_for_address(Address 
         LOCK_GUARD(m_virtual_region_lock);
 
         auto region = find_address_in_range_tree(m_kernel_virtual_regions, aligned_address,
-                                                 [] (const RefPtr<VirtualRegion>& vr) { return vr->virtual_range(); });
+            [](const RefPtr<VirtualRegion>& vr) { return vr->virtual_range(); });
 
         if (!region)
             return {};
@@ -283,7 +283,7 @@ MemoryManager::VR MemoryManager::virtual_region_responsible_for_address(Address 
     LOCK_GUARD(current_process.lock());
 
     auto region = find_address_in_range_tree(current_process.virtual_regions(), aligned_address,
-                                             [] (const RefPtr<VirtualRegion>& vr) { return vr->virtual_range(); });
+        [](const RefPtr<VirtualRegion>& vr) { return vr->virtual_range(); });
 
     if (!region)
         return {};

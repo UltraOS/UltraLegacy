@@ -97,7 +97,8 @@ bool PCI::Device::can_use_bar(const BAR& bar)
 }
 #endif
 
-PCI::Device::CommandRegister PCI::Device::set_command_register(MemorySpaceMode memory_space, IOSpaceMode io_space, BusMasterMode bus_master) {
+PCI::Device::CommandRegister PCI::Device::set_command_register(MemorySpaceMode memory_space, IOSpaceMode io_space, BusMasterMode bus_master)
+{
     static constexpr u16 io_space_bit = SET_BIT(0);
     static constexpr u16 memory_space_bit = SET_BIT(1);
     static constexpr u16 bus_master_bit = SET_BIT(2);

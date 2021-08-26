@@ -1,18 +1,18 @@
-#include "Process.h"
 #include "TaskLoader.h"
+#include "Core/FPU.h"
+#include "ELF/ELFLoader.h"
 #include "FileSystem/VFS.h"
 #include "Memory/PrivateVirtualRegion.h"
-#include "ELF/ELFLoader.h"
-#include "Core/FPU.h"
+#include "Process.h"
 #include "Scheduler.h"
 
 namespace kernel {
 
-#define TERMINATE_WITH_ERROR(code)                   \
-    request->error_code = code;                      \
-    if (request->blocker)                            \
-        request->blocker->unblock();                 \
-    Thread::current()->set_invulnerable(false);      \
+#define TERMINATE_WITH_ERROR(code)              \
+    request->error_code = code;                 \
+    if (request->blocker)                       \
+        request->blocker->unblock();            \
+    Thread::current()->set_invulnerable(false); \
     Scheduler::the().exit_process(static_cast<size_t>(code));
 
 // NOTE: This function is noreturn, so don't create any non-trivially destructible objects
@@ -72,15 +72,13 @@ void TaskLoader::do_load(LoadRequest* request)
 
     auto current_sp = stack_begin;
 
-    auto push_str_on_the_stack = [&current_sp] (StringView str)
-    {
+    auto push_str_on_the_stack = [&current_sp](StringView str) {
         current_sp -= str.size() + 1;
         copy_memory(str.data(), current_sp.as_pointer<void>(), str.size());
         current_sp.as_pointer<char>()[str.size()] = '\0';
     };
 
-    auto push_ptr_on_the_stack = [&current_sp] (Address addr)
-    {
+    auto push_ptr_on_the_stack = [&current_sp](Address addr) {
         current_sp -= sizeof(Address::underlying_pointer_type);
         *current_sp.as_pointer<Address::underlying_pointer_type>() = addr;
     };
@@ -180,6 +178,5 @@ ErrorOr<RefPtr<Process>> TaskLoader::load_from_file(LoadParameters& params)
 
     return process;
 }
-
 
 }

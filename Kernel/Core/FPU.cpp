@@ -1,6 +1,6 @@
-#include "Common/Logger.h"
 #include "FPU.h"
 #include "CPU.h"
+#include "Common/Logger.h"
 
 namespace kernel {
 
@@ -70,7 +70,8 @@ void FPU::initialize_for_this_cpu()
 
         if (s_features.mxcsr_mask == 0) {
             alignas(16) u8 fxsave_region[512] {};
-            asm volatile ("fxsave %0" : "=m"(*fxsave_region));
+            asm volatile("fxsave %0"
+                         : "=m"(*fxsave_region));
 
             // From the intel manual:
             // "Check the value in the MXCSR_MASK field in the FXSAVE image (bytes 28 through 31)."
@@ -168,11 +169,16 @@ void FPU::save_state(void* ptr)
         u32 low = 0xFFFFFFFF;
         u32 high = 0xFFFFFFFF;
 
-        asm volatile("xsave %0" : "=m"(*byte_ptr) : "a"(low), "d"(high) : "memory");
+        asm volatile("xsave %0"
+                     : "=m"(*byte_ptr)
+                     : "a"(low), "d"(high)
+                     : "memory");
     } else if (s_features.fxsave) {
-        asm volatile ("fxsave %0" : "=m"(*byte_ptr));
+        asm volatile("fxsave %0"
+                     : "=m"(*byte_ptr));
     } else {
-        asm volatile ("fnsave %0" : "=m"(*byte_ptr));
+        asm volatile("fnsave %0"
+                     : "=m"(*byte_ptr));
     }
 }
 
@@ -184,11 +190,11 @@ void FPU::restore_state(void* ptr)
         u32 low = 0xFFFFFFFF;
         u32 high = 0xFFFFFFFF;
 
-        asm volatile("xrstor %0" :: "m"(*byte_ptr), "a"(low), "d"(high));
+        asm volatile("xrstor %0" ::"m"(*byte_ptr), "a"(low), "d"(high));
     } else if (s_features.fxsave) {
-        asm volatile ("fxrstor %0" :: "m"(*byte_ptr));
+        asm volatile("fxrstor %0" ::"m"(*byte_ptr));
     } else {
-        asm volatile ("frstor %0" :: "m"(*byte_ptr));
+        asm volatile("frstor %0" ::"m"(*byte_ptr));
     }
 }
 

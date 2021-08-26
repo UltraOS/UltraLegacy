@@ -6,8 +6,8 @@
 
 #include "Conversions.h"
 #include "Lock.h"
-#include "String.h"
 #include "LogRing.h"
+#include "String.h"
 #include "Traits.h"
 #include "Types.h"
 

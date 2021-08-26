@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Common/Types.h"
 #include "Common/Macros.h"
+#include "Common/Types.h"
 
 namespace kernel {
 
@@ -18,8 +18,8 @@ struct PACKED USBLEGCTLSTS {
     u32 SMIOnHostSystemError : 1;
     u32 RsvdZ : 8;
     u32 SMIOnOSOwnershipChange : 1; // <-| RW1C
-    u32 SMIOnPCICommand : 1;        // <-|
-    u32 SMIOnBAR : 1;               // <-|
+    u32 SMIOnPCICommand : 1; // <-|
+    u32 SMIOnBAR : 1; // <-|
 };
 
 struct PACKED SupportedProtocolDWORD0 {
@@ -113,8 +113,8 @@ struct PACKED PORTSC {
 
 struct PACKED PortRegister {
     u32 PORTSC;
-    u32 PORTPMSC;  // <-| Different meanings for USB2/USB3
-    u32 PORTLI;    // <-|
+    u32 PORTPMSC; // <-| Different meanings for USB2/USB3
+    u32 PORTLI; // <-|
     u32 PORTHLPMC; // <-|
 };
 

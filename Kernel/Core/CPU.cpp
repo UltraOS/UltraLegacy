@@ -12,8 +12,8 @@
 #include "Multitasking/Process.h"
 #include "Multitasking/TSS.h"
 
-#include "FPU.h"
 #include "CPU.h"
+#include "FPU.h"
 
 namespace kernel {
 
@@ -101,13 +101,14 @@ void CPU::XCR::write(u32 index)
 
 void CPU::write_cr4(size_t value)
 {
-    asm volatile("mov %0, %%cr4" :: "r" (value));
+    asm volatile("mov %0, %%cr4" ::"r"(value));
 }
 
 size_t CPU::read_cr4()
 {
     size_t value;
-    asm volatile("mov %%cr4, %0" : "=r" (value));
+    asm volatile("mov %%cr4, %0"
+                 : "=r"(value));
 
     return value;
 }

@@ -186,7 +186,10 @@ public:
             Address address_upper { nullptr };
 #endif
 
-            [[nodiscard]] bool is_memory() const { return type == Type::MEMORY32 || type == Type::MEMORY64; }
+            [[nodiscard]] bool is_memory() const
+            {
+                return type == Type::MEMORY32 || type == Type::MEMORY64;
+            }
             [[nodiscard]] bool is_present() const { return type != Type::NOT_PRESENT; }
             [[nodiscard]] bool is_io() const { return type == Type::IO; }
         };
@@ -199,7 +202,10 @@ public:
         BAR bar(u8);
 
 #ifdef ULTRA_64
-        bool can_use_bar(const BAR&) { return true; }
+        bool can_use_bar(const BAR&)
+        {
+            return true;
+        }
 #elif defined(ULTRA_32)
         bool can_use_bar(const BAR&);
 #endif
@@ -227,9 +233,9 @@ public:
 
         // returns the original command register values
         CommandRegister set_command_register(
-                MemorySpaceMode = MemorySpaceMode::UNTOUCHED,
-                IOSpaceMode = IOSpaceMode::UNTOUCHED,
-                BusMasterMode = BusMasterMode::UNTOUCHED);
+            MemorySpaceMode = MemorySpaceMode::UNTOUCHED,
+            IOSpaceMode = IOSpaceMode::UNTOUCHED,
+            BusMasterMode = BusMasterMode::UNTOUCHED);
 
         void enable_msi(u16 vector);
         void clear_interrupts_disabled();

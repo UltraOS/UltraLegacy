@@ -2,8 +2,8 @@
 
 #include "Common/Types.h"
 #include "Core/ErrorCode.h"
-#include "Multitasking/Mutex.h"
 #include "Multitasking/Blocker.h"
+#include "Multitasking/Mutex.h"
 
 #include <Shared/IO.h>
 
@@ -57,6 +57,7 @@ inline bool is_io_mode_set(IOMode value, IOMode flag)
 class IOStream {
     MAKE_NONMOVABLE(IOStream);
     MAKE_NONCOPYABLE(IOStream);
+
 public:
     enum class Type {
         FILE_ITERATOR,

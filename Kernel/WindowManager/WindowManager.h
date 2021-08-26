@@ -11,7 +11,7 @@ namespace kernel {
 
 enum class WMCommand : u32 {
 #define WM_COMMAND(name) name,
-ENUMERATE_WM_COMMANDS
+    ENUMERATE_WM_COMMANDS
 #undef WM_COMMAND
 };
 

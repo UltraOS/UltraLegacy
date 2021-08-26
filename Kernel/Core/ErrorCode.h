@@ -97,7 +97,7 @@ public:
 
 private:
     ErrorCode m_error;
-    T m_value { };
+    T m_value {};
 };
 
 }

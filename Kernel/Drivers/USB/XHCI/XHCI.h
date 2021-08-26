@@ -91,7 +91,7 @@ private:
                 return "invalid"_sv;
             }
         }
-    }* m_ports { nullptr };
+    } * m_ports { nullptr };
     size_t m_port_count { 0 };
 
     struct DCBAAContext {
