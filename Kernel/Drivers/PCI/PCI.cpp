@@ -186,7 +186,9 @@ void PCI::Device::enable_msi(u16 vector)
         auto table_offset = raw_bir & ~bir_mask;
 
         auto table_bar = bar(bir);
-        ASSERT(table_bar.type == BAR::Type::MEMORY32);
+        log() << "PCI: MSI-X @ bar " << bir << ", offset " << table_offset;
+        if (!can_use_bar(table_bar))
+            runtime::panic("cannot enable MSI-X, BAR is outside of address space");
 
         auto table_address = table_bar.address + table_offset;
         auto mapped_table = TypedMapping<u32>::create("MSI-X Table"_sv, table_address, 4 * sizeof(u32));
