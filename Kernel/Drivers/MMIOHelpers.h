@@ -77,14 +77,14 @@ T mmio_read64(Address address, MMIOPolicy policy)
 #endif
     }
     case MMIOPolicy::DWORD_ACCESS: {
-        volatile u32 reg_as_u32[2];
+        u32 reg_as_u32[2];
         reg_as_u32[0] = *address.as_pointer<volatile u32>();
         address += sizeof(u32);
         reg_as_u32[1] = *address.as_pointer<volatile u32>();
         return bit_cast<T>(reg_as_u32);
     }
     case MMIOPolicy::IGNORE_UPPER_DWORD: {
-        volatile u32 reg_as_u32[2] {};
+        u32 reg_as_u32[2] {};
         reg_as_u32[0] = *address.as_pointer<volatile u32>();
         return bit_cast<T>(reg_as_u32);
     }

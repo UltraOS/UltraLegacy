@@ -294,6 +294,60 @@ struct PACKED OperationalRegisters {
     PortRegister port_registers[];
 };
 
+struct PACKED InterrupterManagementRegister {
+    u32 IP : 1;
+    u32 IE : 1;
+    u32 RsvdP : 30;
+
+    static constexpr size_t offset_within_interrupter = 0x0;
+};
+
+struct PACKED InterrupterModerationRegister {
+    u16 IMODI;
+    u16 IMODC;
+
+    static constexpr size_t offset_within_interrupter = 0x4;
+};
+
+struct PACKED EventRingSegmentTableBaseAddressRegister {
+    u32 RsvdP : 6;
+    u32 EventRingSegmentTableBaseAddressLo : 26;
+    u32 EventRingSegmentTableBaseAddressHi;
+
+    static constexpr size_t offset_within_interrupter = 0x10;
+};
+
+struct PACKED EventRingDequeuePointerRegister {
+    u64 DESI : 3;
+    u64 EHB : 1;
+    u64 EventRingDequeuePointerLo : 28;
+    u64 EventRingDequeuePointerHi : 32;
+
+    static constexpr size_t offset_within_interrupter = 0x18;
+};
+
+struct PACKED InterrupterRegisterSet {
+    InterrupterManagementRegister IMAN;
+    InterrupterManagementRegister IMOD;
+    u32 ERSTSZ;
+    u32 ERSTBA;
+    EventRingSegmentTableBaseAddressRegister ERST;
+    EventRingDequeuePointerRegister ERDP;
+};
+
+struct PACKED RuntimeRegisters {
+    u32 MFINDEX;
+    u32 RsvdZ[7];
+    InterrupterRegisterSet Interrupter[];
+};
+
+struct PACKED EventRingSegmentTableEntry {
+    u32 RingSegmentBaseAddressLo;
+    u32 RingSegmentBaseAddressHi;
+    u32 RingSegmentSize;
+    u32 RsvdZ;
+};
+
 enum class TRBType : u32 {
     Normal = 1,
     SetupStage = 2,
@@ -330,7 +384,7 @@ enum class TRBType : u32 {
     MFINDEXWrapEvent = 39,
 };
 
-struct GenericCommandTRB {
+struct GenericTRB {
     u32 RzvdZ;
     u32 RzvdZ1;
     u32 RzvdZ2;
@@ -353,6 +407,11 @@ struct LinkTRB {
     u32 RsvdZ2 : 4;
     TRBType Type : 6;
     u32 RsvdZ3 : 16;
+};
+
+struct PACKED DoorbellRegister {
+    u16 DBTarget;
+    u16 DBStreamID;
 };
 
 static_assert(sizeof(USBLEGCTLSTS) == 4, "Incorrect size of USBLEGCTLSTS");
@@ -386,7 +445,14 @@ static_assert(sizeof(PORTLIUSB3) == 4, "Incorrect size of PORTPMSC for USB3");
 static_assert(sizeof(PORTHLPMCUSB2) == 4, "Incorrect size of PORTHLPMC for USB2");
 static_assert(sizeof(PORTHLPMCUSB3) == 4, "Incorrect size of PORTHLPMC for USB3");
 
-static_assert(sizeof(GenericCommandTRB) == 4 * sizeof(u32), "Incorrect size of GenericCommandTRB");
+static_assert(sizeof(GenericTRB) == 4 * sizeof(u32), "Incorrect size of GenericTRB");
 static_assert(sizeof(LinkTRB) == 4 * sizeof(u32), "Incorrect size of LinkTRB");
+
+static_assert(sizeof(InterrupterManagementRegister) == 4, "Incorrect size of InterrupterManagementRegister");
+static_assert(sizeof(InterrupterModerationRegister) == 4, "Incorrect size of InterrupterModerationRegister");
+static_assert(sizeof(EventRingSegmentTableBaseAddressRegister) == 8, "Incorrect size of EventRingSegmentTableBaseAddressRegister");
+static_assert(sizeof(EventRingDequeuePointerRegister) == 8, "Incorrect size of EventRingDequeuePointerRegister");
+static_assert(sizeof(InterrupterRegisterSet) == 0x20, "Incorrect size of InterrupterRegisterSet");
+static_assert(sizeof(RuntimeRegisters) == 0x20, "Incorrect size of RuntimeRegisters");
 
 }

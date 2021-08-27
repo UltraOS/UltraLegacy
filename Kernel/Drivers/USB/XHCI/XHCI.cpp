@@ -53,6 +53,18 @@ bool XHCI::initialize()
     base += caplength;
     m_operational_registers = base.as_pointer<OperationalRegisters>();
 
+    auto rtoffset = m_capability_registers->RTSOFF;
+    XHCI_DEBUG << "runtime registers at offset " << rtoffset;
+    base = Address(m_capability_registers);
+    base += rtoffset;
+    m_runtime_registers = base.as_pointer<RuntimeRegisters>();
+
+    auto dboffset = m_capability_registers->DBOFF;
+    XHCI_DEBUG << "doorbell registers at offset " << dboffset;
+    base = Address(m_capability_registers);
+    base += dboffset;
+    m_doorbell_registers = base.as_pointer<volatile u32>();
+
     auto hccp1 = read_cap_reg<HCCPARAMS1>();
 
     m_supports_64bit = hccp1.AC64;
@@ -88,9 +100,9 @@ bool XHCI::initialize()
         return false;
     }
 
-    auto hcs = read_cap_reg<HCSPARAMS1>();
-    XHCI_DEBUG << "slots: " << hcs.MaxSlots << " interrupters: " << hcs.MaxIntrs << " ports: " << hcs.MaxPorts;
-    m_port_count = hcs.MaxPorts;
+    auto hcs1 = read_cap_reg<HCSPARAMS1>();
+    XHCI_DEBUG << "slots: " << hcs1.MaxSlots << " interrupters: " << hcs1.MaxIntrs << " ports: " << hcs1.MaxPorts;
+    m_port_count = hcs1.MaxPorts;
     m_ports = new Port[m_port_count] {};
 
     if (!reset())
@@ -99,6 +111,42 @@ bool XHCI::initialize()
     if (!detect_ports())
         return false;
 
+    auto cfg = read_oper_reg<CONFIG>();
+    cfg.MaxSlotsEn = hcs1.MaxSlots;
+    write_oper_reg(cfg);
+
+    if (!initialize_dcbaa(hccp1, hcs1))
+        return false;
+
+    if (!initialize_command_ring())
+        return false;
+
+    set_command_register(MemorySpaceMode::ENABLED, IOSpaceMode::UNTOUCHED, BusMasterMode::ENABLED, InterruptDisableMode::CLEARED);
+
+    XHCI_LOG << "enabling MSIs for vector " << interrupt_vector();
+    enable_msi(interrupt_vector());
+
+    if (!initialize_event_ring())
+        return false;
+
+    auto raw = m_operational_registers->DNCTRL;
+    raw |= SET_BIT(1);
+    m_operational_registers->DNCTRL = raw;
+
+    // enable the schedule
+    auto usbcmd = read_oper_reg<USBCMD>();
+    usbcmd.RS = 1;
+    write_oper_reg(usbcmd);
+
+    GenericTRB trb {};
+    trb.Type = TRBType::NoOp;
+    enqueue_command(trb);
+
+    return true;
+}
+
+bool XHCI::initialize_dcbaa(const HCCPARAMS1& hccp1, const HCSPARAMS1& hcs1)
+{
     auto dcbaap_page = allocate_safe_page();
     m_dcbaa_context.dcbaa = TypedMapping<u64>::create("DCBAA"_sv, dcbaap_page.address(), Page::size);
 
@@ -136,8 +184,8 @@ bool XHCI::initialize()
 
     XHCI_LOG << bytes_per_device_context << " bytes per device context, " << contexts_per_page << " contexts per page";
 
-    auto pages_needed = ceiling_divide<size_t>(hcs.MaxSlots, contexts_per_page);
-    XHCI_LOG << "allocating " << pages_needed << " pages for " << hcs.MaxSlots << " slots";
+    auto pages_needed = ceiling_divide<size_t>(hcs1.MaxSlots, contexts_per_page);
+    XHCI_LOG << "allocating " << pages_needed << " pages for " << hcs1.MaxSlots << " slots";
 
     m_dcbaa_context.device_context_pages.reserve(pages_needed);
     size_t port_offset = 1;
@@ -159,8 +207,13 @@ bool XHCI::initialize()
 
     write_oper_reg(reg);
 
+    return true;
+}
+
+bool XHCI::initialize_command_ring()
+{
     auto command_ring_page = allocate_safe_page();
-    m_command_ring = TypedMapping<GenericCommandTRB>::create("CommandRing"_sv, command_ring_page.address(), Page::size);
+    m_command_ring = TypedMapping<GenericTRB>::create("CommandRing"_sv, command_ring_page.address(), Page::size);
 
     // link last TRB back to the head
     LinkTRB link {};
@@ -174,20 +227,49 @@ bool XHCI::initialize()
     cr.CommandRingPointerHi = link.RingSegmentPointerHi;
     write_oper_reg(cr);
 
-    auto cfg = read_oper_reg<CONFIG>();
-    cfg.MaxSlotsEn = hcs.MaxSlots;
-    write_oper_reg(cfg);
+    return true;
+}
 
-    auto raw = m_operational_registers->DNCTRL;
-    raw |= SET_BIT(1);
-    m_operational_registers->DNCTRL = raw;
+bool XHCI::initialize_event_ring()
+{
+    auto event_ring_segment_table_page = allocate_safe_page();
+    m_event_ring_segment0_page = allocate_safe_page();
+    {
+        auto segment_table = TypedMapping<EventRingSegmentTableEntry>::create("SegmentTable"_sv, event_ring_segment_table_page.address(), Page::size);
 
-    // enable the schedule
+        auto& entry0 = segment_table[0];
+        SET_DWORDS_TO_ADDRESS(entry0.RingSegmentBaseAddressLo, entry0.RingSegmentBaseAddressHi, m_event_ring_segment0_page.address());
+        entry0.RingSegmentSize = event_ring_segment_capacity;
+    }
+    m_event_ring = TypedMapping<GenericTRB>::create("EventRing"_sv, m_event_ring_segment0_page.address(), Page::size);
+
+    auto raw_ertsz = m_runtime_registers->Interrupter[0].ERSTSZ;
+    raw_ertsz |= 1;
+    m_runtime_registers->Interrupter[0].ERSTSZ = raw_ertsz;
+
+    auto erdp = read_interrupter_reg<EventRingDequeuePointerRegister>(0);
+    erdp.EventRingDequeuePointerLo = m_event_ring_segment0_page.address() >> 4;
+#ifdef ULTRA_64
+    erdp.EventRingDequeuePointerHi = m_event_ring_segment0_page.address() >> 32;
+#endif
+    write_interrupter_reg(0, erdp);
+
+    auto erstba = read_interrupter_reg<EventRingSegmentTableBaseAddressRegister>(0);
+    erstba.EventRingSegmentTableBaseAddressLo = event_ring_segment_table_page.address() >> 6;
+#ifdef ULTRA_64
+    erstba.EventRingSegmentTableBaseAddressHi = (event_ring_segment_table_page.address() >> 32);
+#endif
+    write_interrupter_reg(0, erstba);
+
+    // Enable the interrupter in CMD + IE bit in the primary interrupter
     auto usbcmd = read_oper_reg<USBCMD>();
-    usbcmd.RS = 1;
     usbcmd.INTE = 1;
     usbcmd.HSEE = 1;
     write_oper_reg(usbcmd);
+
+    auto im = read_interrupter_reg<InterrupterManagementRegister>(0);
+    im.IE = 1;
+    write_interrupter_reg(0, im);
 
     return true;
 }
@@ -359,7 +441,7 @@ bool XHCI::halt()
 
     auto wait_res = repeat_until([this]() -> bool { return read_oper_reg<USBSTS>().HCH; }, 20);
     if (!wait_res.success)
-        XHCI_WARN << "Failed to halt the controller";
+        XHCI_WARN << "failed to halt the controller";
 
     return wait_res.success;
 }
@@ -390,6 +472,9 @@ bool XHCI::reset()
 
 void XHCI::autodetect(const DynamicArray<PCI::DeviceInfo>& devices)
 {
+    if (InterruptController::is_legacy_mode())
+        return;
+
     for (auto& device : devices) {
         if (device.class_code != class_code)
             continue;
@@ -400,10 +485,8 @@ void XHCI::autodetect(const DynamicArray<PCI::DeviceInfo>& devices)
 
         XHCI_LOG << "detected a new controller -> " << device;
         auto* xhci = new XHCI(device);
-        if (xhci->initialize())
-            continue;
-
-        delete xhci;
+        if (!xhci->initialize())
+            delete xhci;
     }
 }
 
@@ -449,6 +532,56 @@ void XHCI::write_oper_reg(T value)
         mmio_write32(base, value);
 }
 
+template <typename T>
+T XHCI::read_interrupter_reg(size_t index)
+{
+    auto base = Address(&m_runtime_registers->Interrupter[index]);
+    base += T::offset_within_interrupter;
+
+    if constexpr (sizeof(T) == 8)
+        return mmio_read64<T>(base, m_supports_64bit ? MMIOPolicy::QWORD_ACCESS : MMIOPolicy::IGNORE_UPPER_DWORD);
+    else
+        return mmio_read32<T>(base);
+}
+
+template <typename T>
+void XHCI::write_interrupter_reg(size_t index, T value)
+{
+    auto base = Address(&m_runtime_registers->Interrupter[index]);
+    base += T::offset_within_interrupter;
+
+    if constexpr (sizeof(T) == 8)
+        mmio_write64(base, value, m_supports_64bit ? MMIOPolicy::QWORD_ACCESS : MMIOPolicy::IGNORE_UPPER_DWORD);
+    else
+        mmio_write32(base, value);
+}
+
+template <typename T>
+size_t XHCI::enqueue_command(T& trb)
+{
+    static_assert(sizeof(T) == sizeof(GenericTRB));
+
+    if (m_command_ring_offset == command_ring_capacity - 1) {
+        m_command_ring_cycle = !m_command_ring_cycle;
+        m_command_ring_offset = 0;
+    }
+
+    trb.C = m_command_ring_cycle;
+
+    copy_memory(&trb, &m_command_ring[m_command_ring_offset], sizeof(GenericTRB));
+
+    DoorbellRegister d {};
+    ring_doorbell(0, d);
+
+    return m_command_ring_offset++;
+}
+
+void XHCI::ring_doorbell(size_t index, DoorbellRegister reg)
+{
+    ASSERT(index < 255);
+    mmio_write32(&m_doorbell_registers[index], reg);
+}
+
 Page XHCI::allocate_safe_page()
 {
     auto page = MemoryManager::the().allocate_page();
@@ -463,7 +596,38 @@ Page XHCI::allocate_safe_page()
 
 bool XHCI::handle_irq(RegisterState&)
 {
-    XHCI_LOG << "got an irq?";
+    auto sts = read_oper_reg<USBSTS>();
+    auto im = read_interrupter_reg<InterrupterManagementRegister>(0);
+    log() << "Got an IRQ, STS: " << bit_cast<u32>(sts) << " IM: " << bit_cast<u32>(im);
+
+    write_oper_reg(sts);
+    write_interrupter_reg(0, im);
+
+    for (;;) {
+        if (m_event_ring_index == event_ring_segment_capacity) {
+            m_event_ring_cycle = !m_event_ring_cycle;
+            m_event_ring_index = 0;
+        }
+
+        if (m_event_ring[m_event_ring_index].C != m_event_ring_cycle)
+            break;
+
+        XHCI_LOG << "irq: event[" << m_event_ring_index << "]: " << static_cast<u8>(m_event_ring[m_event_ring_index].Type);
+
+        m_event_ring_index++;
+    }
+
+    auto address = m_event_ring_segment0_page.address();
+    address += m_event_ring_index * sizeof(GenericTRB);
+
+    auto erdp = read_interrupter_reg<EventRingDequeuePointerRegister>(0);
+    erdp.EHB = 1;
+    erdp.EventRingDequeuePointerLo = address >> 4;
+#ifdef ULTRA_64
+    erdp.EventRingDequeuePointerHi = address >> 32;
+#endif
+    write_interrupter_reg(0, erdp);
+
     return true;
 }
 

@@ -42,7 +42,23 @@ private:
     template <typename T>
     void write_oper_reg(T);
 
+    template <typename T>
+    T read_interrupter_reg(size_t index);
+
+    template <typename T>
+    void write_interrupter_reg(size_t index, T value);
+
+    // NOTE: You're not required to set the cycle bit.
+    template <typename T>
+    size_t enqueue_command(T&);
+
+    void ring_doorbell(size_t index, DoorbellRegister);
+
     bool perform_bios_handoff();
+    bool initialize_dcbaa(const HCCPARAMS1&, const HCSPARAMS1&);
+    bool initialize_command_ring();
+    bool initialize_event_ring();
+
     bool halt();
     bool reset();
 
@@ -58,6 +74,8 @@ private:
 
     volatile CapabilityRegisters* m_capability_registers { nullptr };
     volatile OperationalRegisters* m_operational_registers { nullptr };
+    volatile RuntimeRegisters* m_runtime_registers { nullptr };
+    volatile u32* m_doorbell_registers { nullptr };
     Address m_ecaps_base { nullptr };
 
     struct Port {
@@ -104,8 +122,17 @@ private:
         DynamicArray<Page> device_context_pages;
     } m_dcbaa_context;
 
-    static constexpr size_t command_ring_capacity = Page::size / sizeof(GenericCommandTRB);
-    TypedMapping<GenericCommandTRB> m_command_ring;
+    static constexpr size_t command_ring_capacity = Page::size / sizeof(GenericTRB);
+    size_t m_command_ring_offset { 0 };
+    TypedMapping<GenericTRB> m_command_ring;
+
+    static constexpr size_t event_ring_segment_capacity = Page::size / sizeof(GenericTRB);
+    Page m_event_ring_segment0_page {};
+    size_t m_event_ring_index { 0 };
+    TypedMapping<GenericTRB> m_event_ring;
+
+    u8 m_event_ring_cycle { 1 };
+    u8 m_command_ring_cycle { 1 };
 
     bool m_supports_64bit { false };
 };
