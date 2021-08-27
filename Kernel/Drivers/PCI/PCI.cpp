@@ -97,11 +97,12 @@ bool PCI::Device::can_use_bar(const BAR& bar)
 }
 #endif
 
-PCI::Device::CommandRegister PCI::Device::set_command_register(MemorySpaceMode memory_space, IOSpaceMode io_space, BusMasterMode bus_master)
+PCI::Device::CommandRegister PCI::Device::set_command_register(MemorySpaceMode memory_space, IOSpaceMode io_space, BusMasterMode bus_master, InterruptDisableMode interrupt_mode)
 {
     static constexpr u16 io_space_bit = SET_BIT(0);
     static constexpr u16 memory_space_bit = SET_BIT(1);
     static constexpr u16 bus_master_bit = SET_BIT(2);
+    static constexpr u16 interrupts_disabled_bit = SET_BIT(10);
 
     CommandRegister original {};
 
@@ -109,6 +110,7 @@ PCI::Device::CommandRegister PCI::Device::set_command_register(MemorySpaceMode m
     original.io_space = (raw & io_space_bit) ? IOSpaceMode::ENABLED : IOSpaceMode::DISABLED;
     original.memory_space = (raw & memory_space_bit) ? MemorySpaceMode::ENABLED : MemorySpaceMode::DISABLED;
     original.bus_master = (raw & bus_master_bit) ? BusMasterMode::ENABLED : BusMasterMode::DISABLED;
+    original.interrupts = (raw & interrupts_disabled_bit) ? InterruptDisableMode::SET : InterruptDisableMode::CLEARED;
 
     if (io_space == IOSpaceMode::DISABLED)
         raw &= ~io_space_bit;
@@ -124,6 +126,11 @@ PCI::Device::CommandRegister PCI::Device::set_command_register(MemorySpaceMode m
         raw &= ~bus_master_bit;
     else if (bus_master == BusMasterMode::ENABLED)
         raw |= bus_master_bit;
+
+    if (interrupt_mode == InterruptDisableMode::CLEARED)
+        raw &= ~interrupts_disabled_bit;
+    else if (interrupt_mode == InterruptDisableMode::SET)
+        raw |= interrupts_disabled_bit;
 
     access().write16(location(), PCI::command_register_offset, raw);
 
@@ -190,15 +197,6 @@ void PCI::Device::enable_msi(u16 vector)
 
         access().write32(location(), cap->offset + message_control_offset, message_control);
     }
-}
-
-void PCI::Device::clear_interrupts_disabled()
-{
-    static constexpr u16 interrupts_disabled_bit = SET_BIT(10);
-
-    auto raw = access().read16(location(), PCI::command_register_offset);
-    raw &= ~interrupts_disabled_bit;
-    access().write16(location(), PCI::command_register_offset, raw);
 }
 
 u16 PCI::Device::legacy_pci_irq_line()

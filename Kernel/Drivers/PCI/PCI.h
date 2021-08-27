@@ -225,20 +225,26 @@ public:
             ENABLED,
             UNTOUCHED
         };
+        enum class InterruptDisableMode {
+            CLEARED,
+            SET,
+            UNTOUCHED
+        };
         struct CommandRegister {
             MemorySpaceMode memory_space;
             IOSpaceMode io_space;
             BusMasterMode bus_master;
+            InterruptDisableMode interrupts;
         };
 
         // returns the original command register values
         CommandRegister set_command_register(
             MemorySpaceMode = MemorySpaceMode::UNTOUCHED,
             IOSpaceMode = IOSpaceMode::UNTOUCHED,
-            BusMasterMode = BusMasterMode::UNTOUCHED);
+            BusMasterMode = BusMasterMode::UNTOUCHED,
+            InterruptDisableMode = InterruptDisableMode::UNTOUCHED);
 
         void enable_msi(u16 vector);
-        void clear_interrupts_disabled();
 
         u16 legacy_pci_irq_line();
 

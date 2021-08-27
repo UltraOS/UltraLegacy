@@ -28,8 +28,7 @@ AHCI::AHCI(const PCI::DeviceInfo& info)
     ASSERT(bar_5.type == BAR::Type::MEMORY32);
     m_hba = TypedMapping<volatile HBA>::create("AHCI HBA"_sv, bar_5.address);
 
-    set_command_register(MemorySpaceMode::ENABLED, IOSpaceMode::UNTOUCHED, BusMasterMode::ENABLED);
-    clear_interrupts_disabled();
+    set_command_register(MemorySpaceMode::ENABLED, IOSpaceMode::UNTOUCHED, BusMasterMode::ENABLED, InterruptDisableMode::CLEARED);
 
     // We have to enable AHCI before touching any AHCI registers
     enable_ahci();
