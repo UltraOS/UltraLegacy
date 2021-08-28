@@ -26,9 +26,10 @@ qemu-system-x86_64 -drive file=Images/Ultra%arch%HDD.vmdk,index=0,media=disk ^
                    -debugcon stdio ^
                    -serial file:Ultra%arch%log.txt ^
                    -smp 4 ^
-                   -m 128 ^
+                   -m 512 ^
                    -no-reboot -no-shutdown ^
                    -vga vmware ^
+                   -device qemu-xhci ^
                    -M q35
 exit 0
 
