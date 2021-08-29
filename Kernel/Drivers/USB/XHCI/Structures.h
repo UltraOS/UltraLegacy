@@ -414,6 +414,81 @@ struct PACKED DoorbellRegister {
     u16 DBStreamID;
 };
 
+struct PACKED SlotContext {
+    u32 RouteString : 20;
+    u32 Speed : 4;
+    u32 RsvdZ : 1;
+    u32 MTT : 1;
+    u32 Hub : 1;
+    u32 ContextEntries : 5;
+
+    u16 MaxExitLatency;
+    u8 RootHubPortNumber;
+    u8 NumberOfPorts;
+
+    u32 ParentHubSlotID : 8;
+    u32 ParentPortNumber : 8;
+    u32 TTT : 2;
+    u32 RzvdZ1 : 4;
+    u32 InterrupterTarget : 10;
+
+    u32 USBDeviceAddress : 8;
+    u32 RzvdZ2 : 19;
+    enum class State {
+        Disabled = 0,
+        Enabled = 0,
+        Default = 1,
+        Addressed = 2,
+        Configured = 3,
+    } SlotState : 5;
+
+    u32 xHCIReserved[4];
+    // might have 4 more DWORDs here depending on HCCPARAMS1::CSZ
+};
+
+struct PACKED EndpointContext {
+    enum class State {
+        Disabled = 0,
+        Running = 1,
+        Halted = 2,
+        Stopped = 3,
+        Error = 4,
+    } EPState : 3;
+    u32 RsvdZ : 5;
+    u32 Mult : 2;
+    u32 MaxPStreams : 5;
+    u32 LSA : 1;
+    u32 Interval : 8;
+    u32 MaxESITPayloadHi : 8;
+
+    u32 RsvdZ1 : 1;
+    u32 CErr : 2;
+    enum class Type {
+        NotValid = 0,
+        IsochOut = 1,
+        BulkOut = 2,
+        InterruptOut = 3,
+        ControlBidirectional = 4,
+        IsochIn = 5,
+        BulkIn = 6,
+        InterruptIn = 7
+    } EPType : 3;
+    u32 RzvdZ2 : 1;
+    u32 HID : 1;
+    u32 MaxBurstSize : 8;
+    u32 MaxPacketSize : 16;
+
+    u32 DCS : 1;
+    u32 TRDequeuePointerLo : 31;
+    u32 TRDequeuePointerHi;
+
+    u32 AverageTRBLength : 16;
+    u32 MaxESITPayloadLo : 16;
+
+    u32 xHCIReserved[3];
+    // might have 4 more DWORDs here depending on HCCPARAMS1::CSZ
+};
+
 static_assert(sizeof(USBLEGCTLSTS) == 4, "Incorrect size of USBLEGCTLSTS");
 static_assert(sizeof(SupportedProtocolDWORD0) == 4, "Incorrect size of SupportedProtocolDWORD0");
 static_assert(sizeof(SupportedProtocolDWORD1) == 4, "Incorrect size of SupportedProtocolDWORD1");
@@ -454,5 +529,8 @@ static_assert(sizeof(EventRingSegmentTableBaseAddressRegister) == 8, "Incorrect 
 static_assert(sizeof(EventRingDequeuePointerRegister) == 8, "Incorrect size of EventRingDequeuePointerRegister");
 static_assert(sizeof(InterrupterRegisterSet) == 0x20, "Incorrect size of InterrupterRegisterSet");
 static_assert(sizeof(RuntimeRegisters) == 0x20, "Incorrect size of RuntimeRegisters");
+
+static_assert(sizeof(SlotContext) == 0x20, "Incorrect size of SlotContext");
+static_assert(sizeof(EndpointContext) == 0x20, "Incorrect size of EndpointContext");
 
 }
