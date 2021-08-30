@@ -48,6 +48,12 @@ private:
     template <typename T>
     void write_interrupter_reg(size_t index, T value);
 
+    template <typename T>
+    void write_port_reg(size_t index, T value);
+
+    template <typename T>
+    T read_port_reg(size_t index);
+
     // NOTE: You're not required to set the cycle bit.
     template <typename T>
     size_t enqueue_command(T&);

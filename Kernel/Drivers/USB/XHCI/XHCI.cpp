@@ -557,6 +557,24 @@ void XHCI::write_interrupter_reg(size_t index, T value)
 }
 
 template <typename T>
+void XHCI::write_port_reg(size_t index, T value)
+{
+    static_assert(sizeof(T) == 4);
+
+    auto base = Address(&m_operational_registers->port_registers[index]);
+    mmio_write32(base, value);
+}
+
+template <typename T>
+T XHCI::read_port_reg(size_t index)
+{
+    static_assert(sizeof(T) == 4);
+
+    auto base = Address(&m_operational_registers->port_registers[index]);
+    return mmio_read32<T>(base);
+}
+
+template <typename T>
 size_t XHCI::enqueue_command(T& trb)
 {
     static_assert(sizeof(T) == sizeof(GenericTRB));

@@ -90,7 +90,7 @@ struct PACKED PORTSC {
     u32 PR : 1;
     u32 PLS : 4;
     u32 PP : 1;
-    u32 ROS : 4;
+    u32 PortSpeed : 4;
     u32 PIC : 2;
     u32 LWS : 1;
     u32 CSC : 1;
@@ -384,10 +384,61 @@ enum class TRBType : u32 {
     MFINDEXWrapEvent = 39,
 };
 
+enum class CC : u32 {
+    Invalid = 0,
+    Success = 1,
+    DataBufferError = 2,
+    BabbleDetectedError = 3,
+    USBTransactionError = 4,
+    TRBError = 5,
+    StallError = 6,
+    ResourceError = 7,
+    BandwidthError = 8,
+    NoSlotsAvailableError = 9,
+    InvalidStreamTypeError = 10,
+    SlotNotEnabledError = 11,
+    EndpointNotEnabledError = 12,
+    ShortPacket = 13,
+    RingUnderrun = 14,
+    RingOverrun = 15,
+    VFEventRingFullError = 16,
+    ParameterError = 17,
+    BandwidthOverrunError = 18,
+    ContextStateError = 19,
+    NoPingResponseError = 20,
+    EventRingFullError = 21,
+    IncompatibleDeviceError = 22,
+    MissedServiceError = 23,
+    CommandRingStopped = 24,
+    CommandAborted = 25,
+    Stopped = 26,
+    StoppedLengthInvalid = 27,
+    StoppedShortPacket = 28,
+    MaxExitLatencyTooLargeError = 29,
+    IsochBufferOverrun = 31,
+    EventLostError = 32,
+    UndefinedError = 33,
+    InvalidStreamIDError = 34,
+    SecondaryBandwidthError = 35,
+    SplitTransactionError = 36,
+};
+
 struct GenericTRB {
     u32 RzvdZ;
     u32 RzvdZ1;
     u32 RzvdZ2;
+    u32 C : 1;
+    u32 RzvdZ3 : 9;
+    TRBType Type : 6;
+    u32 RzvdZ4 : 16;
+};
+
+struct PortStatusChangeEventTRB {
+    u32 RzvdZ : 24;
+    u32 PortID : 8;
+    u32 RzvdZ1;
+    u32 RzvdZ2 : 24;
+    CC CompletionCode : 8;
     u32 C : 1;
     u32 RzvdZ3 : 9;
     TRBType Type : 6;
@@ -509,7 +560,7 @@ static_assert(sizeof(DCBAAP) == 8, "Incorrect size of DCBAAP");
 static_assert(sizeof(CONFIG) == 4, "Incorrect size of CONFIG");
 
 static_assert(sizeof(PortRegister) == 16, "Incorrect size of port register");
-static_assert(sizeof(decltype(PortRegister::PORTSC)) == 4, "Incorrect size of PORTSC");
+static_assert(sizeof(PORTSC) == 4, "Incorrect size of PORTSC");
 
 static_assert(sizeof(PORTPMSCUSB2) == 4, "Incorrect size of PORTPMSC for USB2");
 static_assert(sizeof(PORTPMSCUSB3) == 4, "Incorrect size of PORTPMSC for USB3");
