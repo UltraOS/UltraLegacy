@@ -14,7 +14,8 @@ public:
         MUTEX,
         IO,
         PROCESS_LOAD,
-        SLEEP
+        SLEEP,
+        IRQ
     };
 
     enum class Result : u32 {
@@ -94,6 +95,11 @@ public:
 
 private:
     u64 m_wake_time { 0 };
+};
+
+class IRQBlocker : public Blocker {
+public:
+    IRQBlocker(Thread& blocked_thread);
 };
 
 }

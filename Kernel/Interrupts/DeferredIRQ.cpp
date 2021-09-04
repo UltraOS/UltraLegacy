@@ -17,24 +17,20 @@ DeferredIRQHandler::~DeferredIRQHandler()
 
 void DeferredIRQHandler::deferred_invoke()
 {
+    m_pending_count++;
     DeferredIRQManager::the().request_invocation();
-}
-
-void DeferredIRQHandler::invoke()
-{
-    m_pending = false;
-    handle_deferred_irq();
 }
 
 void DeferredIRQManager::request_invocation()
 {
-    LOCK_GUARD(m_state_lock);
-    m_blocker->unblock();
+    LOCK_GUARD(m_blocker_access_lock);
+    if (m_blocker)
+        m_blocker->unblock();
 }
 
 void DeferredIRQManager::register_handler(DeferredIRQHandler& handler)
 {
-    LOCK_GUARD(m_state_lock);
+    LOCK_GUARD(m_handlers_modification_lock);
 
     ASSERT(!m_handlers.contains(&handler));
     m_handlers.emplace(&handler);
@@ -42,7 +38,7 @@ void DeferredIRQManager::register_handler(DeferredIRQHandler& handler)
 
 void DeferredIRQManager::unregister_handler(DeferredIRQHandler& handler)
 {
-    LOCK_GUARD(m_state_lock);
+    LOCK_GUARD(m_handlers_modification_lock);
 
     ASSERT(m_handlers.contains(&handler));
     m_handlers.remove(&handler);
@@ -50,15 +46,27 @@ void DeferredIRQManager::unregister_handler(DeferredIRQHandler& handler)
 
 void DeferredIRQManager::do_run_handlers()
 {
+    auto* current_thread = Thread::current();
+    current_thread->set_invulnerable(true);
+
     auto& instance = the();
 
+    // The reason this loop is so weird is that we don't want to
+    // ever go into a blocked state whenever there's a pending deferred IRQ.
+    // With this setup it's currently impossible since we set the blocker before
+    // actually running the handlers. If we get an invocation request before
+    // calling block(), the block call itself will instantly return without
+    // actually blocking the thread, and we will go to the next iteration.
     for (;;) {
-        IRQBlocker irq_blocker(*Thread::current());
+        IRQBlocker irq_blocker(*current_thread);
 
         {
-            LOCK_GUARD(instance.m_state_lock);
+            LOCK_GUARD(instance.m_blocker_access_lock);
             instance.m_blocker = &irq_blocker;
+        }
 
+        {
+            LOCK_GUARD(instance.m_handlers_modification_lock);
             for (auto& handler : instance.m_handlers) {
                 while (handler->is_pending())
                     handler->invoke();
@@ -69,7 +77,7 @@ void DeferredIRQManager::do_run_handlers()
         ASSERT(res == Blocker::Result::UNBLOCKED);
 
         {
-            LOCK_GUARD(instance.m_state_lock);
+            LOCK_GUARD(instance.m_blocker_access_lock);
             instance.m_blocker = nullptr;
         }
     }

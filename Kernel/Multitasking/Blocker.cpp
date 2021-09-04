@@ -59,4 +59,9 @@ bool SleepBlocker::should_be_woken_up() const
     return m_wake_time <= Timer::nanoseconds_since_boot();
 }
 
+IRQBlocker::IRQBlocker(Thread& blocked_thread)
+    : Blocker(blocked_thread, Type::IRQ)
+{
+}
+
 }

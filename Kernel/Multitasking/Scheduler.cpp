@@ -2,6 +2,7 @@
 
 #include "Interrupts/IDT.h"
 #include "Interrupts/Utilities.h"
+#include "Interrupts/DeferredIRQ.h"
 
 #include "Scheduler.h"
 #include "TaskFinalizer.h"
@@ -23,6 +24,7 @@ void Scheduler::inititalize()
 #endif
 
     TaskFinalizer::spawn();
+    DeferredIRQManager::initialize();
 
     Timer::register_scheduler_handler(on_tick);
 }

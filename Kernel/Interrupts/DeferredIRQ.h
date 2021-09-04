@@ -12,16 +12,22 @@ public:
     ~DeferredIRQHandler();
 
     void deferred_invoke();
-    [[nodiscard]] bool is_pending() const { return m_pending; }
+    [[nodiscard]] bool is_pending() const { return m_pending_count.load(); }
 
-    virtual void handle_deferred_irq() = 0;
+    virtual bool handle_deferred_irq() = 0;
 
 private:
     friend class DeferredIRQManager;
-    void invoke();
+    void invoke()
+    {
+        auto new_count = m_pending_count--;
+        ASSERT(new_count);
+
+        handle_deferred_irq();
+    }
 
 private:
-    bool m_pending { false };
+    Atomic<size_t> m_pending_count { 0 };
 };
 
 class DeferredIRQManager {
@@ -38,7 +44,10 @@ private:
     static void do_run_handlers();
 
 private:
-    InterruptSafeSpinLock m_state_lock;
+    InterruptSafeSpinLock m_blocker_access_lock;
+
+    // NOTE: not interrupt safe
+    SpinLock m_handlers_modification_lock;
 
     // We cannot use atomic here because as soon as blocker goes
     // out of scope it becomes invalid. And there's no guarantees
