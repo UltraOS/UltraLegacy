@@ -3,6 +3,7 @@
 #include "Kernel/Drivers/Device.h"
 #include "Kernel/Drivers/PCI/PCI.h"
 #include "Kernel/Interrupts/IRQHandler.h"
+#include "Kernel/Interrupts/DeferredIRQ.h"
 #include "Kernel/Memory/MemoryManager.h"
 #include "Memory/TypedMapping.h"
 
@@ -10,7 +11,7 @@
 
 namespace kernel {
 
-class XHCI final : public Device, public PCI::Device, public IRQHandler {
+class XHCI final : public Device, public PCI::Device, public IRQHandler, public DeferredIRQHandler {
     AUTO_DETECT_PCI(XHCI);
 
 public:
@@ -24,6 +25,7 @@ public:
     StringView device_model() const override { return "Generic xHCI Controller"_sv; }
 
     bool handle_irq(RegisterState&) override;
+    bool handle_deferred_irq() override;
 
     static void autodetect(const DynamicArray<PCI::DeviceInfo>&);
 
@@ -73,6 +75,9 @@ private:
 
     Page allocate_safe_page();
 
+    void reset_port(size_t port_id);
+    void handle_port_status_change(size_t port_id);
+
 private:
 #ifdef ULTRA_32
     MemoryManager::VR m_bar0_region;
@@ -92,6 +97,12 @@ private:
             USB3 = SET_BIT(2),
             USB3_MASTER = SET_BIT(2) | SET_BIT(0)
         } mode { NOT_PRESENT };
+
+        enum class State {
+            DEFAULT,
+            RESETTING,
+            DEVICE_ATTACHED,
+        } state { State::DEFAULT };
 
         u8 index_of_pair { 0 };
         u8 physical_offset { 0 };

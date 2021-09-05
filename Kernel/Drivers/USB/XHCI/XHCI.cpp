@@ -1,3 +1,4 @@
+#include <Multitasking/Sleep.h>
 #include "XHCI.h"
 #include "Drivers/MMIOHelpers.h"
 #include "Structures.h"
@@ -138,9 +139,49 @@ bool XHCI::initialize()
     usbcmd.RS = 1;
     write_oper_reg(usbcmd);
 
-    GenericTRB trb {};
-    trb.Type = TRBType::NoOp;
-    enqueue_command(trb);
+    bool powered_by_default = !hccp1.PPC;
+    XHCI_DEBUG << "are ports powered by default - " << powered_by_default;
+
+    for (size_t i = 0; i < m_port_count; ++i) {
+        if (m_ports[i].mode == Port::Mode::NOT_PRESENT)
+            continue;
+
+        auto sts = read_port_reg<PORTSC>(i);
+
+        bool was_enabled = sts.PP;
+
+        sts.PP = 1;
+        // don't accidentally disable the port
+        sts.PED = 0;
+        write_port_reg(i, sts);
+
+        if (!was_enabled) {
+            XHCI_DEBUG << "port " << i << " is not powered on";
+            auto res = repeat_until([this, i] () { return read_port_reg<PORTSC>(i).PP == 1; }, 20);
+
+            if (!res.success) {
+                XHCI_WARN << "port " << i << " failed to power on, ignoring";
+                m_ports[i].mode = Port::Mode::NOT_PRESENT;
+                continue;
+            }
+
+            XHCI_DEBUG << "successfully powered on port " << i;
+        }
+
+        if (sts.CCS)
+            handle_port_status_change(i);
+    }
+
+
+    XHCI_DEBUG << "enabling interrupts";
+    // Enable the interrupter in CMD + IE bit in the primary interrupter
+    usbcmd.INTE = 1;
+    usbcmd.HSEE = 1;
+    write_oper_reg(usbcmd);
+
+    auto im = read_interrupter_reg<InterrupterManagementRegister>(0);
+    im.IE = 1;
+    write_interrupter_reg(0, im);
 
     return true;
 }
@@ -260,16 +301,6 @@ bool XHCI::initialize_event_ring()
     erstba.EventRingSegmentTableBaseAddressHi = (event_ring_segment_table_page.address() >> 32);
 #endif
     write_interrupter_reg(0, erstba);
-
-    // Enable the interrupter in CMD + IE bit in the primary interrupter
-    auto usbcmd = read_oper_reg<USBCMD>();
-    usbcmd.INTE = 1;
-    usbcmd.HSEE = 1;
-    write_oper_reg(usbcmd);
-
-    auto im = read_interrupter_reg<InterrupterManagementRegister>(0);
-    im.IE = 1;
-    write_interrupter_reg(0, im);
 
     return true;
 }
@@ -616,21 +647,144 @@ bool XHCI::handle_irq(RegisterState&)
 {
     auto sts = read_oper_reg<USBSTS>();
     auto im = read_interrupter_reg<InterrupterManagementRegister>(0);
-    log() << "Got an IRQ, STS: " << bit_cast<u32>(sts) << " IM: " << bit_cast<u32>(im);
 
     write_oper_reg(sts);
     write_interrupter_reg(0, im);
 
+    deferred_invoke();
+
+    return true;
+}
+
+void XHCI::reset_port(size_t port_id)
+{
+    auto& port = m_ports[port_id];
+    port.state = Port::State::RESETTING;
+
+    auto ps = read_port_reg<PORTSC>(port_id);
+
+    if (port.mode & Port::USB3)
+        ps.WPR = 1;
+    else
+        ps.PR = 1;
+
+    write_port_reg(port_id, ps);
+}
+
+void XHCI::handle_port_status_change(size_t port_id)
+{
+    auto port_status = read_port_reg<PORTSC>(port_id);
+
+    String changed_bits;
+
+    if (port_status.CSC)
+        changed_bits << " CSC";
+    if (port_status.PEC)
+        changed_bits << " PEC";
+    if (port_status.WRC)
+        changed_bits << " WRC";
+    if (port_status.OCC)
+        changed_bits << " OCC";
+    if (port_status.PRC)
+        changed_bits << " PRC";
+    if (port_status.PLC)
+        changed_bits << " PLC";
+    if (port_status.CEC)
+        changed_bits << " CEC";
+
+    auto& event_port = m_ports[port_id];
+
+    XHCI_DEBUG << "port status change for port " << port_id
+               << ", bits that changed: " << changed_bits;
+
+    port_status.PED = 0;
+
+    if (port_status.CSC) {
+        XHCI_DEBUG << "connection status is " << port_status.CCS;
+
+        if (event_port.mode & Port::USB2) {
+            auto parent_status = read_port_reg<PORTSC>(event_port.index_of_pair);
+
+            XHCI_DEBUG << "USB3 parent status: CCS: " << parent_status.CCS << " speed: " << parent_status.PortSpeed;
+        }
+    }
+
+    write_port_reg(port_id, port_status);
+    return;
+
+    // TODO: reset ports, and handle states correctly
+    if (event_port.state == Port::State::DEFAULT) {
+        // This port has a USB3 counterpart, try to reset it first
+        if (event_port.mode == Port::Mode::USB2) {
+            XHCI_DEBUG << "trying to reset USB3 pair of port " << port_id
+            << " (number " << event_port.index_of_pair << ")";
+
+            reset_port(event_port.index_of_pair);
+            return;
+        }
+
+        XHCI_DEBUG << "trying to reset port " << port_id;
+        reset_port(port_id);
+
+        return;
+    }
+
+    // Looks like this event is associated with port finishing a reset
+    if (event_port.state == Port::State::RESETTING) {
+        auto port_reg = read_port_reg<PORTSC>(port_id);
+        bool success = port_reg.PED && port_reg.PortSpeed;
+
+        port_reg.PED = 0;
+        write_port_reg(port_id, port_reg);
+
+        XHCI_DEBUG << "port state after reset: success: " << success << " speed: " << port_reg.PortSpeed;
+
+        if (!success) {
+            event_port.state = Port::State::DEFAULT;
+
+            // Reset failed for USB2, try USB3
+            if (event_port.mode == Port::Mode::USB3_MASTER)
+                reset_port(event_port.index_of_pair);
+
+            return;
+        }
+
+        event_port.state = Port::State::DEVICE_ATTACHED;
+        return;
+    }
+
+    // Device was detached?
+    if (event_port.state == Port::State::DEVICE_ATTACHED) {
+        auto port_reg = read_port_reg<PORTSC>(port_id);
+        port_reg.PED = 0;
+        write_port_reg(port_id, port_reg);
+
+        XHCI_DEBUG << "Device detached?";
+        event_port.state = Port::State::DEFAULT;
+
+        return;
+    }
+}
+
+bool XHCI::handle_deferred_irq()
+{
     for (;;) {
         if (m_event_ring_index == event_ring_segment_capacity) {
             m_event_ring_cycle = !m_event_ring_cycle;
             m_event_ring_index = 0;
         }
 
-        if (m_event_ring[m_event_ring_index].C != m_event_ring_cycle)
+        auto& event = m_event_ring[m_event_ring_index];
+
+        if (event.C != m_event_ring_cycle)
             break;
 
-        XHCI_LOG << "irq: event[" << m_event_ring_index << "]: " << static_cast<u8>(m_event_ring[m_event_ring_index].Type);
+        XHCI_LOG << "irq: event[" << m_event_ring_index << "]: " << static_cast<u8>(event.Type);
+
+        if (event.Type == TRBType::PortStatusChangeEvent) {
+            auto psc = bit_cast<PortStatusChangeEventTRB>(event);
+            handle_port_status_change(psc.PortID - 1);
+        }
 
         m_event_ring_index++;
     }
