@@ -139,6 +139,7 @@ private:
     u8 m_offset_within_packet { 0 };
     bool m_middle_button_is_primary { false };
     bool m_has_middle_button { false };
+    bool m_supports_w { false };
 
     struct State {
         u16 x { 0 };

@@ -236,8 +236,12 @@ bool SynapticsTouchpad::handle_action()
             } else if (w == 1) {
                 m_prev_state.finger_count = 3;
             } else {
-                y_delta = y_units_delta / m_delta_per_pixel_y;
-                x_delta = x_units_delta / m_delta_per_pixel_x;
+                // Ignore delta if we had multiple fingers on the touchpad previously
+                if (m_prev_state.finger_count == 0) {
+                    y_delta = y_units_delta / m_delta_per_pixel_y;
+                    x_delta = x_units_delta / m_delta_per_pixel_x;
+                }
+
                 m_prev_state.finger_count = 0;
             }
         }
