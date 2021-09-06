@@ -37,14 +37,15 @@ SynapticsTouchpad::SynapticsTouchpad(PS2Controller* parent, PS2Controller::Chann
 
     auto caps = query<CapabilitiesPage>(2);
 
-    if (!caps.has_extended_caps) {
-        SYN_DEBUG << "no extended capabilties";
+    m_supports_w = caps.has_extended_caps;
+
+    if (!m_supports_w) {
+        SYN_DEBUG << "no extended capabilities";
         set_mode(m);
         return;
     }
 
     m.wmode = 1;
-    m.rate = 1;
 
     auto max_page = 8 + caps.max_query_page;
     SYN_DEBUG << "max query page is " << max_page;
@@ -174,9 +175,13 @@ bool SynapticsTouchpad::handle_action()
 
     auto abs_packet = bit_cast<AbsolutePacket>(m_packet_buffer);
 
-    u8 w = abs_packet.w_0;
-    w |= abs_packet.w_1 << 1;
-    w |= abs_packet.w_2_to_3 << 2;
+    u8 w = 4;
+
+    if (m_supports_w) {
+        w = abs_packet.w_0;
+        w |= abs_packet.w_1 << 1;
+        w |= abs_packet.w_2_to_3 << 2;
+    }
 
     // Skip all extended W packets for now
     if (w == 2)
