@@ -129,6 +129,26 @@ private:
         u8 y;
     };
 
+    struct PACKED SecondaryFingerPacket {
+        u8 left : 1;
+        u8 right : 1;
+        u8 always_one : 1;
+        u8 always_zero : 4;
+        u8 always_one1 : 1;
+        u8 x_1_to_8;
+        u8 y_1_to_8;
+        u8 left1 : 1;
+        u8 right1 : 1;
+        u8 always_zero2 : 2;
+        u8 z_5_to_6 : 2;
+        u8 always_one3 : 2;
+        u8 x_9_to_12 : 4;
+        u8 y_9_to_12 : 4;
+        u8 z_1_to_4 : 4;
+        u8 always_one4 : 4;
+    };
+
+    static_assert(sizeof(SecondaryFingerPacket) == 6);
     static_assert(sizeof(AbsolutePacket) == 6);
 
 private:
