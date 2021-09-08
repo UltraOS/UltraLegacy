@@ -75,6 +75,126 @@ private:
     ptr_t m_backtrace[max_watcher_depth];
 };
 
+class SharedSpinLock : public DeadlockWatcher {
+    MAKE_NONCOPYABLE(SharedSpinLock)
+
+public:
+    SharedSpinLock() = default;
+
+    using lock_t = ssize_t;
+
+    static constexpr lock_t unlocked = 0;
+    static constexpr lock_t exclusive = 1;
+
+    void exclusive_lock(const char* file = nullptr, size_t line = 0, size_t core_id = 0) ALWAYS_INLINE
+    {
+        do_exclusive_lock(file, line, core_id, true);
+    }
+
+    void exclusive_unlock() ALWAYS_INLINE
+    {
+        auto expected = exclusive;
+        bool result = m_lock.compare_and_exchange(&expected, unlocked);
+
+        ASSERT(result);
+    }
+
+    void shared_lock() ALWAYS_INLINE
+    {
+        do_shared_lock( true);
+    }
+
+    void shared_unlock() ALWAYS_INLINE
+    {
+        auto result = m_lock.fetch_subtract(1);
+        ASSERT(result >= unlocked);
+    }
+
+protected:
+    void do_exclusive_lock(const char* file, size_t line, size_t core_id, bool service_interrupts) ALWAYS_INLINE
+    {
+        if (!file)
+            file = "<unspecified>";
+
+        lock_t expected = unlocked;
+
+        while (!m_lock.compare_and_exchange(&expected, exclusive)) {
+            did_fail_to_acquire();
+
+            // Service IPIs/IRQs/whatever while waiting
+            if (service_interrupts) {
+                Interrupts::enable();
+                Interrupts::disable();
+            }
+
+            expected = unlocked;
+            pause();
+        }
+
+        did_acquire_lock(file, line, core_id);
+    }
+
+    void do_shared_lock(bool service_interrupts) ALWAYS_INLINE
+    {
+        lock_t expected = unlocked;
+
+        while (!m_lock.compare_and_exchange(&expected, expected + 1))
+        {
+            did_fail_to_acquire();
+
+            // Service IPIs/IRQs/whatever while waiting
+            if (service_interrupts) {
+                Interrupts::enable();
+                Interrupts::disable();
+            }
+
+            if (expected == exclusive)
+                expected = unlocked;
+
+            pause();
+        }
+    }
+
+private:
+    Atomic<lock_t> m_lock { unlocked };
+};
+
+class SharedInterruptSafeSpinLock : public SharedSpinLock {
+public:
+    void exclusive_lock(bool& interrupt_state, const char* file = nullptr, size_t line = 0, size_t core_id = 0) ALWAYS_INLINE
+    {
+        interrupt_state = Interrupts::are_enabled();
+        Interrupts::disable();
+
+        do_exclusive_lock(file, line, core_id, false);
+    }
+
+    void exclusive_unlock(bool interrupt_state) ALWAYS_INLINE
+    {
+        SharedSpinLock::exclusive_unlock();
+
+        if (interrupt_state)
+            Interrupts::enable();
+    }
+
+    void shared_lock(bool& interrupt_state) ALWAYS_INLINE
+    {
+        interrupt_state = Interrupts::are_enabled();
+        Interrupts::disable();
+
+        do_shared_lock(false);
+    }
+
+    void shared_unlock(bool interrupt_state) ALWAYS_INLINE
+    {
+        SharedSpinLock::shared_unlock();
+
+        if (interrupt_state)
+            Interrupts::enable();
+    }
+
+};
+
 class SpinLock : public DeadlockWatcher {
     MAKE_NONCOPYABLE(SpinLock);
 
