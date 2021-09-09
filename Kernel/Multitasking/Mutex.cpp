@@ -7,7 +7,7 @@ void Mutex::lock()
 {
     for (;;) {
         bool interrupt_state = false;
-        m_state_access_lock.lock(interrupt_state, __FILE__, __LINE__, CPU::current_id());
+        ILOCK(m_state_access_lock, interrupt_state);
 
         auto* current_thread = Thread::current();
 
@@ -51,7 +51,7 @@ void SharedMutex::exclusive_lock()
 {
     for (;;) {
         bool interrupt_state = false;
-        m_state_access_lock.lock(interrupt_state, __FILE__, __LINE__, CPU::current_id());
+        ILOCK(m_state_access_lock, interrupt_state);
 
         auto* current_thread = Thread::current();
 
@@ -99,7 +99,7 @@ void SharedMutex::shared_lock()
 {
     for (;;) {
         bool interrupt_state = false;
-        m_state_access_lock.lock(interrupt_state, __FILE__, __LINE__, CPU::current_id());
+        ILOCK(m_state_access_lock, interrupt_state);
 
         auto* current_thread = Thread::current();
 

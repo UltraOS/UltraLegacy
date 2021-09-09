@@ -101,7 +101,7 @@ public:
 
     void shared_lock() ALWAYS_INLINE
     {
-        do_shared_lock( true);
+        do_shared_lock(true);
     }
 
     void shared_unlock() ALWAYS_INLINE
@@ -422,3 +422,9 @@ private:
 }
 
 #define LOCK_GUARD(lock) LockGuard<remove_reference_t<decltype(lock)>> lock_guard(lock, __FILE__, __LINE__)
+
+#define LOCK(lock_name) lock_name.lock(__FILE__, __LINE__, CPU::current_id())
+#define ILOCK(lock_name, interrupt_state) lock_name.lock(interrupt_state, __FILE__, __LINE__, CPU::current_id())
+
+#define EXCLUSIVE_LOCK(lock_name) lock_name.exclusive_lock(__FILE__, __LINE__, CPU::current_id())
+#define EXCLUSIVE_ILOCK(lock_name, interrupt_state) lock_name.exclusive_lock(interrupt_state, __FILE__, __LINE__, CPU::current_id())
