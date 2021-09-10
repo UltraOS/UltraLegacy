@@ -18,6 +18,9 @@ Blocker::Result Blocker::block()
 
 void Blocker::unblock()
 {
+    if (!should_block())
+        return;
+
     Scheduler::the().unblock(*this);
 }
 
