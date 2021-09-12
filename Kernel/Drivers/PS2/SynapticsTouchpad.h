@@ -1,12 +1,12 @@
 #pragma once
 
-#include "Drivers/Mouse.h"
+#include "Drivers/TouchPad.h"
 #include "PS2Controller.h"
 #include "PS2Device.h"
 
 namespace kernel {
 
-class SynapticsTouchpad : public PS2Device, public Mouse {
+class SynapticsTouchpad : public PS2Device, public TouchPad {
 public:
     static constexpr u8 magic_constant = 0x47;
 
@@ -152,23 +152,18 @@ private:
     static_assert(sizeof(AbsolutePacket) == 6);
 
 private:
-    u8 m_delta_per_pixel_x { 0 };
-    u8 m_delta_per_pixel_y { 0 };
-
     u8 m_packet_buffer[6] {};
     u8 m_offset_within_packet { 0 };
-    bool m_middle_button_is_primary { false };
+
     bool m_has_middle_button { false };
     bool m_supports_w { false };
 
-    struct State {
-        u16 x { 0 };
-        u16 y { 0 };
-        u8 finger_count { 0 };
+    bool m_supports_multifinger { false };
 
-        // timestamp of when the finger was first seen
-        u64 touch_begin_ts { 0 };
-    } m_prev_state;
+    // Used to control the order so the second finger doesn't get sent twice.
+    bool m_has_sent_second_finger { false };
+
+    u8 m_finger_count { 0 };
 };
 
 }

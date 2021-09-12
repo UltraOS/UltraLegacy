@@ -13,7 +13,7 @@ public:
     {
     }
 
-    struct Packet {
+    struct Action {
         ScrollDirection scroll_direction;
 
         i8 wheel_delta;

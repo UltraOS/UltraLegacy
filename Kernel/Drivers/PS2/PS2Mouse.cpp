@@ -102,22 +102,22 @@ void PS2Mouse::parse_packet()
     static constexpr u8 rb_bit = SET_BIT(1);
     static constexpr u8 lb_bit = SET_BIT(0);
 
-    Packet p {};
+    Action a {};
 
     bool is_y_negative = m_packet[0] & y_sign_bit;
     bool is_x_negative = m_packet[0] & x_sign_bit;
 
-    p.middle_button_state = m_packet[0] & mb_bit ? VKState::PRESSED : VKState::RELEASED;
-    p.right_button_state = m_packet[0] & rb_bit ? VKState::PRESSED : VKState::RELEASED;
-    p.left_button_state = m_packet[0] & lb_bit ? VKState::PRESSED : VKState::RELEASED;
+    a.middle_button_state = m_packet[0] & mb_bit ? VKState::PRESSED : VKState::RELEASED;
+    a.right_button_state = m_packet[0] & rb_bit ? VKState::PRESSED : VKState::RELEASED;
+    a.left_button_state = m_packet[0] & lb_bit ? VKState::PRESSED : VKState::RELEASED;
 
-    p.x_delta = is_x_negative ? static_cast<i32>(0xFFFFFF00 | m_packet[1]) : m_packet[1];
-    p.y_delta = is_y_negative ? static_cast<i32>(0xFFFFFF00 | m_packet[2]) : m_packet[2];
+    a.x_delta = is_x_negative ? static_cast<i32>(0xFFFFFF00 | m_packet[1]) : m_packet[1];
+    a.y_delta = is_y_negative ? static_cast<i32>(0xFFFFFF00 | m_packet[2]) : m_packet[2];
 
     if (m_packet[0] & x_overflow_bit)
-        p.x_delta = 0;
+        a.x_delta = 0;
     if (m_packet[0] & y_overflow_bit)
-        p.y_delta = 0;
+        a.y_delta = 0;
 
     if (sub_type() == SubType::SCROLL_WHEEL) {
         i32 z_delta = m_packet[3];
@@ -125,8 +125,8 @@ void PS2Mouse::parse_packet()
         if (m_packet[3] & SET_BIT(7))
             z_delta |= static_cast<i32>(0xFFFFFFF0);
 
-        p.wheel_delta = static_cast<i8>(z_delta);
-        p.scroll_direction = ScrollDirection::VERTICAL;
+        a.wheel_delta = static_cast<i8>(z_delta);
+        a.scroll_direction = ScrollDirection::VERTICAL;
 
     } else if (sub_type() == SubType::FIVE_BUTTONS) {
         static constexpr u8 button_5_bit = SET_BIT(5);
@@ -135,28 +135,28 @@ void PS2Mouse::parse_packet()
 
         switch (m_packet[3] & z_delta_mask) {
         case 0x1:
-            p.wheel_delta = 1;
-            p.scroll_direction = ScrollDirection::VERTICAL;
+            a.wheel_delta = 1;
+                a.scroll_direction = ScrollDirection::VERTICAL;
             break;
         case 0xF:
-            p.wheel_delta = -1;
-            p.scroll_direction = ScrollDirection::VERTICAL;
+            a.wheel_delta = -1;
+                a.scroll_direction = ScrollDirection::VERTICAL;
             break;
         case 0x2:
-            p.wheel_delta = 1;
-            p.scroll_direction = ScrollDirection::HORIZONTAL;
+            a.wheel_delta = 1;
+                a.scroll_direction = ScrollDirection::HORIZONTAL;
             break;
         case 0xE:
-            p.wheel_delta = -1;
-            p.scroll_direction = ScrollDirection::HORIZONTAL;
+            a.wheel_delta = -1;
+                a.scroll_direction = ScrollDirection::HORIZONTAL;
             break;
         }
 
-        p.button_4_state = m_packet[3] & button_4_bit ? VKState::PRESSED : VKState::RELEASED;
-        p.button_5_state = m_packet[3] & button_5_bit ? VKState::PRESSED : VKState::RELEASED;
+        a.button_4_state = m_packet[3] & button_4_bit ? VKState::PRESSED : VKState::RELEASED;
+        a.button_5_state = m_packet[3] & button_5_bit ? VKState::PRESSED : VKState::RELEASED;
     }
 
-    EventManager::the().post_action(p);
+    EventManager::the().post_action(a);
 
     m_packet_bytes = 0;
 }

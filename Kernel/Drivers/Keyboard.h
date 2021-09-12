@@ -12,7 +12,7 @@ public:
     {
     }
 
-    struct Packet {
+    struct Action {
         VK key;
         VKState state;
     };

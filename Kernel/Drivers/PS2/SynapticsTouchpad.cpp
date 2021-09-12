@@ -23,12 +23,10 @@ SynapticsTouchpad::SynapticsTouchpad(PS2Controller* parent, PS2Controller::Chann
     auto res = query<ResolutionPage>(8);
     if (IS_BIT_SET(res.highest_bit_must_be_set, 7) && res.x_units_per_mm && res.y_units_per_mm) {
         SYN_DEBUG << "x/mm " << res.x_units_per_mm << " y/mm " << res.y_units_per_mm;
-        m_delta_per_pixel_x = res.x_units_per_mm / 8;
-        m_delta_per_pixel_y = res.y_units_per_mm / 8;
+        set_units_per_pixel(res.x_units_per_mm / 8, res.y_units_per_mm / 8);
     } else {
         SYN_WARN << "resolution query returned bogus data, setting defaults";
-        m_delta_per_pixel_x = 40 / 8;
-        m_delta_per_pixel_y = 64 / 8;
+        set_units_per_pixel(40 / 8, 64 / 8);
     }
 
     Mode m {};
@@ -96,8 +94,10 @@ SynapticsTouchpad::SynapticsTouchpad(PS2Controller* parent, PS2Controller::Chann
 
         if (extended.reports_v)
             supported_caps << " V";
-        if (extended.clk_pad)
-            m_middle_button_is_primary = true;
+        if (extended.clk_pad) {
+            declare_single_button_touchpad();
+            m_has_middle_button = true;
+        }
     }
 
     SYN_DEBUG << "supported caps ->" << supported_caps;
@@ -105,6 +105,8 @@ SynapticsTouchpad::SynapticsTouchpad(PS2Controller* parent, PS2Controller::Chann
 
     // Set the secret undocumented "advanced gesture" mode that makes the touchpad report multiple fingers
     if (caps.multi_finger_report) {
+        m_supports_multifinger = true;
+
         auto byte = encode_byte(0x03);
         for (auto bit : byte.bits) {
             send_command(0xE8);
@@ -113,6 +115,8 @@ SynapticsTouchpad::SynapticsTouchpad(PS2Controller* parent, PS2Controller::Chann
     }
     send_command(0xF3);
     send_command(0xC8);
+
+    declare_primary_finger_memory();
 
     enable_irq();
 }
@@ -183,94 +187,96 @@ bool SynapticsTouchpad::handle_action()
         w |= abs_packet.w_2_to_3 << 2;
     }
 
-    // Skip all extended W packets for now
-    if (w == 2)
+    static constexpr u8 two_fingers = 0;
+    static constexpr u8 three_or_more_fingers = 1;
+    static constexpr u8 extended_packet = 2;
+    static constexpr u8 pass_through = 3;
+
+    // Don't care
+    if (w == pass_through)
         return true;
 
-    u16 x = abs_packet.x;
-    x |= abs_packet.x_8_to_11 << 8;
-    x |= abs_packet.x_12 << 12;
+    Update update {};
 
-    u16 y = abs_packet.y;
-    y |= abs_packet.y_8_to_11 << 8;
-    y |= abs_packet.y_12 << 12;
+    if (w == extended_packet) {
+        auto packet_code = (m_packet_buffer[5] >> 4) & 0xF;
+
+        static constexpr u8 secondary_finger_packet = 1;
+        static constexpr u8 finger_state_packet = 2;
+
+        if (packet_code == secondary_finger_packet) {
+            if (m_has_sent_second_finger) // must be a third/N finger packet. ignore it.
+                return true;
+
+            auto finger_packet = bit_cast<SecondaryFingerPacket>(m_packet_buffer);
+
+            update.x = finger_packet.x_1_to_8 << 1;
+            update.x |= finger_packet.x_9_to_12 << 9;
+
+            update.y = finger_packet.y_1_to_8 << 1;
+            update.y |= finger_packet.y_9_to_12 << 9;
+
+            if (update.x < 100 || update.y < 100)
+                update.x = update.y = 0;
+
+            update.finger_count = m_finger_count;
+            update.finger_index = 1;
+
+            m_has_sent_second_finger = true;
+            submit_update(update);
+            return true;
+        }
+
+        if (packet_code == finger_state_packet) {
+            auto reported_count = m_packet_buffer[1] & 0xF;
+
+            if (m_finger_count >= 3 && reported_count >= 3) // otherwise, out of sync packet
+                m_finger_count = reported_count;
+
+            return true;
+        }
+
+        return true;
+    }
+
+    update.left_button = abs_packet.left ? VKState::PRESSED : VKState::RELEASED;
+    update.right_button = abs_packet.right ? VKState::PRESSED : VKState::RELEASED;
+
+    if (m_has_middle_button)
+        update.middle_button = (abs_packet.l_u ^ abs_packet.left) ? VKState::PRESSED : VKState::RELEASED;
+
+    update.x = abs_packet.x;
+    update.x |= abs_packet.x_8_to_11 << 8;
+    update.x |= abs_packet.x_12 << 12;
+
+    update.y = abs_packet.y;
+    update.y |= abs_packet.y_8_to_11 << 8;
+    update.y |= abs_packet.y_12 << 12;
 
     u16 z = abs_packet.z_pressure;
 
-    i16 scroll_delta = 0;
-    i16 x_delta = 0;
-    i16 y_delta = 0;
-
-    bool left_click = false;
-
-    // Width too big or pressure too low, invalid coordinates, consider this a release event
-    if (z < 20 || w >= 6 || x < 100 || y < 100) {
-        // previous was release too
-        if (m_prev_state.touch_begin_ts == 0)
-            return true;
-
-        auto press_diff = Timer::nanoseconds_since_boot() - m_prev_state.touch_begin_ts;
-        if (press_diff <= (Time::nanoseconds_in_millisecond * 100))
-            left_click = true;
-
-        m_prev_state.touch_begin_ts = 0;
+    if (m_supports_multifinger) {
+        if (w == two_fingers)
+            m_finger_count = 2;
+        else if (w == three_or_more_fingers && m_finger_count < 3) // otherwise, count is updated via finger state packet
+            m_finger_count = 3;
+        else if (w >= 4)
+            m_finger_count = 1;
     } else {
-        // previous state was release, record ts
-        if (m_prev_state.touch_begin_ts == 0) {
-            m_prev_state.touch_begin_ts = Timer::nanoseconds_since_boot();
-        } else {
-            i16 x_units_delta = static_cast<i16>(m_prev_state.x) - static_cast<i16>(x);
-            x_units_delta *= -1;
-
-            i16 y_units_delta = static_cast<i16>(m_prev_state.y) - static_cast<i16>(y);
-            y_units_delta *= -1;
-
-            if (w == 0) {
-                // this is a scroll
-                if (m_prev_state.finger_count == 2) {
-                    scroll_delta = y_units_delta / (m_delta_per_pixel_y * 4);
-                    scroll_delta *= -1;
-                }
-
-                m_prev_state.finger_count = 2;
-            } else if (w == 1) {
-                m_prev_state.finger_count = 3;
-            } else {
-                // Ignore delta if we had multiple fingers on the touchpad previously
-                if (m_prev_state.finger_count == 0) {
-                    y_delta = y_units_delta / m_delta_per_pixel_y;
-                    x_delta = x_units_delta / m_delta_per_pixel_x;
-                }
-
-                m_prev_state.finger_count = 0;
-            }
-        }
-
-        m_prev_state.x = x;
-        m_prev_state.y = y;
+        m_finger_count = 1;
     }
 
-    Packet parsed_packet {};
-    parsed_packet.left_button_state = (abs_packet.left || left_click) ? VKState::PRESSED : VKState::RELEASED;
-    parsed_packet.right_button_state = abs_packet.right ? VKState::PRESSED : VKState::RELEASED;
-
-    auto middle_btn_state = (abs_packet.l_u ^ abs_packet.left) ? VKState::PRESSED : VKState::RELEASED;
-
-    if (m_middle_button_is_primary)
-        parsed_packet.left_button_state = middle_btn_state;
-    else if (m_has_middle_button)
-        parsed_packet.middle_button_state = middle_btn_state;
-
-    if (scroll_delta) {
-        parsed_packet.scroll_direction = ScrollDirection::VERTICAL;
-        parsed_packet.wheel_delta = scroll_delta;
+    // invalid values == empty packet
+    if (z < 20 || w >= 6 || update.x < 100 || update.y < 100) {
+        update.x = update.y = 0;
+        m_finger_count = 0;
     }
-    if (x_delta)
-        parsed_packet.x_delta = x_delta;
-    if (y_delta)
-        parsed_packet.y_delta = y_delta;
 
-    EventManager::the().post_action(parsed_packet);
+    update.finger_count = m_finger_count;
+
+    submit_update(update);
+    m_has_sent_second_finger = false;
+
     return true;
 }
 
