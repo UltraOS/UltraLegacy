@@ -33,7 +33,7 @@ protected:
 private:
     // NOTE: This API assumes the following:
     // - X increases as finger travels left to right.
-    // - Y increases as finger travels downwards.
+    // - Y increases as finger travels upwards.
     // ------------------------------------------------------------------------
     // NOTE: Usage
     // - State of buttons is ignored for finger_index != 0.
@@ -133,8 +133,6 @@ private:
         u16 primary_x_previous { 0 };
         u16 primary_y_previous { 0 };
 
-        // Valid for SCROLLING, SCROLLING_SELECTION, SECONDARY_IS_CURSOR.
-        // For every other state use primary_x/y.
         u16 secondary_x { 0 };
         u16 secondary_y { 0 };
 
@@ -155,7 +153,7 @@ private:
         // Used for generating primary button press events when in
         // PRIMARY_IS_CURSOR and the user quickly taps the touchpad,
         // as well as tracking moments when user put two fingers on
-        // the touchpad roughly at the same time.
+        // the touchpad at roughly the same time.
         u64 touch_begin_ts { 0 };
     } m_state {};
 
