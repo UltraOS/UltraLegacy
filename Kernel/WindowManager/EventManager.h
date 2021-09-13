@@ -17,8 +17,8 @@ class EventManager {
 public:
     static EventManager& the() { return s_instance; }
 
-    void post_action(const Keyboard::Packet&);
-    void post_action(const Mouse::Packet&);
+    void post_action(const Keyboard::Action&);
+    void post_action(const Mouse::Action&);
     void push_event(const Event&);
 
     void dispatch_pending();
@@ -43,7 +43,7 @@ private:
     static constexpr size_t max_event_queue_size = 64;
     CircularBuffer<Event, max_event_queue_size> m_event_queue;
 
-    Mouse::Packet m_last_mouse_state {};
+    Mouse::Action m_last_mouse_state {};
 
     VKState m_key_state[static_cast<u8>(VK::LAST)] { VKState::RELEASED };
 

@@ -126,7 +126,7 @@ void EventManager::generate_char_typed_if_applicable(VK key)
     }
 }
 
-void EventManager::post_action(const Keyboard::Packet& packet)
+void EventManager::post_action(const Keyboard::Action& packet)
 {
 #ifdef EVENT_MANAGER_DEBUG
     log() << "EventManager: key press " << to_string(packet.key) << " is_press: " << (packet.state == VKState::PRESSED);
@@ -142,7 +142,7 @@ void EventManager::post_action(const Keyboard::Packet& packet)
         generate_char_typed_if_applicable(packet.key);
 }
 
-void EventManager::post_action(const Mouse::Packet& packet)
+void EventManager::post_action(const Mouse::Action& packet)
 {
     // detect changes of state
     if (packet.x_delta || packet.y_delta) {
