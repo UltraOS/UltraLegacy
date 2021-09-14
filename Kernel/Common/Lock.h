@@ -106,7 +106,7 @@ public:
 
     void shared_unlock() ALWAYS_INLINE
     {
-        auto result = m_lock.fetch_subtract(1);
+        auto result = m_lock.fetch_subtract(1, MemoryOrder::ACQ_REL) - 1;
         ASSERT(result >= unlocked);
     }
 
