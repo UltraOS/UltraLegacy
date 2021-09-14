@@ -155,7 +155,7 @@ size_t dump_backtrace(ptr_t* into, size_t max_depth, Address base_pointer)
 static Atomic<bool> in_panic;
 bool is_in_panic()
 {
-    return in_panic;
+    return in_panic.load(MemoryOrder::ACQUIRE);
 }
 
 [[noreturn]] void panic(const char* reason, const RegisterState* registers)
@@ -171,7 +171,7 @@ bool is_in_panic()
         error() << "Panicked while inside panic: " << reason;
         hang();
     }
-    in_panic = true;
+    in_panic.store(true, MemoryOrder::RELEASE);
 
     error() << panic_message << "\n";
 
