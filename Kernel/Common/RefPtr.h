@@ -15,19 +15,19 @@ public:
 
     void decrement()
     {
-        if (--m_counter == 0) {
+        if (m_counter.fetch_subtract(1, MemoryOrder::ACQ_REL) == 1) {
             destroy();
         }
     }
 
     void increment()
     {
-        ++m_counter;
+        m_counter.fetch_add(1, MemoryOrder::ACQ_REL);
     }
 
     size_t reference_count() const
     {
-        return m_counter;
+        return m_counter.load(MemoryOrder::ACQUIRE);
     }
 
     virtual ~RefCounterBase() = default;
