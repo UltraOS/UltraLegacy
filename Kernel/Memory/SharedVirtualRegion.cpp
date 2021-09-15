@@ -7,14 +7,14 @@ SharedVirtualRegion::SharedVirtualRegion(Range range, Properties properties, Str
     : VirtualRegion(range, properties, name)
 {
     m_shared_block = new SharedBlock;
-    m_shared_block->ref_count = 1;
+    m_shared_block->ref_count.store(1, MemoryOrder::RELEASE);
 }
 
 SharedVirtualRegion::SharedVirtualRegion(Range range, Properties properties, const SharedVirtualRegion& to_clone)
     : VirtualRegion(range, properties, to_clone.name().to_view())
     , m_shared_block(to_clone.m_shared_block)
 {
-    m_shared_block->ref_count++;
+    m_shared_block->ref_count.fetch_add(1, MemoryOrder::ACQ_REL);
 }
 
 SharedVirtualRegion* SharedVirtualRegion::clone(Range virtual_range, IsSupervisor is_supervisor)
@@ -63,7 +63,7 @@ Page SharedVirtualRegion::page_at(Address virtual_address)
 
 SharedVirtualRegion::~SharedVirtualRegion()
 {
-    if (m_shared_block->ref_count == 0)
+    if (m_shared_block->ref_count.load(MemoryOrder::ACQUIRE) == 0)
         delete m_shared_block;
 }
 

@@ -28,7 +28,7 @@ private:
     friend class MemoryManager;
 
     InterruptSafeSpinLock& lock() { return m_shared_block->modification_lock; }
-    size_t decref() { return --m_shared_block->ref_count; }
+    size_t decref() { return m_shared_block->ref_count.fetch_subtract(1, MemoryOrder::ACQ_REL) - 1; }
     SharedBlock& shared_block() { return *m_shared_block; }
 
     void store_page(Page page, Address virtual_address);
