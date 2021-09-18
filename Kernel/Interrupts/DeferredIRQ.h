@@ -12,7 +12,7 @@ public:
     ~DeferredIRQHandler();
 
     void deferred_invoke();
-    [[nodiscard]] bool is_pending() const { return m_pending_count.load(); }
+    [[nodiscard]] bool is_pending() const { return m_pending_count.load(MemoryOrder::ACQUIRE); }
 
     virtual bool handle_deferred_irq() = 0;
 
@@ -20,7 +20,7 @@ private:
     friend class DeferredIRQManager;
     void invoke()
     {
-        auto new_count = m_pending_count--;
+        auto new_count = m_pending_count.fetch_subtract(1, MemoryOrder::ACQ_REL);
         ASSERT(new_count);
 
         handle_deferred_irq();

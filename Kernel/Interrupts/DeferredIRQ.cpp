@@ -17,7 +17,7 @@ DeferredIRQHandler::~DeferredIRQHandler()
 
 void DeferredIRQHandler::deferred_invoke()
 {
-    m_pending_count++;
+    m_pending_count.fetch_add(1, MemoryOrder::ACQ_REL);
     DeferredIRQManager::the().request_invocation();
 }
 
