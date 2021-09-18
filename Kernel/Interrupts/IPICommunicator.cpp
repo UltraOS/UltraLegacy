@@ -20,22 +20,22 @@ void IPICommunicator::Request::wait_for_completion()
 {
     u64 request_timeout_counter = 1'000'000'000;
 
-    while (m_completion_countdown.load() != 0 && --request_timeout_counter) {
+    while (m_completion_countdown.load(MemoryOrder::ACQUIRE) != 0 && --request_timeout_counter) {
         // Process the queue while we wait for other cpus anyways
         the().process_pending();
         pause();
     }
 
-    if (m_completion_countdown.load() == 0)
+    if (m_completion_countdown.load(MemoryOrder::ACQUIRE) == 0)
         return;
 
     // This was a hang request probably sent from runtime::panic, so we don't wanna panic again
     if (type() == Type::HANG) {
         error() << "IPICommunicator: A core has failed to complete an IPI task, countdown = "
-                << m_completion_countdown.load();
+                << m_completion_countdown.load(MemoryOrder::ACQUIRE);
     } else {
         String error_string;
-        error_string << "IPICommunicator: request timeout, " << m_completion_countdown.load()
+        error_string << "IPICommunicator: request timeout, " << m_completion_countdown.load(MemoryOrder::ACQUIRE)
                      << " core(s) failed to complete request of type " << static_cast<int>(type());
         runtime::panic(error_string.c_string());
     }

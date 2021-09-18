@@ -25,8 +25,8 @@ public:
 
         virtual Type type() const = 0;
 
-        void complete() { --m_completion_countdown; }
-        void increment_completion_countdown() { ++m_completion_countdown; }
+        void complete() { m_completion_countdown.fetch_subtract(1, MemoryOrder::ACQ_REL); }
+        void increment_completion_countdown() { m_completion_countdown.fetch_add(1, MemoryOrder::ACQ_REL); }
 
         void wait_for_completion();
 
