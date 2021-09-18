@@ -88,7 +88,7 @@ void HeapAllocator::feed_block(void* ptr, size_t size, size_t chunk_size_in_byte
     new_heap.chunk_count = pure_size / chunk_size_in_bytes;
     new_heap.free_chunks = new_heap.chunk_count;
     new_heap.data = new_heap.bitmap() + bitmap_bytes;
-    total_free_bytes() += new_heap.chunk_count * chunk_size_in_bytes;
+    total_free_bytes().fetch_add(new_heap.chunk_count * chunk_size_in_bytes, MemoryOrder::ACQ_REL);
 
 #ifdef HEAP_ALLOCATOR_DEBUG
 
@@ -157,7 +157,7 @@ void* HeapAllocator::allocate(size_t bytes, size_t alignment)
     bool did_acquire = refill_lock().try_lock(interrupt_state);
 
     if (did_acquire) {
-        size_t bytes_left_after_allocation = total_free_bytes();
+        size_t bytes_left_after_allocation = total_free_bytes().load(MemoryOrder::ACQUIRE);
 
         if (bytes > bytes_left_after_allocation)
             bytes_left_after_allocation = 0;
@@ -274,7 +274,7 @@ void* HeapAllocator::allocate(size_t bytes, size_t alignment)
         }
 
         heap->free_chunks -= chunks_needed;
-        total_free_bytes() -= chunks_needed * heap->chunk_size;
+        total_free_bytes().fetch_subtract(chunks_needed * heap->chunk_size, MemoryOrder::ACQ_REL);
 
         auto* data = heap->begin() + (at_bit / 2) * heap->chunk_size;
 
@@ -368,7 +368,7 @@ void HeapAllocator::free(void* ptr)
             control_byte ^= scaled_id;
 
             heap->free_chunks++;
-            total_free_bytes() += heap->chunk_size;
+            total_free_bytes().fetch_add(heap->chunk_size, MemoryOrder::ACQ_REL);
 
 #ifdef HEAP_ALLOCATOR_DEBUG
             total_freed_chunks++;
