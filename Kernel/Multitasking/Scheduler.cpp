@@ -278,7 +278,7 @@ void Scheduler::pick_next()
 {
     // Cannot use LOCK_GUARD here as switch_task never returns
     bool interrupt_state = false;
-    s_queues_lock.lock(interrupt_state, __FILE__, __LINE__);
+    ILOCK(s_queues_lock, interrupt_state);
 
     auto* current_thread = Thread::current();
 

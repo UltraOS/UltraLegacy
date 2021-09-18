@@ -13,7 +13,7 @@ Blocker::Blocker(Thread& blocked_thread, Type type)
 Blocker::Result Blocker::block()
 {
     Scheduler::the().block(*this);
-    return m_result;
+    return m_result.load(MemoryOrder::ACQUIRE);
 }
 
 void Blocker::unblock()
