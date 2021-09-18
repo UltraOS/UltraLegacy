@@ -34,11 +34,11 @@ void Timer::on_tick(const RegisterState& register_state, bool is_bsp)
         LOCK_GUARD(s_lock);
 
 #ifdef ULTRA_32
-        s_time_update_sync_counter++;
-#endif
+        s_time_update_sync_counter.fetch_add(1, MemoryOrder::ACQ_REL);
         s_nanoseconds_since_boot += Time::nanoseconds_in_second / current_frequency();
-#ifdef ULTRA_32
-        s_time_update_sync_counter++;
+        s_time_update_sync_counter.fetch_add(1, MemoryOrder::ACQ_REL);
+#elif defined(ULTRA_64)
+        s_nanoseconds_since_boot.fetch_add(Time::nanoseconds_in_second / current_frequency(), MemoryOrder::ACQ_REL);
 #endif
 
         for (auto handler : s_transparent_handlers)

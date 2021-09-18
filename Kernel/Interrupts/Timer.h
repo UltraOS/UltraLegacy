@@ -40,19 +40,19 @@ public:
         u32 captured_update = 0;
 
         do {
-            captured_update = s_time_update_sync_counter;
+            captured_update = s_time_update_sync_counter.load(MemoryOrder::ACQUIRE);
 
             while (captured_update & 1) {
-                captured_update = s_time_update_sync_counter;
+                captured_update = s_time_update_sync_counter.load(MemoryOrder::ACQUIRE);
                 continue;
             }
 
             out_counter = s_nanoseconds_since_boot;
-        } while (captured_update != s_time_update_sync_counter);
+        } while (captured_update != s_time_update_sync_counter.load(MemoryOrder::ACQUIRE));
 
         return out_counter;
 #elif defined(ULTRA_64)
-        return s_nanoseconds_since_boot;
+        return s_nanoseconds_since_boot.load(MemoryOrder::ACQUIRE);
 #endif
     }
 
