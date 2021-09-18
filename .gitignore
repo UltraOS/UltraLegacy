@@ -22,6 +22,7 @@ Tests/Environment/*
 !Tests/Environment/Memory/MemoryManager.h
 !Tests/Environment/Drivers/Video/.keep
 !Tests/Environment/FileSystem/FAT32/.keep
+!Tests/Environment/LibC/.keep
 
 # Misc files/extensions that we always ignore
 .idea/
