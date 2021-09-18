@@ -124,7 +124,7 @@ void CPU::initialize()
     s_processors.insert_back(*cpu);
     cpu->bring_online();
 
-    ++s_alive_counter;
+    s_alive_counter.fetch_add(1, MemoryOrder::ACQ_REL);
 }
 
 CPU::FLAGS CPU::flags()
@@ -214,12 +214,12 @@ u32 CPU::current_id()
 
 void CPU::LocalData::bring_online()
 {
-    ASSERT(*m_is_online == false);
+    ASSERT(m_is_online->load(MemoryOrder::ACQUIRE) == false);
 
     if (supports_smp())
         ASSERT(LAPIC::my_id() == m_id);
 
-    *m_is_online = true;
+    m_is_online->store(true, MemoryOrder::RELEASE);
 }
 
 void CPU::ap_entrypoint()
@@ -240,7 +240,7 @@ void CPU::ap_entrypoint()
     current_cpu.set_tss(*new TSS);
 
     current_cpu.bring_online();
-    ++s_alive_counter;
+    s_alive_counter.fetch_add(1, MemoryOrder::ACQ_REL);
 
     Interrupts::enable();
 

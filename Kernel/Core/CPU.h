@@ -71,7 +71,7 @@ public:
     static bool is_initialized() { return !s_processors.empty(); }
 
     static size_t processor_count() { return s_processors.size(); }
-    static size_t alive_processor_count() { return s_alive_counter; }
+    static size_t alive_processor_count() { return s_alive_counter.load(MemoryOrder::ACQUIRE); }
 
     class LocalData : public StandaloneListNode<LocalData> {
     public:
@@ -99,7 +99,7 @@ public:
         Thread& idle_task();
 
         void bring_online();
-        bool is_online() const { return *m_is_online; }
+        bool is_online() const { return m_is_online->load(MemoryOrder::ACQUIRE); }
 
         IPICommunicator::Request* pop_request();
         void push_request(IPICommunicator::Request&);
