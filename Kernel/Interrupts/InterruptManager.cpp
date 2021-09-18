@@ -22,7 +22,7 @@ void InterruptManager::handle_interrupt(RegisterState* registers)
         runtime::panic(error_str.c_string());
     }
 
-    InterruptHandler* handler = s_handlers[interrupt_number].load();
+    InterruptHandler* handler = s_handlers[interrupt_number].load(MemoryOrder::ACQUIRE);
 
     if (handler == nullptr) {
         String error_str;
@@ -41,10 +41,9 @@ void InterruptManager::set_handler_for_vector(u16 vector, InterruptHandler& hand
         runtime::panic(error_str.c_string());
     }
 
-    if (s_handlers[vector].load())
-        runtime::panic("InterruptHandler: tried to register a handler for an already managed interrupt!");
-
-    s_handlers[vector] = &handler;
+    InterruptHandler* expected = nullptr;
+    auto result = s_handlers[vector].compare_and_exchange(&expected, &handler);
+    ASSERT(result);
 
     if (user_callable)
         IDT::the().make_user_callable(vector);
@@ -58,10 +57,10 @@ void InterruptManager::remove_handler_for_vector(u16 vector, InterruptHandler& o
         runtime::panic(error_str.c_string());
     }
 
-    if (s_handlers[vector].load() != &owner)
-        runtime::panic("InterruptHandler: tried to unregister a non-registered handler!");
+    auto* owner_ptr = &owner;
+    auto result = s_handlers[vector].compare_and_exchange(&owner_ptr, nullptr);
+    ASSERT(result);
 
-    s_handlers[vector] = nullptr;
     IDT::the().make_non_user_callable(vector);
 }
 
