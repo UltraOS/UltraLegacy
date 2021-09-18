@@ -134,22 +134,27 @@ MemoryManager::MemoryManager()
 
         MM_LOG << "New physical region: " << this_region;
 
-        m_initial_physical_bytes += this_region.free_page_count() * Page::size;
+        m_initial_physical_bytes.fetch_add(this_region.free_page_count() * Page::size, MemoryOrder::ACQ_REL);
     }
 
-    MM_LOG << "Total free physical memory: "
-           << bytes_to_megabytes(m_initial_physical_bytes.load()) << " MB ("
-           << m_initial_physical_bytes / Page::size << " pages) ";
+    auto initial_bytes = m_initial_physical_bytes.load(MemoryOrder::ACQUIRE);
 
-    m_free_physical_bytes = m_initial_physical_bytes;
-    m_initial_physical_bytes += kernel_image_size;
-    m_initial_physical_bytes += kernel_first_heap_block_size;
+    MM_LOG << "Total free physical memory: "
+           << bytes_to_megabytes(initial_bytes) << " MB ("
+           << initial_bytes / Page::size << " pages) ";
+
+    m_free_physical_bytes.store(initial_bytes, MemoryOrder::RELEASE);
+
+    initial_bytes += kernel_image_size;
+    initial_bytes += kernel_first_heap_block_size;
+    m_initial_physical_bytes.store(initial_bytes, MemoryOrder::RELEASE);
 
     static constexpr size_t lowest_sane_ram_amount = 64 * MB;
-    if (m_initial_physical_bytes < lowest_sane_ram_amount) {
+
+    if (initial_bytes < lowest_sane_ram_amount) {
         StackString<256> error_str;
         error_str << "RAM size sanity check failed: detected "
-                  << m_initial_physical_bytes.load() << " bytes, expected at least "
+                  << initial_bytes << " bytes, expected at least "
                   << lowest_sane_ram_amount;
         runtime::panic(error_str.data());
     }
@@ -221,7 +226,7 @@ Page MemoryManager::allocate_page(bool should_zero)
         if (!page)
             continue;
 
-        m_free_physical_bytes -= Page::size;
+        m_free_physical_bytes.fetch_subtract(Page::size, MemoryOrder::ACQ_REL);
 
         if (should_zero) {
             MM_DEBUG_EX << "zeroing the page at physaddr " << page->address();
@@ -297,7 +302,7 @@ void MemoryManager::free_page(const Page& page)
 
     if (region) {
         region->free_page(page);
-        m_free_physical_bytes += Page::size;
+        m_free_physical_bytes.fetch_add(Page::size, MemoryOrder::ACQ_REL);
         return;
     }
 

@@ -197,7 +197,7 @@ public:
 
     [[nodiscard]] PhysicalStats physical_stats() const
     {
-        return { m_initial_physical_bytes.load(), m_free_physical_bytes.load() };
+        return { m_initial_physical_bytes.load(MemoryOrder::ACQUIRE), m_free_physical_bytes.load(MemoryOrder::ACQUIRE) };
     }
 
     using VR = RefPtr<VirtualRegion>;
