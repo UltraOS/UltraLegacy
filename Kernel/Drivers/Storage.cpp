@@ -18,7 +18,7 @@ StorageDevice::AsyncRequest::AsyncRequest(Address virtual_address, LBARange lba_
 
 ErrorCode StorageDevice::AsyncRequest::wait()
 {
-    if (m_is_completed)
+    if (m_is_completed.load(MemoryOrder::ACQUIRE))
         return result();
 
     m_blocker.block();
@@ -27,11 +27,11 @@ ErrorCode StorageDevice::AsyncRequest::wait()
 
 void StorageDevice::AsyncRequest::complete(ErrorCode code)
 {
-    ASSERT(!m_is_completed);
+    ASSERT(!m_is_completed.load(MemoryOrder::ACQUIRE));
 
     set_result(code);
     m_blocker.unblock();
-    m_is_completed = true;
+    m_is_completed.store(true, MemoryOrder::RELEASE);
 }
 
 StorageDevice::RamdiskRequest::RamdiskRequest(Address virtual_address, size_t byte_offset, size_t byte_count, OP op)

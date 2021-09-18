@@ -33,7 +33,7 @@ public:
     Device* one_of(Device::Category, StringView type = "any"_sv);
     DynamicArray<Device*> children_of(Device*);
     bool has_children(Device*);
-    Device* primary_of(Device::Category category) { return primary_of_category(category); }
+    Device* primary_of(Device::Category category) { return primary_of_category(category).load(MemoryOrder::ACQUIRE); }
 
     size_t count_of(Device::Category);
     size_t count();

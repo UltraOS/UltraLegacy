@@ -21,7 +21,7 @@ void Device::make_child_of(Device* parent)
 
 bool Device::is_primary()
 {
-    return DeviceManager::the().primary_of_category(m_category) == this;
+    return DeviceManager::the().primary_of_category(m_category).load(MemoryOrder::ACQUIRE) == this;
 }
 
 void Device::make_primary()

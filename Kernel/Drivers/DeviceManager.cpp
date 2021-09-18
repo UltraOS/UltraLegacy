@@ -154,7 +154,7 @@ size_t DeviceManager::count_of(Device::Category category)
 
 void DeviceManager::set_as_primary(Device* device)
 {
-    primary_of_category(device->device_category()) = device;
+    primary_of_category(device->device_category()).store(device, MemoryOrder::RELEASE);
 }
 
 size_t DeviceManager::count()
