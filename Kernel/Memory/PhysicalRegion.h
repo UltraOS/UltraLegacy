@@ -20,8 +20,8 @@ public:
     Address begin() const { return m_range.begin(); }
     Address end() const { return m_range.end(); }
 
-    size_t free_page_count() const { return m_free_pages; }
-    bool has_free_pages() const { return m_free_pages; }
+    size_t free_page_count() const { return m_free_pages.load(MemoryOrder::ACQUIRE); }
+    bool has_free_pages() const { return m_free_pages.load(MemoryOrder::ACQUIRE); }
 
     [[nodiscard]] Optional<DynamicArray<Page>> allocate_pages(size_t count);
     [[nodiscard]] Optional<Page> allocate_page();

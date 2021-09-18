@@ -9,7 +9,7 @@ namespace kernel {
 PhysicalRegion::PhysicalRegion(const Range& range)
     : m_range(range)
     , m_free_pages(range.length() / Page::size)
-    , m_allocation_map(m_free_pages)
+    , m_allocation_map(m_free_pages.load(MemoryOrder::ACQUIRE))
 {
     ASSERT_PAGE_ALIGNED(Address(range.begin()));
     ASSERT_PAGE_ALIGNED(range.length());
@@ -31,7 +31,7 @@ Optional<Page> PhysicalRegion::allocate_page()
 {
     LOCK_GUARD(m_lock);
 
-    if (m_free_pages == 0)
+    if (m_free_pages.load(MemoryOrder::ACQUIRE) == 0)
         return {};
 
     auto index = m_allocation_map.find_bit(false, m_next_hint);
@@ -46,7 +46,7 @@ Optional<Page> PhysicalRegion::allocate_page()
         m_next_hint = 0;
 
     m_allocation_map.set_bit(*index, true);
-    --m_free_pages;
+    m_free_pages.fetch_subtract(1, MemoryOrder::ACQ_REL);
 
 #ifdef PHYSICAL_REGION_DEBUG
     log() << "PhysicalRegion: allocating a page at address " << bit_as_physical_address(index);
@@ -72,6 +72,6 @@ void PhysicalRegion::free_page(const Page& page)
     ASSERT(m_allocation_map.bit_at(bit));
 
     m_allocation_map.set_bit(bit, false);
-    ++m_free_pages;
+    m_free_pages.fetch_add(1, MemoryOrder::ACQ_REL);
 }
 }
