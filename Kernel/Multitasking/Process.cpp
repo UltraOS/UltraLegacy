@@ -68,7 +68,7 @@ ErrorCode Process::create_thread(Address entrypoint, size_t stack_size)
 
         if (m_is_supervisor == IsSupervisor::YES) {
             String name = m_name;
-            name << " thread " << m_next_thread_id.load() << " stack";
+            name << " thread " << m_next_thread_id.load(MemoryOrder::ACQUIRE) << " stack";
             auto stack = MemoryManager::the().allocate_kernel_stack(name.to_view(), stack_size);
             thread = Thread::create_supervisor(*this, stack, entrypoint);
         } else {
@@ -86,7 +86,7 @@ ErrorCode Process::create_thread(Address entrypoint, size_t stack_size)
 }
 
 Process::Process(AddressSpace& address_space, IsSupervisor is_supervisor, StringView name)
-    : m_id(s_next_process_id++)
+    : m_id(s_next_process_id.fetch_add(1, MemoryOrder::ACQ_REL))
     , m_address_space(&address_space)
     , m_is_supervisor(is_supervisor)
     , m_name(name)
@@ -115,8 +115,8 @@ ErrorCode Process::store_io_stream_at(u32 id, const RefPtr<IOStream>& stream)
     m_io_streams.emplace(id, stream);
 
     // FIXME: support proper io id allocation.
-    u32 next_io_id = max(m_next_io_id.load(), id);
-    m_next_io_id = next_io_id;
+    u32 next_io_id = max(m_next_io_id.load(MemoryOrder::ACQUIRE), id);
+    m_next_io_id.store(next_io_id, MemoryOrder::RELEASE);
 
     return ErrorCode::NO_ERROR;
 }
@@ -125,7 +125,7 @@ ErrorOr<u32> Process::store_io_stream(const RefPtr<IOStream>& object)
 {
     LOCK_GUARD(m_lock);
 
-    auto io_id = m_next_io_id++;
+    auto io_id = m_next_io_id.fetch_add(1, MemoryOrder::ACQ_REL);
     m_io_streams.emplace(io_id, object);
 
     return io_id;

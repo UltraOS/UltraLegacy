@@ -48,7 +48,7 @@ public:
 
     [[nodiscard]] IsSupervisor is_supervisor() const { return m_is_supervisor; }
 
-    [[nodiscard]] u32 consume_thread_id() { return m_next_thread_id++; }
+    [[nodiscard]] u32 consume_thread_id() { return m_next_thread_id.fetch_add(1, MemoryOrder::ACQ_REL); }
 
     [[nodiscard]] u32 id() const { return m_id; }
 
@@ -66,8 +66,8 @@ public:
         return did_set;
     }
 
-    [[nodiscard]] bool is_alive() const { return m_state == State::ALIVE; }
-    [[nodiscard]] State state() const { return m_state; }
+    [[nodiscard]] bool is_alive() const { return m_state.load(MemoryOrder::ACQUIRE) == State::ALIVE; }
+    [[nodiscard]] State state() const { return m_state.load(MemoryOrder::ACQUIRE); }
     [[nodiscard]] const String& name() const { return m_name; }
     [[nodiscard]] InterruptSafeSpinLock& lock() const { return m_lock; }
 
@@ -100,15 +100,18 @@ public:
 
     ~Process()
     {
-        ASSERT(m_state == State::EXITED);
+        ASSERT(m_state.load(MemoryOrder::ACQUIRE) == State::EXITED);
     }
 
-    [[nodiscard]] u32 alive_thread_count() const { return m_alive_thread_count; }
-    u32 increment_alive_thread_count() { return ++m_alive_thread_count; }
+    [[nodiscard]] u32 alive_thread_count() const { return m_alive_thread_count.load(MemoryOrder::ACQUIRE); }
+    u32 increment_alive_thread_count() { return m_alive_thread_count.fetch_add(1, MemoryOrder::ACQ_REL) + 1; }
     u32 decrement_alive_thread_count()
     {
-        ASSERT(m_alive_thread_count != 0);
-        return --m_alive_thread_count;
+        auto value = m_alive_thread_count.fetch_subtract(1, MemoryOrder::ACQ_REL);
+
+        ASSERT(value != 0);
+
+        return value - 1;
     }
 
 private:
@@ -117,8 +120,8 @@ private:
     friend class TaskFinalizer;
     void mark_as_released()
     {
-        ASSERT(m_state == State::EXITING);
-        m_state = State::EXITED;
+        ASSERT(m_state.load(MemoryOrder::ACQUIRE) == State::EXITING);
+        m_state.store(State::EXITED, MemoryOrder::RELEASE);
     }
 
 private:
