@@ -138,7 +138,7 @@ String VFS::generate_prefix(StorageDevice& device)
         auto idx = static_cast<size_t>(medium);
         ASSERT(idx < static_cast<size_t>(StorageDevice::Info::MediumType::LAST));
 
-        return m_prefix_indices[idx]++;
+        return m_prefix_indices[idx].fetch_add(1, MemoryOrder::ACQ_REL);
     };
 
     auto info = device.query_info();

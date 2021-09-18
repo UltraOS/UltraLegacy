@@ -495,7 +495,7 @@ bool FAT32::try_initialize()
     if (should_manually_calculate_capacity)
         calculate_capacity();
 
-    FAT32_LOG << "total cluster count " << m_cluster_count << ", free clusters " << m_free_clusters.load();
+    FAT32_LOG << "total cluster count " << m_cluster_count << ", free clusters " << m_free_clusters.load(MemoryOrder::ACQUIRE);
 
     static constexpr u32 end_of_chain_indicator_fat_entry = 1;
     m_end_of_chain = locked_fat_entry_at(end_of_chain_indicator_fat_entry);
@@ -516,8 +516,8 @@ void FAT32::calculate_capacity()
         auto cluster = fat_entry_at(last_fat_entry);
 
         if (cluster == free_cluster) {
-            m_free_clusters++;
-            m_last_free_cluster = cluster;
+            m_free_clusters.fetch_add(1, MemoryOrder::ACQ_REL);
+            m_last_free_cluster.store(cluster, MemoryOrder::RELEASE);
         }
     }
 }
@@ -560,8 +560,8 @@ bool FAT32::parse_fsinfo(FSINFO& fsinfo)
     FAT32_LOG << "FSINFO seems to be valid: last allocated cluster " << fsinfo.last_allocated_cluster
               << ", free clusters " << fsinfo.free_cluster_count;
 
-    m_free_clusters = fsinfo.free_cluster_count;
-    m_last_free_cluster = fsinfo.last_allocated_cluster + 1;
+    m_free_clusters.store(fsinfo.free_cluster_count, MemoryOrder::RELEASE);
+    m_last_free_cluster.store(fsinfo.last_allocated_cluster + 1, MemoryOrder::RELEASE);
 
     return true;
 }
@@ -919,9 +919,9 @@ FAT32::File* FAT32::open_or_incref(
     if (it != m_identifier_to_file.end()) {
         auto& open_file = it->second;
 
-        open_file->refcount++;
+        auto value = open_file->refcount.fetch_add(1, MemoryOrder::ACQ_REL);
 
-        FAT32_DEBUG << "file \"" << name << "\" was already open, new refcount " << open_file->refcount.load();
+        FAT32_DEBUG << "file \"" << name << "\" was already open, new refcount " << value + 1;
 
         return open_file->ptr;
     }
@@ -929,7 +929,7 @@ FAT32::File* FAT32::open_or_incref(
     FAT32_DEBUG << "opened file \"" << name << "\"";
     OpenFile* open_file = new OpenFile;
     open_file->ptr = new File(name, *this, attributes, identifier, first_cluster, size);
-    open_file->refcount = 1;
+    open_file->refcount.store(1, MemoryOrder::RELEASE);
 
     m_identifier_to_file[identifier] = open_file;
     return open_file->ptr;
@@ -1006,14 +1006,14 @@ ErrorOr<FAT32::File*> FAT32::open_file_from_path(StringView path, OnlyIf constra
 DynamicArray<u32> FAT32::allocate_cluster_chain(u32 count, u32 link_to)
 {
     ASSERT(count != 0);
-    ASSERT(count <= m_free_clusters);
+    ASSERT(count <= m_free_clusters.load(MemoryOrder::ACQUIRE));
 
     DynamicArray<u32> chain;
     chain.reserve(count);
 
     LOCK_GUARD(m_fat_cache_lock);
 
-    auto hint = m_last_free_cluster.load();
+    auto hint = m_last_free_cluster.load(MemoryOrder::ACQUIRE);
     auto last = m_cluster_count;
     auto prev = link_to;
 
@@ -1030,8 +1030,8 @@ DynamicArray<u32> FAT32::allocate_cluster_chain(u32 count, u32 link_to)
             prev = cluster;
 
             if (chain.size() == count) {
-                m_free_clusters -= count;
-                m_last_free_cluster = cluster + 1;
+                m_free_clusters.fetch_subtract(count, MemoryOrder::ACQ_REL);
+                m_last_free_cluster.store(cluster + 1, MemoryOrder::RELEASE);
                 set_fat_entry_at(cluster, m_end_of_chain);
 
                 return chain;
@@ -1115,7 +1115,10 @@ ErrorCode FAT32::close(BaseFile& file)
     }
 
     auto& open_file = it->second;
-    if (--open_file->refcount == 0) {
+
+    auto value = open_file->refcount.fetch_subtract(1, MemoryOrder::ACQ_REL) - 1;
+
+    if (value == 0) {
         FAT32_DEBUG << "no more references for file \"" << f.name() << "\", closed";
         // Ideally we should call flush on any cached file clusters,
         // but it might be too expensive to fetch all the file clusters
@@ -1124,7 +1127,7 @@ ErrorCode FAT32::close(BaseFile& file)
         delete open_file;
         m_identifier_to_file.remove(it);
     } else {
-        FAT32_DEBUG << "file \"" << f.name() << "\" still has " << open_file->refcount.load() << " reference(s)";
+        FAT32_DEBUG << "file \"" << f.name() << "\" still has " << value << " reference(s)";
     }
 
     return ErrorCode::NO_ERROR;
@@ -1833,13 +1836,16 @@ void FAT32::sync()
     static u32 last_known_free_cluster_count = 0;
     static u32 last_known_allocated_cluster = 0;
 
-    if (last_known_free_cluster_count == m_free_clusters && last_known_allocated_cluster == (m_last_free_cluster - 1)) {
+    auto last_free_cluster = m_last_free_cluster.load(MemoryOrder::ACQUIRE) - 1;
+    auto free_clusters = m_free_clusters.load(MemoryOrder::ACQUIRE);
+
+    if (last_known_free_cluster_count == free_clusters && last_known_allocated_cluster == last_free_cluster) {
         FAT32_DEBUG << "FSINFO doesn't need an update, skipping sync for now";
         return;
     }
 
-    last_known_free_cluster_count = m_free_clusters;
-    last_known_allocated_cluster = m_last_free_cluster - 1;
+    last_known_free_cluster_count = free_clusters;
+    last_known_allocated_cluster = last_free_cluster;
 
     auto fsinfo_dma = MemoryManager::the().allocate_dma_buffer("FAT32 Sync"_sv, Page::size);
 
