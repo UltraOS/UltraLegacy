@@ -66,7 +66,7 @@ public:
         return *m_kernel_stack;
     }
 
-    bool should_die() const { return m_should_die; }
+    bool should_die() const { return m_should_die.load(MemoryOrder::ACQUIRE); }
     bool is_invulnerable() const { return m_is_invulnerable; }
     void set_invulnerable(bool value) { m_is_invulnerable = value; }
 
@@ -75,7 +75,7 @@ public:
         return m_requested_state.compare_and_exchange(&expected, new_state);
     }
 
-    State requested_state() { return m_requested_state; }
+    State requested_state() { return m_requested_state.load(MemoryOrder::ACQUIRE); }
 
     class ScopedInvulnerability {
     public:
@@ -100,7 +100,7 @@ public:
 
     u32 add_window(RefPtr<Window> window)
     {
-        auto id = ++m_window_ids;
+        auto id = m_window_ids.fetch_add(1, MemoryOrder::ACQ_REL) + 1;
         m_windows[id] = window;
 
         return id;
@@ -158,7 +158,7 @@ private:
     bool interrupt();
     void exit(i32 code)
     {
-        m_should_die = true;
+        m_should_die.store(true, MemoryOrder::RELEASE);
         m_exit_code = code;
     }
 
