@@ -338,9 +338,9 @@ bool XHCI::detect_ports()
             auto& port = m_ports[offset];
 
             if (dw0.MajorRevision == 3)
-                port.mode = Port::USB3_MASTER;
+                port.mode = Port::USB3;
             else if (dw0.MajorRevision == 2)
-                port.mode = Port::USB2_MASTER;
+                port.mode = Port::USB2;
             else {
                 XHCI_WARN << "invalid revision " << dw0.MajorRevision;
                 return false;
@@ -368,13 +368,8 @@ bool XHCI::detect_ports()
                 return false;
             }
 
-            m_ports[i].index_of_pair = j;
-            m_ports[j].index_of_pair = i;
-
-            if (m_ports[i].mode == Port::USB3_MASTER)
-                m_ports[j].mode = Port::USB2;
-            if (m_ports[j].mode == Port::USB3_MASTER)
-                m_ports[i].mode = Port::USB2;
+            m_ports[i].set_index_of_pair(j);
+            m_ports[j].set_index_of_pair(i);
         }
     }
 
@@ -656,19 +651,138 @@ bool XHCI::handle_irq(RegisterState&)
     return true;
 }
 
-void XHCI::reset_port(size_t port_id)
+void XHCI::reset_port(size_t port_id, bool warm)
 {
-    auto& port = m_ports[port_id];
-    port.state = Port::State::RESETTING;
-
     auto ps = read_port_reg<PORTSC>(port_id);
 
-    if (port.mode & Port::USB3)
+    // Don't accidentally ACK state change that we don't handle here
+    ps.PED = 0;
+    ps.CSC = 0;
+    ps.PEC = 0;
+    ps.WRC = 0;
+    ps.OCC = 0;
+    ps.PRC = 0;
+    ps.PLC = 0;
+    ps.CEC = 0;
+
+    if (warm)
         ps.WPR = 1;
     else
         ps.PR = 1;
 
     write_port_reg(port_id, ps);
+}
+
+void XHCI::handle_port_connect_status_change(size_t port_id, PORTSC status)
+{
+    auto& port = m_ports[port_id];
+
+    bool transition_down = !status.CCS;
+
+    if (transition_down && port.state == Port::State::SPURIOUS_CONNECTION) {
+        XHCI_DEBUG << "connection on port " << port_id << " down as expected";
+        port.state = Port::State::DEFAULT;
+        return;
+    }
+
+    if (port.state == Port::State::RESETTING_PAIR) {
+        XHCI_DEBUG << "ignoring status change (to " << status.CCS << ") for pair port " << port_id;
+        return;
+    }
+
+    if ((port.state == Port::State::DEVICE_ATTACHED || port.state == Port::State::RESETTING) && transition_down) {
+        XHCI_DEBUG << "connection gone on port " << port_id;
+
+        port.state = Port::State::DEFAULT;
+
+        // TODO: delete device, deinitialize whatever is needed
+
+        if (port.is_usb3() && port.is_paired())
+            m_ports[port.index_of_pair].state = Port::State::DEFAULT;
+
+        return;
+    }
+
+    // Transition down but not relevant port state
+    if (transition_down) {
+        XHCI_WARN << "port connection gone in state " << port.state_to_string();
+        return;
+    }
+
+    // Wait a bit for a possible connection on USB3 as well.
+    if (port.is_usb2() && port.is_paired()) {
+        auto usb3_index = port.index_of_pair;
+        auto& usb3_pair = m_ports[usb3_index];
+
+        if (usb3_pair.state != Port::State::DEFAULT) {
+            XHCI_WARN << "USB2 port connection up while in USB3 state " << usb3_pair.state_to_string();
+            return;
+        }
+
+        auto result = repeat_until(
+                [this, usb3_index]() -> bool {
+                    auto state = read_port_reg<PORTSC>(usb3_index);
+                    return state.CCS;
+                }, 100);
+
+        if (result.success) {
+            XHCI_DEBUG << "USB3 connection went up after " << result.elapsed_ms << "MS, ignoring USB2";
+            port.state = Port::State::SPURIOUS_CONNECTION;
+            return;
+        }
+    }
+
+    XHCI_DEBUG << "resetting port " << port_id;
+    auto usb3 = port.is_usb3();
+
+    if (usb3 && port.is_paired())
+        m_ports[port.index_of_pair].state = Port::State::RESETTING_PAIR;
+
+    port.state = Port::State::RESETTING;
+    reset_port(port_id, port.is_usb3());
+}
+
+void XHCI::handle_port_reset_status_change(size_t port_id, PORTSC status)
+{
+    auto& port = m_ports[port_id];
+    bool success = status.PED && status.PortSpeed;
+
+    if (port.state != Port::State::RESETTING) {
+        XHCI_WARN << "reset status change for port " << port_id << " in state " << port.state_to_string();
+        return;
+    }
+
+    XHCI_DEBUG << "port " << port_id << " state after reset: success: " << success << " speed: " << status.PortSpeed;
+
+    if (!success) {
+        port.state = Port::State::DEFAULT;
+
+        if (port.is_paired())
+            m_ports[port.index_of_pair].state = Port::State::DEFAULT;
+
+        return;
+    }
+
+    // TODO: configure, get descriptors, etc
+
+    port.state = Port::State::DEVICE_ATTACHED;
+    if (port.is_usb3() && port.is_paired())
+        m_ports[port.index_of_pair].state = Port::State::DEVICE_ATTACHED_TO_PAIR;
+}
+
+void XHCI::handle_port_config_error(size_t port_id, [[maybe_unused]] PORTSC status)
+{
+    XHCI_WARN << "config error on port " << port_id;
+    auto& port = m_ports[port_id];
+
+    if (port.state == Port::State::DEVICE_ATTACHED) {
+        // TODO: deinitialize
+
+        if (port.is_paired())
+            m_ports[port.index_of_pair].state = Port::State::DEFAULT;
+    }
+
+    port.state = Port::State::DEFAULT;
 }
 
 void XHCI::handle_port_status_change(size_t port_id)
@@ -692,76 +806,32 @@ void XHCI::handle_port_status_change(size_t port_id)
     if (port_status.CEC)
         changed_bits << " CEC";
 
-    auto& event_port = m_ports[port_id];
+    XHCI_DEBUG << "port " << port_id << " changed: " << changed_bits;
 
-    XHCI_DEBUG << "port status change for port " << port_id
-               << ", bits that changed: " << changed_bits;
+    u8 temp_PED = port_status.PED;
 
     port_status.PED = 0;
-
-    if (port_status.CSC) {
-        XHCI_DEBUG << "connection status is " << port_status.CCS;
-
-        if (event_port.mode & Port::USB2) {
-            auto parent_status = read_port_reg<PORTSC>(event_port.index_of_pair);
-
-            XHCI_DEBUG << "USB3 parent status: CCS: " << parent_status.CCS << " speed: " << parent_status.PortSpeed;
-        }
-    }
-
     write_port_reg(port_id, port_status);
-    return;
 
-    // TODO: reset ports, and handle states correctly
-    if (event_port.state == Port::State::DEFAULT) {
-        // This port has a USB3 counterpart, try to reset it first
-        if (event_port.mode == Port::Mode::USB2) {
-            XHCI_DEBUG << "trying to reset USB3 pair of port " << port_id
-            << " (number " << event_port.index_of_pair << ")";
+    port_status.PED = temp_PED;
 
-            reset_port(event_port.index_of_pair);
-            return;
-        }
+    if (port_status.PEC)
+        XHCI_DEBUG << "enable/disable change for port " << port_id << ", and is now " << port_status.PED;
+    if (port_status.OCC)
+        XHCI_DEBUG << "over-current change for port " << port_id << ", and is now " << port_status.OCA;
 
-        XHCI_DEBUG << "trying to reset port " << port_id;
-        reset_port(port_id);
-
+    if (port_status.CEC) {
+        handle_port_config_error(port_id, port_status);
         return;
     }
 
-    // Looks like this event is associated with port finishing a reset
-    if (event_port.state == Port::State::RESETTING) {
-        auto port_reg = read_port_reg<PORTSC>(port_id);
-        bool success = port_reg.PED && port_reg.PortSpeed;
-
-        port_reg.PED = 0;
-        write_port_reg(port_id, port_reg);
-
-        XHCI_DEBUG << "port state after reset: success: " << success << " speed: " << port_reg.PortSpeed;
-
-        if (!success) {
-            event_port.state = Port::State::DEFAULT;
-
-            // Reset failed for USB2, try USB3
-            if (event_port.mode == Port::Mode::USB3_MASTER)
-                reset_port(event_port.index_of_pair);
-
-            return;
-        }
-
-        event_port.state = Port::State::DEVICE_ATTACHED;
+    if (port_status.WRC || port_status.PRC) {
+        handle_port_reset_status_change(port_id, port_status);
         return;
     }
 
-    // Device was detached?
-    if (event_port.state == Port::State::DEVICE_ATTACHED) {
-        auto port_reg = read_port_reg<PORTSC>(port_id);
-        port_reg.PED = 0;
-        write_port_reg(port_id, port_reg);
-
-        XHCI_DEBUG << "Device detached?";
-        event_port.state = Port::State::DEFAULT;
-
+    if (port_status.CSC || port_status.PLC) {
+        handle_port_connect_status_change(port_id, port_status);
         return;
     }
 }
@@ -779,11 +849,11 @@ bool XHCI::handle_deferred_irq()
         if (event.C != m_event_ring_cycle)
             break;
 
-        XHCI_LOG << "irq: event[" << m_event_ring_index << "]: " << static_cast<u8>(event.Type);
-
         if (event.Type == TRBType::PortStatusChangeEvent) {
             auto psc = bit_cast<PortStatusChangeEventTRB>(event);
             handle_port_status_change(psc.PortID - 1);
+        } else {
+            XHCI_LOG << "unhandled event[" << m_event_ring_index << "]: " << static_cast<u8>(event.Type);
         }
 
         m_event_ring_index++;

@@ -75,8 +75,11 @@ private:
 
     Page allocate_safe_page();
 
-    void reset_port(size_t port_id);
+    void reset_port(size_t port_id, bool warm);
     void handle_port_status_change(size_t port_id);
+    void handle_port_connect_status_change(size_t port_id, PORTSC status);
+    void handle_port_reset_status_change(size_t port_id, PORTSC status);
+    void handle_port_config_error(size_t port_id, PORTSC status);
 
 private:
 #ifdef ULTRA_32
@@ -93,35 +96,64 @@ private:
         enum Mode : u8 {
             NOT_PRESENT = 0,
             USB2 = SET_BIT(1),
-            USB2_MASTER = SET_BIT(1) | SET_BIT(0),
+            USB2_PAIRED = SET_BIT(1) | SET_BIT(0),
             USB3 = SET_BIT(2),
-            USB3_MASTER = SET_BIT(2) | SET_BIT(0)
+            USB3_PAIRED = SET_BIT(2) | SET_BIT(0)
         } mode { NOT_PRESENT };
 
         enum class State {
             DEFAULT,
+            SPURIOUS_CONNECTION,
             RESETTING,
+            RESETTING_PAIR,
             DEVICE_ATTACHED,
+            DEVICE_ATTACHED_TO_PAIR
         } state { State::DEFAULT };
+
+        [[nodiscard]] StringView state_to_string() const
+        {
+            switch (state) {
+            case State::DEFAULT:
+                return "default"_sv;
+            case State::SPURIOUS_CONNECTION:
+                return "spurious connection"_sv;
+            case State::RESETTING:
+                return "resetting"_sv;
+            case State::DEVICE_ATTACHED:
+                return "device attached"_sv;
+            case State::DEVICE_ATTACHED_TO_PAIR:
+                return "device attached to pair"_sv;
+            default:
+                return "invalid"_sv;
+            }
+        }
+
+        void set_index_of_pair(size_t index)
+        {
+            index_of_pair = index;
+            mode = static_cast<Mode>(static_cast<u8>(mode) | SET_BIT(0));
+        }
 
         u8 index_of_pair { 0 };
         u8 physical_offset { 0 };
 
-        [[nodiscard]] bool is_master() const { return mode & SET_BIT(0); }
+        [[nodiscard]] bool is_paired() const { return mode & SET_BIT(0); }
+        [[nodiscard]] bool is_usb2() const { return mode & USB2; }
+        [[nodiscard]] bool is_usb3() const { return mode & USB3; }
 
-        StringView mode_to_string()
+        [[nodiscard]] StringView mode_to_string() const
         {
             switch (mode) {
             case NOT_PRESENT:
                 return "not present"_sv;
             case USB2:
                 return "USB2"_sv;
-            case USB2_MASTER:
-                return "USB2 master"_sv;
+            case USB2_PAIRED:
+                return "USB2 paired"_sv;
             case USB3:
                 return "USB3"_sv;
-            case USB3_MASTER:
-                return "USB3 master"_sv;
+            case USB3_PAIRED:
+                return "USB3 paired"_sv;
             default:
                 return "invalid"_sv;
             }
