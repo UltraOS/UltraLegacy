@@ -81,6 +81,8 @@ private:
     void handle_port_reset_status_change(size_t port_id, PORTSC status);
     void handle_port_config_error(size_t port_id, PORTSC status);
 
+    void begin_port_initialization(size_t port_id);
+
 private:
 #ifdef ULTRA_32
     MemoryManager::VR m_bar0_region;
@@ -102,19 +104,19 @@ private:
         } mode { NOT_PRESENT };
 
         enum class State {
-            DEFAULT,
+            IDLE,
             SPURIOUS_CONNECTION,
             RESETTING,
             RESETTING_PAIR,
             DEVICE_ATTACHED,
             DEVICE_ATTACHED_TO_PAIR
-        } state { State::DEFAULT };
+        } state { State::IDLE };
 
         [[nodiscard]] StringView state_to_string() const
         {
             switch (state) {
-            case State::DEFAULT:
-                return "default"_sv;
+            case State::IDLE:
+                return "idle"_sv;
             case State::SPURIOUS_CONNECTION:
                 return "spurious connection"_sv;
             case State::RESETTING:

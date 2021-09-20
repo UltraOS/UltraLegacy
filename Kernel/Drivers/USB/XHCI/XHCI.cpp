@@ -681,11 +681,11 @@ void XHCI::handle_port_connect_status_change(size_t port_id, PORTSC status)
 
     if (transition_down && port.state == Port::State::SPURIOUS_CONNECTION) {
         XHCI_DEBUG << "connection on port " << port_id << " down as expected";
-        port.state = Port::State::DEFAULT;
+        port.state = Port::State::IDLE;
         return;
     }
 
-    if (port.state == Port::State::RESETTING_PAIR) {
+    if (port.state == Port::State::RESETTING_PAIR || port.state == Port::State::DEVICE_ATTACHED_TO_PAIR) {
         XHCI_DEBUG << "ignoring status change (to " << status.CCS << ") for pair port " << port_id;
         return;
     }
@@ -693,12 +693,12 @@ void XHCI::handle_port_connect_status_change(size_t port_id, PORTSC status)
     if ((port.state == Port::State::DEVICE_ATTACHED || port.state == Port::State::RESETTING) && transition_down) {
         XHCI_DEBUG << "connection gone on port " << port_id;
 
-        port.state = Port::State::DEFAULT;
+        port.state = Port::State::IDLE;
 
         // TODO: delete device, deinitialize whatever is needed
 
-        if (port.is_usb3() && port.is_paired())
-            m_ports[port.index_of_pair].state = Port::State::DEFAULT;
+        if (port.is_paired())
+            m_ports[port.index_of_pair].state = Port::State::IDLE;
 
         return;
     }
@@ -714,7 +714,7 @@ void XHCI::handle_port_connect_status_change(size_t port_id, PORTSC status)
         auto usb3_index = port.index_of_pair;
         auto& usb3_pair = m_ports[usb3_index];
 
-        if (usb3_pair.state != Port::State::DEFAULT) {
+        if (usb3_pair.state != Port::State::IDLE) {
             XHCI_WARN << "USB2 port connection up while in USB3 state " << usb3_pair.state_to_string();
             return;
         }
@@ -732,14 +732,50 @@ void XHCI::handle_port_connect_status_change(size_t port_id, PORTSC status)
         }
     }
 
-    XHCI_DEBUG << "resetting port " << port_id;
-    auto usb3 = port.is_usb3();
+    // We don't have to reset USB3 ports.
+    // From the intel xHCI specification:
+    // "A USB3 protocol port attempts to automatically advance to
+    //  the Enabled state as port of the attach process"
+    if (port.is_usb3()) {
+        bool success = status.PED && status.PortSpeed;
 
-    if (usb3 && port.is_paired())
+        XHCI_DEBUG << "usb3 port " << port_id << " state after connection: powered on - "
+                   << status.PED << " speed - " << status.PortSpeed;
+
+        if (!success) {
+            port.state = Port::State::IDLE;
+            if (port.is_paired())
+                m_ports[port.index_of_pair].state = Port::State::IDLE;
+            return;
+        }
+
+        begin_port_initialization(port_id);
+        return;
+    }
+
+    if (port.is_paired())
         m_ports[port.index_of_pair].state = Port::State::RESETTING_PAIR;
 
     port.state = Port::State::RESETTING;
-    reset_port(port_id, port.is_usb3());
+    reset_port(port_id, false);
+}
+
+void XHCI::begin_port_initialization(size_t port_id)
+{
+    auto& port = m_ports[port_id];
+
+    // TODO:
+    // 1. Allocate slot
+    // 2. Set address (blocking)
+    // 3. Get first 8 bytes of the descriptor
+    // 4. Cold reset the port
+    // 5. Set address (without blocking)
+    // 6. Read the entire descriptor
+    // 7. TBD
+
+    port.state = Port::State::DEVICE_ATTACHED;
+    if (port.is_usb3() && port.is_paired())
+        m_ports[port.index_of_pair].state = Port::State::DEVICE_ATTACHED_TO_PAIR;
 }
 
 void XHCI::handle_port_reset_status_change(size_t port_id, PORTSC status)
@@ -752,22 +788,17 @@ void XHCI::handle_port_reset_status_change(size_t port_id, PORTSC status)
         return;
     }
 
-    XHCI_DEBUG << "port " << port_id << " state after reset: success: " << success << " speed: " << status.PortSpeed;
+    XHCI_DEBUG << "port " << port_id << " state after reset: powered on - "
+               << status.PED << " speed - " << status.PortSpeed;
 
     if (!success) {
-        port.state = Port::State::DEFAULT;
-
+        port.state = Port::State::IDLE;
         if (port.is_paired())
-            m_ports[port.index_of_pair].state = Port::State::DEFAULT;
-
+            m_ports[port.index_of_pair].state = Port::State::IDLE;
         return;
     }
 
-    // TODO: configure, get descriptors, etc
-
-    port.state = Port::State::DEVICE_ATTACHED;
-    if (port.is_usb3() && port.is_paired())
-        m_ports[port.index_of_pair].state = Port::State::DEVICE_ATTACHED_TO_PAIR;
+    begin_port_initialization(port_id);
 }
 
 void XHCI::handle_port_config_error(size_t port_id, [[maybe_unused]] PORTSC status)
@@ -779,10 +810,10 @@ void XHCI::handle_port_config_error(size_t port_id, [[maybe_unused]] PORTSC stat
         // TODO: deinitialize
 
         if (port.is_paired())
-            m_ports[port.index_of_pair].state = Port::State::DEFAULT;
+            m_ports[port.index_of_pair].state = Port::State::IDLE;
     }
 
-    port.state = Port::State::DEFAULT;
+    port.state = Port::State::IDLE;
 }
 
 void XHCI::handle_port_status_change(size_t port_id)
