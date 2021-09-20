@@ -433,6 +433,48 @@ struct GenericTRB {
     u32 RzvdZ4 : 16;
 };
 
+struct EnableSlotTRB : public GenericTRB {};
+struct DisableSlotTRB {
+    u32 RzvdZ;
+    u32 RzvdZ1;
+    u32 RzvdZ2;
+    u32 C : 1;
+    u32 RzvdZ3 : 9;
+    TRBType Type : 6;
+    u32 RzvdZ4 : 8;
+    u32 SlotID : 8;
+};
+
+struct ResetDeviceTRB : public DisableSlotTRB {};
+
+struct AddressDeviceTRB {
+    u32 InputContextPointerLo;
+    u32 InputContextPointerHi;
+    u32 RzvdZ;
+    u32 C : 1;
+    u32 RzvdZ1 : 8;
+    u32 BSR : 1;
+    TRBType Type : 6;
+    u32 RzvdZ2 : 8;
+    u32 SlotID : 8;
+};
+
+// "The Evaluate Context Command TRB uses the same format as the
+//  Address Device Command TRB ... the BSR field is not used."
+struct EvaluateContextTRB : public AddressDeviceTRB {};
+
+struct ConfigureEndpointTRB {
+    u32 InputContextPointerLo;
+    u32 InputContextPointerHi;
+    u32 RzvdZ;
+    u32 C : 1;
+    u32 RzvdZ1 : 8;
+    u32 DC : 1;
+    TRBType Type : 6;
+    u32 RzvdZ2 : 8;
+    u32 SlotID : 8;
+};
+
 struct PortStatusChangeEventTRB {
     u32 RzvdZ : 24;
     u32 PortID : 8;
