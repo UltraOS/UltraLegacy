@@ -536,7 +536,7 @@ struct PACKED SlotContext {
     } SlotState : 5;
 
     u32 xHCIReserved[4];
-    // might have 4 more DWORDs here depending on HCCPARAMS1::CSZ
+    // might have 8 more DWORDs here depending on HCCPARAMS1::CSZ
 };
 
 struct PACKED EndpointContext {
@@ -579,7 +579,22 @@ struct PACKED EndpointContext {
     u32 MaxESITPayloadLo : 16;
 
     u32 xHCIReserved[3];
-    // might have 4 more DWORDs here depending on HCCPARAMS1::CSZ
+    // might have 8 more DWORDs here depending on HCCPARAMS1::CSZ
+};
+
+struct PACKED InputControlContext {
+    u32 D;
+    u32 A;
+    u32 RzvdZ;
+    u32 RzvdZ1;
+    u32 RzvdZ2;
+    u32 RzvdZ3;
+    u32 RzvdZ4;
+    u32 ConfigurationValue : 8;
+    u32 InterfaceNumber : 8;
+    u32 AlternateSetting : 8;
+    u32 RzvdZ5 : 8;
+    // might have 8 more DWORDs here depending on HCCPARAMS1::CSZ
 };
 
 static_assert(sizeof(USBLEGCTLSTS) == 4, "Incorrect size of USBLEGCTLSTS");
@@ -615,6 +630,12 @@ static_assert(sizeof(PORTHLPMCUSB3) == 4, "Incorrect size of PORTHLPMC for USB3"
 
 static_assert(sizeof(GenericTRB) == 4 * sizeof(u32), "Incorrect size of GenericTRB");
 static_assert(sizeof(LinkTRB) == 4 * sizeof(u32), "Incorrect size of LinkTRB");
+static_assert(sizeof(EnableSlotTRB) == 4 * sizeof(u32), "Incorrect size of EnableSlotTRB");
+static_assert(sizeof(DisableSlotTRB) == 4 * sizeof(u32), "Incorrect size of DisableSlotTRB");
+static_assert(sizeof(ResetDeviceTRB) == 4 * sizeof(u32), "Incorrect size of ResetDeviceTRB");
+static_assert(sizeof(AddressDeviceTRB) == 4 * sizeof(u32), "Incorrect size of AddressDeviceTRB");
+static_assert(sizeof(EvaluateContextTRB) == 4 * sizeof(u32), "Incorrect size of EvaluateContextTRB");
+static_assert(sizeof(ConfigureEndpointTRB) == 4 * sizeof(u32), "Incorrect size of ConfigureEndpointTRB");
 
 static_assert(sizeof(InterrupterManagementRegister) == 4, "Incorrect size of InterrupterManagementRegister");
 static_assert(sizeof(InterrupterModerationRegister) == 4, "Incorrect size of InterrupterModerationRegister");
@@ -625,5 +646,6 @@ static_assert(sizeof(RuntimeRegisters) == 0x20, "Incorrect size of RuntimeRegist
 
 static_assert(sizeof(SlotContext) == 0x20, "Incorrect size of SlotContext");
 static_assert(sizeof(EndpointContext) == 0x20, "Incorrect size of EndpointContext");
+static_assert(sizeof(InputControlContext) == 0x20, "Incorrect size of InputControlContext");
 
 }
