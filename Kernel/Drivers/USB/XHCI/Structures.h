@@ -487,7 +487,19 @@ struct PortStatusChangeEventTRB {
     u32 RzvdZ4 : 16;
 };
 
-struct LinkTRB {
+struct PACKED CommandCompletionEventTRB {
+    u32 CommandTRBPointerLo;
+    u32 CommandTRBPointerHi;
+    u32 CommandCompletionParameter : 24;
+    CC CompletionCode : 8;
+    u32 C : 1;
+    u32 RzvdZ : 9;
+    TRBType Type : 6;
+    u32 VFID : 8;
+    u32 SlotID : 8;
+};
+
+struct PACKED LinkTRB {
     u32 RingSegmentPointerLo;
     u32 RingSegmentPointerHi;
     u32 RsvdZ : 22;
@@ -595,6 +607,27 @@ struct PACKED InputControlContext {
     u32 AlternateSetting : 8;
     u32 RzvdZ5 : 8;
     // might have 8 more DWORDs here depending on HCCPARAMS1::CSZ
+};
+
+struct PACKED InputContextBuffer {
+    InputControlContext icc;
+
+    // Can't use actual structs because padding depends on HCCPARAMS1::CSZ
+    u8 data[];
+
+    void* context_at(size_t index, size_t bytes_per_context)
+    {
+        ASSERT(index < 32);
+        ASSERT(bytes_per_context == 32 || bytes_per_context == 64);
+
+        auto* out = data;
+
+        if (bytes_per_context == 64)
+            out += bytes_per_context - sizeof(icc);
+
+        out += bytes_per_context * index;
+        return out;
+    }
 };
 
 static_assert(sizeof(USBLEGCTLSTS) == 4, "Incorrect size of USBLEGCTLSTS");
