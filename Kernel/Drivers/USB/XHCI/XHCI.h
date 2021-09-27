@@ -63,7 +63,7 @@ private:
     void ring_doorbell(size_t index, DoorbellRegister);
 
     bool perform_bios_handoff();
-    bool initialize_dcbaa(const HCCPARAMS1&, const HCSPARAMS1&);
+    bool initialize_dcbaa(const HCCPARAMS1&);
     bool initialize_command_ring();
     bool initialize_event_ring();
 
@@ -169,18 +169,17 @@ private:
         DynamicArray<Page> scratchpad_pages;
 
         size_t bytes_per_context_structure { 0 };
-
-        DynamicArray<Page> device_context_pages;
     } m_dcbaa_context;
 
     static constexpr size_t command_ring_capacity = Page::size / sizeof(GenericTRB);
     size_t m_command_ring_offset { 0 };
-    TypedMapping<GenericTRB> m_command_ring;
+    Page m_command_ring_page;
+    TypedMapping<volatile GenericTRB> m_command_ring;
 
     static constexpr size_t event_ring_segment_capacity = Page::size / sizeof(GenericTRB);
     Page m_event_ring_segment0_page {};
     size_t m_event_ring_index { 0 };
-    TypedMapping<GenericTRB> m_event_ring;
+    TypedMapping<volatile GenericTRB> m_event_ring;
 
     u8 m_event_ring_cycle { 1 };
     u8 m_command_ring_cycle { 1 };

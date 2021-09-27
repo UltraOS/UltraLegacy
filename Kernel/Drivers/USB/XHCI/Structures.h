@@ -423,7 +423,7 @@ enum class CC : u32 {
     SplitTransactionError = 36,
 };
 
-struct GenericTRB {
+struct PACKED GenericTRB {
     u32 RzvdZ;
     u32 RzvdZ1;
     u32 RzvdZ2;
@@ -433,8 +433,8 @@ struct GenericTRB {
     u32 RzvdZ4 : 16;
 };
 
-struct EnableSlotTRB : public GenericTRB {};
-struct DisableSlotTRB {
+struct PACKED EnableSlotTRB : public GenericTRB {};
+struct PACKED DisableSlotTRB {
     u32 RzvdZ;
     u32 RzvdZ1;
     u32 RzvdZ2;
@@ -447,7 +447,7 @@ struct DisableSlotTRB {
 
 struct ResetDeviceTRB : public DisableSlotTRB {};
 
-struct AddressDeviceTRB {
+struct PACKED AddressDeviceTRB {
     u32 InputContextPointerLo;
     u32 InputContextPointerHi;
     u32 RzvdZ;
@@ -463,7 +463,7 @@ struct AddressDeviceTRB {
 //  Address Device Command TRB ... the BSR field is not used."
 struct EvaluateContextTRB : public AddressDeviceTRB {};
 
-struct ConfigureEndpointTRB {
+struct PACKED ConfigureEndpointTRB {
     u32 InputContextPointerLo;
     u32 InputContextPointerHi;
     u32 RzvdZ;
@@ -475,7 +475,7 @@ struct ConfigureEndpointTRB {
     u32 SlotID : 8;
 };
 
-struct PortStatusChangeEventTRB {
+struct PACKED PortStatusChangeEventTRB {
     u32 RzvdZ : 24;
     u32 PortID : 8;
     u32 RzvdZ1;
@@ -615,7 +615,7 @@ struct PACKED InputContextBuffer {
     // Can't use actual structs because padding depends on HCCPARAMS1::CSZ
     u8 data[];
 
-    void* context_at(size_t index, size_t bytes_per_context)
+    volatile void* context_at(size_t index, size_t bytes_per_context) volatile
     {
         ASSERT(index < 32);
         ASSERT(bytes_per_context == 32 || bytes_per_context == 64);
@@ -669,6 +669,9 @@ static_assert(sizeof(ResetDeviceTRB) == 4 * sizeof(u32), "Incorrect size of Rese
 static_assert(sizeof(AddressDeviceTRB) == 4 * sizeof(u32), "Incorrect size of AddressDeviceTRB");
 static_assert(sizeof(EvaluateContextTRB) == 4 * sizeof(u32), "Incorrect size of EvaluateContextTRB");
 static_assert(sizeof(ConfigureEndpointTRB) == 4 * sizeof(u32), "Incorrect size of ConfigureEndpointTRB");
+
+static_assert(sizeof(PortStatusChangeEventTRB) == 4 * sizeof(u32), "Incorrect size of PortStatusChangeEventTRB");
+static_assert(sizeof(CommandCompletionEventTRB) == 4 * sizeof(u32), "Incorrect size of CommandCompletionEventTRB");
 
 static_assert(sizeof(InterrupterManagementRegister) == 4, "Incorrect size of InterrupterManagementRegister");
 static_assert(sizeof(InterrupterModerationRegister) == 4, "Incorrect size of InterrupterModerationRegister");

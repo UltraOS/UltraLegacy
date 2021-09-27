@@ -19,6 +19,15 @@
 
 namespace kernel {
 
+inline void volatile_copy_memory(const volatile void* source, volatile void* destination, size_t size)
+{
+    auto* byte_src = reinterpret_cast<const volatile u8*>(source);
+    auto* byte_dst = reinterpret_cast<volatile u8*>(destination);
+
+    while (size--)
+        *byte_dst++ = *byte_src++;
+}
+
 XHCI::XHCI(const PCI::DeviceInfo& info)
     : ::kernel::Device(Category::CONTROLLER)
     , PCI::Device(info)
@@ -116,7 +125,7 @@ bool XHCI::initialize()
     cfg.MaxSlotsEn = hcs1.MaxSlots;
     write_oper_reg(cfg);
 
-    if (!initialize_dcbaa(hccp1, hcs1))
+    if (!initialize_dcbaa(hccp1))
         return false;
 
     if (!initialize_command_ring())
@@ -186,7 +195,7 @@ bool XHCI::initialize()
     return true;
 }
 
-bool XHCI::initialize_dcbaa(const HCCPARAMS1& hccp1, const HCSPARAMS1& hcs1)
+bool XHCI::initialize_dcbaa(const HCCPARAMS1& hccp1)
 {
     auto dcbaap_page = allocate_safe_page();
     m_dcbaa_context.dcbaa = TypedMapping<u64>::create("DCBAA"_sv, dcbaap_page.address(), Page::size);
@@ -215,52 +224,24 @@ bool XHCI::initialize_dcbaa(const HCCPARAMS1& hccp1, const HCSPARAMS1& hcs1)
 
     DCBAAP reg {};
     SET_DWORDS_TO_ADDRESS(reg.DeviceContextBaseAddressArrayPointerLo, reg.DeviceContextBaseAddressArrayPointerHi, dcbaap_page.address());
+    write_oper_reg(reg);
 
     m_dcbaa_context.bytes_per_context_structure = hccp1.CSZ ? 64 : 32;
     XHCI_LOG << "bytes per context: " << m_dcbaa_context.bytes_per_context_structure;
-
-    static constexpr size_t entries_per_device_context = 32;
-    size_t bytes_per_device_context = entries_per_device_context * m_dcbaa_context.bytes_per_context_structure;
-    size_t contexts_per_page = Page::size / bytes_per_device_context;
-
-    XHCI_LOG << bytes_per_device_context << " bytes per device context, " << contexts_per_page << " contexts per page";
-
-    auto pages_needed = ceiling_divide<size_t>(hcs1.MaxSlots, contexts_per_page);
-    XHCI_LOG << "allocating " << pages_needed << " pages for " << hcs1.MaxSlots << " slots";
-
-    m_dcbaa_context.device_context_pages.reserve(pages_needed);
-    size_t port_offset = 1;
-    size_t contexts_to_initialize = m_port_count;
-
-    for (size_t i = 0; i < pages_needed; ++i) {
-        auto page = allocate_safe_page();
-
-        auto current_base = page.address();
-        for (size_t j = 0; j < min<size_t>(contexts_to_initialize, contexts_per_page); ++j) {
-            m_dcbaa_context.dcbaa[port_offset++] = current_base;
-            current_base += bytes_per_device_context;
-        }
-
-        contexts_to_initialize -= min<size_t>(contexts_to_initialize, contexts_per_page);
-
-        m_dcbaa_context.device_context_pages.emplace(page);
-    }
-
-    write_oper_reg(reg);
 
     return true;
 }
 
 bool XHCI::initialize_command_ring()
 {
-    auto command_ring_page = allocate_safe_page();
-    m_command_ring = TypedMapping<GenericTRB>::create("CommandRing"_sv, command_ring_page.address(), Page::size);
+    m_command_ring_page = allocate_safe_page();
+    m_command_ring = TypedMapping<volatile GenericTRB>::create("CommandRing"_sv, m_command_ring_page.address(), Page::size);
 
     // link last TRB back to the head
     LinkTRB link {};
     link.Type = TRBType::Link;
-    set_dwords_to_address(link.RingSegmentPointerLo, link.RingSegmentPointerHi, command_ring_page.address());
-    copy_memory(&link, &m_command_ring[command_ring_capacity - 1], sizeof(link));
+    SET_DWORDS_TO_ADDRESS(link.RingSegmentPointerLo, link.RingSegmentPointerHi, m_command_ring_page.address());
+    volatile_copy_memory(&link, &m_command_ring[command_ring_capacity - 1], sizeof(link));
 
     CRCR cr {};
     cr.RCS = 1;
@@ -282,7 +263,7 @@ bool XHCI::initialize_event_ring()
         SET_DWORDS_TO_ADDRESS(entry0.RingSegmentBaseAddressLo, entry0.RingSegmentBaseAddressHi, m_event_ring_segment0_page.address());
         entry0.RingSegmentSize = event_ring_segment_capacity;
     }
-    m_event_ring = TypedMapping<GenericTRB>::create("EventRing"_sv, m_event_ring_segment0_page.address(), Page::size);
+    m_event_ring = TypedMapping<volatile GenericTRB>::create("EventRing"_sv, m_event_ring_segment0_page.address(), Page::size);
 
     auto raw_ertsz = m_runtime_registers->Interrupter[0].ERSTSZ;
     raw_ertsz |= 1;
@@ -612,7 +593,7 @@ size_t XHCI::enqueue_command(T& trb)
 
     trb.C = m_command_ring_cycle;
 
-    copy_memory(&trb, &m_command_ring[m_command_ring_offset], sizeof(GenericTRB));
+    volatile_copy_memory(&trb, &m_command_ring[m_command_ring_offset], sizeof(GenericTRB));
 
     DoorbellRegister d {};
     ring_doorbell(0, d);
@@ -875,7 +856,8 @@ bool XHCI::handle_deferred_irq()
             m_event_ring_index = 0;
         }
 
-        auto& event = m_event_ring[m_event_ring_index];
+        GenericTRB event {};
+        volatile_copy_memory(&m_event_ring[m_event_ring_index], &event, sizeof(GenericTRB));
 
         if (event.C != m_event_ring_cycle)
             break;
