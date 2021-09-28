@@ -738,6 +738,7 @@ void XHCI::handle_port_connect_status_change(size_t port_id, PORTSC status)
 void XHCI::begin_port_initialization(size_t port_id)
 {
     auto& port = m_ports[port_id];
+    port.state = Port::State::INITIALIZATION;
 
     // TODO:
     // 1. Allocate slot
