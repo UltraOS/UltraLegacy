@@ -107,9 +107,8 @@ private:
             IDLE,
             SPURIOUS_CONNECTION,
             RESETTING,
-            RESETTING_PAIR,
-            DEVICE_ATTACHED,
-            DEVICE_ATTACHED_TO_PAIR
+            INITIALIZATION,
+            RUNNING,
         } state { State::IDLE };
 
 
