@@ -886,4 +886,38 @@ bool XHCI::handle_deferred_irq()
     return true;
 }
 
+StringView XHCI::Port::state_to_string() const
+{
+    switch (state) {
+    case State::IDLE:
+        return "idle"_sv;
+    case State::SPURIOUS_CONNECTION:
+        return "spurious connection"_sv;
+    case State::RESETTING:
+        return "resetting"_sv;
+    case State::RUNNING:
+        return "running"_sv;
+    default:
+        return "invalid"_sv;
+    }
+}
+
+StringView XHCI::Port::mode_to_string() const
+{
+    switch (mode) {
+    case NOT_PRESENT:
+        return "not present"_sv;
+    case USB2:
+        return "USB2"_sv;
+    case USB2_PAIRED:
+        return "USB2 paired"_sv;
+    case USB3:
+        return "USB3"_sv;
+    case USB3_PAIRED:
+        return "USB3 paired"_sv;
+    default:
+        return "invalid"_sv;
+    }
+}
+
 }

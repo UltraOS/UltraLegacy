@@ -103,7 +103,7 @@ private:
             USB3_PAIRED = SET_BIT(2) | SET_BIT(0)
         } mode { NOT_PRESENT };
 
-        enum class State {
+        enum class State : u8 {
             IDLE,
             SPURIOUS_CONNECTION,
             RESETTING,
@@ -112,29 +112,6 @@ private:
             DEVICE_ATTACHED_TO_PAIR
         } state { State::IDLE };
 
-        [[nodiscard]] StringView state_to_string() const
-        {
-            switch (state) {
-            case State::IDLE:
-                return "idle"_sv;
-            case State::SPURIOUS_CONNECTION:
-                return "spurious connection"_sv;
-            case State::RESETTING:
-                return "resetting"_sv;
-            case State::DEVICE_ATTACHED:
-                return "device attached"_sv;
-            case State::DEVICE_ATTACHED_TO_PAIR:
-                return "device attached to pair"_sv;
-            default:
-                return "invalid"_sv;
-            }
-        }
-
-        void set_index_of_pair(size_t index)
-        {
-            index_of_pair = index;
-            mode = static_cast<Mode>(static_cast<u8>(mode) | SET_BIT(0));
-        }
 
         u8 index_of_pair { 0 };
         u8 physical_offset { 0 };
@@ -143,22 +120,13 @@ private:
         [[nodiscard]] bool is_usb2() const { return mode & USB2; }
         [[nodiscard]] bool is_usb3() const { return mode & USB3; }
 
-        [[nodiscard]] StringView mode_to_string() const
+        [[nodiscard]] StringView mode_to_string() const;
+        [[nodiscard]] StringView state_to_string() const;
+
+        void set_index_of_pair(size_t index)
         {
-            switch (mode) {
-            case NOT_PRESENT:
-                return "not present"_sv;
-            case USB2:
-                return "USB2"_sv;
-            case USB2_PAIRED:
-                return "USB2 paired"_sv;
-            case USB3:
-                return "USB3"_sv;
-            case USB3_PAIRED:
-                return "USB3 paired"_sv;
-            default:
-                return "invalid"_sv;
-            }
+            index_of_pair = index;
+            mode = static_cast<Mode>(static_cast<u8>(mode) | SET_BIT(0));
         }
     } * m_ports { nullptr };
     size_t m_port_count { 0 };
