@@ -3,6 +3,8 @@
 #include "Common/Macros.h"
 #include "Common/Types.h"
 
+#include "Drivers/USB/Structures.h"
+
 namespace kernel {
 
 struct PACKED USBLEGCTLSTS {
@@ -475,6 +477,21 @@ struct PACKED ConfigureEndpointTRB {
     u32 SlotID : 8;
 };
 
+struct PACKED TransferEventTRB {
+    u32 TRBPointerLo;
+    u32 TRBPointerHi;
+    u32 TRBTransferLength : 24;
+    CC CompletionCode : 8;
+    u32 C : 1;
+    u32 RzvdZ : 1;
+    u32 ED : 1;
+    u32 RzvdZ1 : 7;
+    TRBType Type : 6;
+    u32 EndpointID : 5;
+    u32 RzvdZ2 : 3;
+    u32 SlotID : 8;
+};
+
 struct PACKED PortStatusChangeEventTRB {
     u32 RzvdZ : 24;
     u32 PortID : 8;
@@ -512,6 +529,65 @@ struct PACKED LinkTRB {
     u32 RsvdZ2 : 4;
     TRBType Type : 6;
     u32 RsvdZ3 : 16;
+};
+
+enum class TransferType : u32 {
+    NoDataStage = 0,
+    OUTDataStage = 2,
+    INDataStage = 3
+};
+
+struct PACKED SetupStageTRB : SetupData {
+    u32 TRBTransferLength : 17;
+    u32 RzvdZ : 5;
+    u32 InterrupterTarget : 10;
+    u32 C : 1;
+    u32 RzvdZ1 : 4;
+    u32 IOC : 1;
+    u32 IDT : 1;
+    u32 RzvdZ2 : 3;
+    TRBType Type : 6;
+    TransferType TRT : 2;
+    u32 RzvdZ3 : 14;
+};
+
+struct PACKED DataStageTRB {
+    u32 DataBufferLo;
+    u32 DataBufferHi;
+
+    u32 TRBTransferLength : 17;
+    u32 TDSize : 5;
+    u32 InterrupterTarget : 10;
+
+    u32 C : 1;
+    u32 ENT : 1;
+    u32 ISP : 1;
+    u32 NS : 1;
+    u32 CH : 1;
+    u32 IOC : 1;
+    u32 IDT : 1;
+    u32 RzvdZ : 3;
+    TRBType Type : 6;
+    u32 DIR : 1;
+    u32 RzvdZ1 : 15;
+};
+
+struct PACKED StatusStageTRB {
+    u32 RzvdZ;
+    u32 RzvdZ1;
+
+    u32 RzvdZ2 : 22;
+    u32 InterrupterTarget : 10;
+
+    u32 C : 1;
+    u32 ENT : 1;
+    u32 RzvdZ3 : 2;
+    u32 CH : 1;
+    u32 IOC : 1;
+    u32 RzvdZ4 : 4;
+    TRBType Type : 6;
+    u32 DIR : 1;
+    u32 RzvdZ5 : 15;
 };
 
 struct PACKED DoorbellRegister {
@@ -612,20 +688,14 @@ struct PACKED InputControlContext {
 struct PACKED InputContextBuffer {
     InputControlContext icc;
 
-    // Can't use actual structs because padding depends on HCCPARAMS1::CSZ
-    u8 data[];
-
     volatile void* context_at(size_t index, size_t bytes_per_context) volatile
     {
         ASSERT(index < 32);
         ASSERT(bytes_per_context == 32 || bytes_per_context == 64);
 
-        auto* out = data;
+        auto* out = reinterpret_cast<volatile uint8_t*>(this);
 
-        if (bytes_per_context == 64)
-            out += bytes_per_context - sizeof(icc);
-
-        out += bytes_per_context * index;
+        out += bytes_per_context * (index + 1);
         return out;
     }
 };
@@ -669,7 +739,11 @@ static_assert(sizeof(ResetDeviceTRB) == 4 * sizeof(u32), "Incorrect size of Rese
 static_assert(sizeof(AddressDeviceTRB) == 4 * sizeof(u32), "Incorrect size of AddressDeviceTRB");
 static_assert(sizeof(EvaluateContextTRB) == 4 * sizeof(u32), "Incorrect size of EvaluateContextTRB");
 static_assert(sizeof(ConfigureEndpointTRB) == 4 * sizeof(u32), "Incorrect size of ConfigureEndpointTRB");
+static_assert(sizeof(SetupStageTRB) == 4 * sizeof(u32), "Incorrect size of SetupStageTRB");
+static_assert(sizeof(DataStageTRB) == 4 * sizeof(u32), "Incorrect size of DataStageTRB");
+static_assert(sizeof(StatusStageTRB) == 4 * sizeof(u32), "Incorrect size of StatusStageTRB");
 
+static_assert(sizeof(TransferEventTRB) == 4 * sizeof(u32), "Incorrect size of TransferEventTRB");
 static_assert(sizeof(PortStatusChangeEventTRB) == 4 * sizeof(u32), "Incorrect size of PortStatusChangeEventTRB");
 static_assert(sizeof(CommandCompletionEventTRB) == 4 * sizeof(u32), "Incorrect size of CommandCompletionEventTRB");
 
