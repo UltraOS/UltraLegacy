@@ -5,6 +5,7 @@
 #include "Drivers/Device.h"
 #include "Drivers/PCI/PCI.h"
 #include "Memory/TypedMapping.h"
+#include "Interrupts/DeferredIRQ.h"
 
 namespace kernel {
 
@@ -14,7 +15,7 @@ class PortInterruptStatus;
 class PortSATAError;
 class HBA;
 
-class AHCI final : public Device, public PCI::Device, public IRQHandler {
+class AHCI final : public Device, public PCI::Device, public IRQHandler, public DeferredIRQHandler {
     AUTO_DETECT_PCI(AHCI);
 
 public:
@@ -134,6 +135,7 @@ private:
     void wait_for_port_ready(size_t index);
 
     bool handle_irq(RegisterState&) override;
+    bool handle_deferred_irq() override;
     void handle_port_irq(size_t port);
     void enable_irq() override { ASSERT_NEVER_REACHED(); }
     void disable_irq() override { ASSERT_NEVER_REACHED(); }

@@ -271,6 +271,13 @@ void AHCI::enable_dma_engines_for_port(size_t index)
 
 bool AHCI::handle_irq(RegisterState&)
 {
+    deferred_invoke();
+
+    return true;
+}
+
+bool AHCI::handle_deferred_irq()
+{
     volatile auto port_status = m_hba->interrupt_pending_status;
 
     if (port_status == 0)
