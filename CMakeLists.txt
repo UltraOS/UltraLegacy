@@ -77,9 +77,9 @@ message("Detected port files: ${PORT_FILES_LIST}, executables: ${PORT_EXECUTABLE
 string(CONCAT VHC_BUILD_COMMAND
   "mkdir -p ${PROJECT_SOURCE_DIR}/Images && "
   "${CMAKE_SOURCE_DIR}/Scripts/vhc --mbr ${BOOTLOADER_PATH}/${MBR} "
-                                  "--vbr ${BOOTLOADER_PATH}/${VBR} "
+                                  "--filesystem FAT32,vfat=false,vbr=${BOOTLOADER_PATH}/${VBR} "
                                   "--files ${BOOTLOADER_PATH}/${KERNEL_LOADER} ${KERNEL_PATH}/${KERNEL} ${KERNEL_PATH}/KSyms.map ${PORT_FILES_LIST} "
-                                  "--size 64 --image-dir ${PROJECT_SOURCE_DIR}/Images --image-name Ultra${ARCH}HDD"
+                                  "--size 64 --image-directory ${PROJECT_SOURCE_DIR}/Images --image-name Ultra${ARCH}HDD"
 )
 
 separate_arguments(VHC_BUILD_COMMAND UNIX_COMMAND "${VHC_BUILD_COMMAND}")
