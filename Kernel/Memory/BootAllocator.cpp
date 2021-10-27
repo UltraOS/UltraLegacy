@@ -76,14 +76,13 @@ Address64 BootAllocator::reserve_contiguous(size_t page_count, Address64 lower_l
     for (; picked_range != m_memory_map.end(); ++picked_range) {
         bool is_bad_range = false;
 
-        if (picked_range->type != MemoryMap::PhysicalRange::Type::FREE)
+        if (picked_range->type != MemoryMap::PhysicalRange::Type::FREE) {
             is_bad_range = true;
-
-        if (picked_range->length() < bytes_to_allocate)
-            is_bad_range = true;
-
-        if (picked_range->begin() + bytes_to_allocate > upper_limit)
-            is_bad_range = true;
+        } else {
+            auto range_end = min(picked_range->end(), upper_limit);
+            auto range_begin = max(picked_range->begin(), lower_limit);
+            is_bad_range = (range_end - range_begin) < bytes_to_allocate;
+        }
 
         if (is_bad_range) {
             if (should_look_further(*picked_range))
