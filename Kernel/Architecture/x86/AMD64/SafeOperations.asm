@@ -28,7 +28,7 @@ safe_copy_memory:
     jmp .done
 
     .on_access_violation:
-        mov rax, 0
+        xor rax, rax
     .done:
         pop rbx
         ret
@@ -51,7 +51,7 @@ length_of_user_string:
     jmp .done
 
     .on_access_violation:
-        mov rax, 0
+        xor rax, rax
     .done:
         pop rbx
         ret
@@ -93,7 +93,7 @@ copy_until_null_or_n_from_user:
         jmp .next
 
     .on_access_violation:
-        mov rax, 0
+        xor rax, rax
     .done:
         pop rbx
         ret

@@ -28,7 +28,7 @@ safe_copy_memory:
     jmp .done
 
     .on_access_violation:
-        mov eax, 0
+        xor eax, eax
     .done:
         pop ebx
         pop edi
@@ -57,7 +57,7 @@ length_of_user_string:
     jmp .done
 
     .on_access_violation:
-        mov eax, 0
+        xor eax, eax
     .done:
         pop ebx
         pop edi
@@ -107,7 +107,7 @@ copy_until_null_or_n_from_user:
         jmp .next
 
     .on_access_violation:
-        mov eax, 0
+        xor eax, eax
     .done:
         pop edi
         pop esi
